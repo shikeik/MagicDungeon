@@ -637,7 +637,7 @@ public interface IWebBrowser {
 
 请在 `core` 模块创建新包 `com.goldsprite.magicdungeon.core.web`。
 
-**文件 1: `core/src/main/java/com/goldsprite/gdengine/core/web/IWebBrowser.java`**
+**文件 1: `core/src/main/java/com/goldsprite/magicdungeon/core/web/IWebBrowser.java`**
 
 ```java
 package com.goldsprite.magicdungeon.core.web;
@@ -669,7 +669,7 @@ public interface IWebBrowser {
 }
 ```
 
-**文件 2: `core/src/main/java/com/goldsprite/gdengine/core/Gd.java` (追加字段)**
+**文件 2: `core/src/main/java/com/goldsprite/magicdungeon/core/Gd.java` (追加字段)**
 
 我们需要在全局入口 `Gd` 中增加这个服务的引用。
 
@@ -707,7 +707,7 @@ public class Gd {
 
 在 Android 端，我们使用一个 `Dialog` 或者新的 `Activity` 来承载 `WebView`。为了轻量化，这里推荐使用全屏 `Dialog`。
 
-**文件 3: `android/src/main/java/com/goldsprite/gdengine/android/AndroidWebBrowser.java`**
+**文件 3: `android/src/main/java/com/goldsprite/magicdungeon/android/AndroidWebBrowser.java`**
 
 ```java
 package com.goldsprite.magicdungeon.android;
@@ -848,7 +848,7 @@ public class AndroidWebBrowser implements IWebBrowser {
 
 #### 3. Desktop 端实现 (系统浏览器)
 
-**文件 4: `lwjgl3/src/main/java/com/goldsprite/gdengine/lwjgl3/DesktopWebBrowser.java`**
+**文件 4: `lwjgl3/src/main/java/com/goldsprite/magicdungeon/lwjgl3/DesktopWebBrowser.java`**
 
 ```java
 package com.goldsprite.magicdungeon.lwjgl3;
@@ -1012,7 +1012,7 @@ dependencies {
 
 #### 第三步：实现 DocServer 逻辑
 
-新建文件 **`core/src/main/java/com/goldsprite/gdengine/core/web/DocServer.java`**
+新建文件 **`core/src/main/java/com/goldsprite/magicdungeon/core/web/DocServer.java`**
 
 ```java
 package com.goldsprite.magicdungeon.core.web;
@@ -1178,7 +1178,7 @@ public class DocServer extends NanoHTTPD {
 
 最后，我们在 Hub 界面把那个按钮接上，进行一次完整的跑通测试。
 
-修改 **`core/src/main/java/com/goldsprite/gdengine/screens/ecs/hub/mvp/HubViewImpl.java`**：
+修改 **`core/src/main/java/com/goldsprite/magicdungeon/screens/ecs/hub/mvp/HubViewImpl.java`**：
 
 ```java
 // ... imports ...

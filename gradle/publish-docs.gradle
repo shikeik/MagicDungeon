@@ -10,7 +10,7 @@ ext {
 }
 
 tasks.register('packageDocs', Zip) {
-	group = 'gdengine-publish'
+	group = 'magicdungeon-publish'
 	from DOCS_ROOT
 	include 'engine_docs/**'
 	archiveFileName = 'docs_full.zip'
@@ -19,7 +19,7 @@ tasks.register('packageDocs', Zip) {
 }
 
 tasks.register('buildDocsDist') {
-	group = 'gdengine-publish'
+	group = 'magicdungeon-publish'
 	dependsOn 'packageDocs'
 	outputs.upToDateWhen { false } // 强制运行
 

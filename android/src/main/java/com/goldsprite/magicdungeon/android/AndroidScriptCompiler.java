@@ -269,7 +269,7 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		// 1. android.jar (通常很大，如果文件存在且不是新版本，就跳过)
 		extractAsset("android.jar", new File(libsDir, "android.jar"), isNewVersion);
 
-		// 2. libs/*.jar (gdx.jar, gdengine.jar)
+		// 2. libs/*.jar (gdx.jar, magicdungeon.jar)
 		try {
 			String[] libFiles = context.getAssets().list("engine/libs");
 			if (libFiles != null) {

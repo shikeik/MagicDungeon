@@ -26,4 +26,4 @@ MagicDungeon 使用 **Hub** 作为项目管理中心，类似于 Unity Hub。
 *   `project.json`: 项目元数据（入口类、引擎版本）。
 *   `src/main/java/`: 您的 Java 源代码。
 *   `assets/`: 图片、音频等资源文件。
-*   `libs/`: 引擎自动注入的依赖库（`gdengine.jar` 等）。
+*   `libs/`: 引擎自动注入的依赖库（`magicdungeon.jar` 等）。

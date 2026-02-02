@@ -28,7 +28,7 @@
 | `tests/` | 单元测试 | `GdxTestRunner`, ECS/FSM/Skeleton 覆盖测试 |
 | `MagicDungeon/` | 运行时工作区 | `UserProjects`, `LocalTemplates`, `engine_config.json` |
 
-### 2.2 核心代码结构修正 (`core/src/main/java/com/goldsprite/gdengine/`)
+### 2.2 核心代码结构修正 (`core/src/main/java/com/goldsprite/magicdungeon/`)
 
 *   **`assets/`**: 包含 `CustomAtlasLoader` (支持 `#region` 语法) 和 `VisUIHelper` (中文字体加载)。
 *   **`core/`**:

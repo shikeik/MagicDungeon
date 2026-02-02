@@ -15,7 +15,7 @@ MyGame/
 │       └── java/          # Java 源代码存放处 (包名目录结构)
 ├── assets/                # 资源目录 (图片、音频、字体)
 └── libs/                  # 依赖库 (引擎自动注入)
-    ├── gdengine.jar       # 引擎核心 API
+    ├── magicdungeon.jar       # 引擎核心 API
     ├── gdx.jar            # LibGDX 核心
     └── ...
 ```

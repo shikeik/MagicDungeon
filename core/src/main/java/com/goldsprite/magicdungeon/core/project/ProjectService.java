@@ -278,7 +278,7 @@ public class ProjectService {
 
 		Debug.logT("ProjectService", "🚀 Upgrading project: " + projectDir.name());
 
-		// 1. 覆盖 libs (gdx.jar, gdengine.jar, sources.jar 等)
+		// 1. 覆盖 libs (gdx.jar, magicdungeon.jar, sources.jar 等)
 		injectEngineLibs(projectDir);
 
 		// 2. 更新 project.json 中的引擎版本号

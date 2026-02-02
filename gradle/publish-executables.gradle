@@ -16,7 +16,7 @@ ext {
     PROP_FILE = file("${rootProject.rootDir}/gradle.properties")
 
     // 核心源码文件位置 (用于强行注入版本)
-    BUILD_CONFIG_FILE = file("${rootProject.rootDir}/core/src/main/java/com/goldsprite/gdengine/BuildConfig.java")
+    BUILD_CONFIG_FILE = file("${rootProject.rootDir}/core/src/main/java/com/goldsprite/magicdungeon/BuildConfig.java")
     README_FILE = file("${rootProject.rootDir}/README.md")
 }
 
@@ -55,7 +55,7 @@ if (targetVersion == null) {
 // ============================================================
 
 tasks.register('publishExecutables') {
-    group = 'gdengine-publish'
+    group = 'magicdungeon-publish'
     description = '一键发布：同步版本->构建->归档->Git提交'
 
     // 0. 安全拦截

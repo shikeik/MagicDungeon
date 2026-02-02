@@ -1,5 +1,5 @@
 tasks.register('previewDocs', JavaExec) {
-    group = "gdengine"
+    group = "magicdungeon"
     description = "Start the DocServer using the main class from core"
 
     // 指定运行的类路径 (复用 core 模块的运行时环境)

@@ -15,7 +15,7 @@ ext {
 }
 
 tasks.register('publishTemplate') {
-	group = 'gdengine-publish'
+	group = 'magicdungeon-publish'
 	description = 'Package, Split and Manifest a specific template.'
 
 	doLast {

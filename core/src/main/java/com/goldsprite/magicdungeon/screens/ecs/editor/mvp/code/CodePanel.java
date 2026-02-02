@@ -1,4 +1,4 @@
-// core/src/main/java/com/goldsprite/gdengine/screens/ecs/editor/mvp/code/CodePanel.java
+// core/src/main/java/com/goldsprite/magicdungeon/screens/ecs/editor/mvp/code/CodePanel.java
 
 package com.goldsprite.magicdungeon.screens.ecs.editor.mvp.code;
 
