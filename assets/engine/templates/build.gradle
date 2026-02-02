@@ -1,0 +1,60 @@
+plugins {
+	id 'java-library'
+	id 'idea' // 引入 idea 插件，通过代码操纵 .iml 项目文件
+}
+
+sourceSets.main.resources.srcDirs += [rootProject.file('/assets').path]
+
+dependencies {
+	// 引用 libs 目录下所有的 jar 包
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+// 配置 IDEA 模块生成逻辑
+idea {
+	module {
+		// 当 Gradle 生成 .iml 文件时，执行这段逻辑
+		iml {
+			withXml {
+				def node = it.asNode()
+
+				// 1. 找到所有的 library 依赖节点
+				def orderEntries = node.component.find { it.@name == 'NewModuleRootManager' }.orderEntry
+
+				// 2. 遍历 libs 目录下的所有 Jar
+				file('libs').eachFile { file ->
+					// 只处理普通 Jar
+					if (file.name.endsWith('.jar') && !file.name.endsWith('-sources.jar')) {
+
+						// 3. [修改] 检查是否存在对应的 Sources Jar
+						def sourcesJar = new File(file.parent, file.name.replace('.jar', '-sources.jar'))
+						if (sourcesJar.exists()) {
+
+							// 4. 在 .iml 中找到对应的 library 节点，并注入 sources 路径
+							orderEntries.each { entry ->
+								if (entry.@type == 'module-library') {
+									def libraryTable = entry.library
+									def classesRoot = libraryTable.CLASSES.root
+
+									if (classesRoot && classesRoot.@url && classesRoot.@url.contains(file.name)) {
+										// [修改] 注入 SOURCES 节点 (原: JAVADOC)
+										def sourcesNode = libraryTable.find { it.name() == 'SOURCES' }
+										if (!sourcesNode) {
+											sourcesNode = libraryTable.appendNode('SOURCES')
+										}
+										// 添加 sources 路径 (格式: jar://$PROJECT_DIR$/libs/xxx-sources.jar!/)
+										def sourcesUrl = "jar://\$PROJECT_DIR\$/libs/${sourcesJar.name}!/"
+
+										if (!sourcesNode.root.find { it.@url == sourcesUrl }) {
+											sourcesNode.appendNode('root', [url: sourcesUrl])
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

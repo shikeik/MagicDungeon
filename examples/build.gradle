@@ -1,0 +1,10 @@
+plugins {
+	id 'java-library'
+}
+
+group = 'com.goldsprite.magicdungeon'
+version = '0.1.0'
+
+dependencies {
+	api project(':core')
+}

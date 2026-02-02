@@ -1,0 +1,90 @@
+buildscript {
+	repositories {
+		google()
+		jcenter()
+		mavenLocal()
+		mavenCentral()
+		gradlePluginPortal()
+		maven { url 'https://maven.aliyun.com/repository/public/' }
+		maven { url 'https://maven.aliyun.com/repository/google' }
+		maven { url 'https://maven.aliyun.com/repository/jcenter' }
+		maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+		maven { url 'https://maven.aliyun.com/nexus/content/groups/public' }
+		maven { url 'https://s01.oss.sonatype.org' }
+		maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+		maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
+		maven { url "https://jitpack.io" }
+		maven { url 'https://repo1.maven.org/maven2/' }
+		maven { url 'https://dl.bintray.com/ppartisan/maven/' }
+		maven { url "https://clojars.org/repo/" }
+	}
+	dependencies {
+		classpath 'com.android.tools.build:gradle:8.12.3'
+	}
+}
+
+allprojects {
+	apply plugin: 'eclipse'
+	apply plugin: 'idea'
+	// This allows you to "Build and run using IntelliJ IDEA", an option in IDEA's Settings.
+	idea {
+		module {
+			outputDir file('build/classes/java/main')
+			testOutputDir file('build/classes/java/test')
+		}
+	}
+	tasks.withType(JavaCompile).configureEach {
+		options.encoding = "UTF-8"
+	}
+}
+
+subprojects {
+	version = '$projectVersion'
+	ext.appName = 'GDEngine'
+	repositories {
+		google()
+		jcenter()
+		mavenLocal()
+		mavenCentral()
+		gradlePluginPortal()
+		maven { url 'https://maven.aliyun.com/repository/public/' }
+		maven { url 'https://maven.aliyun.com/repository/google' }
+		maven { url 'https://maven.aliyun.com/repository/jcenter' }
+		maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+		maven { url 'https://maven.aliyun.com/nexus/content/groups/public' }
+		maven { url 'https://s01.oss.sonatype.org' }
+		maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+		maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
+		maven { url "https://jitpack.io" }
+		maven { url 'https://repo1.maven.org/maven2/' }
+		maven { url 'https://dl.bintray.com/ppartisan/maven/' }
+		maven { url "https://clojars.org/repo/" }
+	}
+
+	plugins.withType(JavaPlugin).tap {
+		configureEach {
+			java {
+				sourceCompatibility = JavaVersion.toVersion(project.jdkVersion)
+				targetCompatibility = JavaVersion.toVersion(project.jdkVersion)
+			}
+		}
+	}
+}
+
+eclipse.project.name = 'GDEngine' + '-parent'
+
+// ============================================================
+// 统一构建调度中心 (Build Orchestration)
+// ============================================================
+
+// 引入独立的引擎任务管理脚本
+apply from: 'gradle/engine-tasks.gradle'
+apply from: 'gradle/changelog-generator.gradle'
+
+// [新增] 引入本地文档预览任务
+apply from: 'gradle/docs-preview.gradle'
+
+apply from: 'gradle/publish-docs.gradle'
+apply from: 'gradle/publish-template.gradle'
+
+apply from: "gradle/publish-executables.gradle"
