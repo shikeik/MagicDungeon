@@ -9,6 +9,8 @@ import com.goldsprite.magicdungeon.entities.Player;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisWindow;
+import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.kotcrab.vis.ui.widget.VisScrollPane;
 import java.util.LinkedList;
 
 public class GameHUD {
@@ -27,9 +29,18 @@ public class GameHUD {
     private VisWindow inventoryWindow;
     private VisTable inventoryList;
 
+    private VisTextButton inventoryBtn;
+    private VisTextButton saveBtn;
+    private VisTextButton helpBtn;
+    private VisWindow helpWindow;
+
+    // Save listener interface
+    private Runnable saveListener;
+
     public GameHUD(Viewport viewport) {
         stage = new Stage(viewport);
 
+        // Main root table
         VisTable root = new VisTable();
         root.top().left();
         root.setFillParent(true);
@@ -42,25 +53,76 @@ public class GameHUD {
         msgLabel = new VisLabel("");
         showMessage("Welcome to Dungeon!");
 
-        // Stats Row
-        root.add(hpLabel).pad(10);
-        root.add(manaLabel).pad(10);
-        root.add(xpLabel).pad(10);
-        root.add(lvLabel).pad(10);
-        root.add(floorLabel).pad(10);
-        root.row();
+        // Top bar with stats and buttons
+        VisTable topBar = new VisTable();
+        topBar.top();
+        topBar.setFillParent(true);
 
-        // Message Log Area (expanded)
-        root.add(msgLabel).colspan(5).left().pad(10).expandX();
+        // Stats group (left side)
+        VisTable statGroup = new VisTable();
+        statGroup.left();
+        statGroup.add(hpLabel).pad(10).row();
+        statGroup.add(manaLabel).pad(10).row();
+        statGroup.add(xpLabel).pad(10).row();
+        statGroup.add(lvLabel).pad(10).row();
+        statGroup.add(floorLabel).pad(10).row();
 
-        stage.addActor(root);
+        // Button group (right side)
+        VisTable buttonGroup = new VisTable();
+        buttonGroup.right();
+
+        // Inventory button
+        inventoryBtn = new VisTextButton("背包");
+        inventoryBtn.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+            @Override
+            public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+                toggleInventory();
+                return true;
+            }
+        });
+        buttonGroup.add(inventoryBtn).pad(5);
+
+        // Save button
+        saveBtn = new VisTextButton("保存");
+        saveBtn.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+            @Override
+            public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+                if (saveListener != null) {
+                    saveListener.run();
+                }
+                return true;
+            }
+        });
+        buttonGroup.add(saveBtn).pad(5);
+
+        // Help button
+        helpBtn = new VisTextButton("帮助");
+        helpBtn.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+            @Override
+            public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+                showHelp();
+                return true;
+            }
+        });
+        buttonGroup.add(helpBtn).pad(5);
+
+        // Arrange top bar
+        topBar.add(statGroup).expandX().left();
+        topBar.add(buttonGroup).expandX().right();
+        topBar.row();
+
+        // Message Log Area
+        topBar.add(msgLabel).colspan(2).left().pad(10, 10, 0, 10).expandX();
+
+        stage.addActor(topBar);
 
         createInventoryWindow();
+        createHelpWindow();
     }
 
     private void createInventoryWindow() {
-        inventoryWindow = new VisWindow("Inventory");
-        inventoryWindow.setSize(400, 500);
+        inventoryWindow = new VisWindow("背包");
+        inventoryWindow.setSize(450, 550);
         inventoryWindow.setCenterOnAdd(true);
         inventoryWindow.setMovable(true);
         inventoryWindow.setVisible(false);
@@ -73,6 +135,42 @@ public class GameHUD {
         inventoryWindow.add(inventoryList).expand().fill().top().left().pad(10);
 
         stage.addActor(inventoryWindow);
+    }
+
+    private void createHelpWindow() {
+        helpWindow = new VisWindow("帮助");
+        helpWindow.setSize(400, 300);
+        helpWindow.setCenterOnAdd(true);
+        helpWindow.setMovable(true);
+        helpWindow.setVisible(false);
+        helpWindow.setResizable(false);
+        helpWindow.addCloseButton();
+
+        VisTable helpTable = new VisTable();
+        helpTable.top().left();
+        helpTable.pad(10);
+
+        // Help content
+        helpTable.add(new VisLabel("游戏说明")).center().padBottom(15).row();
+        helpTable.add(new VisLabel("移动/攻击: WASD 或方向键")).left().padBottom(5).row();
+        helpTable.add(new VisLabel("撞击怪物会自动攻击")).left().padBottom(5).row();
+        helpTable.add(new VisLabel("技能: SPACE 键使用治疗技能")).left().padBottom(5).row();
+        helpTable.add(new VisLabel("下一关: 找到楼梯并踩上去")).left().padBottom(5).row();
+        helpTable.add(new VisLabel("物品: 踩上去自动拾取，背包中点击装备")).left().padBottom(5).row();
+        helpTable.add(new VisLabel("存档: 点击保存按钮保存游戏进度")).left().padBottom(5).row();
+
+        // Add scroll pane to handle long content
+        VisScrollPane scrollPane = new VisScrollPane(helpTable);
+        scrollPane.setFlickScroll(false);
+        scrollPane.setScrollingDisabled(false, true); // Only vertical scrolling
+
+        helpWindow.add(scrollPane).expand().fill();
+        stage.addActor(helpWindow);
+    }
+
+    private void showHelp() {
+        helpWindow.setVisible(true);
+        helpWindow.centerWindow();
     }
 
     public void update(Player player, int floor) {
@@ -104,6 +202,10 @@ public class GameHUD {
         if (inventoryWindow.isVisible()) {
             inventoryWindow.centerWindow();
         }
+    }
+
+    public void setSaveListener(Runnable saveListener) {
+        this.saveListener = saveListener;
     }
 
     private void updateInventory(Player player) {

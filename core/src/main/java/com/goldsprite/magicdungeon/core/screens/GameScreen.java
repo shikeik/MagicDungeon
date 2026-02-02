@@ -67,8 +67,14 @@ public class GameScreen extends GScreen {
 		spawnEntities();
 
 		// Scene2D HUD
-		// 传递 uiViewport 给 HUD
-		hud = new GameHUD(getUIViewport());
+        // 传递 uiViewport 给 HUD
+        hud = new GameHUD(getUIViewport());
+
+        // Set save listener for HUD save button
+        hud.setSaveListener(() -> {
+            SaveManager.saveGame(player, dungeon);
+            hud.showMessage("Game Saved!");
+        });
 		getImp().addProcessor(hud.stage);
 
 		// Audio
