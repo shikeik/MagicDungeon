@@ -245,6 +245,7 @@ public class GameScreen extends GScreen {
 			if (damage > 0) {
 				audio.playHit();
 				player.stats.hp -= damage;
+				player.hitFlashTimer = 0.2f; // Trigger red flash
 				hud.showMessage("Took " + damage + " damage!");
 				if (player.stats.hp <= 0) {
 					hud.showMessage("GAME OVER!");
@@ -342,7 +343,13 @@ public class GameScreen extends GScreen {
 
 		// Render Player
 		if (playerTexture != null) {
+			if (player.hitFlashTimer > 0) {
+				batch.setColor(1f, 0f, 0f, 1f);
+			}
 			batch.draw(playerTexture, player.visualX + player.bumpX, player.visualY + player.bumpY);
+			if (player.hitFlashTimer > 0) {
+				batch.setColor(1f, 1f, 1f, 1f);
+			}
 		}
 
 		batch.end();

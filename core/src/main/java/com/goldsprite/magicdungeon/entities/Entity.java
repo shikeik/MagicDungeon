@@ -18,6 +18,9 @@ public class Entity {
     public float bumpX;
     public float bumpY;
 
+    // Visual Effects
+    public float hitFlashTimer;
+
     public Entity(int x, int y, Color color) {
         this.x = x;
         this.y = y;
@@ -73,6 +76,12 @@ public class Entity {
 
         if (Math.abs(this.bumpX) < 0.1f) this.bumpX = 0;
         if (Math.abs(this.bumpY) < 0.1f) this.bumpY = 0;
+
+        // Flash timer decay
+        if (this.hitFlashTimer > 0) {
+            this.hitFlashTimer -= dt;
+            if (this.hitFlashTimer < 0) this.hitFlashTimer = 0;
+        }
     }
 
     public void triggerBump(int dirX, int dirY) {

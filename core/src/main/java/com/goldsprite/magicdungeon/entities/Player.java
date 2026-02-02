@@ -53,6 +53,7 @@ public class Player extends Entity {
                 triggerBump(dx, dy);
                 audio.playHit(); // Play hit sound
                 targetMonster.hp -= this.stats.atk;
+                targetMonster.hitFlashTimer = 0.2f; // Trigger red flash
                 // Simple knockback/hit effect could be added here
                 if (targetMonster.hp <= 0) {
                     // Monster died - Gain XP
