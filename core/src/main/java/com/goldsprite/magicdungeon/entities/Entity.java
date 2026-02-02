@@ -89,4 +89,20 @@ public class Entity {
         this.bumpX = dirX * force;
         this.bumpY = dirY * force;
     }
+
+    /**
+     * 应用受击闪光效果
+     * @return 是否应用了闪光效果（用于恢复颜色）
+     */
+    public boolean applyHitFlash() {
+        return hitFlashTimer > 0;
+    }
+
+    /**
+     * 重置闪光计时器
+     * @param duration 闪光持续时间
+     */
+    public void triggerHitFlash(float duration) {
+        this.hitFlashTimer = duration;
+    }
 }

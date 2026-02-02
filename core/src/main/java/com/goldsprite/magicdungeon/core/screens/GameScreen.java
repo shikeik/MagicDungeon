@@ -331,12 +331,13 @@ public class GameScreen extends GScreen {
 				Texture mTex = monsterTextures.get(m.name);
 				if (mTex != null) {
 					// Apply hit flash effect if needed
-					if (m.hitFlashTimer > 0) {
-						batch.setColor(1f, 0f, 0f, 1f);
+					boolean appliedFlash = m.applyHitFlash();
+					if (appliedFlash) {
+						batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
 					}
 					batch.draw(mTex, m.visualX + m.bumpX, m.visualY + m.bumpY);
 					// Reset color if we changed it
-					if (m.hitFlashTimer > 0) {
+					if (appliedFlash) {
 						batch.setColor(1f, 1f, 1f, 1f);
 					}
 				} else {
@@ -344,12 +345,13 @@ public class GameScreen extends GScreen {
 					Texture fallback = monsterTextures.get(MonsterType.SLIME.name);
 					if (fallback != null) {
 						// Apply hit flash effect if needed
-						if (m.hitFlashTimer > 0) {
-							batch.setColor(1f, 0f, 0f, 1f);
+						boolean appliedFlash = m.applyHitFlash();
+						if (appliedFlash) {
+							batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
 						}
 						batch.draw(fallback, m.visualX + m.bumpX, m.visualY + m.bumpY);
 						// Reset color if we changed it
-						if (m.hitFlashTimer > 0) {
+						if (appliedFlash) {
 							batch.setColor(1f, 1f, 1f, 1f);
 						}
 					}
@@ -359,11 +361,13 @@ public class GameScreen extends GScreen {
 
 		// Render Player
 		if (playerTexture != null) {
-			if (player.hitFlashTimer > 0) {
-				batch.setColor(1f, 0f, 0f, 1f);
+			// Apply hit flash effect using base class method
+			boolean appliedFlash = player.applyHitFlash();
+			if (appliedFlash) {
+				batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
 			}
 			batch.draw(playerTexture, player.visualX + player.bumpX, player.visualY + player.bumpY);
-			if (player.hitFlashTimer > 0) {
+			if (appliedFlash) {
 				batch.setColor(1f, 1f, 1f, 1f);
 			}
 		}
