@@ -7,21 +7,21 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.Input;
 import com.goldsprite.magicdungeon.PlatformImpl;
-import com.goldsprite.magicdungeon.core.config.GDEngineConfig;
+import com.goldsprite.magicdungeon.core.config.MagicDungeonConfig;
 import com.goldsprite.magicdungeon.core.platform.DesktopFiles;
 import com.goldsprite.magicdungeon.core.scripting.IScriptCompiler;
 import com.goldsprite.magicdungeon.core.web.IWebBrowser;
 
 /**
- * 引擎核心 API 入口 (GDEngine Facade)
+ * 引擎核心 API 入口 (MagicDungeon Facade)
  * <p>
- * 这是访问 GDEngine 核心功能的全局入口点。它不仅代理了 LibGDX 的基础模块（如 {@link #input}, {@link #graphics}），
+ * 这是访问 MagicDungeon 核心功能的全局入口点。它不仅代理了 LibGDX 的基础模块（如 {@link #input}, {@link #graphics}），
  * 还提供了引擎特有的功能（如脚本编译、配置管理）。
  * </p>
  *
  * <h3>快速索引：</h3>
  * <ul>
- *   <li>详细指南与架构说明: <a href="file:E:\WorkSpaces\Libgdx_WSpace\Projs\GDEngine\docs\manual\core\engine_context.md">docs/manual/core/engine_context.md</a></li>
+ *   <li>详细指南与架构说明: <a href="file:E:\WorkSpaces\Libgdx_WSpace\Projs\MagicDungeon\docs\manual\core\engine_context.md">docs/manual/core/engine_context.md</a></li>
  *   <li>获取当前运行模式: {@link #mode}</li>
  * </ul>
  *
@@ -64,7 +64,7 @@ public class Gd {
 	public static final Config config = new Config();
 
 	/** 引擎偏好设置 (可能为 null，表示未初始化引导) */
-	public static GDEngineConfig engineConfig;
+	public static MagicDungeonConfig engineConfig;
 
 	/** 当前运行模式 */
 	public static Mode mode = Mode.RELEASE;
@@ -109,8 +109,8 @@ public class Gd {
 		if (compilerImpl != null) compiler = compilerImpl;
 
 		// 尝试静默加载配置
-		if (GDEngineConfig.tryLoad()) {
-			engineConfig = GDEngineConfig.getInstance();
+		if (MagicDungeonConfig.tryLoad()) {
+			engineConfig = MagicDungeonConfig.getInstance();
 		}
 
 		// 默认实现：兜底使用 Gdx.net.openURI (防空指针)

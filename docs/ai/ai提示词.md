@@ -18,7 +18,7 @@ engine_docs使用定制化Docsify搭建静态网站页面
 如果项目中有类似功能且设计优秀，则尽量借鉴项目中优秀实现来完成
 尽量写出易于扩展和内聚良好的代码，以便给出代码时可以不用这里改一点那里改一点
 
-文件阅览顺序: GDEngine_项目概览报表 -> ProjectTree -> ProjectGradle -> ProjectCode -> ProjectDocsCode
+文件阅览顺序: MagicDungeon_项目概览报表 -> ProjectTree -> ProjectGradle -> ProjectCode -> ProjectDocsCode
 
 
 常用提示词  

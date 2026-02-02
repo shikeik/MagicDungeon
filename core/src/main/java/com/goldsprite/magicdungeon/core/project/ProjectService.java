@@ -6,7 +6,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.magicdungeon.BuildConfig;
 import com.goldsprite.magicdungeon.core.Gd;
-import com.goldsprite.magicdungeon.core.config.GDEngineConfig;
+import com.goldsprite.magicdungeon.core.config.MagicDungeonConfig;
 import com.goldsprite.magicdungeon.core.project.model.TemplateInfo;
 import com.goldsprite.magicdungeon.log.Debug;
 
@@ -102,7 +102,7 @@ public class ProjectService {
 		if (Gd.engineConfig != null) {
 			String activeRoot = Gd.engineConfig.getActiveEngineRoot();
 			// 如果未初始化，尝试使用推荐路径作为兜底
-			if (activeRoot == null) activeRoot = GDEngineConfig.getRecommendedRoot();
+			if (activeRoot == null) activeRoot = MagicDungeonConfig.getRecommendedRoot();
 
 			if (activeRoot != null) {
 				FileHandle localRoot = Gdx.files.absolute(activeRoot).child("LocalTemplates");

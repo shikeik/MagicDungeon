@@ -1,4 +1,4 @@
-* [**GDEngine**](/)
+* [**MagicDungeon**](/)
 
 * 快速入门
   * [环境搭建](manual/getting_started/install.md)

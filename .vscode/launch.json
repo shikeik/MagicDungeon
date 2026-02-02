@@ -9,7 +9,7 @@
             "name": "Lwjgl3Launcher",
             "request": "launch",
             "mainClass": "com.goldsprite.magicdungeon.lwjgl3.Lwjgl3Launcher",
-            "projectName": "GDEngine-lwjgl3"
+            "projectName": "MagicDungeon-lwjgl3"
         },
         {
             "type": "java",

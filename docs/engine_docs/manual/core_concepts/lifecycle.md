@@ -1,6 +1,6 @@
 # 生命周期 (Lifecycle)
 
-理解代码的执行顺序对于游戏开发至关重要。以下是 GDEngine (`GameWorld` & `SceneSystem`) 的执行时序：
+理解代码的执行顺序对于游戏开发至关重要。以下是 MagicDungeon (`GameWorld` & `SceneSystem`) 的执行时序：
 
 ## 初始化阶段
 

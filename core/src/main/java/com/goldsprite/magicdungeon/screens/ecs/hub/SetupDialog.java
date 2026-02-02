@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.magicdungeon.core.Gd;
-import com.goldsprite.magicdungeon.core.config.GDEngineConfig;
+import com.goldsprite.magicdungeon.core.config.MagicDungeonConfig;
 import com.goldsprite.magicdungeon.ui.widget.BaseDialog;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;
@@ -16,13 +16,13 @@ public class SetupDialog extends BaseDialog {
 	private final Runnable onSuccess;
 
 	public SetupDialog(Runnable onSuccess) {
-		super("Welcome to GDEngine");
+		super("Welcome to MagicDungeon");
 		this.onSuccess = onSuccess;
 
 		getContentTable().add(new VisLabel("Initialize Engine Workspace")).padBottom(20).row();
 		getContentTable().add(new VisLabel("Engine Root Directory:")).left().row();
 
-		pathField = new VisTextField(GDEngineConfig.getRecommendedRoot());
+		pathField = new VisTextField(MagicDungeonConfig.getRecommendedRoot());
 		getContentTable().add(pathField).width(400).padBottom(20).row();
 
 		VisTextButton btnConfirm = new VisTextButton("Initialize 和 Enter");
@@ -35,10 +35,10 @@ public class SetupDialog extends BaseDialog {
 
 				try {
 					// 1. 初始化配置
-					GDEngineConfig.initialize(path);
+					MagicDungeonConfig.initialize(path);
 
 					// 2. 绑定到 Gd
-					Gd.engineConfig = GDEngineConfig.getInstance();
+					Gd.engineConfig = MagicDungeonConfig.getInstance();
 
 					// 3. 回调跳转
 					fadeOut();

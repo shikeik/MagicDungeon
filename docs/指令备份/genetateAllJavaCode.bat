@@ -9,11 +9,11 @@ set "TARGET_EXT=*.java"
 REM 2. 设置排除的目录或文件名关键词 (使用空格分隔)
 REM 修改点：
 REM 1. 添加了 \assets\
-REM 2. 将 \GDEngine\ 修改为 \GDEngine\GDEngine\ (如果是为了排除子目录)
+REM 2. 将 \MagicDungeon\ 修改为 \MagicDungeon\MagicDungeon\ (如果是为了排除子目录)
 REM    或者如果不改名，必须小心根目录重名问题。
 REM 3. 删除了整个字符串末尾的反斜杠，或者在末尾加个空格，防止转义最后一个引号。
 
-set "EXCLUDE_PATTERN=\GDEngine\GDEngine\ \build\ \bin\ \.git\ \target\ \.idea\ \out\ \assets\ \ig这个会被忽略是个bug\"
+set "EXCLUDE_PATTERN=\MagicDungeon\MagicDungeon\ \build\ \bin\ \.git\ \target\ \.idea\ \out\ \assets\ \ig这个会被忽略是个bug\"
 
 REM 3. 输出文件名
 set "OUTPUT_FILE=ProjectCode.txt"

@@ -1,4 +1,4 @@
-# GDEngine 更新日志
+# MagicDungeon 更新日志
 
 ## [Overview] 总览
 - 暂无
@@ -149,4 +149,4 @@
 - [x] 支持双击打开项目
 
 ### `1.8.10.x` 配置系统
-- [x] 增加 `GDEngineConfig`，支持配置项目根目录 (跨平台同步支持)
+- [x] 增加 `MagicDungeonConfig`，支持配置项目根目录 (跨平台同步支持)

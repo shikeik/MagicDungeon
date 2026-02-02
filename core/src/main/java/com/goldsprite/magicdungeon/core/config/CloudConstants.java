@@ -7,7 +7,7 @@ package com.goldsprite.magicdungeon.core.config;
 public class CloudConstants {
 
 	public static final String REPO_OWNER = "shikeik";
-	public static final String REPO_NAME = "GDEngine";
+	public static final String REPO_NAME = "MagicDungeon";
 	public static final String BRANCH = "main";
 
 	// 1. 锚点接口 (官方 API)

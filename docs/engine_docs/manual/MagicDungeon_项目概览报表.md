@@ -1,10 +1,10 @@
-# GDEngine 项目概览报表 (修正版)
+# MagicDungeon 项目概览报表 (修正版)
 
 ## 一、项目基本信息
 
 | 属性 | 内容 | 实证来源 |
 | :--- | :--- | :--- |
-| **项目名称** | GDEngine | `settings.gradle` |
+| **项目名称** | MagicDungeon | `settings.gradle` |
 | **项目类型** | 基于 LibGDX 的跨平台 2D 游戏引擎 | `build.gradle` dependencies |
 | **当前版本** | **v1.10.12.21** | `gradle.properties`: `projectVersion=1.10.12.21` |
 | **开发状态** | 活跃开发中 | `changelog/README.md` 含 "In Development" |
@@ -26,7 +26,7 @@
 | `lwjgl3/` | PC 桌面端实现 | `Lwjgl3Launcher`, `DesktopScriptCompiler` (ECJ+URLClassLoader) |
 | `assets/` | 引擎内置资源 | 包含 `engine/libs` (核心库Jar), `templates` (工程模板) |
 | `tests/` | 单元测试 | `GdxTestRunner`, ECS/FSM/Skeleton 覆盖测试 |
-| `GDEngine/` | 运行时工作区 | `UserProjects`, `LocalTemplates`, `engine_config.json` |
+| `MagicDungeon/` | 运行时工作区 | `UserProjects`, `LocalTemplates`, `engine_config.json` |
 
 ### 2.2 核心代码结构修正 (`core/src/main/java/com/goldsprite/gdengine/`)
 

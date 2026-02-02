@@ -1,5 +1,5 @@
 /**
- * GDEngine Changelog System v4.2 (Live Navigation Fix)
+ * MagicDungeon Changelog System v4.2 (Live Navigation Fix)
  */
 
 (function(global) {
@@ -207,16 +207,16 @@
 		getLocalVersion: function() {
 			const params = new URLSearchParams(window.location.search);
 			let ver = params.get('v');
-			
+
 			// 策略 1: 如果 URL 有，优先用 URL，并尝试写入所有可能的缓存
 			if (ver) {
 				try { sessionStorage.setItem('gd_local_version', ver); } catch(e){}
 				try { localStorage.setItem('gd_local_version', ver); } catch(e){}
 				// 如果是本地 file:// 协议，cookie 可能无效，但还是试一下
-				document.cookie = `gd_local_version=${ver}; path=/; max-age=31536000`; 
+				document.cookie = `gd_local_version=${ver}; path=/; max-age=31536000`;
 				return ver;
 			}
-			
+
 			// 策略 2: 如果 URL 没有，依次尝试 sessionStorage -> localStorage -> Cookie
 			try {
 				ver = sessionStorage.getItem('gd_local_version');
@@ -340,7 +340,7 @@
 		}
 	};
 
-	global.GDEngineChangelog = App;
+	global.MagicDungeonChangelog = App;
 	App.run();
 
 })(window);

@@ -39,7 +39,7 @@ import com.kotcrab.vis.ui.widget.VisTextField;
 import com.goldsprite.magicdungeon.utils.MultiPartDownloader;
 import com.goldsprite.magicdungeon.screens.ecs.hub.OnlineTemplateDialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Value;
-import com.goldsprite.magicdungeon.core.config.GDEngineConfig;
+import com.goldsprite.magicdungeon.core.config.MagicDungeonConfig;
 import com.badlogic.gdx.Preferences;
 
 import java.util.Locale;
@@ -146,11 +146,11 @@ public class HubViewImpl extends VisTable implements IHubView {
 	private static final String PREF_DOCS = "gd_docs_config";
 	private static final String KEY_DOC_TIME = "local_doc_updated_at";
 	// [修改] 清单走镜像 (秒更)，文件走 CDN (在清单里写死了)
-	private static final String DOC_MANIFEST_URL = "https://gh-proxy.com/https://raw.githubusercontent.com/shikeik/GDEngine/refs/heads/main/dist/docs_manifest.json";
+	private static final String DOC_MANIFEST_URL = "https://gh-proxy.com/https://raw.githubusercontent.com/shikeik/MagicDungeon/refs/heads/main/dist/docs_manifest.json";
 
 	private void openLocalDocs() {
-		String activeRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
-		if (activeRoot == null) activeRoot = GDEngineConfig.getRecommendedRoot();
+		String activeRoot = MagicDungeonConfig.getInstance().getActiveEngineRoot();
+		if (activeRoot == null) activeRoot = MagicDungeonConfig.getRecommendedRoot();
 
 		final String finalRoot = activeRoot;
 		FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
@@ -269,7 +269,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 	private void launchDocServer() {
 		try {
 			com.goldsprite.magicdungeon.core.web.DocServer.startServer(
-				Gdx.files.absolute(GDEngineConfig.getInstance().getActiveEngineRoot())
+				Gdx.files.absolute(MagicDungeonConfig.getInstance().getActiveEngineRoot())
 				.child("engine_docs").file().getAbsolutePath()
 			);
 
@@ -277,7 +277,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 			ToastUI.inst().show("文档服务已启动");
 
 			if (Gd.browser != null) {
-				Gd.browser.openUrl(url, "GDEngine Docs");
+				Gd.browser.openUrl(url, "MagicDungeon Docs");
 			}
 		} catch (Exception e) {
 			showError("Server Start Failed: " + e.getMessage());

@@ -136,7 +136,7 @@
                             "hash": "cf2cb0a4f620220c17c6f4e6fcb23ed9226697af",
                             "date": "2026-01-22",
                             "type": "docs",
-                            "summary": "\u4fee\u6b63GDEngine_\u9879\u76ee\u6982\u89c8\u62a5\u8868, \u4fee\u590d\u5e7b\u89c9\u90e8\u5206",
+                            "summary": "\u4fee\u6b63MagicDungeon_\u9879\u76ee\u6982\u89c8\u62a5\u8868, \u4fee\u590d\u5e7b\u89c9\u90e8\u5206",
                             "details": ""
                         },
                         {
@@ -1020,7 +1020,7 @@
                             "hash": "26d4bc93c88425a4f3cf27ad2f726f3f0172681d",
                             "date": "2026-01-16",
                             "type": "docs",
-                            "summary": "\u76ee\u5f55\u6574\u7406, \u4ee5\u53caGDEngine\u6587\u6863\u4e0e\u81ea\u52a8\u5316\u65e5\u5fd7\u7cfb\u7edf\u5f00\u53d1\u7b56\u5212.md\u7f16\u5199",
+                            "summary": "\u76ee\u5f55\u6574\u7406, \u4ee5\u53caMagicDungeon\u6587\u6863\u4e0e\u81ea\u52a8\u5316\u65e5\u5fd7\u7cfb\u7edf\u5f00\u53d1\u7b56\u5212.md\u7f16\u5199",
                             "details": ""
                         }
                     ]
@@ -1675,7 +1675,7 @@
                             "hash": "25cb8bf7c499f1f7b20b4eb6bdd7a40ebf7426a5",
                             "date": "2026-01-13",
                             "type": "legacy",
-                            "summary": "1.10.4.0 \u4ece\u539fSoloFight\u72ec\u7acb\u51faGDEngine\u9879\u76ee, \u6b63\u5f0f\u8f6c\u4e3a\u5f15\u64ce\u5f00\u53d1 \u6e05\u7406\u6240\u6709SoloFight\u4ee3\u7801",
+                            "summary": "1.10.4.0 \u4ece\u539fSoloFight\u72ec\u7acb\u51faMagicDungeon\u9879\u76ee, \u6b63\u5f0f\u8f6c\u4e3a\u5f15\u64ce\u5f00\u53d1 \u6e05\u7406\u6240\u6709SoloFight\u4ee3\u7801",
                             "details": ""
                         },
                         {
@@ -2509,7 +2509,7 @@
                             "hash": "9366f174cacc025391ad2c7d7d77da1179e57713",
                             "date": "2026-01-05",
                             "type": "legacy",
-                            "summary": "1.8.5 Android\u811a\u672c\u9879\u76ee\u76ee\u5f55\u6839\u73b0\u5728\u53ef\u4ee5\u5728sdcard/GDEngine/Projects/\u76f4\u63a5\u7f16\u8f91\u4e86",
+                            "summary": "1.8.5 Android\u811a\u672c\u9879\u76ee\u76ee\u5f55\u6839\u73b0\u5728\u53ef\u4ee5\u5728sdcard/MagicDungeon/Projects/\u76f4\u63a5\u7f16\u8f91\u4e86",
                             "details": ""
                         },
                         {

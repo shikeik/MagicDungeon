@@ -2,7 +2,7 @@
 
 # ================= 配置区域 =================
 # 查找的关键词 (区分大小写)
-SEARCH_STR="GDEngine"
+SEARCH_STR="MagicDungeon"
 
 # 替换后的关键词
 REPLACE_STR="MagicDungeon"

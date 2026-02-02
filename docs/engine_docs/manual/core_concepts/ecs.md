@@ -1,6 +1,6 @@
 # ECS 架构详解
 
-GDEngine 实现了高性能的 ECS (Entity-Component-System) 架构，同时为了易用性，保留了类似 Unity 的 Scene Graph (场景图) 接口。
+MagicDungeon 实现了高性能的 ECS (Entity-Component-System) 架构，同时为了易用性，保留了类似 Unity 的 Scene Graph (场景图) 接口。
 
 ## 核心三要素
 

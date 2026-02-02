@@ -1,6 +1,6 @@
 # Hello World
 
-让我们编写第一个游戏脚本。GDEngine 的脚本本质上就是标准的 Java 类。
+让我们编写第一个游戏脚本。MagicDungeon 的脚本本质上就是标准的 Java 类。
 
 ## 1. 入口脚本 (Main.java)
 
@@ -19,7 +19,7 @@ public class Main implements IGameScriptEntry {
 
 	@Override
 	public void onStart(GameWorld world) {
-		Debug.log("Hello, GDEngine!");
+		Debug.log("Hello, MagicDungeon!");
 
 		// 1. 创建实体
 		GObject player = new GObject("Player");

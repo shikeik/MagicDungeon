@@ -12,7 +12,7 @@ import com.goldsprite.magicdungeon.log.Debug;
  * 引擎全局配置管理器
  * 机制：利用 Preferences (gd_boot) 存储引擎根目录路径，实现位置解耦。
  */
-public class GDEngineConfig {
+public class MagicDungeonConfig {
 
 	// 引导首选项 Key
 	private static final String PREF_NAME = "gd_boot";
@@ -21,7 +21,7 @@ public class GDEngineConfig {
 	private static final String CONFIG_FILENAME = "engine_config.json";
 
 	private static final Json json = new Json();
-	private static GDEngineConfig instance;
+	private static MagicDungeonConfig instance;
 
 	static {
 		json.setOutputType(JsonWriter.OutputType.json);
@@ -93,13 +93,13 @@ public class GDEngineConfig {
 
 		if (configFile.exists()) {
 			try {
-				instance = json.fromJson(GDEngineConfig.class, configFile);
+				instance = json.fromJson(MagicDungeonConfig.class, configFile);
 			} catch (Exception e) {
 				Debug.logT("Config", "Load failed, using default.");
 			}
 		}
 
-		if (instance == null) instance = new GDEngineConfig();
+		if (instance == null) instance = new MagicDungeonConfig();
 
 		instance.activeEngineRoot = rootPath;
 		instance.getProjectsDir().mkdirs(); // 确保项目目录存在
@@ -111,7 +111,7 @@ public class GDEngineConfig {
 		Debug.logT("Config", "Engine Root: " + rootPath);
 	}
 
-	public static GDEngineConfig getInstance() { return instance; }
+	public static MagicDungeonConfig getInstance() { return instance; }
 
 	public void save() {
 		if (activeEngineRoot == null) return;
@@ -140,9 +140,9 @@ public class GDEngineConfig {
 
 	public static String getRecommendedRoot() {
 		if (PlatformImpl.isAndroidUser()) {
-			return PlatformImpl.AndroidExternalStoragePath + "/GDEngine";
+			return PlatformImpl.AndroidExternalStoragePath + "/MagicDungeon";
 		} else {
-			return Gdx.files.local("GDEngine").file().getAbsolutePath();
+			return Gdx.files.local("MagicDungeon").file().getAbsolutePath();
 		}
 	}
 

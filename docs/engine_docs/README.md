@@ -1,6 +1,6 @@
-# GDEngine 开发者中心
+# MagicDungeon 开发者中心
 
-**GDEngine** 是一个基于 LibGDX 的现代化 2D 游戏引擎，专注于**跨平台热重载开发**与**原生级性能**。
+**MagicDungeon** 是一个基于 LibGDX 的现代化 2D 游戏引擎，专注于**跨平台热重载开发**与**原生级性能**。
 
 ### 核心特性
 *   **双端开发：** 支持 Windows (PC) 与 Android (手机) 直接运行编辑器。
@@ -22,7 +22,7 @@
 
 ---
 
-[当前最全的引擎概览(AI撰写)](manual/GDEngine_项目概览报表.md)
+[当前最全的引擎概览(AI撰写)](manual/MagicDungeon_项目概览报表.md)
 
 ### 当前bug罗列
 - [已解决] ~~用户项目必须含有一个自定义组件继承任何Component及其子类否则AddCompDialog清单将不触发刷新，显示为空~~

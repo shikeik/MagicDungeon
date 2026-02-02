@@ -9,7 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.magicdungeon.core.Gd;
 import com.goldsprite.magicdungeon.core.config.CloudConstants;
-import com.goldsprite.magicdungeon.core.config.GDEngineConfig;
+import com.goldsprite.magicdungeon.core.config.MagicDungeonConfig;
 import com.goldsprite.magicdungeon.log.Debug;
 import com.goldsprite.magicdungeon.ui.widget.BaseDialog;
 import com.goldsprite.magicdungeon.ui.widget.ToastUI;
@@ -68,7 +68,7 @@ public class OnlineTemplateDialog extends BaseDialog {
 
 	// [重构] 下载逻辑
 	private void startDownload(String name, String id) {
-		String engineRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
+		String engineRoot = MagicDungeonConfig.getInstance().getActiveEngineRoot();
 		if (engineRoot == null) {
 			statusLabel.setText("Error: Engine not initialized");
 			return;

@@ -31,7 +31,7 @@ public class ChangeLogDialog extends BaseDialog {
 	private final ObjectMap<String, LogNode> nodeMap = new ObjectMap<>();
 
 	public ChangeLogDialog() {
-		super("GDEngine 更新日志");
+		super("MagicDungeon 更新日志");
 		top().left();
 
 		// --- Data ---

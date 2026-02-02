@@ -102,8 +102,8 @@ tasks.register('publishExecutables') {
     doLast {
         println "📦 [4/5] 归档产物..."
 
-        def expectedApk = "GDEngine_V${targetVersion}.apk"
-        def expectedJar = "GDEngine_V${targetVersion}.jar"
+        def expectedApk = "MagicDungeon_V${targetVersion}.apk"
+        def expectedJar = "MagicDungeon_V${targetVersion}.jar"
 
         // 执行搬运
         copy {
@@ -113,7 +113,7 @@ tasks.register('publishExecutables') {
             include expectedJar
             include expectedApk
             // 预留 EXE
-            include "GDEngine_V${targetVersion}.exe"
+            include "MagicDungeon_V${targetVersion}.exe"
         }
 
         // 校验产物
@@ -192,7 +192,7 @@ def forceUpdateBuildConfig(String newVer) {
 def forceUpdateReadme(String newVer) {
     if (!README_FILE.exists()) return
     def content = README_FILE.getText("UTF-8")
-    // 替换 # GDEngine ... Vxxx
+    // 替换 # MagicDungeon ... Vxxx
     // 假设 README 标题格式相对固定
     def newContent = content.replaceFirst(/V\d+(\.\d+)+/, "V${newVer}")
     README_FILE.write(newContent, "UTF-8")

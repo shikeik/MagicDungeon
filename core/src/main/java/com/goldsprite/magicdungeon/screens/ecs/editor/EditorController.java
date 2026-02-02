@@ -587,7 +587,7 @@ public class EditorController {
 
 	// [核心构建逻辑] 完全复刻并优化 BuildAndRun
 	private void performBuild() {
-		// 1. 自动保存代码 (如同 GDEngineEditorScreen)
+		// 1. 自动保存代码 (如同 MagicDungeonEditorScreen)
 		codePanel.save();
 
 		FileHandle projectDir = ProjectService.inst().getCurrentProject();

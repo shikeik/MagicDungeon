@@ -1,6 +1,6 @@
 # 环境准备与安装
 
-GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它最大的特色是支持在 **Android 平板** 和 **PC** 上进行完全一致的开发体验，支持 Java 脚本热重载。
+MagicDungeon 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它最大的特色是支持在 **Android 平板** 和 **PC** 上进行完全一致的开发体验，支持 Java 脚本热重载。
 
 ## 系统要求 (实证)
 
@@ -17,7 +17,7 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
     <div class="loading-text">正在获取版本列表...</div>
 </div>
 
-*   **GitHub Releases:** [直达下载页](https://github.com/shikeik/GDEngine/releases)
+*   **GitHub Releases:** [直达下载页](https://github.com/shikeik/MagicDungeon/releases)
 
 <!-- 样式 -->
 <style>
@@ -65,7 +65,7 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
 <!-- 逻辑脚本 -->
 <script>
 (function() {
-    const REPO = "shikeik/GDEngine";
+    const REPO = "shikeik/MagicDungeon";
     // 文件下载走 gcore CDN (极速)
     const CDN_BASE = "https://gcore.jsdelivr.net/gh/" + REPO + "@";
     // 定义反代基准地址 (用于 APK/JAR 下载，避开 CDN 限制)
@@ -107,9 +107,9 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
         // 格式: https://gh-proxy.com/https://github.com/{user}/{repo}/releases/download/{tag}/{filename}
         const basePath = `${PROXY_BASE}${REPO}/releases/download/${tag}/`;
         
-        document.getElementById('link-apk').href = basePath + `GDEngine_V${cleanVer}.apk`;
-        document.getElementById('link-jar').href = basePath + `GDEngine_V${cleanVer}.jar`;
-        document.getElementById('link-exe').href = basePath + `GDEngine_V${cleanVer}.exe`;
+        document.getElementById('link-apk').href = basePath + `MagicDungeon_V${cleanVer}.apk`;
+        document.getElementById('link-jar').href = basePath + `MagicDungeon_V${cleanVer}.jar`;
+        document.getElementById('link-exe').href = basePath + `MagicDungeon_V${cleanVer}.exe`;
     }
 
     fetch('changelog/changelog.json')
@@ -152,7 +152,7 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
 
 ## 源码构建
 如果您希望参与引擎开发：
-1. 克隆仓库: `git clone https://github.com/shikeik/GDEngine.git`
+1. 克隆仓库: `git clone https://github.com/shikeik/MagicDungeon.git`
 2. 打开项目根目录。
 3. 运行 Gradle 任务: `gradlew build`。
 

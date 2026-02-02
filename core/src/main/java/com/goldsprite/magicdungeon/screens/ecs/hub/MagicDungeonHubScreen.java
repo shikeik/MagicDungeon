@@ -3,7 +3,7 @@ package com.goldsprite.magicdungeon.screens.ecs.hub;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.goldsprite.magicdungeon.PlatformImpl;
 import com.goldsprite.magicdungeon.core.Gd;
-import com.goldsprite.magicdungeon.core.config.GDEngineConfig;
+import com.goldsprite.magicdungeon.core.config.MagicDungeonConfig;
 import com.goldsprite.magicdungeon.log.Debug;
 import com.goldsprite.magicdungeon.screens.GScreen;
 import com.goldsprite.magicdungeon.screens.ScreenManager;
@@ -15,7 +15,7 @@ import com.goldsprite.magicdungeon.screens.ecs.hub.mvp.HubViewImpl;
  * 职责：创建 Stage，组装 View 和 Presenter，处理生命周期。
  * 不再包含任何业务逻辑或 UI 细节。
  */
-public class GDEngineHubScreen extends GScreen {
+public class MagicDungeonHubScreen extends GScreen {
 
 	private Stage stage;
 
@@ -67,13 +67,13 @@ public class GDEngineHubScreen extends GScreen {
 
 	private void checkEnvironment() {
 		if (Gd.engineConfig == null) {
-			if (GDEngineConfig.tryLoad()) {
-				Gd.engineConfig = GDEngineConfig.getInstance();
+			if (MagicDungeonConfig.tryLoad()) {
+				Gd.engineConfig = MagicDungeonConfig.getInstance();
 				presenter.start(); // 启动业务逻辑
 			} else {
 				// 需要引导初始化
 				new SetupDialog(() -> {
-					Gd.engineConfig = GDEngineConfig.getInstance();
+					Gd.engineConfig = MagicDungeonConfig.getInstance();
 					presenter.start();
 				}).show(stage);
 			}

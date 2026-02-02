@@ -1,6 +1,6 @@
 # UI 与富文本(未审查)
 
-GDEngine 集成了 VisUI 作为标准 UI 库，并扩展了若干自定义控件。
+MagicDungeon 集成了 VisUI 作为标准 UI 库，并扩展了若干自定义控件。
 
 ## RichText (富文本)
 

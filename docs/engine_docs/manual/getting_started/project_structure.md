@@ -1,10 +1,10 @@
 # 项目结构与配置
 
-GDEngine 采用标准的 Java 项目结构，便于与 IntelliJ IDEA 等外部 IDE 兼容。
+MagicDungeon 采用标准的 Java 项目结构，便于与 IntelliJ IDEA 等外部 IDE 兼容。
 
 ## 目录结构 (Standard Layout)
 
-一个标准的 GDEngine 项目（如 `UserProjects/MyGame`）包含以下内容：
+一个标准的 MagicDungeon 项目（如 `UserProjects/MyGame`）包含以下内容：
 
 ```text
 MyGame/
@@ -35,7 +35,7 @@ MyGame/
 
 ## project.index 的作用
 
-**这是 GDEngine 热重载机制的核心。**
+**这是 MagicDungeon 热重载机制的核心。**
 由于 Android 环境下无法像 PC 那样扫描 Classpath，编译器 (`AndroidScriptCompiler` / `DesktopScriptCompiler`) 在每次编译成功后，会将所有用户类的全限定名写入此文件。
 
 `ComponentRegistry` 会读取此文件来发现用户编写的新组件 (`Component`)。
