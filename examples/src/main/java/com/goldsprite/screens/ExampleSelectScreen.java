@@ -2,6 +2,7 @@ package com.goldsprite.screens;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
+import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 
 import java.util.Map;
 
@@ -13,11 +14,12 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
-		// --- 核心开发工具 ---
+		// --- 核心场景 ---
+		map.put("开始游戏", MainMenuScreen.class);
 
 		map.put("", null); // 分隔线
 
 		// --- 引擎功能测试 ---
-		map.put("测试", MagicDungeonSelectionScreen.class);
+		map.put("测试", TestSelectionScreen.class);
 	}
 }

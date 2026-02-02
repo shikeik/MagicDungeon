@@ -5,7 +5,7 @@ import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 
 import java.util.Map;
 
-public class MagicDungeonSelectionScreen extends BaseSelectionScreen {
+public class TestSelectionScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);

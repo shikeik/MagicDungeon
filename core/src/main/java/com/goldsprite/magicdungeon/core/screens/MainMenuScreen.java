@@ -15,18 +15,17 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.goldsprite.magicdungeon.core.NewDungeonGame;
+import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.utils.Constants;
 
-public class MainMenuScreen implements Screen {
-    final NewDungeonGame game;
+public class MainMenuScreen extends GScreen {
     private Stage stage;
     private Skin skin;
 
-    public MainMenuScreen(NewDungeonGame game) {
-        this.game = game;
+    public void create() {
         stage = new Stage(new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT));
+		getImp().addProcessor(stage);
 
         createSkin();
 
@@ -42,7 +41,7 @@ public class MainMenuScreen implements Screen {
         startButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new GameScreen(game));
+                getScreenManager().setCurScreen(GameScreen.class, true);
                 dispose();
             }
         });
@@ -53,8 +52,8 @@ public class MainMenuScreen implements Screen {
             loadButton.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
-                    GameScreen gameScreen = new GameScreen(game);
-                    game.setScreen(gameScreen);
+                    GameScreen gameScreen = new GameScreen();
+					getScreenManager().setCurScreen(gameScreen);
                     gameScreen.loadGame();
                     dispose();
                 }
@@ -96,11 +95,6 @@ public class MainMenuScreen implements Screen {
     }
 
     @Override
-    public void show() {
-        Gdx.input.setInputProcessor(stage);
-    }
-
-    @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
         stage.act(delta);
@@ -111,15 +105,6 @@ public class MainMenuScreen implements Screen {
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
     }
-
-    @Override
-    public void pause() {}
-
-    @Override
-    public void resume() {}
-
-    @Override
-    public void hide() {}
 
     @Override
     public void dispose() {

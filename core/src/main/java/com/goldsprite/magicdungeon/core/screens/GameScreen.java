@@ -4,12 +4,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.goldsprite.magicdungeon.core.NewDungeonGame;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.entities.Item;
 import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.Monster;
@@ -31,8 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GameScreen implements Screen {
-    final NewDungeonGame game;
+public class GameScreen extends GScreen {
     private Dungeon dungeon;
     private Player player;
     private List<Monster> monsters;
@@ -45,10 +44,13 @@ public class GameScreen implements Screen {
     private Map<String, Texture> itemTextures;
     private GameHUD hud;
     private AudioSystem audio;
+	private SpriteBatch batch;
 
-    public GameScreen(NewDungeonGame game) {
+	@Override
+	public void create() {
+		batch = new SpriteBatch();
+
         System.out.println("GameScreen Constructor Started");
-        this.game = game;
         this.dungeon = new Dungeon(50, 50);
         this.player = new Player(dungeon.startPos.x, dungeon.startPos.y);
 
@@ -173,10 +175,6 @@ public class GameScreen implements Screen {
     }
 
     @Override
-    public void show() {
-    }
-
-    @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
 
@@ -286,8 +284,8 @@ public class GameScreen implements Screen {
         // Update HUD
         hud.update(player, dungeon.level);
 
-        game.batch.setProjectionMatrix(camera.combined);
-        game.batch.begin();
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
 
         // Calculate visible range (optimization)
         int startX = (int)((camera.position.x - camera.viewportWidth / 2) / Constants.TILE_SIZE) - 1;
@@ -307,7 +305,7 @@ public class GameScreen implements Screen {
                 if (tile != null) {
                     Texture texture = tileTextures.get(tile.type);
                     if (texture != null) {
-                        game.batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE);
+                        batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE);
                     }
                 }
             }
@@ -318,7 +316,7 @@ public class GameScreen implements Screen {
             Texture itemTex = itemTextures.get(item.data.name);
             if (itemTex != null) {
                 // Render slightly smaller to distinguish from tiles
-                game.batch.draw(itemTex, item.visualX + 4, item.visualY + 4, 24, 24);
+                batch.draw(itemTex, item.visualX + 4, item.visualY + 4, 24, 24);
             } else {
                 // Fallback debug
                 // game.batch.draw(playerTexture, item.visualX + 8, item.visualY + 8, 16, 16);
@@ -330,12 +328,12 @@ public class GameScreen implements Screen {
             if (m.hp > 0) {
                 Texture mTex = monsterTextures.get(m.name);
                 if (mTex != null) {
-                    game.batch.draw(mTex, m.visualX + m.bumpX, m.visualY + m.bumpY);
+                    batch.draw(mTex, m.visualX + m.bumpX, m.visualY + m.bumpY);
                 } else {
                     // Fallback to Slime if texture missing
                     Texture fallback = monsterTextures.get(MonsterType.SLIME.name);
                     if (fallback != null) {
-                        game.batch.draw(fallback, m.visualX + m.bumpX, m.visualY + m.bumpY);
+                        batch.draw(fallback, m.visualX + m.bumpX, m.visualY + m.bumpY);
                     } else {
                          System.err.println("Slime texture is missing!");
                     }
@@ -345,12 +343,12 @@ public class GameScreen implements Screen {
 
         // Render Player
         if (playerTexture != null) {
-            game.batch.draw(playerTexture, player.visualX + player.bumpX, player.visualY + player.bumpY);
+            batch.draw(playerTexture, player.visualX + player.bumpX, player.visualY + player.bumpY);
         } else {
              System.err.println("Player texture is null during render!");
         }
 
-        game.batch.end();
+        batch.end();
 
         // Draw HUD Stage last
         // Stage uses its own camera, usually y-up.
@@ -384,18 +382,6 @@ public class GameScreen implements Screen {
     public void resize(int width, int height) {
         viewport.update(width, height);
         hud.resize(width, height);
-    }
-
-    @Override
-    public void pause() {
-    }
-
-    @Override
-    public void resume() {
-    }
-
-    @Override
-    public void hide() {
     }
 
     @Override
