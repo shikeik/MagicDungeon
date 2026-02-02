@@ -86,9 +86,9 @@ public class GameHUD {
     }
 
     public void showMessage(String msg) {
-        logMessages.addFirst(msg);
+        logMessages.add(msg);
         if (logMessages.size() > 5) {
-            logMessages.removeLast();
+            logMessages.removeFirst();
         }
 
         StringBuilder sb = new StringBuilder();
