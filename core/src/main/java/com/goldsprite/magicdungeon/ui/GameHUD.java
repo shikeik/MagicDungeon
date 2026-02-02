@@ -17,7 +17,7 @@ public class GameHUD {
     private VisLabel hpLabel;
     private VisLabel manaLabel;
     private VisLabel xpLabel;
-    private VisLabel lvlLabel;
+    private VisLabel lvLabel;
     private VisLabel floorLabel;
     private VisLabel msgLabel;
 
@@ -36,7 +36,7 @@ public class GameHUD {
         hpLabel = new VisLabel("HP: 100/100");
         manaLabel = new VisLabel("MP: 50/50");
         xpLabel = new VisLabel("XP: 0/100");
-        lvlLabel = new VisLabel("LVL: 1");
+        lvLabel = new VisLabel("LV: 1");
         floorLabel = new VisLabel("Floor: 1");
         msgLabel = new VisLabel("");
         showMessage("Welcome to Dungeon!");
@@ -45,7 +45,7 @@ public class GameHUD {
         root.add(hpLabel).pad(10);
         root.add(manaLabel).pad(10);
         root.add(xpLabel).pad(10);
-        root.add(lvlLabel).pad(10);
+        root.add(lvLabel).pad(10);
         root.add(floorLabel).pad(10);
         root.row();
 
@@ -78,7 +78,7 @@ public class GameHUD {
         hpLabel.setText("HP: " + player.stats.hp + "/" + player.stats.maxHp);
         manaLabel.setText("MP: " + player.stats.mana + "/" + player.stats.maxMana);
         xpLabel.setText("XP: " + player.stats.xp);
-        lvlLabel.setText("LVL: " + player.stats.level);
+        lvLabel.setText("LV: " + player.stats.level);
         floorLabel.setText("Floor: " + floor);
 
         updateInventory(player);

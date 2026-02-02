@@ -206,8 +206,16 @@ public class GameScreen extends GScreen {
 		// Enter Next Level
 		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.E)) {
 			Tile tile = dungeon.getTile(player.x, player.y);
-			if (tile != null && tile.type == TileType.STAIRS_DOWN) {
-				nextLevel();
+			// Debug: Check current position and tile type
+			if (tile != null) {
+				System.out.println("Player position: " + player.x + "," + player.y + ", Tile type: " + tile.type);
+				if (tile.type == TileType.STAIRS_DOWN) {
+					System.out.println("Stairs found! Current level: " + dungeon.level);
+					nextLevel();
+					System.out.println("New level: " + dungeon.level);
+				}
+			} else {
+				System.out.println("Tile is null at position: " + player.x + "," + player.y);
 			}
 		}
 
