@@ -147,9 +147,3 @@ tasks.register('updateExe4jOptions') {
 
 compileJava.dependsOn(updateExe4jOptions)
 jar.dependsOn(updateExe4jOptions)
-
-// 资源处理依赖 (虽然 run 已经加了，这里保留给 build 使用)
-processResources {
-	dependsOn ':core:copyEngineLibs'
-	dependsOn ':core:packageEngineCore'
-}

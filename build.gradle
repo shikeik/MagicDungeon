@@ -77,14 +77,14 @@ eclipse.project.name = 'MagicDungeon' + '-parent'
 // 统一构建调度中心 (Build Orchestration)
 // ============================================================
 
-// 引入独立的引擎任务管理脚本
-apply from: 'gradle/engine-tasks.gradle'
-apply from: 'gradle/changelog-generator.gradle'
-
-// [新增] 引入本地文档预览任务
-apply from: 'gradle/docs-preview.gradle'
-
-apply from: 'gradle/publish-docs.gradle'
-apply from: 'gradle/publish-template.gradle'
-
-apply from: "gradle/publish-executables.gradle"
+//// 引入独立的引擎任务管理脚本
+//apply from: 'gradle/engine-tasks.gradle'
+//apply from: 'gradle/changelog-generator.gradle'
+//
+//// [新增] 引入本地文档预览任务
+//apply from: 'gradle/docs-preview.gradle'
+//
+//apply from: 'gradle/publish-docs.gradle'
+//apply from: 'gradle/publish-template.gradle'
+//
+//apply from: "gradle/publish-executables.gradle"

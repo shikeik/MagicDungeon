@@ -24,18 +24,14 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.goldsprite.GdxLauncher;
-import com.goldsprite.magicdungeon.PlatformImpl;
-import com.goldsprite.magicdungeon.core.Gd;
-import com.goldsprite.magicdungeon.screens.ScreenManager;
+import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.screens.ScreenManager;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class AndroidGdxLauncher extends AndroidApplication {
 	private static AndroidGdxLauncher ctx;
-
-	// [新增] 权限工具
-	private PermissionUtils permissionUtils;
 
 	// ... (保留原有的 Layout 变量: rootFrame, overlayLayer 等) ...
 	// 略去 Layout 变量定义，保持原样即可
@@ -79,7 +75,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		initKeyMap();
 
 		// 在 onCreate 里的 injectCompilerAndStart() 或 startEngine() 调用之前：
- 		Gd.setWebBrowser(new AndroidWebBrowser(this));
+ 		PlatformImpl.webBrower = new AndroidWebBrowser(this);
 
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useImmersiveMode = true;
@@ -89,7 +85,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		// 这样 AndroidApplication 内部的 input/graphics 就会被创建
 		// onResume 就不会崩了
 		// ---------------------------------------------------------
-		gdxLauncher = new GdxLauncher(null);
+		gdxLauncher = new GdxLauncher();
 
 		gameView = initializeForView(gdxLauncher, cfg);
 
@@ -105,23 +101,6 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		// 4. 设置监听器 (这些可以现在就设，虽然游戏还没逻辑)
 		setupGdxListeners();
 
-		// ---------------------------------------------------------
-		// 5. 权限检查与“热启动”
-		// ---------------------------------------------------------
-		String[] permissions = {
-			Manifest.permission.WRITE_EXTERNAL_STORAGE,
-			Manifest.permission.READ_EXTERNAL_STORAGE
-		};
-
-		permissionUtils = new PermissionUtils(this, permissions, 100, new Runnable() {
-			@Override
-			public void run() {
-				// [关键] 权限拿到了！创建编译器并注入给游戏
-				injectCompilerAndStart();
-			}
-		});
-
-		permissionUtils.requestAllPermission();
 	}
 
 	private void setupGdxListeners() {
@@ -139,72 +118,6 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		gameView.setFocusableInTouchMode(true);
 		gameView.requestFocus();
 	}
-
-	private void injectCompilerAndStart() {
-		// 此时有权限了，可以安全地进行文件 IO (mkdirs)
-		AndroidScriptCompiler androidCompiler = new AndroidScriptCompiler(this);
-
-		// 通知游戏：编译器好了，开始加载资源吧！
-		if (gdxLauncher != null) {
-			gdxLauncher.onAndroidReady(androidCompiler);
-		}
-	}
-
-	// [新增] 启动引擎逻辑
-	private void startEngine() {
-		// 1. 创建根容器
-		rootFrame = new FrameLayout(this);
-
-		// 2. 配置
-		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		cfg.useImmersiveMode = true;
-		cfg.numSamples = 2;
-
-		// 3. 启动
-		AndroidScriptCompiler androidCompiler = new AndroidScriptCompiler(this);
-		ApplicationListener main = new GdxLauncher(androidCompiler);
-
-		gameView = initializeForView(main, cfg);
-		rootFrame.addView(gameView, new FrameLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-		setContentView(rootFrame);
-
-		// 4. UI 层
-		new Handler(getMainLooper()).post(this::initOverlayUI);
-
-		ScreenManager.orientationChanger = (orientation) -> runOnUiThread(() -> {
-			setRequestedOrientation(orientation == ScreenManager.Orientation.Landscape ?
-				ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-		});
-
-		ScreenManager.exitGame.add(() -> moveTaskToBack(true));
-		PlatformImpl.showSoftInputKeyBoard = (show) -> runOnUiThread(() -> setKeyboardVisibility(show));
-
-		gameView.setFocusable(true);
-		gameView.setFocusableInTouchMode(true);
-		gameView.requestFocus();
-	}
-
-	// [新增] 代理回调到 PermissionUtils
-	@Override
-	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		if (permissionUtils != null) {
-			permissionUtils.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		}
-	}
-
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data);
-		if (permissionUtils != null) {
-			permissionUtils.onActivityResult(requestCode, resultCode, data);
-		}
-	}
-
-	// ... (原有的 initOverlayUI, initKeyMap 等方法保持不变) ...
-	// 为了节省篇幅，这里略去后面的 UI 初始化代码，请确保保留它们
 
 	private void initOverlayUI() {
 		// ... (保持原样)

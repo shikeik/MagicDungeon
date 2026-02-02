@@ -21,8 +21,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.goldsprite.magicdungeon.core.web.IWebBrowser;
-import com.goldsprite.magicdungeon.screens.ScreenManager;
+import com.goldsprite.gdengine.web.IWebBrowser;
+import com.goldsprite.gdengine.screens.ScreenManager;
 
 import java.util.ArrayList;
 import java.util.List;

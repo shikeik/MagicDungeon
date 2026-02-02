@@ -1,7 +1,7 @@
 package com.goldsprite.magicdungeon.lwjgl3;
 
 import com.badlogic.gdx.Gdx;
-import com.goldsprite.magicdungeon.core.web.IWebBrowser;
+import com.goldsprite.gdengine.web.IWebBrowser;
 
 public class DesktopWebBrowser implements IWebBrowser {
 	@Override

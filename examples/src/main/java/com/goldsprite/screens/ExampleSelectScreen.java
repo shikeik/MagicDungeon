@@ -1,9 +1,7 @@
 package com.goldsprite.screens;
 
-import com.goldsprite.magicdungeon.screens.GScreen;
-import com.goldsprite.magicdungeon.screens.basics.BaseSelectionScreen;
-import com.goldsprite.magicdungeon.screens.ecs.hub.MagicDungeonHubScreen;
-import com.goldsprite.magicdungeon.screens.ecs.editor.EditorGameScreen;
+import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 
 import java.util.Map;
 
@@ -16,7 +14,6 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		// --- 核心开发工具 ---
-		map.put(">>> MagicDungeon Hub (项目管理) <<<", MagicDungeonHubScreen.class);
 
 		map.put("", null); // 分隔线
 

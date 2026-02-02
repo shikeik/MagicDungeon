@@ -1,5 +1,0 @@
-{
-	"name": "${PROJECT_NAME}",
-	"entryClass": "${PACKAGE}.${MAIN_CLASS}",
-	"engineVersion": "${ENGINE_VERSION}"
-}

@@ -4,11 +4,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.goldsprite.magicdungeon.PlatformImpl;
-import com.goldsprite.magicdungeon.core.Gd;
-import com.goldsprite.magicdungeon.screens.ScreenManager;
-import com.goldsprite.magicdungeon.BuildConfig;
+import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.GdxLauncher;
+import com.goldsprite.magicdungeon.BuildConfig;
 
 /**
  * Launches the desktop (LWJGL3) application.
@@ -25,14 +24,12 @@ public class Lwjgl3Launcher {
 	}
 
 	private static Lwjgl3Application createApplication() {
-		// [修改] 创建 PC 端编译器实例
-		DesktopScriptCompiler compiler = new DesktopScriptCompiler();
 
 		// [新增] 注入浏览器实现
-		Gd.setWebBrowser(new DesktopWebBrowser());
+		PlatformImpl.webBrower = new DesktopWebBrowser();
 
 		// [修改] 注入到游戏主入口
-		return new Lwjgl3Application(new GdxLauncher(compiler), getDefaultConfiguration());
+		return new Lwjgl3Application(new GdxLauncher(), getDefaultConfiguration());
 	}
 
 	private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
