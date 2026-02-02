@@ -3,6 +3,7 @@ package com.goldsprite.magicdungeon.ui;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
+import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.entities.Player;
@@ -26,7 +27,7 @@ public class GameHUD {
 
     private LinkedList<String> logMessages = new LinkedList<>();
 
-    private VisWindow inventoryWindow;
+    private InventoryDialog inventoryDialog;
     private VisTable inventoryList;
 
     private VisTextButton inventoryBtn;
@@ -36,6 +37,14 @@ public class GameHUD {
 
     // Save listener interface
     private Runnable saveListener;
+
+    // Inventory Dialog class that extends BaseDialog
+    private class InventoryDialog extends BaseDialog {
+        public InventoryDialog() {
+            super("背包");
+            setSize(450, 550);
+        }
+    }
 
     public GameHUD(Viewport viewport) {
         stage = new Stage(viewport);
@@ -116,26 +125,17 @@ public class GameHUD {
 
         stage.addActor(topBar);
 
-        createInventoryWindow();
+        // Initialize inventory dialog
+        inventoryDialog = new InventoryDialog();
+        inventoryList = new VisTable();
+        inventoryList.top().left();
+        inventoryDialog.add(inventoryList).expand().fill().top().left().pad(10);
+
+        // Initialize help window
         createHelpWindow();
     }
 
-    private void createInventoryWindow() {
-        inventoryWindow = new VisWindow("背包");
-        inventoryWindow.setSize(450, 550);
-        inventoryWindow.setCenterOnAdd(true);
-        inventoryWindow.setMovable(true);
-        inventoryWindow.setVisible(false);
-        inventoryWindow.setResizable(false);
-        inventoryWindow.addCloseButton();
-
-        inventoryList = new VisTable();
-        inventoryList.top().left();
-
-        inventoryWindow.add(inventoryList).expand().fill().top().left().pad(10);
-
-        stage.addActor(inventoryWindow);
-    }
+    // Removed createInventoryWindow method (replaced by InventoryDialog)
 
     private void createHelpWindow() {
         helpWindow = new VisWindow("帮助");
@@ -169,8 +169,14 @@ public class GameHUD {
     }
 
     private void showHelp() {
+        // Close other windows if open
+        if (inventoryDialog != null && inventoryDialog.isVisible()) {
+            inventoryDialog.hide();
+        }
         helpWindow.setVisible(true);
         helpWindow.centerWindow();
+        // Ensure the window is at the top
+        helpWindow.toFront();
     }
 
     public void update(Player player, int floor) {
@@ -198,17 +204,25 @@ public class GameHUD {
     }
 
     public void toggleInventory() {
-        inventoryWindow.setVisible(!inventoryWindow.isVisible());
-        if (inventoryWindow.isVisible()) {
-            inventoryWindow.centerWindow();
+        // Close other windows if open
+        if (helpWindow.isVisible()) {
+            helpWindow.setVisible(false);
         }
+
+        // Show inventory dialog
+        inventoryDialog.show(stage);
+    }
+
+    // Method to update inventory dialog content
+    public void updateInventoryDialog(Player player) {
+        updateInventory(player);
     }
 
     public void setSaveListener(Runnable saveListener) {
         this.saveListener = saveListener;
     }
 
-    private void updateInventory(Player player) {
+    public void updateInventory(Player player) {
         inventoryList.clear();
         if (player.inventory.isEmpty()) {
             inventoryList.add(new VisLabel("Empty")).pad(5);

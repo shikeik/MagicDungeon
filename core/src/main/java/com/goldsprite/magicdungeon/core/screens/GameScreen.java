@@ -248,6 +248,8 @@ public class GameScreen extends GScreen {
 				} else {
 					player.inventory.add(item.data);
 					hud.showMessage("Picked up " + item.data.name + "!");
+					// Update inventory dialog if it's open
+						hud.updateInventory(player);
 				}
 			}
 		}
@@ -302,6 +304,7 @@ public class GameScreen extends GScreen {
 
 		// Update HUD
 		hud.update(player, dungeon.level);
+		hud.updateInventory(player);
 
 		// 使用 GScreen 的 worldCamera
 		batch.setProjectionMatrix(worldCamera.combined);
