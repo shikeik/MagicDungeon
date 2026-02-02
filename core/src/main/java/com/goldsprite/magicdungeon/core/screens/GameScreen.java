@@ -330,12 +330,28 @@ public class GameScreen extends GScreen {
 			if (m.hp > 0) {
 				Texture mTex = monsterTextures.get(m.name);
 				if (mTex != null) {
+					// Apply hit flash effect if needed
+					if (m.hitFlashTimer > 0) {
+						batch.setColor(1f, 0f, 0f, 1f);
+					}
 					batch.draw(mTex, m.visualX + m.bumpX, m.visualY + m.bumpY);
+					// Reset color if we changed it
+					if (m.hitFlashTimer > 0) {
+						batch.setColor(1f, 1f, 1f, 1f);
+					}
 				} else {
 					// Fallback to Slime if texture missing
 					Texture fallback = monsterTextures.get(MonsterType.SLIME.name);
 					if (fallback != null) {
+						// Apply hit flash effect if needed
+						if (m.hitFlashTimer > 0) {
+							batch.setColor(1f, 0f, 0f, 1f);
+						}
 						batch.draw(fallback, m.visualX + m.bumpX, m.visualY + m.bumpY);
+						// Reset color if we changed it
+						if (m.hitFlashTimer > 0) {
+							batch.setColor(1f, 1f, 1f, 1f);
+						}
 					}
 				}
 			}
