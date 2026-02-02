@@ -9,18 +9,16 @@
 
 ## [项目待办](docs/TODO.md)
 
-## [Java Doc](readme/docs/javadoc/index.html) 仅本地
-
 ## 项目配置
 
-- `libgdx`-1.12.1
-	- `freetype`-1.12.1
+- `libgdx`-1.14.0
+	- `freetype`
 - `idea`-2024.3
 - `java`-17
 - `gradle`
 	- `gradle`-8.13
 	- `AGP`-8.12.3
 - `android`
-	- `compileSdk` 34
+	- `compileSdk` 36
 	- `targetSdk` 34
-	- `minSdk` 21
+	- `minSdk` 26

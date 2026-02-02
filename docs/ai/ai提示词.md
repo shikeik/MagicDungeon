@@ -7,7 +7,7 @@
 ui架构使用MVP来灵活管理我们的大型ui编辑器结构
 engine_docs使用定制化Docsify搭建静态网站页面
 
-项目配置: java17, libgdx1.12.1, gdx-freetype, vis-ui_1.5.3
+项目配置: java17, libgdx1.14.0, gdx-freetype, vis-ui_1.5.7
 平台: Android, Windows双端
 
 用户应用更新时:   
