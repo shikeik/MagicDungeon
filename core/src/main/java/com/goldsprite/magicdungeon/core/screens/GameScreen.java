@@ -69,6 +69,7 @@ public class GameScreen extends GScreen {
 		// Scene2D HUD
 		// 传递 uiViewport 给 HUD
 		hud = new GameHUD(getUIViewport());
+		getImp().addProcessor(hud.stage);
 
 		// Audio
 		audio = new AudioSystem();

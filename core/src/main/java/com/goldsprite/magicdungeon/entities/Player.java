@@ -14,7 +14,13 @@ public class Player extends Entity {
     // Stats
     public PlayerStats stats;
     public List<ItemData> inventory;
+    public Equipment equipment;
 
+    // Equipment class for storing equipped items
+    public static class Equipment {
+        public ItemData weapon;
+        public ItemData armor;
+    }
     public Player(int x, int y) {
         super(x, y, Color.GREEN);
 
@@ -24,6 +30,7 @@ public class Player extends Entity {
 
         this.stats = new PlayerStats();
         this.inventory = new ArrayList<>();
+        this.equipment = new Equipment();
     }
 
     public void update(float dt, Dungeon dungeon, int dx, int dy, List<Monster> monsters, AudioSystem audio) {
@@ -81,5 +88,40 @@ public class Player extends Entity {
             this.stats.mana -= 10;
             this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + 20);
         }
+    }
+
+    public void equip(ItemData item) {
+        if (item.type == ItemType.WEAPON) {
+            this.equipment.weapon = item;
+            updateStats();
+        } else if (item.type == ItemType.ARMOR) {
+            this.equipment.armor = item;
+            updateStats();
+        } else if (item.type == ItemType.POTION) {
+            usePotion(item);
+        }
+    }
+
+    private void usePotion(ItemData item) {
+        if (item.heal > 0) {
+            this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.heal);
+            // Remove potion from inventory
+            this.inventory.remove(item);
+        }
+    }
+
+    private void updateStats() {
+        int baseAtk = 5; // Base attack
+        int baseDef = 0; // Base defense
+
+        if (equipment.weapon != null) {
+            baseAtk += equipment.weapon.atk;
+        }
+        if (equipment.armor != null) {
+            baseDef += equipment.armor.def;
+        }
+
+        this.stats.atk = baseAtk;
+        this.stats.def = baseDef;
     }
 }

@@ -4,6 +4,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.magicdungeon.entities.ItemData;
+import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.entities.Player;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -111,7 +112,60 @@ public class GameHUD {
             inventoryList.add(new VisLabel("Empty")).pad(5);
         } else {
             for (ItemData item : player.inventory) {
-                inventoryList.add(new VisLabel(item.name)).left().pad(2).row();
+                // Create a table for each item
+                VisTable itemTable = new VisTable();
+                itemTable.left();
+                itemTable.pad(2);
+                itemTable.setWidth(300);
+
+                // Check if item is equipped
+                boolean isEquipped = (player.equipment.weapon == item) || (player.equipment.armor == item);
+
+                // Item name with equipped status
+                String equipIndicator = isEquipped ? " (Equipped)" : "";
+                VisLabel nameLabel = new VisLabel(item.name + equipIndicator);
+                if (isEquipped) {
+                    nameLabel.setColor(1.0f, 0.7f, 0.0f, 1.0f); // Gold color for equipped items
+                }
+
+                // Item type
+                VisLabel typeLabel = new VisLabel("Type: " + item.type.name());
+                typeLabel.setColor(0.7f, 0.7f, 0.7f, 1.0f);
+
+                // Item stats
+                StringBuilder statsText = new StringBuilder();
+                if (item.atk > 0) statsText.append("ATK: +").append(item.atk).append(" ");
+                if (item.def > 0) statsText.append("DEF: +").append(item.def).append(" ");
+                if (item.heal > 0) statsText.append("HEAL: ").append(item.heal);
+                VisLabel statsLabel = new VisLabel(statsText.toString());
+                statsLabel.setColor(0.0f, 0.8f, 0.0f, 1.0f);
+
+                // Add to table
+                itemTable.add(nameLabel).left().pad(2).expandX().row();
+                itemTable.add(typeLabel).left().pad(2).row();
+                itemTable.add(statsLabel).left().pad(2).row();
+
+                // Add border
+                itemTable.add(new VisTable()).padTop(5).row();
+
+                // Add click listener
+                itemTable.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+                    @Override
+                    public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+                        // Equip or use item
+                        player.equip(item);
+
+                        // Show message
+                        String action = item.type == ItemType.POTION ? "Used" : (isEquipped ? "Unequipped" : "Equipped");
+                        showMessage(action + " " + item.name);
+
+                        // Refresh inventory
+                        updateInventory(player);
+                        return true;
+                    }
+                });
+
+                inventoryList.add(itemTable).left().expandX().fillX().pad(2).row();
             }
         }
     }
