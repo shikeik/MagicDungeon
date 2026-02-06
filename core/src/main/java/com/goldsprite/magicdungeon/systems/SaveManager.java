@@ -56,7 +56,15 @@ public class SaveManager {
 
 		state.items = new ArrayList<>();
 		for (Item item : items) {
-			state.items.add(new ItemState(item.x, item.y, item.data.name()));
+			state.items.add(new ItemState(
+				item.x, 
+				item.y, 
+				item.item.data.name(),
+				item.item.quality.name(),
+				item.item.atk,
+				item.item.def,
+				item.item.heal
+			));
 		}
 
 		Json json = new Json();

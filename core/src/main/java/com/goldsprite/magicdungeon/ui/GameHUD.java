@@ -48,6 +48,9 @@ public class GameHUD {
 	private NinePatchDrawable slotBgDrawable;
 	private NinePatchDrawable slotBorderDrawable;
 
+	private Texture whiteTexture;
+	private TextureRegionDrawable whiteDrawable;
+
 	private Player currentPlayer;
 
 	// Save listener interface
@@ -97,6 +100,8 @@ public class GameHUD {
 			Texture tex = TextureManager.getInstance().getItem(item.data.name());
 			if (tex != null) {
 				VisImage icon = new VisImage(new TextureRegionDrawable(tex));
+				// Tint icon with quality color
+				icon.setColor(item.quality.color);
 				VisTable iconTable = new VisTable();
 				iconTable.add(icon).size(48, 48);
 				iconTable.setTouchable(Touchable.disabled); // Prevent blocking events
@@ -134,21 +139,32 @@ public class GameHUD {
 		}
 
 		private void createTooltip(InventoryItem item, boolean isEquipped) {
+			// Outer table for quality border
+			VisTable borderTable = new VisTable();
+			if (whiteDrawable != null) {
+				borderTable.setBackground(whiteDrawable);
+				borderTable.setColor(item.quality.color);
+			}
+
 			VisTable content = new VisTable();
 			content.setBackground("list");
 			content.pad(10);
+			
+			// Add content to border table with 2px padding (thickness)
+			borderTable.add(content).grow().pad(2);
 
-			// Title
-			VisLabel title = new VisLabel(item.data.name);
-			if (item.data.color != null) title.setColor(item.data.color);
+			// Title with Quality Name
+			String titleText = "[" + item.quality.name + "] " + item.data.name;
+			VisLabel title = new VisLabel(titleText);
+			title.setColor(item.quality.color);
 			content.add(title).left().row();
 
-			//uuid
+			// uuid
 			int maxLen = 9;
 			String shortId = item.id.length() > maxLen ? item.id.substring(item.id.length()-maxLen) : item.id;
-			shortId = item.id;
 			VisLabel uuid = new VisLabel("#"+shortId);
 			uuid.setColor(Color.DARK_GRAY);
+			uuid.setFontScale(0.8f);
 			content.add(uuid).right().row();
 
 			content.add(new Separator()).growX().padBottom(15).row();
@@ -156,10 +172,10 @@ public class GameHUD {
 			// Type
 			content.add(new VisLabel("类型: " + getTypeString(item.data.type))).left().row();
 
-			// Stats
-			if (item.data.atk > 0) content.add(new VisLabel("攻击: +" + item.data.atk)).left().row();
-			if (item.data.def > 0) content.add(new VisLabel("防御: +" + item.data.def)).left().row();
-			if (item.data.heal > 0) content.add(new VisLabel("回复: +" + item.data.heal)).left().row();
+			// Dynamic Stats
+			if (item.atk > 0) content.add(new VisLabel("攻击: +" + item.atk)).left().row();
+			if (item.def > 0) content.add(new VisLabel("防御: +" + item.def)).left().row();
+			if (item.heal > 0) content.add(new VisLabel("回复: +" + item.heal)).left().row();
 
 			// Status
 			if (isEquipped) {
@@ -169,7 +185,7 @@ public class GameHUD {
 			}
 
 			// Create Tooltip
-			new Tooltip.Builder(content).target(this).build();
+			new Tooltip.Builder(borderTable).target(this).build();
 		}
 
 		private String getTypeString(ItemType type) {
@@ -297,6 +313,14 @@ public class GameHUD {
 		slotBorderTexture = new Texture(borderPm);
 		slotBorderDrawable = new NinePatchDrawable(new NinePatch(slotBorderTexture, 5, 5, 5, 5));
 		borderPm.dispose();
+
+		// 3. White pixel for quality border
+		Pixmap whitePm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+		whitePm.setColor(Color.WHITE);
+		whitePm.fill();
+		whiteTexture = new Texture(whitePm);
+		whiteDrawable = new TextureRegionDrawable(whiteTexture);
+		whitePm.dispose();
 	}
 
 	// Removed createInventoryWindow method (replaced by InventoryDialog)
@@ -411,5 +435,6 @@ public class GameHUD {
 		stage.dispose();
 		if (slotBgTexture != null) slotBgTexture.dispose();
 		if (slotBorderTexture != null) slotBorderTexture.dispose();
+		if (whiteTexture != null) whiteTexture.dispose();
 	}
 }

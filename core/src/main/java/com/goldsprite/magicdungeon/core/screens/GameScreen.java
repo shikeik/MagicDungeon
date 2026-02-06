@@ -36,6 +36,9 @@ import com.goldsprite.magicdungeon.core.ItemState;
 import com.goldsprite.magicdungeon.core.LevelState;
 import com.goldsprite.magicdungeon.core.MonsterState;
 
+import com.badlogic.gdx.graphics.Color; // Ensure Color is imported
+import com.goldsprite.magicdungeon.entities.ItemQuality; // Ensure ItemQuality is imported
+
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
 	private Player player;
@@ -126,7 +129,15 @@ public class GameScreen extends GScreen {
 		
 		List<ItemState> itemStates = new ArrayList<>();
 		for (Item item : items) {
-			itemStates.add(new ItemState(item.x, item.y, item.data.name()));
+			itemStates.add(new ItemState(
+				item.x, 
+				item.y, 
+				item.item.data.name(),
+				item.item.quality.name(),
+				item.item.atk,
+				item.item.def,
+				item.item.heal
+			));
 		}
 		
 		visitedLevels.put(dungeon.level, new LevelState(monsterStates, itemStates));
@@ -160,7 +171,19 @@ public class GameScreen extends GScreen {
 				data = ItemData.valueOf(is.itemName);
 			} catch(IllegalArgumentException e) {
 			}
-			items.add(new Item(is.x, is.y, data));
+			
+			// Restore Quality and Stats
+			ItemQuality quality = ItemQuality.COMMON;
+			try {
+				if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
+			} catch(IllegalArgumentException e) {}
+			
+			int atk = is.atk > 0 ? is.atk : data.atk;
+			int def = is.def > 0 ? is.def : data.def;
+			int heal = is.heal > 0 ? is.heal : data.heal;
+			
+			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+			items.add(new Item(is.x, is.y, invItem));
 		}
 	}
 
@@ -285,7 +308,7 @@ public class GameScreen extends GScreen {
 				else if (r < 0.8) itemData = ItemData.Rusty_Sword;
 				// Add more logic for better loot later
 
-				items.add(new Item(pos.x, pos.y, itemData));
+				items.add(new Item(pos.x, pos.y, new InventoryItem(itemData, itemRng)));
 			}
 		}
 	}
@@ -359,17 +382,17 @@ public class GameScreen extends GScreen {
 				i--;
 				audio.playItem();
 				// Apply Item Effect
-				if (item.data.type == ItemType.POTION) {
-					if (item.data == ItemData.Health_Potion) {
-						player.stats.hp = Math.min(player.stats.hp + item.data.heal, player.stats.maxHp);
+				if (item.item.data.type == ItemType.POTION) {
+					if (item.item.data == ItemData.Health_Potion) {
+						player.stats.hp = Math.min(player.stats.hp + item.item.heal, player.stats.maxHp);
 						hud.showMessage("Used Health Potion!");
-					} else if (item.data == ItemData.Mana_Potion) {
-						player.stats.mana = Math.min(player.stats.mana + item.data.heal, player.stats.maxMana);
+					} else if (item.item.data == ItemData.Mana_Potion) {
+						player.stats.mana = Math.min(player.stats.mana + item.item.heal, player.stats.maxMana);
 						hud.showMessage("Used Mana Potion!");
 					}
 				} else {
-					player.inventory.add(new InventoryItem(item.data));
-					hud.showMessage("Picked up " + item.data.name + "!");
+					player.inventory.add(item.item);
+					hud.showMessage("Picked up " + item.item.quality.name + " " + item.item.data.name + "!");
 					// Update inventory dialog if it's open
 					hud.updateInventory(player);
 				}
@@ -506,10 +529,12 @@ public class GameScreen extends GScreen {
 
 		// Render Items
 		for (Item item : items) {
-			Texture itemTex = TextureManager.getInstance().get(item.data.name());
+			Texture itemTex = TextureManager.getInstance().get(item.item.data.name());
 			if (itemTex != null) {
 				// Render slightly smaller to distinguish from tiles
+				batch.setColor(item.item.quality.color); // Apply Quality Color Tint
 				batch.draw(itemTex, item.visualX + 4, item.visualY + 4, 24, 24);
+				batch.setColor(Color.WHITE); // Reset
 			}
 		}
 
@@ -626,7 +651,19 @@ public class GameScreen extends GScreen {
 					} catch(IllegalArgumentException e) {
 						// Fallback logic if needed
 					}
-					items.add(new Item(is.x, is.y, data));
+					
+					// Restore Quality and Stats
+					ItemQuality quality = ItemQuality.COMMON;
+					try {
+						if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
+					} catch(IllegalArgumentException e) {}
+					
+					int atk = is.atk > 0 ? is.atk : data.atk;
+					int def = is.def > 0 ? is.def : data.def;
+					int heal = is.heal > 0 ? is.heal : data.heal;
+					
+					InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+					items.add(new Item(is.x, is.y, invItem));
 				}
 				
 			} else {

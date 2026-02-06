@@ -1,0 +1,103 @@
+# 物品多样性系统设计方案
+
+## 1. 背景与目标
+为了增加游戏的探索乐趣和物品收集的深度，我们需要引入物品品质系统和属性浮动机制。
+当前游戏中的物品属性是固定的（由 `ItemData` 枚举决定），缺乏变化。
+本方案旨在实现以下目标：
+1.  **品质分级**：物品分为“劣质、普通、精致、完美”四个等级。
+2.  **视觉区分**：不同品质的物品在图标上应有明显的颜色区分。
+3.  **属性浮动**：同名物品的属性值（攻击、防御、回复量）应在一定范围内随机浮动，且受品质影响。
+4.  **UI 提示**：Tooltip 应清晰展示物品的品质和具体属性。
+
+## 2. 核心概念
+
+### 2.1 物品品质 (ItemQuality)
+定义一个新的枚举 `ItemQuality`，包含以下等级：
+
+| 品质名称 | 中文名 | 颜色 (Color) | 属性倍率 (Multiplier) | 出现权重 (Weight) |
+| :--- | :--- | :--- | :--- | :--- |
+| **POOR** | 劣质 | 灰色 (GRAY) | 0.8 | 30% |
+| **COMMON** | 普通 | 白色 (WHITE) | 1.0 | 50% |
+| **RARE** | 精致 | 蓝色 (CYAN) | 1.2 | 15% |
+| **EPIC** | 完美 | 紫色 (PURPLE) | 1.5 | 5% |
+
+### 2.2 属性计算公式
+物品生成的最终属性值 = `基础值(ItemData) * 品质倍率(Quality) * 随机浮动(0.9 ~ 1.1)`
+
+涉及的属性：
+*   `atk` (攻击力)
+*   `def` (防御力)
+*   `heal` (回复量)
+
+## 3. 技术方案
+
+### 3.1 数据结构变更
+
+#### `InventoryItem` 类 (运行时数据)
+新增字段以存储实例特有的数据：
+*   `ItemQuality quality`：物品品质。
+*   `int atk, def, heal`：计算后的实际属性值。
+*   `float valueMultiplier`：记录具体的浮动系数（可选，方便调试）。
+
+#### `ItemState` 类 (存档数据)
+新增字段以保存物品状态：
+*   `String quality`：保存品质枚举名。
+*   `int atk, def, heal`：保存实际属性值。
+
+### 3.2 生成逻辑 (`GameScreen` & `InventoryItem`)
+*   修改 `GameScreen.spawnEntities()`：
+    *   在创建 `Item` 时，不再只传入 `ItemData`。
+    *   需要先构建一个 `InventoryItem` 实例（或者 `Item` 类本身包含这些数据，建议 `Item` 持有 `InventoryItem` 或 `Item` 本身只负责地图显示，数据由 `InventoryItem` 管理）。
+    *   目前 `Item` 类有一个 `ItemData data` 字段。建议将 `Item` 修改为持有一个 `InventoryItem` 对象，或者将 `InventoryItem` 的字段提升到 `Item` 中（不太推荐，因为 `Item` 是实体）。
+    *   **最佳实践**：修改 `Item` 类，使其包含 `InventoryItem inventoryItem` 字段，而不是 `ItemData`。这样捡起时直接把 `inventoryItem` 放入背包即可。
+
+*   `InventoryItem` 构造函数：
+    *   新增构造函数 `InventoryItem(ItemData data, RandomXS128 rng)`。
+    *   内部逻辑：
+        1.  根据权重随机决定 `quality`。
+        2.  计算 `atk`, `def`, `heal`。
+
+### 3.3 视觉表现 (`SpriteGenerator`)
+*   修改 `createItem(String name, Color qualityColor)` 方法。
+*   在生成纹理时，根据 `qualityColor` 给物品添加边框光晕，或者对整体色调进行微调（Tint）。
+*   由于 `SpriteGenerator` 是静态缓存的，我们需要一种机制来获取不同品质的纹理。
+    *   **方案 A**：预生成所有品质的变体（内存消耗大）。
+    *   **方案 B**：运行时动态着色（`SpriteBatch.setColor`）。
+        *   这对于背包图标（`VisImage`）很容易，设置 `Color` 即可。
+        *   对于地图实体（`batch.draw`），也很容易。
+    *   **结论**：不修改 `SpriteGenerator` 生成逻辑，而是修改 **渲染逻辑**。
+        *   地图上：根据品质颜色 `batch.setColor(quality.color)` 绘制。
+        *   背包里：`VisImage.setColor(quality.color)`。
+
+### 3.4 UI 显示 (`GameHUD`)
+*   修改 `InventorySlot` 的 Tooltip。
+*   显示格式示例：
+    ```
+    [紫色] 完美 传奇之刃
+    攻击: 75 (50 + 25)
+    类型: 武器
+    ```
+*   使用 LibGDX 的标记语言或 VisUI 的多色 Label 支持。
+
+## 4. 实施步骤
+
+1.  **定义枚举**：创建 `com.goldsprite.magicdungeon.entities.ItemQuality`。
+2.  **重构 `InventoryItem`**：
+    *   添加品质和属性字段。
+    *   实现随机生成逻辑。
+3.  **重构 `Item`**：
+    *   将 `ItemData data` 替换为 `InventoryItem item`。
+    *   更新所有引用 `Item.data` 的代码。
+4.  **更新存档系统**：
+    *   修改 `ItemState`。
+    *   更新 `SaveManager` 和 `GameScreen.loadGame`。
+5.  **更新渲染**：
+    *   `GameScreen.render()`：根据品质渲染地图物品颜色。
+    *   `GameHUD`：根据品质渲染背包图标颜色。
+6.  **更新 Tooltip**：展示详细信息。
+
+## 5. 兼容性处理
+*   旧存档加载时，如果缺少品质信息，默认为 `COMMON`，属性设为 `ItemData` 的基础值。
+
+---
+*待确认后执行。*
