@@ -11,7 +11,7 @@
 
 ## 项目配置
 
-- `libgdx`-1.14.0
+- `libgdx`-1.12.1
 	- `freetype`
 - `idea`-2024.3
 - `java`-17

@@ -77,9 +77,11 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		// 在 onCreate 里的 injectCompilerAndStart() 或 startEngine() 调用之前：
  		PlatformImpl.webBrower = new AndroidWebBrowser(this);
 
+		 //gdx启动配置
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useImmersiveMode = true;
 		cfg.numSamples = 2;
+
 		// ---------------------------------------------------------
 		// 1. 立即初始化 GDX (传入 null compiler)
 		// 这样 AndroidApplication 内部的 input/graphics 就会被创建

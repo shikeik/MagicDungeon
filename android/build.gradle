@@ -10,7 +10,7 @@ eclipse.project.name = appName + "-android"
 
 android {
 	namespace "com.goldsprite.magicdungeon.android"
-	compileSdkVersion 36 // 更新到34以兼容androidx.core:core:1.12.0
+	compileSdkVersion 34 // 更新到34以兼容androidx.core:core:1.12.0
 	sourceSets {
 		main {
 			manifest.srcFile 'src/main/AndroidManifest.xml'
@@ -33,6 +33,7 @@ android {
 	defaultConfig {
 		applicationId 'com.goldsprite.magicdungeon.android'
 		minSdkVersion 26
+		//noinspection OldTargetApi
 		targetSdkVersion 34
 		versionCode 1
 		versionName "0.1.0"//aide+无法使用gradle变量故保持0.1.0
@@ -89,7 +90,7 @@ configurations { natives }
 
 dependencies {
 	implementation files('libs/MTDataFilesProvider.jar')
-	implementation 'androidx.core:core:1.12.0'
+	implementation 'androidx.core:core:1.15.0'
 
 	coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 
@@ -113,7 +114,7 @@ dependencies {
 
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
 	// 用于android的java构建版本过时警告
 	options.compilerArgs << "-Xlint:-options"
 }
