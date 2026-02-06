@@ -159,12 +159,13 @@ public class SpriteGenerator {
 		Color stairShadow = Color.valueOf("#333333");
 
 		// Max Width: 2/3 of TEX_SIZE (approx 170px)
-		int maxWidth = (int)(TEX_SIZE * 0.7f);
+		int maxWidth = (int)(TEX_SIZE * 0.75f);
+		int maxBackWidth = (int)(TEX_SIZE * 0.9f);
 
 		if (!up) {
 			// STAIRS DOWN: Trapezoid Perspective
 			// Background: Dark Floor
-			drawRect(p, (TEX_SIZE - maxWidth)/2, 0, maxWidth, TEX_SIZE, Color.valueOf("#000000"));
+			drawRect(p, (TEX_SIZE - maxBackWidth)/2, 0, maxBackWidth, TEX_SIZE, Color.valueOf("#000000"));
 
 			// Draw stairs from Top (Light) to Bottom (Dark)
 			int steps = 8;

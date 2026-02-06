@@ -349,6 +349,14 @@ public class GameScreen extends GScreen {
 			for (int x = startX; x < endX; x++) {
 				Tile tile = dungeon.getTile(x, y);
 				if (tile != null) {
+					// Fix: Draw Floor under transparent tiles (Stairs, Door) to show background properly
+					if (tile.type == TileType.Stairs_Down || tile.type == TileType.Stairs_Up || tile.type == TileType.Door) {
+						Texture floorTex = TextureManager.getInstance().getTile(TileType.Floor);
+						if (floorTex != null) {
+							batch.draw(floorTex, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
+						}
+					}
+
 					Texture texture = TextureManager.getInstance().getTile(tile.type);
 					if (texture != null) {
 						batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
