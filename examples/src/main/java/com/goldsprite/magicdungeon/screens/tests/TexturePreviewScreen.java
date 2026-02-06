@@ -18,6 +18,7 @@ import java.util.List;
 
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 
 public class TexturePreviewScreen extends GScreen {
@@ -64,22 +65,22 @@ public class TexturePreviewScreen extends GScreen {
         TextureManager tm = TextureManager.getInstance();
 
         // 1. Tiles
-        addPreview(tm.getTile(TileType.FLOOR), "Floor", col++, row);
-        addPreview(tm.getTile(TileType.WALL), "Wall", col++, row);
-        addPreview(tm.getTile(TileType.DOOR), "Door", col++, row);
-        addPreview(tm.getTile(TileType.STAIRS_DOWN), "Stairs Down", col++, row);
-        addPreview(tm.getTile(TileType.STAIRS_UP), "Stairs Up", col++, row);
+        addPreview(tm.get("FLOOR"), "Floor", col++, row);
+        addPreview(tm.get("WALL"), "Wall", col++, row);
+        addPreview(tm.get("DOOR"), "Door", col++, row);
+        addPreview(tm.get("STAIRS_DOWN"), "Stairs Down", col++, row);
+        addPreview(tm.get("STAIRS_UP"), "Stairs Up", col++, row);
 
         // New Row
         row++; col = 0;
 
         // 2. Player
-        addPreview(tm.getPlayer(), "Player", col++, row);
+        addPreview(tm.get("PLAYER"), "Player", col++, row);
 
         // 3. Monsters
         for (MonsterType type : MonsterType.values()) {
             if (col >= 6) { col = 0; row++; }
-            addPreview(tm.getMonster(type.name), "Mon: " + type.name, col++, row);
+            addPreview(tm.get(type.name()), "Mon: " + type.name(), col++, row);
         }
 
         // New Row
@@ -88,20 +89,13 @@ public class TexturePreviewScreen extends GScreen {
         // 4. Items
         for (ItemData item : ItemData.values()) {
             if (col >= 6) { col = 0; row++; }
-            addPreview(tm.getItem(item.name), item.name, col++, row);
+            addPreview(tm.get(item.name()), item.name(), col++, row);
         }
 
-        // ... (InputProcessor logic needs update for viewport)
-		getImp().addProcessor(new InputAdapter() {
-			@Override
-			public boolean touchDragged(int screenX, int screenY, int pointer) {
-				float deltaX = -Gdx.input.getDeltaX() * camera.zoom;
-				float deltaY = Gdx.input.getDeltaY() * camera.zoom;
-				camera.translate(deltaX, deltaY);
-				return true;
-			}
-			// ... (rest same)
-		});
+        // Camera Controller
+        SimpleCameraController controller = new SimpleCameraController(camera);
+        controller.setCoordinateMapper((x, y) -> viewport.unproject(new com.badlogic.gdx.math.Vector2(x, y)));
+        getImp().addProcessor(controller);
     }
 
     private void addPreview(Texture tex, String name, int col, int row) {

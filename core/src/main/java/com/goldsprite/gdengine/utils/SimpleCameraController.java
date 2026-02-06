@@ -12,6 +12,27 @@ import com.badlogic.gdx.math.Vector3;
 
 import java.util.function.BooleanSupplier;
 
+/**
+ * 简易相机控制器 (通用版).
+ * <p>
+ * 提供对 {@link OrthographicCamera} 的基础控制功能，包括：
+ * <ul>
+ *     <li><b>鼠标拖拽平移</b> (右键或中键)</li>
+ *     <li><b>滚轮缩放</b> (以鼠标为锚点)</li>
+ *     <li><b>触摸手势</b> (双指缩放、单指平移)</li>
+ * </ul>
+ * <p>
+ * 本控制器设计为通用的 {@link InputProcessor}，可直接添加到 {@link com.badlogic.gdx.InputMultiplexer} 中使用。
+ * <p>
+ * <b>高级特性：</b>
+ * <ul>
+ *     <li>支持自定义坐标映射策略 ({@link CoordinateMapper})，适配 Viewport 或自定义坐标系。</li>
+ *     <li>支持激活条件检查 ({@link #setActivationCondition(BooleanSupplier)})，灵活控制是否响应输入。</li>
+ *     <li>解决了滚轮缩放时的"漂移"问题，保证以鼠标指针指向的世界点为中心进行缩放。</li>
+ * </ul>
+ *
+ * @author GoldSprite
+ */
 public class SimpleCameraController implements InputProcessor {
 
 	private final OrthographicCamera camera;
@@ -19,11 +40,26 @@ public class SimpleCameraController implements InputProcessor {
 	private final InputAdapter mouseInputAdapter;
 	private boolean inputEnabled = true;
 
+	/** 最小缩放比例 (Zoom 值越小，视野越小/物体越大) */
 	public static float minZoom = 0.001f;
+	/** 最大缩放比例 (Zoom 值越大，视野越大/物体越小) */
 	public static float maxZoom = 100.0f;
 
-	// [新增] 坐标映射策略接口
+	/**
+	 * 坐标映射策略接口.
+	 * <p>
+	 * 用于将屏幕坐标 (Screen Coordinates) 转换为世界坐标 (World Coordinates)。
+	 * 默认实现使用 {@link OrthographicCamera#unproject(Vector3)}。
+	 * <p>
+	 * 如果使用了 Viewport，建议传入 Viewport 的 unproject 逻辑。
+	 */
 	public interface CoordinateMapper {
+		/**
+		 * 将屏幕坐标转换为世界坐标.
+		 * @param screenX 屏幕 X 坐标
+		 * @param screenY 屏幕 Y 坐标
+		 * @return 对应的世界坐标 (Vector2)
+		 */
 		Vector2 map(float screenX, float screenY);
 	}
 
@@ -33,6 +69,10 @@ public class SimpleCameraController implements InputProcessor {
 	// [新增] 激活条件
 	private BooleanSupplier activationCondition;
 
+	/**
+	 * 构造一个新的相机控制器.
+	 * @param camera 需要控制的正交相机
+	 */
 	public SimpleCameraController(OrthographicCamera camera) {
 		this.camera = camera;
 
@@ -47,13 +87,32 @@ public class SimpleCameraController implements InputProcessor {
 		this.mouseInputAdapter = new CameraMouseListener();
 	}
 
+	/**
+	 * 设置自定义的坐标映射策略.
+	 * <p>
+	 * 当使用了非全屏 Viewport 或特殊坐标系转换时非常有用。
+	 * @param mapper 映射策略实现
+	 */
 	public void setCoordinateMapper(CoordinateMapper mapper) {
 		this.mapper = mapper;
 	}
 
-	// [新增] 设置激活条件
+	/**
+	 * 设置激活条件.
+	 * <p>
+	 * 当条件返回 false 时，控制器将忽略所有输入事件。
+	 * @param condition 返回 boolean 的 Supplier
+	 */
 	public void setActivationCondition(BooleanSupplier condition) {
 		this.activationCondition = condition;
+	}
+
+	/**
+	 * 启用或禁用输入处理.
+	 * @param enabled true 为启用，false 为禁用
+	 */
+	public void setInputEnabled(boolean enabled) {
+		this.inputEnabled = enabled;
 	}
 
 	// [新增] 内部检查

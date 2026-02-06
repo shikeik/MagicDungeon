@@ -40,14 +40,20 @@ public class TextureManager implements Disposable {
         
         // Monsters
         for (MonsterType type : MonsterType.values()) {
-            // Key is the display name (e.g. "史莱姆") used by Entity.name
-            // Generator expects Enum name (e.g. "SLIME")
-            textureCache.put(type.name, SpriteGenerator.createMonster(type.name()));
+            Texture tex = SpriteGenerator.createMonster(type.name());
+            // 1. Enum Name (e.g. "SLIME") - Standard Key
+            textureCache.put(type.name(), tex);
+            // 2. Display Name (e.g. "史莱姆") - Compatible Key
+            textureCache.put(type.name, tex);
         }
         
         // Items
         for (ItemData item : ItemData.values()) {
-            textureCache.put(item.name, SpriteGenerator.createItem(item.name));
+            Texture tex = SpriteGenerator.createItem(item.name);
+            // 1. Enum Name (e.g. "RUSTY_SWORD") - Standard Key
+            textureCache.put(item.name(), tex);
+            // 2. Display Name (e.g. "生锈的剑") - Compatible Key
+            textureCache.put(item.name, tex);
         }
     }
     
@@ -73,7 +79,10 @@ public class TextureManager implements Disposable {
 
     @Override
     public void dispose() {
-        for (Texture t : textureCache.values()) {
+        // Use a Set to avoid disposing the same texture multiple times
+        // (since we map multiple keys to the same texture)
+        java.util.Set<Texture> uniqueTextures = new java.util.HashSet<>(textureCache.values());
+        for (Texture t : uniqueTextures) {
             t.dispose();
         }
         textureCache.clear();
