@@ -29,11 +29,11 @@ public class TextureManager implements Disposable {
     
     private void loadAll() {
         // Tiles
-        textureCache.put(TileType.WALL.name(), SpriteGenerator.createWall());
-        textureCache.put(TileType.FLOOR.name(), SpriteGenerator.createFloor());
-        textureCache.put(TileType.DOOR.name(), SpriteGenerator.createDoor());
-        textureCache.put(TileType.STAIRS_DOWN.name(), SpriteGenerator.createStairs(false));
-        textureCache.put(TileType.STAIRS_UP.name(), SpriteGenerator.createStairs(true));
+        textureCache.put(TileType.Wall.name(), SpriteGenerator.createWall());
+        textureCache.put(TileType.Floor.name(), SpriteGenerator.createFloor());
+        textureCache.put(TileType.Door.name(), SpriteGenerator.createDoor());
+        textureCache.put(TileType.Stairs_Down.name(), SpriteGenerator.createStairs(false));
+        textureCache.put(TileType.Stairs_Up.name(), SpriteGenerator.createStairs(true));
         
         // Player
         textureCache.put("PLAYER", SpriteGenerator.createPlayer());
@@ -41,20 +41,20 @@ public class TextureManager implements Disposable {
         // Monsters
         for (MonsterType type : MonsterType.values()) {
             Texture tex = SpriteGenerator.createMonster(type.name());
-            // 1. Enum Name (e.g. "SLIME") - Standard Key
+            // Only Enum Name (e.g. "Slime") - Standard Key
             textureCache.put(type.name(), tex);
-            // 2. Display Name (e.g. "史莱姆") - Compatible Key
-            textureCache.put(type.name, tex);
         }
         
         // Items
         for (ItemData item : ItemData.values()) {
             Texture tex = SpriteGenerator.createItem(item.name);
-            // 1. Enum Name (e.g. "RUSTY_SWORD") - Standard Key
+            // Only Enum Name (e.g. "Rusty_Sword") - Standard Key
             textureCache.put(item.name(), tex);
-            // 2. Display Name (e.g. "生锈的剑") - Compatible Key
-            textureCache.put(item.name, tex);
         }
+    }
+
+    public Map<String, Texture> getAllTextures() {
+        return textureCache;
     }
     
     public Texture get(String key) {

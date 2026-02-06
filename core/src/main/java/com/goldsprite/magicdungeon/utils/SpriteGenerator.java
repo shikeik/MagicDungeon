@@ -333,7 +333,7 @@ public class SpriteGenerator {
     public static Texture createMonster(String type) {
         Pixmap p = createPixmap();
         
-        if (type.equals("SLIME")) {
+        if (type.equals("Slime")) {
             // Slime Body
             p.setColor(Color.valueOf("#44aaff"));
             p.fillCircle(128, 140, 100);
@@ -351,7 +351,7 @@ public class SpriteGenerator {
             drawCircle(p, 90, 130, 8, Color.BLACK);
             drawCircle(p, 166, 130, 8, Color.BLACK);
             
-        } else if (type.equals("SKELETON")) {
+        } else if (type.equals("Skeleton")) {
             // Skull (Smaller)
             int headW = 70;
             int headH = 60;
@@ -379,7 +379,7 @@ public class SpriteGenerator {
             drawRect(p, 60, 230, 50, 25, Color.valueOf("#aaaaaa")); // Left
             drawRect(p, 146, 230, 50, 25, Color.valueOf("#aaaaaa")); // Right
             
-        } else if (type.equals("ORC")) {
+        } else if (type.equals("Orc")) {
             // Body (Improved Color)
             Color skin = Color.valueOf("#558b2f"); // Olive Green
             drawRect(p, 50, 50, 156, 180, skin);
@@ -405,7 +405,7 @@ public class SpriteGenerator {
             drawRect(p, 80, 80, 30, 10, Color.RED);
             drawRect(p, 146, 80, 30, 10, Color.RED);
             
-        } else if (type.equals("BAT")) {
+        } else if (type.equals("Bat")) {
             // Wings (Dark Purple/Grey)
             p.setColor(Color.valueOf("#424242"));
             p.fillTriangle(128, 128, 20, 40, 50, 180);
@@ -425,7 +425,7 @@ public class SpriteGenerator {
             drawCircle(p, 118, 120, 3, Color.RED); // Pupil
             drawCircle(p, 138, 120, 3, Color.RED);
 
-        } else if (type.equals("BOSS")) {
+        } else if (type.equals("Boss")) {
             // DRAGON (Magnificent)
             
             // Wings (Big, back)
@@ -685,9 +685,9 @@ public class SpriteGenerator {
         } else if (name.contains("Ring") || name.contains("戒指")) {
              boolean isPower = name.contains("Power") || name.contains("力量");
              // Ring Band
-             Color bandColor = isPower ? Color.GOLD : Color.SILVER;
-             
-             // Draw Donut
+            Color bandColor = isPower ? Color.GOLD : Color.LIGHT_GRAY;
+            
+            // Draw Donut
              p.setColor(bandColor);
              p.fillCircle(128, 128, 50);
              // Inner hole (Clear)
@@ -711,7 +711,7 @@ public class SpriteGenerator {
                  // Blue Gem, Oval Cut (Defense)
                  drawGradientCircle(p, 128, 78, 18, Color.CYAN, Color.BLUE);
                  // Silver Setting
-                 drawRect(p, 120, 120, 16, 20, Color.SILVER); // Connection
+                 drawRect(p, 120, 120, 16, 20, Color.LIGHT_GRAY); // Connection
              }
              
         } else if (name.contains("Coin") || name.contains("金币")) {

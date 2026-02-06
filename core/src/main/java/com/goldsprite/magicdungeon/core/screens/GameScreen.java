@@ -1,6 +1,7 @@
 package com.goldsprite.magicdungeon.core.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.GridPoint2;
@@ -22,9 +23,7 @@ import com.goldsprite.magicdungeon.world.TileType;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -82,15 +81,6 @@ public class GameScreen extends GScreen {
 		// Audio
 		audio = new AudioSystem();
 
-		// Initialize HUD item textures using TextureManager
-		Map<String, Texture> itemTexMap = new HashMap<>();
-		for(ItemData d : ItemData.values()) {
-			itemTexMap.put(d.name, TextureManager.getInstance().getItem(d.name));
-		}
-		if (hud != null) {
-			hud.setItemTextures(itemTexMap);
-		}
-
 		// 初始化相机位置
 		updateCamera();
 
@@ -124,11 +114,11 @@ public class GameScreen extends GScreen {
 				if (Math.abs(pos.x - player.x) < 5 && Math.abs(pos.y - player.y) < 5) continue;
 
 				// Varied Monster Types based on Level
-				MonsterType type = MonsterType.SLIME;
-				if (dungeon.level >= 2 && Math.random() < 0.3) type = MonsterType.BAT;
-				if (dungeon.level >= 3 && Math.random() < 0.3) type = MonsterType.SKELETON;
-				if (dungeon.level >= 5 && Math.random() < 0.3) type = MonsterType.ORC;
-				if (dungeon.level % 6 == 0 && Math.random() < 0.3) type = MonsterType.BOSS;
+                MonsterType type = MonsterType.Slime;
+                if (dungeon.level >= 2 && Math.random() < 0.3) type = MonsterType.Bat;
+                if (dungeon.level >= 3 && Math.random() < 0.3) type = MonsterType.Skeleton;
+                if (dungeon.level >= 5 && Math.random() < 0.3) type = MonsterType.Orc;
+                if (dungeon.level % 6 == 0 && Math.random() < 0.3) type = MonsterType.Boss;
 
 				Monster m = new Monster(pos.x, pos.y, type);
 				// Apply difficulty
@@ -146,11 +136,11 @@ public class GameScreen extends GScreen {
 			GridPoint2 pos = dungeon.getRandomWalkableTile();
 			if (pos != null) {
 				// Random item type
-				ItemData itemData = ItemData.HEALTH_POTION;
+				ItemData itemData = ItemData.Health_Potion;
 				double r = Math.random();
-				if (r < 0.4) itemData = ItemData.HEALTH_POTION;
-				else if (r < 0.6) itemData = ItemData.MANA_POTION;
-				else if (r < 0.8) itemData = ItemData.RUSTY_SWORD;
+				if (r < 0.4) itemData = ItemData.Health_Potion;
+				else if (r < 0.6) itemData = ItemData.Mana_Potion;
+				else if (r < 0.8) itemData = ItemData.Rusty_Sword;
 				// Add more logic for better loot later
 
 				items.add(new Item(pos.x, pos.y, itemData));
@@ -176,17 +166,17 @@ public class GameScreen extends GScreen {
 
 		// Input Handling
 		int dx = 0;
-		int dy = 0;
-		if (Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.A)) dx = -1;
-		if (Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.D)) dx = 1;
-		if (Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.W)) dy = 1;
-		if (Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.S)) dy = -1;
+        int dy = 0;
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) dx = -1;
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) dx = 1;
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy = 1;
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy = -1;
 
-		if (dx != 0 || dy != 0) {
-			audio.playMove();
-		}
+        if (dx != 0 || dy != 0) {
+            audio.playMove();
+        }
 
-		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.SPACE)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 			if (player.stats.mana >= 10) {
 				player.useSkill();
 				audio.playLevelUp();
@@ -202,7 +192,7 @@ public class GameScreen extends GScreen {
 			// Debug: Check current position and tile type
 			if (tile != null) {
 				System.out.println("Player position: " + player.x + "," + player.y + ", Tile type: " + tile.type);
-				if (tile.type == TileType.STAIRS_DOWN) {
+				if (tile.type == TileType.Stairs_Down) {
 					System.out.println("Stairs found! Current level: " + dungeon.level);
 					nextLevel();
 					System.out.println("New level: " + dungeon.level);
@@ -223,11 +213,11 @@ public class GameScreen extends GScreen {
 				i--;
 				audio.playItem();
 				// Apply Item Effect
-				if (item.data.type == com.goldsprite.magicdungeon.entities.ItemType.POTION) {
-					if (item.data == ItemData.HEALTH_POTION) {
+				if (item.data.type == ItemType.POTION) {
+					if (item.data == ItemData.Health_Potion) {
 						player.stats.hp = Math.min(player.stats.hp + item.data.heal, player.stats.maxHp);
 						hud.showMessage("Used Health Potion!");
-					} else if (item.data == ItemData.MANA_POTION) {
+					} else if (item.data == ItemData.Mana_Potion) {
 						player.stats.mana = Math.min(player.stats.mana + item.data.heal, player.stats.maxMana);
 						hud.showMessage("Used Mana Potion!");
 					}
@@ -261,35 +251,35 @@ public class GameScreen extends GScreen {
 		updateCamera();
 
 		// Regenerate map
-		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.R)) {
-			dungeon.generate();
-			player.x = dungeon.startPos.x;
-			player.y = dungeon.startPos.y;
-			player.visualX = player.x * Constants.TILE_SIZE;
-			player.visualY = player.y * Constants.TILE_SIZE;
-			player.stats.hp = player.stats.maxHp;
-			spawnEntities();
-			hud.showMessage("Map Regenerated!");
-		}
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            dungeon.generate();
+            player.x = dungeon.startPos.x;
+            player.y = dungeon.startPos.y;
+            player.visualX = player.x * Constants.TILE_SIZE;
+            player.visualY = player.y * Constants.TILE_SIZE;
+            player.stats.hp = player.stats.maxHp;
+            spawnEntities();
+            hud.showMessage("Map Regenerated!");
+        }
 
-		// Save Game
-		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.F5)) {
-			SaveManager.saveGame(player, dungeon);
-			hud.showMessage("Game Saved!");
-		}
+        // Save Game
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+            SaveManager.saveGame(player, dungeon);
+            hud.showMessage("Game Saved!");
+        }
 
-		// Load Game
-		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.F9)) {
-			loadGame();
-		}
+        // Load Game
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+            loadGame();
+        }
 
-		// Toggle Inventory
-		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.I)) {
-			hud.toggleInventory();
-		}
+        // Toggle Inventory
+        if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+            hud.toggleInventory();
+        }
 
         // Cheat Code: Get All Items
-        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.GRAVE)) { // Tilde key (~) for easier access, or check for sequence if strictly "cheat666" needed
+        if (Gdx.input.isKeyJustPressed(Input.Keys.GRAVE)) { // Tilde key (~) for easier access, or check for sequence if strictly "cheat666" needed
              // Simple key binding for now, implementing "cheat666" sequence would require buffer
              // Let's use F8 as "Cheat Key" or handle "cheat666" via input processor if strict
         }
@@ -299,23 +289,23 @@ public class GameScreen extends GScreen {
         // For simplicity in LibGDX without UI input field, let's use a debug key combo like CTRL+L
         // But user asked for "input cheat666". Let's assume typing blind.
 
-        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUM_6) || Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUMPAD_6)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6)) {
              // Basic cheat implementation - Adds all items when F6 is pressed (easier than typing)
              // Or better:
         }
 
         // Implementing "cheat666" typing detection
-        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUM_6)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
              cheatCodeBuffer += "6";
-        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.C)) {
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
              cheatCodeBuffer += "c";
-        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.H)) {
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
              cheatCodeBuffer += "h";
-        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.E)) {
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
              cheatCodeBuffer += "e";
-        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.A)) {
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
              cheatCodeBuffer += "a";
-        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.T)) {
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
              cheatCodeBuffer += "t";
         } else {
              // Reset buffer if too long or check on timer?
@@ -367,7 +357,7 @@ public class GameScreen extends GScreen {
 
 		// Render Items
 		for (Item item : items) {
-			Texture itemTex = TextureManager.getInstance().getItem(item.data.name);
+			Texture itemTex = TextureManager.getInstance().get(item.data.name());
 			if (itemTex != null) {
 				// Render slightly smaller to distinguish from tiles
 				batch.draw(itemTex, item.visualX + 4, item.visualY + 4, 24, 24);
@@ -377,9 +367,9 @@ public class GameScreen extends GScreen {
 		// Render Monsters
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
-				Texture mTex = TextureManager.getInstance().getMonster(m.name);
+				Texture mTex = TextureManager.getInstance().get(m.type.name());
 				if (mTex == null) {
-					mTex = TextureManager.getInstance().getMonster(MonsterType.SLIME.name);
+					mTex = TextureManager.getInstance().get(MonsterType.Slime.name());
 				}
 
 				if (mTex != null) {

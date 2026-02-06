@@ -2,7 +2,7 @@ export const TILE_TYPE = {
     WALL: 0,
     FLOOR: 1,
     DOOR: 2,
-    STAIRS_DOWN: 3
+    Stairs_Down: 3
 };
 
 export class Tile {

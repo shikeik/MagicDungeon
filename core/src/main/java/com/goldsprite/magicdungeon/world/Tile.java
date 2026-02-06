@@ -10,6 +10,6 @@ public class Tile {
         this.type = type;
         this.visible = false;
         this.discovered = false;
-        this.walkable = (type != TileType.WALL);
+        this.walkable = (type != TileType.Wall);
     }
 }

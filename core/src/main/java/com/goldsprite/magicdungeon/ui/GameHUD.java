@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
+import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.InventoryItem;
 import com.goldsprite.magicdungeon.entities.ItemType;
@@ -20,8 +21,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.HashMap;
 
 public class GameHUD {
     public Stage stage;
@@ -44,7 +43,6 @@ public class GameHUD {
     private VisTextButton helpBtn;
     private BaseDialog helpWindow;
 
-    private Map<String, Texture> itemTextures;
     private Texture slotBgTexture;
     private Texture slotBorderTexture;
     private NinePatchDrawable slotBgDrawable;
@@ -96,8 +94,8 @@ public class GameHUD {
             stack.add(bgTable);
 
             // 3. Icon
-            if (itemTextures != null && itemTextures.containsKey(item.data.name)) {
-                Texture tex = itemTextures.get(item.data.name);
+            Texture tex = TextureManager.getInstance().getItem(item.data.name());
+            if (tex != null) {
                 VisImage icon = new VisImage(new TextureRegionDrawable(tex));
                 VisTable iconTable = new VisTable();
                 iconTable.add(icon).size(48, 48);
@@ -299,10 +297,6 @@ public class GameHUD {
         slotBorderTexture = new Texture(borderPm);
         slotBorderDrawable = new NinePatchDrawable(new NinePatch(slotBorderTexture, 5, 5, 5, 5));
         borderPm.dispose();
-    }
-
-    public void setItemTextures(Map<String, Texture> textures) {
-        this.itemTextures = textures;
     }
 
     // Removed createInventoryWindow method (replaced by InventoryDialog)

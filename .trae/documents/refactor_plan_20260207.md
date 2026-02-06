@@ -27,7 +27,7 @@
     *   获取方式分散 (`getTile`, `getMonster`, `getItem`)。
 *   **方案**:
     *   在 `loadAll` 中，为 Monster 和 Item 同时注册 **英文枚举名** 和 **中文显示名** 作为 Key。
-    *   确保 `get(String key)` 可以通过英文 ID (如 "SLIME", "RUSTY_SWORD") 获取资源。
+    *   确保 `get(String key)` 可以通过英文 ID (如 "SLIME", "Rusty_Sword") 获取资源。
     *   保留 `getTile`, `getMonster` 等辅助方法以维持兼容性，但推荐直接使用 `get(String key)`。
     *   更新 `TexturePreviewScreen` 中的调用方式，展示统一接口的便利性。
 

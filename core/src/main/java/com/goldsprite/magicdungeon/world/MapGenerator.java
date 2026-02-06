@@ -41,7 +41,7 @@ public class MapGenerator {
         // Initialize with walls
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                map[y][x] = new Tile(TileType.WALL);
+                map[y][x] = new Tile(TileType.Wall);
             }
         }
 
@@ -101,7 +101,7 @@ public class MapGenerator {
             Room lastRoom = rooms.get(rooms.size() - 1);
             int stairsX = lastRoom.x + lastRoom.w / 2;
             int stairsY = lastRoom.y + lastRoom.h / 2;
-            map[stairsY][stairsX].type = TileType.STAIRS_DOWN;
+            map[stairsY][stairsX].type = TileType.Stairs_Down;
         }
 
         // Start position
@@ -117,7 +117,7 @@ public class MapGenerator {
     private void createRoom(Tile[][] map, Room room) {
         for (int y = room.y; y < room.y + room.h; y++) {
             for (int x = room.x; x < room.x + room.w; x++) {
-                map[y][x].type = TileType.FLOOR;
+                map[y][x].type = TileType.Floor;
                 map[y][x].walkable = true;
             }
         }
@@ -125,14 +125,14 @@ public class MapGenerator {
 
     private void createHCorridor(Tile[][] map, int x1, int x2, int y) {
         for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
-            map[y][x].type = TileType.FLOOR;
+            map[y][x].type = TileType.Floor;
             map[y][x].walkable = true;
         }
     }
 
     private void createVCorridor(Tile[][] map, int y1, int y2, int x) {
         for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
-            map[y][x].type = TileType.FLOOR;
+            map[y][x].type = TileType.Floor;
             map[y][x].walkable = true;
         }
     }

@@ -44,7 +44,7 @@ export class MapGenerator {
 
             if (!failed) {
                 this.createRoom(map, newRoom);
-                
+
                 if (rooms.length > 0) {
                     const prevRoom = rooms[rooms.length - 1];
                     const prevCenter = {
@@ -74,7 +74,7 @@ export class MapGenerator {
         const lastRoom = rooms[rooms.length - 1];
         const stairsX = Math.floor(lastRoom.x + lastRoom.w / 2);
         const stairsY = Math.floor(lastRoom.y + lastRoom.h / 2);
-        map[stairsY][stairsX].type = TILE_TYPE.STAIRS_DOWN;
+        map[stairsY][stairsX].type = TILE_TYPE.Stairs_Down;
 
         // Start position
         const startRoom = rooms[0];

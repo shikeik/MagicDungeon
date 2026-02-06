@@ -18,20 +18,20 @@ export class Game {
     constructor() {
         // Init assets first
         initAssets();
-        
+
         this.renderer = new Renderer('game-canvas');
         this.input = new Input();
         this.audio = new AudioSystem();
         this.state = GAME_STATE.MENU;
         this.lastTime = 0;
-        
+
         this.monsters = [];
         this.items = [];
         this.player = null;
         this.map = null;
         this.log = [];
         this.level = 1;
-        
+
         this.achievements = new AchievementSystem();
         this.skillSystem = null;
 
@@ -46,21 +46,21 @@ export class Game {
         document.getElementById('load-btn').addEventListener('click', () => {
             this.loadGame();
         });
-        
+
         // New UI bindings
         document.getElementById('help-btn')?.addEventListener('click', () => {
             document.getElementById('help-modal').style.display = 'flex';
         });
-        
+
         document.getElementById('inventory-btn')?.addEventListener('click', () => {
             this.updateInventoryUI();
             document.getElementById('inventory-modal').style.display = 'flex';
         });
-        
+
         document.getElementById('save-btn')?.addEventListener('click', () => {
             this.saveGame();
         });
-        
+
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.target.closest('.modal').style.display = 'none';
@@ -71,7 +71,7 @@ export class Game {
 
     saveGame() {
         if (!this.player || !this.map) return;
-        
+
         const saveData = {
             player: {
                 stats: this.player.stats,
@@ -81,11 +81,11 @@ export class Game {
                 y: this.player.y
             },
             level: this.level,
-            // For full save we need map data, monsters, items. 
+            // For full save we need map data, monsters, items.
             // Simplified: Save player and restart level generation logic or simplified state
             seed: Date.now() // Ideally use a seed for map gen
         };
-        
+
         if (SaveSystem.save('dungeon_save', saveData)) {
             this.logMessage("Game Saved!");
             alert("Game Saved Successfully!"); // Explicit feedback
@@ -110,17 +110,17 @@ export class Game {
             this.player.stats = data.player.stats;
             this.player.inventory = data.player.inventory;
             this.player.equipment = data.player.equipment;
-            
+
             // Restore equipment references to inventory items
-            // Since inventory is loaded from JSON, objects are new. 
-            // We need to link equipment back to the inventory items if possible, 
+            // Since inventory is loaded from JSON, objects are new.
+            // We need to link equipment back to the inventory items if possible,
             // or just rely on the data being correct.
-            // Simplified: Re-assigning stats is enough for logic, but for equipment UI 
+            // Simplified: Re-assigning stats is enough for logic, but for equipment UI
             // we might need to check if the exact object references matter.
-            // In equip(), we store reference. Here we loaded copies. 
+            // In equip(), we store reference. Here we loaded copies.
             // So this.player.equipment.weapon is NOT in this.player.inventory array.
             // Fix: Find the matching item in inventory and link it.
-            
+
             if (this.player.equipment.weapon) {
                 const w = this.player.inventory.find(i => i.data.name === this.player.equipment.weapon.data.name);
                 if (w) this.player.equipment.weapon = w;
@@ -139,7 +139,7 @@ export class Game {
         document.getElementById('hud').style.display = 'block';
         this.state = GAME_STATE.PLAYING;
         this.level = startLevel;
-        
+
         this.initLevel();
     }
 
@@ -157,7 +157,7 @@ export class Game {
             this.player.visualX = this.player.x * TILE_SIZE;
             this.player.visualY = this.player.y * TILE_SIZE;
         }
-        
+
         // Spawn Monsters (More/Stronger based on level)
         this.monsters = [];
         const monsterCount = 10 + Math.floor(this.level * 2);
@@ -197,7 +197,7 @@ export class Game {
         this.logMessage(`Descending to Level ${this.level}...`);
         this.audio.playLevelUp(); // Re-use sound for now
         this.initLevel();
-        
+
         // Auto Save
         this.saveGame();
         this.logMessage("Auto-saved game.");
@@ -207,7 +207,7 @@ export class Game {
         console.log(msg);
         this.log.push(msg);
         if (this.log.length > 10) this.log.shift();
-        
+
         const logEl = document.getElementById('game-log');
         if (logEl) {
             logEl.innerHTML = this.log.slice().reverse().map(m => `<div>${m}</div>`).join('');
@@ -239,7 +239,7 @@ export class Game {
 
                 // Skills update
                 if (this.skillSystem) this.skillSystem.update(dt);
-                
+
                 // Skill input (Space to Heal)
                 if (this.input.isKeyPressed('Space')) {
                      if (this.skillSystem.use(SKILLS.HEAL.id)) {
@@ -262,14 +262,14 @@ export class Game {
                             this.player.inventory.push(item);
                             this.logMessage(`Picked up ${item.data.name}`);
                             this.audio.playItem();
-                            
+
                             // Auto equip for simplicity if better or first
                             this.player.equip(item);
                         }
-                        
+
                         // Check for stairs
                         const tile = this.map.getTile(action.x, action.y);
-                        if (tile && tile.type === TILE_TYPE.STAIRS_DOWN) {
+                        if (tile && tile.type === TILE_TYPE.Stairs_Down) {
                              this.logMessage("You found the stairs! Press SPACE or click Next Level to descend.");
                              // For now, auto descend or simple check
                              // Let's auto descend for seamlessness or maybe wait for input?
@@ -279,7 +279,7 @@ export class Game {
                         }
                     }
                 }
-                
+
                 // Update Monsters
                 this.monsters.forEach(m => {
                     const result = m.update(dt, this.player, this.map, this.monsters);
@@ -306,7 +306,7 @@ export class Game {
         target.hp -= damage;
         this.audio.playAttack();
         this.logMessage(`${attacker.name || attacker.constructor.name} attacks ${target.name || target.constructor.name} for ${damage} damage!`);
-        
+
         if (target === this.player) {
             // Visual feedback for player damage
             const overlay = document.getElementById('damage-overlay');
@@ -318,7 +318,7 @@ export class Game {
 
         if (target.hp <= 0) {
             this.logMessage(`${target.name || target.constructor.name} dies!`);
-            
+
             if (target === this.player) {
                 this.state = GAME_STATE.GAME_OVER;
                 alert("Game Over!");
@@ -338,7 +338,7 @@ export class Game {
                         this.logMessage(`Level Up! You are now level ${this.player.stats.level}`);
                         this.audio.playLevelUp();
                     }
-                    
+
                     // Check Achievements
                     const newAch = this.achievements.check(this.player.stats);
                     newAch.forEach(ach => this.logMessage(`ACHIEVEMENT: ${ach.name}`));
@@ -350,14 +350,14 @@ export class Game {
     updateInventoryUI() {
         const list = document.getElementById('inventory-list');
         if (!list || !this.player) return;
-        
+
         const typeNames = ['Weapon', 'Armor', 'Potion', 'Key'];
 
         list.innerHTML = '';
         this.player.inventory.forEach(item => {
             const div = document.createElement('div');
             div.className = 'inventory-item';
-            
+
             const isEquipped = (this.player.equipment.weapon === item) || (this.player.equipment.armor === item);
             if (isEquipped) {
                 div.classList.add('equipped');
@@ -379,7 +379,7 @@ export class Game {
             });
             list.appendChild(div);
         });
-        
+
         // Stats
         const stats = document.getElementById('player-stats-detail');
         if (stats) {
@@ -406,7 +406,7 @@ export class Game {
 
         if (this.state === GAME_STATE.PLAYING && this.map) {
             this.renderer.drawMap(this.map);
-            
+
             // Draw Items
             this.items.forEach(i => {
                 let sprite = null;
@@ -414,8 +414,8 @@ export class Game {
                 else if (i.data.type === ITEM_TYPE.ARMOR) sprite = ASSETS.ITEMS.ARMOR;
                 else if (i.data.type === ITEM_TYPE.POTION) sprite = ASSETS.ITEMS.POTION;
                 else sprite = i.color;
-                
-                this.renderer.drawSprite(sprite, i.x, i.y); 
+
+                this.renderer.drawSprite(sprite, i.x, i.y);
             });
 
             // Draw Monsters

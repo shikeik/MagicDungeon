@@ -8,7 +8,7 @@ export class Renderer {
         this.ctx = this.canvas.getContext('2d');
         this.resize();
         window.addEventListener('resize', () => this.resize());
-        
+
         // Camera position
         this.camera = { x: 0, y: 0 };
     }
@@ -27,7 +27,7 @@ export class Renderer {
     // Follow a target (e.g., player)
     updateCamera(target) {
         if (!target) return;
-        
+
         let tx = target.x * TILE_SIZE;
         let ty = target.y * TILE_SIZE;
 
@@ -53,8 +53,8 @@ export class Renderer {
                     let sprite = null;
                     if (tile.type === TILE_TYPE.WALL) sprite = ASSETS.TILES.WALL;
                     else if (tile.type === TILE_TYPE.FLOOR) sprite = ASSETS.TILES.FLOOR;
-                    else if (tile.type === TILE_TYPE.STAIRS_DOWN) sprite = ASSETS.TILES.STAIRS;
-                    
+                    else if (tile.type === TILE_TYPE.Stairs_Down) sprite = ASSETS.TILES.STAIRS;
+
                     if (sprite) {
                         this.drawSprite(sprite, x, y);
                     } else {
@@ -74,7 +74,7 @@ export class Renderer {
         const screenY = Math.floor(y * size - this.camera.y);
 
         // Cull if out of screen
-        if (screenX < -size || screenX > this.canvas.width || 
+        if (screenX < -size || screenX > this.canvas.width ||
             screenY < -size || screenY > this.canvas.height) return;
 
         if (typeof sprite === 'string') {
@@ -85,7 +85,7 @@ export class Renderer {
              this.ctx.drawImage(sprite, screenX, screenY, size, size);
         }
     }
-    
+
     drawText(text, x, y, color = 'white', fontSize = 16) {
          this.ctx.fillStyle = color;
          this.ctx.font = `${fontSize}px 'Courier New'`;

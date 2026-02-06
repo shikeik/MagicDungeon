@@ -7,6 +7,7 @@ import java.util.List;
 
 public class Monster extends Entity {
     public String name;
+    public MonsterType type;
     public int maxHp;
     public int hp;
     public int atk;
@@ -15,6 +16,7 @@ public class Monster extends Entity {
 
     public Monster(int x, int y, MonsterType type) {
         super(x, y, type.color);
+        this.type = type;
         this.name = type.name;
         this.maxHp = type.maxHp;
         this.hp = type.maxHp;

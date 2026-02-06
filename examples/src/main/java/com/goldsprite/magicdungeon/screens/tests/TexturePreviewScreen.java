@@ -64,32 +64,10 @@ public class TexturePreviewScreen extends GScreen {
         // Use TextureManager
         TextureManager tm = TextureManager.getInstance();
 
-        // 1. Tiles
-        addPreview(tm.get("FLOOR"), "Floor", col++, row);
-        addPreview(tm.get("WALL"), "Wall", col++, row);
-        addPreview(tm.get("DOOR"), "Door", col++, row);
-        addPreview(tm.get("STAIRS_DOWN"), "Stairs Down", col++, row);
-        addPreview(tm.get("STAIRS_UP"), "Stairs Up", col++, row);
-
-        // New Row
-        row++; col = 0;
-
-        // 2. Player
-        addPreview(tm.get("PLAYER"), "Player", col++, row);
-
-        // 3. Monsters
-        for (MonsterType type : MonsterType.values()) {
+        // Iterate all textures
+        for (java.util.Map.Entry<String, Texture> entry : tm.getAllTextures().entrySet()) {
             if (col >= 6) { col = 0; row++; }
-            addPreview(tm.get(type.name()), "Mon: " + type.name(), col++, row);
-        }
-
-        // New Row
-        row++; col = 0;
-
-        // 4. Items
-        for (ItemData item : ItemData.values()) {
-            if (col >= 6) { col = 0; row++; }
-            addPreview(tm.get(item.name()), item.name(), col++, row);
+            addPreview(entry.getValue(), entry.getKey(), col++, row);
         }
 
         // Camera Controller
