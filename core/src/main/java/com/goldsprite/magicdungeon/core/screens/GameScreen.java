@@ -19,6 +19,7 @@ import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 import com.goldsprite.magicdungeon.world.Dungeon;
 import com.goldsprite.magicdungeon.world.Tile;
 import com.goldsprite.magicdungeon.world.TileType;
+import com.goldsprite.magicdungeon.assets.TextureManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,10 +32,6 @@ public class GameScreen extends GScreen {
 	private List<Monster> monsters;
 	private List<Item> items;
 	// Removed redundant viewport and camera
-	private Map<TileType, Texture> tileTextures;
-	private Texture playerTexture;
-	private Map<String, Texture> monsterTextures;
-	private Map<String, Texture> itemTextures;
 	private GameHUD hud;
 	private AudioSystem audio;
 	private SpriteBatch batch;
@@ -85,7 +82,14 @@ public class GameScreen extends GScreen {
 		// Audio
 		audio = new AudioSystem();
 
-		generateTextures();
+		// Initialize HUD item textures using TextureManager
+		Map<String, Texture> itemTexMap = new HashMap<>();
+		for(ItemData d : ItemData.values()) {
+			itemTexMap.put(d.name, TextureManager.getInstance().getItem(d.name));
+		}
+		if (hud != null) {
+			hud.setItemTextures(itemTexMap);
+		}
 
 		// 初始化相机位置
 		updateCamera();
@@ -164,49 +168,7 @@ public class GameScreen extends GScreen {
 		worldCamera.update();
 	}
 
-	private void generateTextures() {
-		System.out.println("Generating Textures...");
-		tileTextures = new HashMap<>();
-		tileTextures.put(TileType.WALL, SpriteGenerator.createWall());
-		tileTextures.put(TileType.FLOOR, SpriteGenerator.createFloor());
-		tileTextures.put(TileType.DOOR, SpriteGenerator.createDoor());
-		tileTextures.put(TileType.STAIRS_DOWN, SpriteGenerator.createStairs());
 
-		playerTexture = SpriteGenerator.createPlayer();
-		if (playerTexture == null) System.err.println("Player texture is null!");
-
-		monsterTextures = new HashMap<>();
-		monsterTextures.put(MonsterType.SLIME.name, SpriteGenerator.createMonster("SLIME"));
-		monsterTextures.put(MonsterType.SKELETON.name, SpriteGenerator.createMonster("SKELETON"));
-		monsterTextures.put(MonsterType.ORC.name, SpriteGenerator.createMonster("ORC"));
-		monsterTextures.put(MonsterType.BAT.name, SpriteGenerator.createMonster("BAT"));
-		monsterTextures.put(MonsterType.BOSS.name, SpriteGenerator.createMonster("BOSS"));
-
-		itemTextures = new HashMap<>();
-		itemTextures.put(ItemData.HEALTH_POTION.name, SpriteGenerator.createItem("Health Potion"));
-		itemTextures.put(ItemData.MANA_POTION.name, SpriteGenerator.createItem("Mana Potion"));
-		itemTextures.put(ItemData.ELIXIR.name, SpriteGenerator.createItem("Elixir"));
-		itemTextures.put(ItemData.RUSTY_SWORD.name, SpriteGenerator.createItem("Rusty Sword"));
-		itemTextures.put(ItemData.IRON_SWORD.name, SpriteGenerator.createItem("Iron Sword"));
-		itemTextures.put(ItemData.STEEL_AXE.name, SpriteGenerator.createItem("Steel Axe"));
-		itemTextures.put(ItemData.MAGIC_WAND.name, SpriteGenerator.createItem("Magic Wand"));
-		itemTextures.put(ItemData.LEGENDARY_BLADE.name, SpriteGenerator.createItem("Legendary Blade"));
-		itemTextures.put(ItemData.LEATHER_ARMOR.name, SpriteGenerator.createItem("Leather Armor"));
-		itemTextures.put(ItemData.IRON_MAIL.name, SpriteGenerator.createItem("Iron Mail"));
-		itemTextures.put(ItemData.PLATE_ARMOR.name, SpriteGenerator.createItem("Plate Armor"));
-		itemTextures.put(ItemData.RING_OF_POWER.name, SpriteGenerator.createItem("Ring of Power"));
-		itemTextures.put(ItemData.RING_OF_DEFENSE.name, SpriteGenerator.createItem("Ring of Defense"));
-		itemTextures.put(ItemData.WOODEN_SHIELD.name, SpriteGenerator.createItem("Wooden Shield"));
-		itemTextures.put(ItemData.IRON_SHIELD.name, SpriteGenerator.createItem("Iron Shield"));
-		itemTextures.put(ItemData.GOLD_COIN.name, SpriteGenerator.createItem("Gold Coin"));
-		itemTextures.put(ItemData.MAGIC_SCROLL.name, SpriteGenerator.createItem("Magic Scroll"));
-
-        if (hud != null) {
-            hud.setItemTextures(itemTextures);
-        }
-
-		System.out.println("Textures Generated.");
-	}
 
 	@Override
 	public void render(float delta) {
@@ -395,7 +357,7 @@ public class GameScreen extends GScreen {
 			for (int x = startX; x < endX; x++) {
 				Tile tile = dungeon.getTile(x, y);
 				if (tile != null) {
-					Texture texture = tileTextures.get(tile.type);
+					Texture texture = TextureManager.getInstance().getTile(tile.type);
 					if (texture != null) {
 						batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
 					}
@@ -405,7 +367,7 @@ public class GameScreen extends GScreen {
 
 		// Render Items
 		for (Item item : items) {
-			Texture itemTex = itemTextures.get(item.data.name);
+			Texture itemTex = TextureManager.getInstance().getItem(item.data.name);
 			if (itemTex != null) {
 				// Render slightly smaller to distinguish from tiles
 				batch.draw(itemTex, item.visualX + 4, item.visualY + 4, 24, 24);
@@ -415,7 +377,11 @@ public class GameScreen extends GScreen {
 		// Render Monsters
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
-				Texture mTex = monsterTextures.get(m.name);
+				Texture mTex = TextureManager.getInstance().getMonster(m.name);
+				if (mTex == null) {
+					mTex = TextureManager.getInstance().getMonster(MonsterType.SLIME.name);
+				}
+
 				if (mTex != null) {
 					// Apply hit flash effect if needed
 					boolean appliedFlash = m.applyHitFlash();
@@ -427,33 +393,19 @@ public class GameScreen extends GScreen {
 					if (appliedFlash) {
 						batch.setColor(1f, 1f, 1f, 1f);
 					}
-				} else {
-					// Fallback to Slime if texture missing
-					Texture fallback = monsterTextures.get(MonsterType.SLIME.name);
-					if (fallback != null) {
-						// Apply hit flash effect if needed
-						boolean appliedFlash = m.applyHitFlash();
-						if (appliedFlash) {
-							batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
-						}
-						batch.draw(fallback, m.visualX + m.bumpX, m.visualY + m.bumpY, Constants.TILE_SIZE, Constants.TILE_SIZE);
-						// Reset color if we changed it
-						if (appliedFlash) {
-							batch.setColor(1f, 1f, 1f, 1f);
-						}
-					}
 				}
 			}
 		}
 
 		// Render Player
-		if (playerTexture != null) {
+		Texture playerTex = TextureManager.getInstance().getPlayer();
+		if (playerTex != null) {
 			// Apply hit flash effect using base class method
 			boolean appliedFlash = player.applyHitFlash();
 			if (appliedFlash) {
 				batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
 			}
-			batch.draw(playerTexture, player.visualX + player.bumpX, player.visualY + player.bumpY, Constants.TILE_SIZE, Constants.TILE_SIZE);
+			batch.draw(playerTex, player.visualX + player.bumpX, player.visualY + player.bumpY, Constants.TILE_SIZE, Constants.TILE_SIZE);
 			if (appliedFlash) {
 				batch.setColor(1f, 1f, 1f, 1f);
 			}

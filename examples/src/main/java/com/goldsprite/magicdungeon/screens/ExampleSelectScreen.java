@@ -1,4 +1,4 @@
-package com.goldsprite.screens;
+package com.goldsprite.magicdungeon.screens;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;

@@ -13,7 +13,7 @@ import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
-import com.goldsprite.screens.ExampleSelectScreen;
+import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 
 public class GdxLauncher extends Game {

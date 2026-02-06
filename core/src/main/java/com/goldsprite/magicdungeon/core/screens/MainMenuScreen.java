@@ -68,16 +68,6 @@ public class MainMenuScreen extends GScreen {
 			table.add(loadButton).width(200).height(50).padBottom(20).row();
 		}
 
-		VisTextButton previewButton = new VisTextButton("Texture Preview");
-		previewButton.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				getScreenManager().setCurScreen(new TexturePreviewScreen());
-				dispose();
-			}
-		});
-		table.add(previewButton).width(200).height(50).padBottom(20).row();
-
 		VisTextButton exitButton = new VisTextButton("Exit");
 		exitButton.addListener(new ClickListener() {
 			@Override

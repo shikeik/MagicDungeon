@@ -160,23 +160,30 @@ public class SpriteGenerator {
         // User said "无背景" for UP stairs.
         
         if (!up) {
-            // STAIRS DOWN: Top Large, Bottom Small (Perspective going into ground)
-            // Or "上大下小" means top of image is wide, bottom is narrow?
-            // "营造往下地牢阴影感" -> Perspective funneling down.
-            // Let's draw a dark hole in center-ish
+            // STAIRS DOWN: Trapezoid Perspective (梯形)
+            // Background Black
+            drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.BLACK);
             
-            drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#444444")); // Floor BG
+            // Draw stairs from Top (Light) to Bottom (Dark/Black)
+            // Top is wide, Bottom is narrow
             
-            // Funnel
-            for(int i=0; i<5; i++) {
-                int inset = i * 20;
-                Color c = new Color(0.1f + i*0.1f, 0.1f + i*0.1f, 0.1f + i*0.1f, 1f); // Darker as we go deep? No, usually deeper is darker.
-                // Outer is light, inner is dark.
-                c = new Color(0.6f - i*0.1f, 0.6f - i*0.1f, 0.6f - i*0.1f, 1f);
-                drawRect(p, 20 + inset, 20 + inset, TEX_SIZE - 40 - inset*2, TEX_SIZE - 40 - inset*2, c);
+            int steps = 8;
+            for(int i=0; i<steps; i++) {
+                // Interpolate color from Grey to Black
+                float t = (float)i / (steps-1);
+                Color c = new Color(0.5f * (1-t), 0.5f * (1-t), 0.5f * (1-t), 1f);
+                
+                // Width decreases
+                int topW = TEX_SIZE - 20;
+                int botW = 100;
+                int currentW = (int)(topW - (topW - botW) * t);
+                int h = 30 - i * 2; // Height decreases slightly
+                
+                int x = (TEX_SIZE - currentW) / 2;
+                int y = i * 35; // Position
+                
+                drawRect(p, x, y, currentW, h, c);
             }
-            // Black void at bottom
-            drawRect(p, 100, 100, 56, 56, Color.BLACK);
             
         } else {
             // STAIRS UP: Top Small, Bottom Large (Perspective going up)
@@ -239,14 +246,11 @@ public class SpriteGenerator {
         Color gold = Color.GOLD;
         Color helmet = Color.valueOf("#CFD8DC"); // Light Silver
         Color darkHelmet = Color.valueOf("#90A4AE");
-        Color legs = Color.valueOf("#424242");
+        Color legs = Color.valueOf("#8d6e63"); // Brown Pants (Contrast with floor)
         Color boots = Color.valueOf("#3E2723");
 
-        // 1. Legs (Centered) - Shorter for bigger head feel? Or normal. 
-        // User asked for "Head smaller", "Shoes bigger".
-        // Current: Head ~80x80, Body ~90h, Legs ~60h. Total ~230h.
-        // Make Head smaller: ~60x60.
-        // Make Shoes bigger: Width 45+, Height 20+.
+        // 1. Legs (Centered)
+        // User asked for big shoes.
         
         int startY = 30; // Shift down
         
@@ -254,9 +258,9 @@ public class SpriteGenerator {
         drawRect(p, 90, 180, 25, 60, legs);
         drawRect(p, 141, 180, 25, 60, legs);
         
-        // Boots (Big Shoes)
-        drawRect(p, 80, 230, 45, 26, boots); // Bigger
-        drawRect(p, 131, 230, 45, 26, boots);
+        // Boots (Big Shoes - Even Bigger)
+        drawRect(p, 75, 230, 55, 30, boots); // Bigger Width 55
+        drawRect(p, 126, 230, 55, 30, boots);
 
         // 2. Body (Armor)
         // Main Chest
@@ -419,23 +423,28 @@ public class SpriteGenerator {
             if (name.contains("Gold") || name.contains("Legendary") || name.contains("传奇")) bladeColor = Color.GOLD;
             if (name.contains("Rusty") || name.contains("生锈")) bladeColor = Color.valueOf("#8d6e63");
             
-            // Diagonal Sword (Bottom Left to Top Right)
-            // Handle
-            drawLine(p, 60, 200, 90, 170, 10, Color.valueOf("#3e2723"));
-            drawCircle(p, 55, 205, 8, Color.GOLD); // Pommel
-            // Guard
-            drawLine(p, 70, 190, 110, 150, 6, Color.valueOf("#5d4037")); // Cross part logic simplified
-            drawLine(p, 75, 155, 105, 185, 14, Color.valueOf("#5d4037")); // Actual Guard
+            // Diagonal Sword (Broadsword, thicker)
+            // Handle (Bottom Left)
+            drawLine(p, 60, 200, 85, 175, 16, Color.valueOf("#3e2723")); // Thicker Handle
+            drawCircle(p, 55, 205, 12, Color.GOLD); // Bigger Pommel
             
-            // Blade
-            drawLine(p, 90, 170, 200, 60, 20, bladeColor);
-            // Tip
-            // Simple triangle tip logic is hard with diagonals, just extend line and taper?
-            // Let's just draw a thinner line at end
-            drawLine(p, 200, 60, 210, 50, 10, bladeColor);
+            // Guard (Perpendicular to blade)
+            // Blade direction vector: (1, -1). Perpendicular: (1, 1).
+            // Center around (85, 175)
+            drawLine(p, 65, 155, 105, 195, 20, Color.valueOf("#5d4037")); // Thick Guard
+            
+            // Blade (Wide)
+            int bladeWidth = 24; // Thicker
+            drawLine(p, 90, 170, 210, 50, bladeWidth, bladeColor);
+            
+            // Tip (Triangle)
+            // Hard to draw rotated triangle with current tools. 
+            // Just draw a line that tapers? Or manually draw lines to form tip.
+            // Let's draw a few lines of decreasing length at tip
+            drawLine(p, 210, 50, 220, 40, 10, bladeColor);
             
             // Blood Groove (Fuller)
-            drawLine(p, 95, 165, 195, 65, 4, bladeColor.cpy().mul(0.7f));
+            drawLine(p, 95, 165, 205, 55, 6, bladeColor.cpy().mul(0.7f)); // Darker center line
 
         } else if (name.contains("Shield") || name.contains("盾")) {
             Color c = name.contains("Iron") || name.contains("铁") ? Color.GRAY : Color.valueOf("#5d4037");
@@ -458,21 +467,64 @@ public class SpriteGenerator {
             drawGradientCircle(p, 128, 120, 30, border, c);
 
         } else if (name.contains("Axe") || name.contains("斧")) {
-             // Handle
-             drawRect(p, 120, 40, 16, 180, Color.valueOf("#5d4037"));
-             // Blades (Double bit)
+             // Handle (Thick) - Diagonal
+             // Top Right to Bottom Left
+             drawLine(p, 180, 40, 60, 200, 16, Color.valueOf("#5d4037"));
+             
+             // Head Position around (160, 60)
+             // Double Bit Moon Shape
              p.setColor(Color.LIGHT_GRAY);
-             p.fillTriangle(120, 60, 60, 40, 60, 120); // Left
-             p.fillTriangle(136, 60, 196, 40, 196, 120); // Right
+             // Left Blade (Crescent)
+             // Draw circle and cut out? Or lines.
+             // Simple: 2 Triangles but curved?
+             // Let's use circles for curve
+             p.fillCircle(140, 80, 50); // Left big circle
+             p.fillCircle(180, 40, 50); // Right big circle
+             
+             // Cutout to make it crescent/axe-like attached to handle?
+             // This is tricky with simple primitives.
+             // Let's use rects/triangles but better placed.
+             
+             // Re-draw handle on top later
+             
+             // Left Blade
+             p.setColor(Color.LIGHT_GRAY);
+             // Top part
+             p.fillTriangle(160, 60, 100, 20, 130, 100);
+             // Bottom part
+             p.fillTriangle(160, 60, 130, 100, 200, 100); // This is messy.
+             
+             // Let's try simple "Butterfly" shape for axe head at (160, 60)
+             p.setColor(Color.LIGHT_GRAY);
+             // Left wing
+             p.fillTriangle(160, 60, 110, 20, 110, 100); 
+             // Right wing
+             p.fillTriangle(160, 60, 210, 20, 210, 100);
+             
+             // Add curve illusion by drawing smaller dark circles?
+             p.setColor(new Color(0,0,0,0)); // Transparent? No.
+             // Just stick to geometric butterfly for now, better than triangle.
+             
+             // Redraw handle
+             drawLine(p, 180, 40, 60, 200, 16, Color.valueOf("#5d4037"));
              
         } else if (name.contains("Wand") || name.contains("Staff") || name.contains("魔杖")) {
-             // Staff
-             drawRect(p, 124, 40, 8, 200, Color.valueOf("#5d4037"));
-             // Gem
-             drawGradientCircle(p, 128, 40, 20, Color.MAGENTA, Color.PURPLE);
+             // Staff - Diagonal
+             drawLine(p, 80, 200, 180, 60, 12, Color.valueOf("#5d4037"));
+             
+             // Head Gem
+             drawGradientCircle(p, 180, 60, 25, Color.MAGENTA, Color.PURPLE);
+             // Ornaments (Gold Rings)
+             p.setColor(Color.GOLD);
+             p.setBlending(Pixmap.Blending.None); // Overwrite
+             // Ring around gem?
+             // Just some dots
+             drawCircle(p, 180, 60, 30, new Color(1, 0.84f, 0, 0.5f)); // Halo
+             
              // Glow
-             p.setColor(new Color(1f, 0f, 1f, 0.3f));
-             p.fillCircle(128, 40, 30);
+             p.setBlending(Pixmap.Blending.SourceOver);
+             p.setColor(new Color(1f, 0f, 1f, 0.4f));
+             p.fillCircle(180, 60, 40);
              
         } else if (name.contains("Scroll") || name.contains("卷轴")) {
              // Paper
