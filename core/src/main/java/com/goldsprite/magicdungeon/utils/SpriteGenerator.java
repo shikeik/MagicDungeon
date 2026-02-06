@@ -114,8 +114,8 @@ public class SpriteGenerator {
 
         if (type.equals("SLIME")) {
             p.setColor(Color.BLUE);
-            p.fillCircle(16, 16, 10); // Top half approx
-            p.fillRectangle(6, 16, 20, 12); // Bottom fill to square it off a bit?
+            p.fillCircle(16, 18, 10); // Top half approx
+            p.fillRectangle(6, 16, 21, 12); // Bottom fill to square it off a bit?
             // H5: arc(16, 20, 10, PI, 0) -> top arc. lineTo 26,28 -> bottom right. lineTo 6,28 -> bottom left.
             // Simplified for Pixmap:
             p.fillCircle(16, 20, 10);

@@ -119,7 +119,7 @@ public class GameScreen extends GScreen {
 				if (dungeon.level >= 2 && Math.random() < 0.3) type = MonsterType.BAT;
 				if (dungeon.level >= 3 && Math.random() < 0.3) type = MonsterType.SKELETON;
 				if (dungeon.level >= 5 && Math.random() < 0.3) type = MonsterType.ORC;
-				if (dungeon.level % 10 == 0) type = MonsterType.BOSS;
+				if (dungeon.level % 6 == 0 && Math.random() < 0.3) type = MonsterType.BOSS;
 
 				Monster m = new Monster(pos.x, pos.y, type);
 				// Apply difficulty
