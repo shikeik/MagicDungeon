@@ -676,4 +676,18 @@ public class GameScreen extends GScreen {
 			hud.showMessage("No Save Found!");
 		}
 	}
+
+	@Override
+	public void dispose() {
+		if (audio != null) {
+			audio.dispose();
+		}
+		if (hud != null) {
+			hud.dispose();
+		}
+		if (batch != null) {
+			batch.dispose();
+		}
+		super.dispose();
+	}
 }
