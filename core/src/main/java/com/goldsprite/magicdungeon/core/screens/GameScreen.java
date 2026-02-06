@@ -377,6 +377,38 @@ public class GameScreen extends GScreen {
 
 		// Cheat Codes
 		handleCheatInput();
+		
+		// Mouse Click Selection
+		if (Gdx.input.justTouched()) {
+			// Convert screen coordinates to world coordinates
+			com.badlogic.gdx.math.Vector3 touchPos = new com.badlogic.gdx.math.Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+			worldCamera.unproject(touchPos);
+			
+			float wx = touchPos.x;
+			float wy = touchPos.y;
+			
+			// Check collisions with Monsters
+			boolean clickedMonster = false;
+			for (Monster m : monsters) {
+				if (m.hp > 0) {
+					// Monster visual area
+					float mx = m.visualX;
+					float my = m.visualY;
+					// Add some tolerance or use exact tile bounds
+					if (wx >= mx && wx < mx + Constants.TILE_SIZE &&
+						wy >= my && wy < my + Constants.TILE_SIZE) {
+						hud.showMonsterInfo(m);
+						clickedMonster = true;
+						break;
+					}
+				}
+			}
+			
+			// If clicked elsewhere, maybe hide info?
+			// But user might want to keep it open while fighting.
+			// Let's keep it open unless explicitly closed or clicked on empty space?
+			// For now, only open on click.
+		}
 	}
 
 	private void handleCheatInput() {
@@ -420,6 +452,16 @@ public class GameScreen extends GScreen {
 		if (Gdx.input.isKeyPressed(Input.Keys.S)) dy = -1;
 
 		if (dx != 0 || dy != 0) {
+			// Auto-select target monster if attacking
+			int nextX = player.x + dx;
+			int nextY = player.y + dy;
+			for (Monster m : monsters) {
+				if (m.hp > 0 && m.x == nextX && m.y == nextY) {
+					hud.showMonsterInfo(m);
+					break;
+				}
+			}
+
 			audio.playMove();
 		}
 

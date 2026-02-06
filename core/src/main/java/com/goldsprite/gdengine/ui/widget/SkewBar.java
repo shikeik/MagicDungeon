@@ -84,6 +84,14 @@ public class SkewBar extends NeonActor {
 		this.fillFromRight = fromRight;
 	}
 
+	/** 设置数值范围 */
+	public void setRange(float min, float max) {
+		this.min = min;
+		this.max = max;
+		// Clamp current value
+		setValue(this.value);
+	}
+
 	/** 设置当前数值 (自动处理范围限制) */
 	public void setValue(float newValue) {
 		float oldVal = this.value;

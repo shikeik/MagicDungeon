@@ -318,6 +318,12 @@ public class SpriteGenerator {
 		int headX = 128 - headW/2;
 		int headY = 36;
 
+		drawHead(p, headX, headY, headW, headH, skin, helmet, darkHelmet);
+
+		return toTexture(p);
+	}
+
+	private static void drawHead(Pixmap p, int headX, int headY, int headW, int headH, Color skin, Color helmet, Color darkHelmet) {
 		drawRect(p, headX, headY, headW, headH, skin);
 
 		// 4. Helmet (Smaller)
@@ -327,15 +333,35 @@ public class SpriteGenerator {
 		drawRect(p, headX - 5, headY + 10, 15, headH, darkHelmet);
 		drawRect(p, headX + headW - 10, headY + 10, 15, headH, darkHelmet);
 		// Center Crest
-		drawRect(p, 128 - 5, headY - 20, 10, 20, Color.RED);
+		drawRect(p, headX + headW/2 - 5, headY - 20, 10, 20, Color.RED); // Fixed center crest X calculation
 
 		// 5. Face Details
 		// Eyes
 		int eyeY = headY + 30;
-		drawRect(p, 128 - 20, eyeY, 12, 12, Color.BLACK);
-		drawRect(p, 128 + 8, eyeY, 12, 12, Color.BLACK);
-		drawRect(p, 128 - 18, eyeY + 2, 4, 4, Color.WHITE);
-		drawRect(p, 128 + 10, eyeY + 2, 4, 4, Color.WHITE);
+		int centerX = headX + headW / 2;
+		drawRect(p, centerX - 20, eyeY, 12, 12, Color.BLACK);
+		drawRect(p, centerX + 8, eyeY, 12, 12, Color.BLACK);
+		drawRect(p, centerX - 18, eyeY + 2, 4, 4, Color.WHITE);
+		drawRect(p, centerX + 10, eyeY + 2, 4, 4, Color.WHITE);
+	}
+
+	public static Texture createAvatar() {
+		int size = 128;
+		Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+		p.setColor(0, 0, 0, 0);
+		p.fill();
+
+		// Colors
+		Color skin = Color.valueOf("#ffccaa");
+		Color helmet = Color.valueOf("#CFD8DC"); // Light Silver
+		Color darkHelmet = Color.valueOf("#90A4AE");
+
+		int headW = 76;
+		int headH = 64;
+		int headX = (size - headW) / 2;
+		int headY = (size - headH) / 2;
+
+		drawHead(p, headX, headY, headW, headH, skin, helmet, darkHelmet);
 
 		return toTexture(p);
 	}
