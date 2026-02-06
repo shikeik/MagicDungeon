@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.NinePatch;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
@@ -22,6 +23,8 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import java.util.LinkedList;
 
+import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
+
 public class GameHUD {
 	public Stage stage;
 	// Removed local skin generation, using VisUIHelper
@@ -32,6 +35,7 @@ public class GameHUD {
 	private VisLabel lvLabel;
 	private VisLabel floorLabel;
 	private VisLabel msgLabel;
+	private VisLabel pauseLabel;
 
 	private LinkedList<String> logMessages = new LinkedList<>();
 
@@ -149,7 +153,7 @@ public class GameHUD {
 			VisTable content = new VisTable();
 			content.setBackground("list");
 			content.pad(10);
-			
+
 			// Add content to border table with 2px padding (thickness)
 			borderTable.add(content).grow().pad(2);
 
@@ -216,6 +220,21 @@ public class GameHUD {
 		msgLabel = new VisLabel("");
 		showMessage("欢迎来到地下城!");
 
+		// Pause Label (Center of Screen, initially hidden)
+		pauseLabel = new VisLabel("PAUSED");
+		pauseLabel.setColor(Color.YELLOW);
+		pauseLabel.setFontScale(2.0f);
+		pauseLabel.setVisible(false);
+		// Center it
+		VisTable pauseTable = new VisTable();
+		pauseTable.setFillParent(true);
+		pauseTable.center();
+		pauseTable.add(pauseLabel);
+		// Add pause table to stage (on top of root)
+		// But root fills parent, so add pauseTable after root is added?
+		// Or add to root? If added to root, it needs to overlap.
+		// Better: Add pauseTable directly to stage after root.
+
 		// Top bar with stats and buttons
 		VisTable topBar = new VisTable();
 		topBar.top();
@@ -236,9 +255,9 @@ public class GameHUD {
 
 		// Inventory button
 		inventoryBtn = new VisTextButton("背包");
-		inventoryBtn.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+		inventoryBtn.addListener(new InputListener() {
 			@Override
-			public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
 				toggleInventory();
 				return true;
 			}
@@ -247,9 +266,9 @@ public class GameHUD {
 
 		// Save button
 		saveBtn = new VisTextButton("保存");
-		saveBtn.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+		saveBtn.addListener(new InputListener() {
 			@Override
-			public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
 				if (saveListener != null) {
 					saveListener.run();
 				}
@@ -260,14 +279,26 @@ public class GameHUD {
 
 		// Help button
 		helpBtn = new VisTextButton("帮助");
-		helpBtn.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+		helpBtn.addListener(new InputListener() {
 			@Override
-			public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
 				showHelp();
 				return true;
 			}
 		});
 		buttonGroup.add(helpBtn).pad(5);
+
+		// pause button
+		VisTextButton pauseBtn = new VisTextButton("暂停");
+		pauseBtn.addListener(new InputListener() {
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				isPaused = !isPaused;
+				setPaused(isPaused);
+				return true;
+			}
+		});
+		buttonGroup.add(pauseBtn).pad(5);
 
 		// Arrange top bar
 		topBar.add(statGroup).expandX().left();
@@ -278,6 +309,7 @@ public class GameHUD {
 		topBar.add(msgLabel).colspan(2).left().pad(10, 10, 0, 10).expandX();
 
 		stage.addActor(topBar);
+		stage.addActor(pauseTable); // Add pause table on top
 
 		// Initialize inventory dialog
 		inventoryDialog = new InventoryDialog();
@@ -385,6 +417,12 @@ public class GameHUD {
 			sb.append(s).append("\n");
 		}
 		msgLabel.setText(sb.toString());
+	}
+
+	public void setPaused(boolean paused) {
+		if (pauseLabel != null) {
+			pauseLabel.setVisible(paused);
+		}
 	}
 
 	public void toggleInventory() {

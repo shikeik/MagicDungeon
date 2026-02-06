@@ -2,12 +2,14 @@ package com.goldsprite.magicdungeon.core.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.goldsprite.magicdungeon.core.GameState;
@@ -47,13 +49,14 @@ public class GameScreen extends GScreen {
 	// Removed redundant viewport and camera
 	private GameHUD hud;
 	private AudioSystem audio;
-	private SpriteBatch batch;
+	private NeonBatch batch;
 	private long seed;
-	
+
 	// History of visited levels
 	private Map<Integer, LevelState> visitedLevels = new HashMap<>();
 
 	private String cheatCodeBuffer = "";
+	public static boolean isPaused = false;
 
 	public GameScreen() {
 		this(MathUtils.random(Long.MIN_VALUE, Long.MAX_VALUE));
@@ -88,7 +91,7 @@ public class GameScreen extends GScreen {
 
 	@Override
 	public void create() {
-		batch = new SpriteBatch();
+		batch = new NeonBatch();
 
 		System.out.println("GameScreen Constructor Started");
 		this.dungeon = new Dungeon(50, 50, seed);
@@ -126,12 +129,12 @@ public class GameScreen extends GScreen {
 				monsterStates.add(new MonsterState(m.x, m.y, m.type.name(), m.hp, m.maxHp));
 			}
 		}
-		
+
 		List<ItemState> itemStates = new ArrayList<>();
 		for (Item item : items) {
 			itemStates.add(new ItemState(
-				item.x, 
-				item.y, 
+				item.x,
+				item.y,
 				item.item.data.name(),
 				item.item.quality.name(),
 				item.item.atk,
@@ -139,10 +142,10 @@ public class GameScreen extends GScreen {
 				item.item.heal
 			));
 		}
-		
+
 		visitedLevels.put(dungeon.level, new LevelState(monsterStates, itemStates));
 	}
-	
+
 	private void loadLevelState(LevelState state) {
 		monsters.clear();
 		for(MonsterState ms : state.monsters) {
@@ -157,13 +160,13 @@ public class GameScreen extends GScreen {
 					}
 				}
 			}
-			
+
 			Monster m = new Monster(ms.x, ms.y, type);
 			m.hp = ms.hp;
 			m.maxHp = ms.maxHp;
 			monsters.add(m);
 		}
-		
+
 		items.clear();
 		for(ItemState is : state.items) {
 			ItemData data = ItemData.Health_Potion;
@@ -171,17 +174,17 @@ public class GameScreen extends GScreen {
 				data = ItemData.valueOf(is.itemName);
 			} catch(IllegalArgumentException e) {
 			}
-			
+
 			// Restore Quality and Stats
 			ItemQuality quality = ItemQuality.COMMON;
 			try {
 				if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
 			} catch(IllegalArgumentException e) {}
-			
+
 			int atk = is.atk > 0 ? is.atk : data.atk;
 			int def = is.def > 0 ? is.def : data.def;
 			int heal = is.heal > 0 ? is.heal : data.heal;
-			
+
 			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
 			items.add(new Item(is.x, is.y, invItem));
 		}
@@ -189,10 +192,10 @@ public class GameScreen extends GScreen {
 
 	private void nextLevel() {
 		saveCurrentLevelState();
-		
+
 		dungeon.level++;
 		dungeon.generate();
-		
+
 		// Check if we visited this level before
 		if (visitedLevels.containsKey(dungeon.level)) {
 			loadLevelState(visitedLevels.get(dungeon.level));
@@ -204,7 +207,7 @@ public class GameScreen extends GScreen {
 		player.y = dungeon.startPos.y;
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
-		
+
 		hud.showMessage("Descended to Floor " + dungeon.level + "!");
 		audio.playLevelUp(); // Reusing sound for now
 	}
@@ -212,10 +215,10 @@ public class GameScreen extends GScreen {
 	private void prevLevel() {
 		if (dungeon.level > 1) {
 			saveCurrentLevelState();
-			
+
 			dungeon.level--;
 			dungeon.generate();
-			
+
 			// Check if we visited this level before
 			if (visitedLevels.containsKey(dungeon.level)) {
 				loadLevelState(visitedLevels.get(dungeon.level));
@@ -223,7 +226,7 @@ public class GameScreen extends GScreen {
 				// Should theoretically always be visited if going back, but handle just in case
 				spawnEntities();
 			}
-			
+
             // When going up, we might want to spawn at the down stairs of the previous level?
             // But currently MapGenerator places stairs down at end room and stairs up at start room.
             // If we assume linear progression, going UP should land us at the DOWN stairs of the upper floor.
@@ -244,7 +247,7 @@ public class GameScreen extends GScreen {
                 }
                 if(stairsDownPos != null) break;
             }
-            
+
             if (stairsDownPos != null) {
                 player.x = stairsDownPos.x;
                 player.y = stairsDownPos.y;
@@ -255,7 +258,7 @@ public class GameScreen extends GScreen {
 
 			player.visualX = player.x * Constants.TILE_SIZE;
 			player.visualY = player.y * Constants.TILE_SIZE;
-			
+
 			hud.showMessage("Ascended to Floor " + dungeon.level + "!");
 			audio.playLevelUp();
 		}
@@ -327,9 +330,88 @@ public class GameScreen extends GScreen {
 
 	@Override
 	public void render(float delta) {
-		ScreenUtils.clear(0, 0, 0, 1);
+		handleInput(delta);
 
-		// Input Handling
+		if (!isPaused) {
+			updateLogic(delta);
+		}
+
+		draw(delta);
+	}
+
+	private void handleInput(float delta) {
+		// Toggle Pause
+		if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+			isPaused = !isPaused;
+			hud.setPaused(isPaused);
+			// Optional: Pause audio or other systems
+		}
+
+		// Toggle Inventory (Always allowed)
+		if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+			hud.toggleInventory();
+		}
+
+		// Save Game
+		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
+			hud.showMessage("游戏已保存!");
+		}
+
+		// Load Game
+		if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+			loadGame();
+		}
+
+		// Regenerate map (Reset)
+		if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+			dungeon.generate();
+			player.x = dungeon.startPos.x;
+			player.y = dungeon.startPos.y;
+			player.visualX = player.x * Constants.TILE_SIZE;
+			player.visualY = player.y * Constants.TILE_SIZE;
+			player.stats.hp = player.stats.maxHp;
+			spawnEntities();
+			hud.showMessage("地图已重置!");
+		}
+
+		// Cheat Codes
+		handleCheatInput();
+	}
+
+	private void handleCheatInput() {
+		if (Gdx.input.isKeyJustPressed(Input.Keys.GRAVE)) {
+			// Placeholder
+		}
+
+		if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
+			cheatCodeBuffer += "6";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
+			cheatCodeBuffer += "c";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
+			cheatCodeBuffer += "h";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+			cheatCodeBuffer += "e";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+			cheatCodeBuffer += "a";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+			cheatCodeBuffer += "t";
+		}
+
+		if (cheatCodeBuffer.endsWith("cheat666")) {
+			cheatCodeBuffer = "";
+			for (ItemData data : ItemData.values()) {
+				player.inventory.add(new InventoryItem(data));
+			}
+			hud.showMessage("作弊已激活: 所有物品已添加!");
+			hud.updateInventory(player);
+			audio.playLevelUp();
+		}
+		if (cheatCodeBuffer.length() > 20) cheatCodeBuffer = "";
+	}
+
+	private void updateLogic(float delta) {
+		// Game Input Handling (WASD)
 		int dx = 0;
 		int dy = 0;
 		if (Gdx.input.isKeyPressed(Input.Keys.A)) dx = -1;
@@ -341,7 +423,7 @@ public class GameScreen extends GScreen {
 			audio.playMove();
 		}
 
-		// Use Potion (Health)
+		// Use Potion (Health) - SPACE
 		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 			// Simple heal logic (if no items)
 			if (player.stats.mana >= 10) {
@@ -354,23 +436,15 @@ public class GameScreen extends GScreen {
 			}
 		}
 
-		// Enter Next Level
+		// Interact / Next Level - E
 		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.E)) {
 			Tile tile = dungeon.getTile(player.x, player.y);
-			// Debug: Check current position and tile type
 			if (tile != null) {
-				System.out.println("Player position: " + player.x + "," + player.y + ", Tile type: " + tile.type);
 				if (tile.type == TileType.Stairs_Down) {
-					System.out.println("Stairs found! Current level: " + dungeon.level);
 					nextLevel();
-					System.out.println("New level: " + dungeon.level);
 				} else if (tile.type == TileType.Stairs_Up) {
-                    System.out.println("Stairs Up found! Current level: " + dungeon.level);
-                    prevLevel();
-                    System.out.println("New level: " + dungeon.level);
-                }
-			} else {
-				System.out.println("Tile is null at position: " + player.x + "," + player.y);
+					prevLevel();
+				}
 			}
 		}
 
@@ -422,82 +496,12 @@ public class GameScreen extends GScreen {
 		// Update Camera
 		updateCamera();
 
-		// Regenerate map
-		if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-			dungeon.generate();
-			player.x = dungeon.startPos.x;
-			player.y = dungeon.startPos.y;
-			player.visualX = player.x * Constants.TILE_SIZE;
-			player.visualY = player.y * Constants.TILE_SIZE;
-			player.stats.hp = player.stats.maxHp;
-			spawnEntities();
-			hud.showMessage("地图已重置!");
-		}
-
-		// Save Game
-		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
-			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
-			hud.showMessage("游戏已保存!");
-		}
-
-		// Load Game
-		if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
-			loadGame();
-		}
-
-		// Toggle Inventory
-		if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
-			hud.toggleInventory();
-		}
-
-		// Cheat Code: Get All Items
-		if (Gdx.input.isKeyJustPressed(Input.Keys.GRAVE)) { // Tilde key (~) for easier access, or check for sequence if strictly "cheat666" needed
-			 // Simple key binding for now, implementing "cheat666" sequence would require buffer
-			 // Let's use F8 as "Cheat Key" or handle "cheat666" via input processor if strict
-		}
-
-		// Simple cheat trigger for testing: Press P to get all items (P for Presents/Power)
-		// Or strictly follow user request "input cheat666" - typically means typing.
-		// For simplicity in LibGDX without UI input field, let's use a debug key combo like CTRL+L
-		// But user asked for "input cheat666". Let's assume typing blind.
-
-		if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6)) {
-			 // Basic cheat implementation - Adds all items when F6 is pressed (easier than typing)
-			 // Or better:
-		}
-
-		// Implementing "cheat666" typing detection
-		if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
-			 cheatCodeBuffer += "6";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
-			 cheatCodeBuffer += "c";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
-			 cheatCodeBuffer += "h";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-			 cheatCodeBuffer += "e";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
-			 cheatCodeBuffer += "a";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
-			 cheatCodeBuffer += "t";
-		} else {
-			 // Reset buffer if too long or check on timer?
-			 // Simplified: Check end of string
-		}
-
-		if (cheatCodeBuffer.endsWith("cheat666")) {
-			cheatCodeBuffer = "";
-			for (ItemData data : ItemData.values()) {
-				player.inventory.add(new InventoryItem(data));
-			}
-			hud.showMessage("作弊已激活: 所有物品已添加!");
-			hud.updateInventory(player);
-			audio.playLevelUp();
-		}
-		if (cheatCodeBuffer.length() > 20) cheatCodeBuffer = "";
-
-		// Update HUD
+		// Update HUD Data
 		hud.update(player, dungeon.level);
-		// hud.updateInventory(player);
+	}
+
+	private void draw(float delta) {
+		ScreenUtils.clear(0, 0, 0, 1);
 
 		// 使用 GScreen 的 worldCamera
 		batch.setProjectionMatrix(worldCamera.combined);
@@ -578,6 +582,12 @@ public class GameScreen extends GScreen {
 			}
 		}
 
+		// If paused, draw overlay
+		if (isPaused) {
+			batch.setProjectionMatrix(getUICamera().combined);
+			batch.drawRect(0, 0, getViewSize().x, getViewSize().y, 0, 0, new Color(0, 0, 0, 0.5f), true);
+		}
+
 		batch.end();
 
 		// HUD Render
@@ -591,13 +601,13 @@ public class GameScreen extends GScreen {
 			player.inventory = state.inventory;
 			dungeon.level = state.dungeonLevel;
 			dungeon.globalSeed = state.seed; // Restore seed
-			
+
 			// Restore Equipment
 			if (state.equipment != null) {
 				player.equipment.weapon = state.equipment.weapon;
 				player.equipment.armor = state.equipment.armor;
 			}
-			
+
 			// Restore History
 			if (state.visitedLevels != null) {
 				visitedLevels = state.visitedLevels;
@@ -607,7 +617,7 @@ public class GameScreen extends GScreen {
 
 			// Regenerate world
 			dungeon.generate();
-			
+
 			// Restore Player Position
 			// If save has coordinates (new save), use them. Otherwise (old save), use startPos.
 			if (state.playerX != 0 || state.playerY != 0) {
@@ -617,10 +627,10 @@ public class GameScreen extends GScreen {
 				player.x = dungeon.startPos.x;
 				player.y = dungeon.startPos.y;
 			}
-			
+
 			player.visualX = player.x * Constants.TILE_SIZE;
 			player.visualY = player.y * Constants.TILE_SIZE;
-			
+
 			// Restore Entities
 			if (state.monsters != null && state.items != null) {
 				// New save system: restore from snapshot
@@ -639,13 +649,13 @@ public class GameScreen extends GScreen {
 							}
 						}
 					}
-					
+
 					Monster m = new Monster(ms.x, ms.y, type);
 					m.hp = ms.hp;
 					m.maxHp = ms.maxHp;
 					monsters.add(m);
 				}
-				
+
 				items.clear();
 				for(ItemState is : state.items) {
 					ItemData data = ItemData.Health_Potion;
@@ -654,21 +664,21 @@ public class GameScreen extends GScreen {
 					} catch(IllegalArgumentException e) {
 						// Fallback logic if needed
 					}
-					
+
 					// Restore Quality and Stats
 					ItemQuality quality = ItemQuality.COMMON;
 					try {
 						if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
 					} catch(IllegalArgumentException e) {}
-					
+
 					int atk = is.atk > 0 ? is.atk : data.atk;
 					int def = is.def > 0 ? is.def : data.def;
 					int heal = is.heal > 0 ? is.heal : data.heal;
-					
+
 					InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
 					items.add(new Item(is.x, is.y, invItem));
 				}
-				
+
 			} else {
 				// Old save system compatibility: regenerate randomly
 				spawnEntities();
