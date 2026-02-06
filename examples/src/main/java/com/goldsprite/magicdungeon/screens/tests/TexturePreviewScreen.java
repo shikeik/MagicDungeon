@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.MonsterType;
@@ -52,7 +53,7 @@ public class TexturePreviewScreen extends GScreen {
 		viewport = new ExtendViewport(1280, 720, camera); // Use ExtendViewport to prevent stretching
 		viewport.apply(true);
 
-		font = new BitmapFont();
+		font = FontUtils.generate(14, 3);
 		font.setColor(Color.WHITE);
 
 		previews = new ArrayList<>();

@@ -1,6 +1,5 @@
 package com.goldsprite.magicdungeon.screens.tests;
 
-import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -26,8 +25,11 @@ public class NeonGenTestScreen extends ExampleGScreen {
     private NeonBatch neonBatch;
     private FrameBuffer frameBuffer;
     private TextureRegion resultRegion;
-    private Image previewImage;
-    private int targetSize = 256;
+    private Image previewImage; // Stretch
+    private Image actualImage;  // Actual Size
+
+    private int targetSize = 64;
+    private int previewLayoutSize = 512; // 预览面板显示大小
 
     private VisTable uiRoot;
     private VisTable contentTable;
@@ -35,18 +37,19 @@ public class NeonGenTestScreen extends ExampleGScreen {
 
     // 用于 FB 渲染的相机
     private OrthographicCamera fbCamera;
-	private Stage stage;
+    private Stage stage;
 
-	@Override
+    @Override
     public String getIntroduction() {
         return "NeonBatch 动态生成纹理测试\n" +
-                "左侧(Live): 实时 NeonBatch 绘制\n" +
-                "右侧(Texture): FrameBuffer 捕获结果";
+                "1. Live: 实时矢量绘制 (无损)\n" +
+                "2. Texture(Stretch): FB捕获结果 (拉伸)\n" +
+                "3. Texture(Actual): FB捕获结果 (1:1 原大)";
     }
 
     @Override
     public void create() {
-		stage = new Stage(uiViewport);
+        stage = new Stage(uiViewport);
 
         neonBatch = new NeonBatch();
         fbCamera = new OrthographicCamera();
@@ -62,55 +65,76 @@ public class NeonGenTestScreen extends ExampleGScreen {
         controls.setBackground("window-bg");
         controls.pad(10);
 
-        controls.add(new VisLabel("Size:")).padRight(10);
-        controls.add(new SmartNumInput("Px", targetSize, 32, (val) -> {
+        controls.add(new VisLabel("Gen Size:")).padRight(5);
+        controls.add(new SmartNumInput("Px", targetSize, 0.1f, (val) -> {
             int newSize = val.intValue();
-            // 限制一下最小尺寸，防止崩溃
             if (newSize < 16) newSize = 16;
             if (newSize != targetSize) {
                 targetSize = newSize;
                 regenerate();
             }
-        })).width(150);
+        })).width(120).padRight(20);
+
+        controls.add(new VisLabel("Preview Size:")).padRight(5);
+        controls.add(new SmartNumInput("Px", previewLayoutSize, 5, (val) -> {
+            int newSize = val.intValue();
+            if (newSize < 100) newSize = 100;
+            if (newSize != previewLayoutSize) {
+                previewLayoutSize = newSize;
+                rebuildLayout();
+            }
+        })).width(120);
 
         uiRoot.add(controls).top().left().pad(20);
         uiRoot.row();
 
         // 2. Main Content Area
         contentTable = new VisTable();
-
-        // Left: Live Render Actor
-        Table leftPanel = new Table();
-        leftPanel.add(new VisLabel("Live Render (NeonBatch)")).padBottom(10).row();
-
-        livePreviewActor = new NeonPreviewActor();
-        // 用 Container 包裹以便居中显示
-        Container<NeonPreviewActor> leftContainer = new Container<>(livePreviewActor);
-        leftContainer.setBackground(new TextureRegionDrawable(neonBatch.getBlankRegion()).tint(new Color(0.2f, 0.2f, 0.2f, 1f))); // Dark BG
-        leftPanel.add(leftContainer).size(400, 400);
-
-        // Right: Texture Result
-        Table rightPanel = new Table();
-        rightPanel.add(new VisLabel("Result Texture (FrameBuffer)")).padBottom(10).row();
-
-        previewImage = new Image();
-        Container<Image> rightContainer = new Container<>(previewImage);
-        rightContainer.setBackground(new TextureRegionDrawable(neonBatch.getBlankRegion()).tint(new Color(0.2f, 0.2f, 0.2f, 1f))); // Dark BG
-        rightPanel.add(rightContainer).size(400, 400);
-
-        contentTable.add(leftPanel).expand().fill().pad(20);
-        contentTable.add(rightPanel).expand().fill().pad(20);
-
         uiRoot.add(contentTable).expand().fill();
 
         stage.addActor(uiRoot);
 
+        rebuildLayout();
+    }
+
+    private void rebuildLayout() {
+        contentTable.clear();
+
+        // Left: Live Render Actor
+        livePreviewActor = new NeonPreviewActor();
+        contentTable.add(createPanel("Live Vector (Stretch)", livePreviewActor)).pad(10);
+
+        // Middle: Texture Result (Stretch)
+        previewImage = new Image();
+        previewImage.setScaling(com.badlogic.gdx.utils.Scaling.stretch);
+        contentTable.add(createPanel("Texture (Stretch)", previewImage)).pad(10);
+
+        // Right: Texture Result (Actual)
+        actualImage = new Image();
+        actualImage.setScaling(com.badlogic.gdx.utils.Scaling.none); // 1:1
+        actualImage.setAlign(com.badlogic.gdx.utils.Align.center);
+        contentTable.add(createPanel("Texture (Actual)", actualImage)).pad(10);
+
         regenerate();
     }
 
+    private VisTable createPanel(String title, Actor content) {
+        VisTable panel = new VisTable();
+        panel.add(new VisLabel(title)).padBottom(5).row();
+
+        Container<Actor> container = new Container<>(content);
+        container.setBackground(new TextureRegionDrawable(neonBatch.getBlankRegion()).tint(new Color(0.2f, 0.2f, 0.2f, 1f)));
+        container.fill(); // [核心修复] 强制内容填满容器
+        // 强制容器大小为预览大小
+        panel.add(container).size(previewLayoutSize, previewLayoutSize);
+        return panel;
+    }
+
     private void regenerate() {
-        // Update Live Preview Size
-        livePreviewActor.setSize(targetSize, targetSize);
+        // Update Live Preview Size (Actor size matches Layout size for Stretch effect)
+        if (livePreviewActor != null) {
+            livePreviewActor.setSize(previewLayoutSize, previewLayoutSize);
+        }
 
         // --- FrameBuffer Generation ---
         if (frameBuffer != null) frameBuffer.dispose();
@@ -131,8 +155,8 @@ public class NeonGenTestScreen extends ExampleGScreen {
         neonBatch.setProjectionMatrix(fbCamera.combined);
         neonBatch.begin();
 
-        // Draw Content (at 0,0)
-        drawTestContent(targetSize);
+        // Draw Content at target resolution
+        drawPlayer(neonBatch, targetSize);
 
         neonBatch.end();
         frameBuffer.end();
@@ -144,44 +168,112 @@ public class NeonGenTestScreen extends ExampleGScreen {
         resultRegion = new TextureRegion(tex);
         resultRegion.flip(false, true);
 
-        previewImage.setDrawable(new TextureRegionDrawable(resultRegion));
+        TextureRegionDrawable drawable = new TextureRegionDrawable(resultRegion);
 
-        // Resize image to fit container but keep aspect ratio (pixelated look)
-        // actually just setting the size of the image widget to targetSize is enough,
-        // the Container will center it.
-        contentTable.findActor("Preview");
-        // But previewImage reference is enough
-        previewImage.setSize(targetSize, targetSize);
-        // Scaling usually handled by Image scaling, but we want 1:1 or integer scale?
-        // Let's just set size to targetSize.
+        if (previewImage != null) {
+            previewImage.setDrawable(drawable);
+            previewImage.setSize(previewLayoutSize, previewLayoutSize);
+        }
+
+        if (actualImage != null) {
+            actualImage.setDrawable(drawable);
+            // For actual size, we set the actor size to texture size
+            actualImage.setSize(targetSize, targetSize);
+        }
     }
 
     /**
-     * Draw actual content. Assumes (0,0) is bottom-left.
+     * 复刻 SpriteGenerator.createPlayer
+     * @param size 绘制目标区域的边长
      */
-    private void drawTestContent(float size) {
-        float cx = size / 2;
-        float cy = size / 2;
+    private void drawPlayer(NeonBatch batch, float size) {
+        // Colors
+        Color skin = Color.valueOf("#ffccaa");
+        Color armor = Color.valueOf("#2196F3");
+        Color darkArmor = Color.valueOf("#1565C0");
+        Color gold = Color.GOLD;
+        Color helmet = Color.valueOf("#CFD8DC");
+        Color darkHelmet = Color.valueOf("#90A4AE");
+        Color legs = Color.valueOf("#8d6e63");
+        Color boots = Color.valueOf("#3E2723");
 
-        // Background Circle
-        neonBatch.drawCircle(cx, cy, size * 0.45f, 4, Color.GOLD, 64, false);
-        neonBatch.drawCircle(cx, cy, size * 0.40f, 0, new Color(1, 0.8f, 0, 0.3f), 64, true);
+        // 1. Legs
+        drawRectPix(batch, size, 90, 180, 25, 60, legs);
+        drawRectPix(batch, size, 141, 180, 25, 60, legs);
 
-        // Star
-        neonBatch.drawStar(cx, cy, size * 0.35f, size * 0.15f, 5, 0, 2, Color.RED, true);
-        neonBatch.drawStar(cx, cy, size * 0.35f, size * 0.15f, 5, 0, 2, Color.ORANGE, false);
+        // Boots
+        int bootY = 215;
+        int bootW = 65;
+        int bootH = 45;
+        drawRectPix(batch, size, 53, bootY, bootW, bootH, boots);
+        drawRectPix(batch, size, 138, bootY, bootW, bootH, boots);
 
-        // Rects (simulate lines or bars)
-        neonBatch.drawRect(cx - size*0.2f, cy - size*0.1f, size*0.4f, size*0.05f, 0, 2, Color.CYAN, true);
+        // Boot Detail
+        Color bootLight = boots.cpy().mul(1.2f);
+        drawRectPix(batch, size, 53, bootY + bootH - 10, bootW, 10, Color.BLACK); // Soles
+        drawRectPix(batch, size, 138, bootY + bootH - 10, bootW, 10, Color.BLACK);
+        drawRectPix(batch, size, 53 + 5, bootY + 5, 10, 20, bootLight); // Highlights
+        drawRectPix(batch, size, 138 + 5, bootY + 5, 10, 20, bootLight);
 
-        // Gradient Rect (HP Bar style)
-        neonBatch.drawSkewGradientRect(cx - size*0.3f, cy - size*0.3f, size*0.6f, size*0.1f, size*0.05f, Color.GREEN, Color.LIME);
+        // 2. Body (Armor)
+        drawRectPix(batch, size, 70, 100, 116, 90, armor); // Main Chest
+        drawRectPix(batch, size, 50, 90, 30, 40, darkArmor); // Shoulder Pads
+        drawRectPix(batch, size, 176, 90, 30, 40, darkArmor);
+
+        drawRectPix(batch, size, 80, 110, 96, 70, darkArmor); // Chest Plate Detail
+        drawRectPix(batch, size, 118, 110, 20, 70, gold); // Center strip
+
+        // Arms
+        drawRectPix(batch, size, 40, 100, 25, 70, darkArmor); // Left
+        drawRectPix(batch, size, 191, 100, 25, 70, darkArmor); // Right
+        // Hands
+        drawRectPix(batch, size, 40, 170, 25, 25, skin);
+        drawRectPix(batch, size, 191, 170, 25, 25, skin);
+
+        // Belt
+        drawRectPix(batch, size, 70, 180, 116, 15, Color.valueOf("#3e2723"));
+        drawRectPix(batch, size, 118, 180, 20, 15, Color.GOLD);
+
+        // 3. Head
+        int headW = 76;
+        int headH = 64;
+        int headX = 128 - headW/2;
+        int headY = 36;
+        drawRectPix(batch, size, headX, headY, headW, headH, skin);
+
+        // 4. Helmet
+        drawRectPix(batch, size, headX - 5, headY - 10, headW + 10, 30, helmet); // Top Dome
+        drawRectPix(batch, size, headX - 5, headY + 10, 15, headH, darkHelmet); // Sides
+        drawRectPix(batch, size, headX + headW - 10, headY + 10, 15, headH, darkHelmet);
+        drawRectPix(batch, size, 128 - 5, headY - 20, 10, 20, Color.RED); // Crest
+
+        // 5. Face Details
+        int eyeY = headY + 30;
+        drawRectPix(batch, size, 128 - 20, eyeY, 12, 12, Color.BLACK);
+        drawRectPix(batch, size, 128 + 8, eyeY, 12, 12, Color.BLACK);
+        drawRectPix(batch, size, 128 - 18, eyeY + 2, 4, 4, Color.WHITE);
+        drawRectPix(batch, size, 128 + 10, eyeY + 2, 4, 4, Color.WHITE);
+    }
+
+    /**
+     * 辅助方法：使用 256x256 的 Pixmap 坐标系进行绘制，内部自动转为 UV 并应用到当前 size
+     * Pixmap 坐标: (0,0) 在左上角, Y 向下
+     * Neon 坐标: (0,0) 在左下角, Y 向上
+     */
+    private void drawRectPix(NeonBatch batch, float size, float px, float py, float w, float h, Color color) {
+        float base = 256f;
+        float u = px / base;
+        // Y 轴翻转核心逻辑
+        float v = 1.0f - (py + h) / base;
+        float uw = w / base;
+        float vh = h / base;
+
+        batch.drawRect(u * size, v * size, uw * size, vh * size, 0, 0, color, true);
     }
 
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
-
         stage.act(delta);
         stage.draw();
     }
@@ -197,7 +289,8 @@ public class NeonGenTestScreen extends ExampleGScreen {
     class NeonPreviewActor extends Actor {
 
         public NeonPreviewActor() {
-            setSize(targetSize, targetSize);
+            // Container.fill() will set the size, but we can set a default
+            setSize(previewLayoutSize, previewLayoutSize);
         }
 
         @Override
@@ -208,13 +301,15 @@ public class NeonGenTestScreen extends ExampleGScreen {
             neonBatch.setProjectionMatrix(stage.getViewport().getCamera().combined);
             neonBatch.begin();
 
+            // [核心修复] 使用更稳健的坐标获取方式
             Vector2 pos = localToStageCoordinates(new Vector2(0, 0));
 
             // Translate to Actor's position
             neonBatch.getTransformMatrix().idt().translate(pos.x, pos.y, 0);
 
-            // Draw
-            drawTestContent(targetSize);
+            // Draw using Actor's width as the scale
+            // 这样无论 previewLayoutSize 是多少，都会完整绘制出 Player
+            drawPlayer(neonBatch, getWidth());
 
             // Reset
             neonBatch.getTransformMatrix().idt();
