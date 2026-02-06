@@ -5,8 +5,10 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.GridPoint2;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.goldsprite.magicdungeon.core.GameState;
 import com.goldsprite.magicdungeon.entities.*;
 import com.goldsprite.magicdungeon.entities.InventoryItem;
@@ -50,9 +52,14 @@ public class GameScreen extends GScreen {
 
 		// 保持世界相机的缩放比例为 1.0 (1 unit = 1 pixel)
 		// 或者如果需要像素放大，可以调整 worldScale, 例如 0.5f 会放大两倍
-		this.worldScale = 0.4f;
+		this.worldScale = 0.3f;
 
 		super.initViewport();
+
+//		// Camera Controller
+//		SimpleCameraController controller = new SimpleCameraController(worldCamera);
+//		controller.setCoordinateMapper((x, y) -> uiViewport.unproject(new Vector2(x, y)));
+//		getImp().addProcessor(controller);
 	}
 
 	@Override
@@ -325,22 +332,17 @@ public class GameScreen extends GScreen {
 
 		// Update HUD
 		hud.update(player, dungeon.level);
-//		hud.updateInventory(player);
+		// hud.updateInventory(player);
 
 		// 使用 GScreen 的 worldCamera
 		batch.setProjectionMatrix(worldCamera.combined);
 		batch.begin();
 
 		// Calculate visible range (optimization)
-		int startX = (int) ((worldCamera.position.x - worldCamera.viewportWidth / 2) / Constants.TILE_SIZE) - 1;
-		int startY = (int) ((worldCamera.position.y - worldCamera.viewportHeight / 2) / Constants.TILE_SIZE) - 1;
-		int endX = (int) ((worldCamera.position.x + worldCamera.viewportWidth / 2) / Constants.TILE_SIZE) + 1;
-		int endY = (int) ((worldCamera.position.y + worldCamera.viewportHeight / 2) / Constants.TILE_SIZE) + 1;
-
-		startX = Math.max(0, startX);
-		startY = Math.max(0, startY);
-		endX = Math.min(dungeon.width, endX);
-		endY = Math.min(dungeon.height, endY);
+		int startX = 0;
+		int startY = 0;
+		int endX = dungeon.width;
+		int endY = dungeon.height;
 
 		// Render Map
 		for (int y = startY; y < endY; y++) {

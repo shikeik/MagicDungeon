@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.entities.ItemData;
@@ -72,7 +73,7 @@ public class TexturePreviewScreen extends GScreen {
 
 		// Camera Controller
 		SimpleCameraController controller = new SimpleCameraController(camera);
-		controller.setCoordinateMapper((x, y) -> viewport.unproject(new com.badlogic.gdx.math.Vector2(x, y)));
+		controller.setCoordinateMapper((x, y) -> viewport.unproject(new Vector2(x, y)));
 		getImp().addProcessor(controller);
 	}
 
