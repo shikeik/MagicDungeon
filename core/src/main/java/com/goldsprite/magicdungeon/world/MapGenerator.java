@@ -2,6 +2,8 @@ package com.goldsprite.magicdungeon.world;
 
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.RandomXS128;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,7 +36,7 @@ public class MapGenerator {
 		}
 	}
 
-	public GenResult generate(boolean hasUpStairs) {
+	public GenResult generate(boolean hasUpStairs, RandomXS128 rng) {
 		Tile[][] map = new Tile[height][width];
 		List<Room> rooms = new ArrayList<>();
 
@@ -51,10 +53,10 @@ public class MapGenerator {
 		int maxSize = 12;
 
 		for (int i = 0; i < maxRooms; i++) {
-			int w = MathUtils.random(minSize, maxSize);
-			int h = MathUtils.random(minSize, maxSize);
-			int x = MathUtils.random(1, width - w - 2);
-			int y = MathUtils.random(1, height - h - 2);
+			int w = rng.nextInt(maxSize - minSize + 1) + minSize;
+			int h = rng.nextInt(maxSize - minSize + 1) + minSize;
+			int x = rng.nextInt(width - w - 2) + 1;
+			int y = rng.nextInt(height - h - 2) + 1;
 
 			Room newRoom = new Room(x, y, w, h);
 
@@ -83,7 +85,7 @@ public class MapGenerator {
 					);
 
 					// Coin flip for corridor direction
-					if (MathUtils.randomBoolean()) {
+					if (rng.nextBoolean()) {
 						createHCorridor(map, prevCenter.x, newCenter.x, prevCenter.y);
 						createVCorridor(map, prevCenter.y, newCenter.y, newCenter.x);
 					} else {

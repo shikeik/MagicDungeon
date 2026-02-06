@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.GridPoint2;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -27,6 +28,8 @@ import com.goldsprite.magicdungeon.assets.TextureManager;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.badlogic.gdx.math.RandomXS128;
+
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
 	private Player player;
@@ -36,8 +39,17 @@ public class GameScreen extends GScreen {
 	private GameHUD hud;
 	private AudioSystem audio;
 	private SpriteBatch batch;
+	private long seed;
 
 	private String cheatCodeBuffer = "";
+
+	public GameScreen() {
+		this(MathUtils.random(Long.MIN_VALUE, Long.MAX_VALUE));
+	}
+
+	public GameScreen(long seed) {
+		this.seed = seed;
+	}
 
 	@Override
 	protected void initViewport() {
@@ -67,7 +79,7 @@ public class GameScreen extends GScreen {
 		batch = new SpriteBatch();
 
 		System.out.println("GameScreen Constructor Started");
-		this.dungeon = new Dungeon(50, 50);
+		this.dungeon = new Dungeon(50, 50, seed);
 		this.player = new Player(dungeon.startPos.x, dungeon.startPos.y);
 
 		this.monsters = new ArrayList<>();
@@ -114,9 +126,9 @@ public class GameScreen extends GScreen {
             // But currently MapGenerator places stairs down at end room and stairs up at start room.
             // If we assume linear progression, going UP should land us at the DOWN stairs of the upper floor.
             // However, our MapGenerator randomizes everything each time.
-            // So for now, let's just spawn at startPos (which is where Stairs Up is) to be safe, 
+            // So for now, let's just spawn at startPos (which is where Stairs Up is) to be safe,
             // OR we can find the Stairs Down and spawn there to simulate "coming up from below".
-            
+
             // Let's spawn at Stairs Down to simulate coming back up.
             // Find Stairs Down
             GridPoint2 stairsDownPos = null;
@@ -130,7 +142,7 @@ public class GameScreen extends GScreen {
                 }
                 if(stairsDownPos != null) break;
             }
-            
+
             if (stairsDownPos != null) {
                 player.x = stairsDownPos.x;
                 player.y = stairsDownPos.y;
@@ -154,19 +166,22 @@ public class GameScreen extends GScreen {
 		// Difficulty Multiplier
 		float difficulty = 1.0f + (dungeon.level - 1) * 0.2f; // 20% harder per level
 
+		RandomXS128 monsterRng = dungeon.getMonsterRNG();
+		RandomXS128 itemRng = dungeon.getItemRNG();
+
 		// Monsters
 		int numMonsters = 10 + (dungeon.level / 2); // More monsters per level
 		for (int i = 0; i < numMonsters; i++) {
-			GridPoint2 pos = dungeon.getRandomWalkableTile();
+			GridPoint2 pos = dungeon.getRandomWalkableTile(monsterRng);
 			if (pos != null) {
 				if (Math.abs(pos.x - player.x) < 5 && Math.abs(pos.y - player.y) < 5) continue;
 
 				// Varied Monster Types based on Level
 				MonsterType type = MonsterType.Slime;
-				if (dungeon.level >= 2 && Math.random() < 0.3) type = MonsterType.Bat;
-				if (dungeon.level >= 3 && Math.random() < 0.3) type = MonsterType.Skeleton;
-				if (dungeon.level >= 5 && Math.random() < 0.3) type = MonsterType.Orc;
-				if (dungeon.level % 6 == 0 && Math.random() < 0.3) type = MonsterType.Boss;
+				if (dungeon.level >= 2 && monsterRng.nextFloat() < 0.3) type = MonsterType.Bat;
+				if (dungeon.level >= 3 && monsterRng.nextFloat() < 0.3) type = MonsterType.Skeleton;
+				if (dungeon.level >= 5 && monsterRng.nextFloat() < 0.3) type = MonsterType.Orc;
+				if (dungeon.level % 6 == 0 && monsterRng.nextFloat() < 0.3) type = MonsterType.Boss;
 
 				Monster m = new Monster(pos.x, pos.y, type);
 				// Apply difficulty
@@ -181,11 +196,11 @@ public class GameScreen extends GScreen {
 		// Items
 		int numItems = 5;
 		for (int i = 0; i < numItems; i++) {
-			GridPoint2 pos = dungeon.getRandomWalkableTile();
+			GridPoint2 pos = dungeon.getRandomWalkableTile(itemRng);
 			if (pos != null) {
 				// Random item type
 				ItemData itemData = ItemData.Health_Potion;
-				double r = Math.random();
+				double r = itemRng.nextDouble();
 				if (r < 0.4) itemData = ItemData.Health_Potion;
 				else if (r < 0.6) itemData = ItemData.Mana_Potion;
 				else if (r < 0.8) itemData = ItemData.Rusty_Sword;
@@ -468,6 +483,7 @@ public class GameScreen extends GScreen {
 			player.stats = state.playerStats;
 			player.inventory = state.inventory;
 			dungeon.level = state.dungeonLevel;
+			dungeon.globalSeed = state.seed; // Restore seed
 
 			// Regenerate world
 			dungeon.generate();

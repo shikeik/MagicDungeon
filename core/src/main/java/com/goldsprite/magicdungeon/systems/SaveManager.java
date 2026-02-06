@@ -15,6 +15,7 @@ public class SaveManager {
 	public static void saveGame(Player player, Dungeon dungeon) {
 		GameState state = new GameState();
 		state.dungeonLevel = dungeon.level;
+		state.seed = dungeon.globalSeed;
 		state.playerStats = player.stats;
 		state.inventory = player.inventory;
 

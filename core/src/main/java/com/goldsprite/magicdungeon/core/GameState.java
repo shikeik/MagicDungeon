@@ -6,6 +6,7 @@ import java.util.List;
 
 public class GameState {
 	public int dungeonLevel;
+	public long seed;
 	public PlayerStats playerStats;
 	public List<InventoryItem> inventory;
 
