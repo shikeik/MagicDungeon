@@ -26,11 +26,14 @@ import com.goldsprite.magicdungeon.world.TileType;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.badlogic.gdx.math.RandomXS128;
 
 import com.goldsprite.magicdungeon.core.ItemState;
+import com.goldsprite.magicdungeon.core.LevelState;
 import com.goldsprite.magicdungeon.core.MonsterState;
 
 public class GameScreen extends GScreen {
@@ -43,6 +46,9 @@ public class GameScreen extends GScreen {
 	private AudioSystem audio;
 	private SpriteBatch batch;
 	private long seed;
+	
+	// History of visited levels
+	private Map<Integer, LevelState> visitedLevels = new HashMap<>();
 
 	private String cheatCodeBuffer = "";
 
@@ -95,7 +101,7 @@ public class GameScreen extends GScreen {
 
 		// Set save listener for HUD save button
 		hud.setSaveListener(() -> {
-			SaveManager.saveGame(player, dungeon, monsters, items);
+			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
 			hud.showMessage("Game Saved!");
 		});
 		getImp().addProcessor(hud.stage);
@@ -109,22 +115,92 @@ public class GameScreen extends GScreen {
 		System.out.println("GameScreen Constructor Finished");
 	}
 
+	private void saveCurrentLevelState() {
+		// Save current level state to history
+		List<MonsterState> monsterStates = new ArrayList<>();
+		for (Monster m : monsters) {
+			if (m.hp > 0) {
+				monsterStates.add(new MonsterState(m.x, m.y, m.type.name(), m.hp, m.maxHp));
+			}
+		}
+		
+		List<ItemState> itemStates = new ArrayList<>();
+		for (Item item : items) {
+			itemStates.add(new ItemState(item.x, item.y, item.data.name()));
+		}
+		
+		visitedLevels.put(dungeon.level, new LevelState(monsterStates, itemStates));
+	}
+	
+	private void loadLevelState(LevelState state) {
+		monsters.clear();
+		for(MonsterState ms : state.monsters) {
+			MonsterType type = MonsterType.Slime;
+			try {
+				type = MonsterType.valueOf(ms.typeName);
+			} catch(IllegalArgumentException e) {
+				for(MonsterType t : MonsterType.values()) {
+					if(t.name.equals(ms.typeName)) {
+						type = t;
+						break;
+					}
+				}
+			}
+			
+			Monster m = new Monster(ms.x, ms.y, type);
+			m.hp = ms.hp;
+			m.maxHp = ms.maxHp;
+			monsters.add(m);
+		}
+		
+		items.clear();
+		for(ItemState is : state.items) {
+			ItemData data = ItemData.Health_Potion;
+			try {
+				data = ItemData.valueOf(is.itemName);
+			} catch(IllegalArgumentException e) {
+			}
+			items.add(new Item(is.x, is.y, data));
+		}
+	}
+
 	private void nextLevel() {
+		saveCurrentLevelState();
+		
 		dungeon.level++;
 		dungeon.generate();
+		
+		// Check if we visited this level before
+		if (visitedLevels.containsKey(dungeon.level)) {
+			loadLevelState(visitedLevels.get(dungeon.level));
+		} else {
+			spawnEntities();
+		}
+
 		player.x = dungeon.startPos.x;
 		player.y = dungeon.startPos.y;
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
-		spawnEntities();
+		
 		hud.showMessage("Descended to Floor " + dungeon.level + "!");
 		audio.playLevelUp(); // Reusing sound for now
 	}
 
 	private void prevLevel() {
 		if (dungeon.level > 1) {
+			saveCurrentLevelState();
+			
 			dungeon.level--;
 			dungeon.generate();
+			
+			// Check if we visited this level before
+			if (visitedLevels.containsKey(dungeon.level)) {
+				loadLevelState(visitedLevels.get(dungeon.level));
+			} else {
+				// Should theoretically always be visited if going back, but handle just in case
+				spawnEntities();
+			}
+			
             // When going up, we might want to spawn at the down stairs of the previous level?
             // But currently MapGenerator places stairs down at end room and stairs up at start room.
             // If we assume linear progression, going UP should land us at the DOWN stairs of the upper floor.
@@ -145,7 +221,7 @@ public class GameScreen extends GScreen {
                 }
                 if(stairsDownPos != null) break;
             }
-
+            
             if (stairsDownPos != null) {
                 player.x = stairsDownPos.x;
                 player.y = stairsDownPos.y;
@@ -156,7 +232,7 @@ public class GameScreen extends GScreen {
 
 			player.visualX = player.x * Constants.TILE_SIZE;
 			player.visualY = player.y * Constants.TILE_SIZE;
-			spawnEntities();
+			
 			hud.showMessage("Ascended to Floor " + dungeon.level + "!");
 			audio.playLevelUp();
 		}
@@ -334,7 +410,7 @@ public class GameScreen extends GScreen {
 
 		// Save Game
 		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
-			SaveManager.saveGame(player, dungeon, monsters, items);
+			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
 			hud.showMessage("Game Saved!");
 		}
 
@@ -487,6 +563,19 @@ public class GameScreen extends GScreen {
 			player.inventory = state.inventory;
 			dungeon.level = state.dungeonLevel;
 			dungeon.globalSeed = state.seed; // Restore seed
+			
+			// Restore Equipment
+			if (state.equipment != null) {
+				player.equipment.weapon = state.equipment.weapon;
+				player.equipment.armor = state.equipment.armor;
+			}
+			
+			// Restore History
+			if (state.visitedLevels != null) {
+				visitedLevels = state.visitedLevels;
+			} else {
+				visitedLevels = new HashMap<>();
+			}
 
 			// Regenerate world
 			dungeon.generate();

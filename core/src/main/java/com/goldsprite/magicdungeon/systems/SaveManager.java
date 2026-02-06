@@ -3,8 +3,10 @@ package com.goldsprite.magicdungeon.systems;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
+import com.goldsprite.magicdungeon.core.EquipmentState;
 import com.goldsprite.magicdungeon.core.GameState;
 import com.goldsprite.magicdungeon.core.ItemState;
+import com.goldsprite.magicdungeon.core.LevelState;
 import com.goldsprite.magicdungeon.core.MonsterState;
 import com.goldsprite.magicdungeon.entities.Item;
 import com.goldsprite.magicdungeon.entities.Monster;
@@ -13,13 +15,14 @@ import com.goldsprite.magicdungeon.world.Dungeon;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class SaveManager {
 	private static final String SAVE_DIR = "MagicDungeon/saves/";
 	private static final String SAVE_FILE_NAME = "game_save.json";
 	private static final String SAVE_PATH = SAVE_DIR + SAVE_FILE_NAME;
 
-	public static void saveGame(Player player, Dungeon dungeon, List<Monster> monsters, List<Item> items) {
+	public static void saveGame(Player player, Dungeon dungeon, List<Monster> monsters, List<Item> items, Map<Integer, LevelState> visitedLevels) {
 		GameState state = new GameState();
 		state.dungeonLevel = dungeon.level;
 		state.seed = dungeon.globalSeed;
@@ -27,8 +30,23 @@ public class SaveManager {
 		state.inventory = player.inventory;
 		state.playerX = player.x;
 		state.playerY = player.y;
+		
+		// Save Equipment
+		if (player.equipment != null) {
+			state.equipment = new EquipmentState(player.equipment.weapon, player.equipment.armor);
+		}
+		
+		// Save Visited Levels History
+		if (visitedLevels != null) {
+			state.visitedLevels = visitedLevels;
+		}
 
-		// Save Monsters
+		// Save Current Level State
+		// Even if we are about to switch levels or exit, saving "current" monsters/items is crucial
+		// Note: The caller might have already updated visitedLevels with current level, 
+		// but GameState has dedicated fields for the "active" snapshot (monsters/items)
+		// which are used when loading the save directly into the current screen.
+		
 		state.monsters = new ArrayList<>();
 		for (Monster m : monsters) {
 			if (m.hp > 0) { // Only save live monsters
@@ -36,7 +54,6 @@ public class SaveManager {
 			}
 		}
 
-		// Save Items
 		state.items = new ArrayList<>();
 		for (Item item : items) {
 			state.items.add(new ItemState(item.x, item.y, item.data.name()));
