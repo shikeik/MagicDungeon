@@ -105,7 +105,7 @@ public class GameScreen extends GScreen {
 		// Set save listener for HUD save button
 		hud.setSaveListener(() -> {
 			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
-			hud.showMessage("Game Saved!");
+			hud.showMessage("游戏已保存!");
 		});
 		getImp().addProcessor(hud.stage);
 
@@ -341,13 +341,16 @@ public class GameScreen extends GScreen {
 			audio.playMove();
 		}
 
+		// Use Potion (Health)
 		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+			// Simple heal logic (if no items)
 			if (player.stats.mana >= 10) {
-				player.useSkill();
-				audio.playLevelUp();
-				hud.showMessage("Used Heal!");
+				player.stats.mana -= 10;
+				player.stats.hp = Math.min(player.stats.hp + 20, player.stats.maxHp);
+				hud.showMessage("使用了治疗术! 回复了 20 点生命!");
+				audio.playItem();
 			} else {
-				hud.showMessage("Not enough Mana!");
+				hud.showMessage("法力不足!");
 			}
 		}
 
@@ -385,14 +388,14 @@ public class GameScreen extends GScreen {
 				if (item.item.data.type == ItemType.POTION) {
 					if (item.item.data == ItemData.Health_Potion) {
 						player.stats.hp = Math.min(player.stats.hp + item.item.heal, player.stats.maxHp);
-						hud.showMessage("Used Health Potion!");
+						hud.showMessage("使用了 [" + item.item.quality.name + "] 生命药水! 回复了 " + item.item.heal + " 点生命!");
 					} else if (item.item.data == ItemData.Mana_Potion) {
 						player.stats.mana = Math.min(player.stats.mana + item.item.heal, player.stats.maxMana);
-						hud.showMessage("Used Mana Potion!");
+						hud.showMessage("使用了 [" + item.item.quality.name + "] 法力药水! 回复了 " + item.item.heal + " 点法力!");
 					}
 				} else {
 					player.inventory.add(item.item);
-					hud.showMessage("Picked up " + item.item.quality.name + " " + item.item.data.name + "!");
+					hud.showMessage("拾取了 [" + item.item.quality.name + "] " + item.item.data.name + "!");
 					// Update inventory dialog if it's open
 					hud.updateInventory(player);
 				}
@@ -408,9 +411,9 @@ public class GameScreen extends GScreen {
 				audio.playHit();
 				player.stats.hp -= damage;
 				player.hitFlashTimer = 0.2f; // Trigger red flash
-				hud.showMessage("Took " + damage + " damage!");
+				hud.showMessage("受到来自 " + m.name + " 的 " + damage + " 点伤害!");
 				if (player.stats.hp <= 0) {
-					hud.showMessage("GAME OVER!");
+					hud.showMessage("游戏结束!");
 				}
 			}
 			m.updateVisuals(delta);
@@ -428,13 +431,13 @@ public class GameScreen extends GScreen {
 			player.visualY = player.y * Constants.TILE_SIZE;
 			player.stats.hp = player.stats.maxHp;
 			spawnEntities();
-			hud.showMessage("Map Regenerated!");
+			hud.showMessage("地图已重置!");
 		}
 
 		// Save Game
 		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
 			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
-			hud.showMessage("Game Saved!");
+			hud.showMessage("游戏已保存!");
 		}
 
 		// Load Game
@@ -486,7 +489,7 @@ public class GameScreen extends GScreen {
 			for (ItemData data : ItemData.values()) {
 				player.inventory.add(new InventoryItem(data));
 			}
-			hud.showMessage("Cheat Activated: All Items Added!");
+			hud.showMessage("作弊已激活: 所有物品已添加!");
 			hud.updateInventory(player);
 			audio.playLevelUp();
 		}
@@ -671,9 +674,9 @@ public class GameScreen extends GScreen {
 				spawnEntities();
 			}
 
-			hud.showMessage("Game Loaded!");
+			hud.showMessage("游戏已加载!");
 		} else {
-			hud.showMessage("No Save Found!");
+			hud.showMessage("未找到存档!");
 		}
 	}
 

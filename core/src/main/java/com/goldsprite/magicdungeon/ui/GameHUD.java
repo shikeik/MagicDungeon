@@ -208,13 +208,13 @@ public class GameHUD {
 		root.top().left();
 		root.setFillParent(true);
 
-		hpLabel = new VisLabel("HP: 100/100");
-		manaLabel = new VisLabel("MP: 50/50");
-		xpLabel = new VisLabel("XP: 0/100");
-		lvLabel = new VisLabel("LV: 1");
-		floorLabel = new VisLabel("Floor: 1");
+		hpLabel = new VisLabel("生命: 100/100");
+		manaLabel = new VisLabel("法力: 50/50");
+		xpLabel = new VisLabel("经验: 0/100");
+		lvLabel = new VisLabel("等级: 1");
+		floorLabel = new VisLabel("层数: 1");
 		msgLabel = new VisLabel("");
-		showMessage("Welcome to Dungeon!");
+		showMessage("欢迎来到地下城!");
 
 		// Top bar with stats and buttons
 		VisTable topBar = new VisTable();
@@ -365,11 +365,11 @@ public class GameHUD {
 
 	public void update(Player player, int floor) {
 		this.currentPlayer = player;
-		hpLabel.setText("HP: " + player.stats.hp + "/" + player.stats.maxHp);
-		manaLabel.setText("MP: " + player.stats.mana + "/" + player.stats.maxMana);
-		xpLabel.setText("XP: " + player.stats.xp);
-		lvLabel.setText("LV: " + player.stats.level);
-		floorLabel.setText("Floor: " + floor);
+		hpLabel.setText("生命: " + player.stats.hp + "/" + player.stats.maxHp);
+		manaLabel.setText("法力: " + player.stats.mana + "/" + player.stats.maxMana);
+		xpLabel.setText("经验: " + player.stats.xp + "/" + player.stats.xpToNextLevel);
+		lvLabel.setText("等级: " + player.stats.level);
+		floorLabel.setText("层数: " + floor);
 
 		stage.act();
 	}
