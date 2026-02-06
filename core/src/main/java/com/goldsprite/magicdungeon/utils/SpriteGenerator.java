@@ -117,19 +117,19 @@ public class SpriteGenerator {
     public static Texture createFloor() {
         Pixmap p = createPixmap();
         
-        // Base Stone
-        drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#222222"));
+        // Base Stone - Lighter
+        drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#444444")); // Previously #222222
         
         // Big tiles pattern (2x2)
         int size = TEX_SIZE / 2;
-        p.setColor(Color.valueOf("#262626"));
+        p.setColor(Color.valueOf("#4d4d4d"));
         p.drawRectangle(0, 0, size, size);
         p.drawRectangle(size, size, size, size);
         p.drawRectangle(size, 0, size, size);
         p.drawRectangle(0, size, size, size);
 
         // Noise/Gravel
-        p.setColor(Color.valueOf("#333333"));
+        p.setColor(Color.valueOf("#555555"));
         for (int i = 0; i < 200; i++) {
             int x = MathUtils.random(TEX_SIZE);
             int y = MathUtils.random(TEX_SIZE);
@@ -138,7 +138,7 @@ public class SpriteGenerator {
         }
         
         // Cracks
-        p.setColor(Color.valueOf("#111111"));
+        p.setColor(Color.valueOf("#333333"));
         for (int i=0; i<5; i++) {
              int x1 = MathUtils.random(TEX_SIZE);
              int y1 = MathUtils.random(TEX_SIZE);
@@ -150,21 +150,60 @@ public class SpriteGenerator {
         return toTexture(p);
     }
 
-    public static Texture createStairs() {
+    public static Texture createStairs(boolean up) {
         Pixmap p = createPixmap();
-        drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#111111"));
         
-        int steps = 6;
-        int stepH = TEX_SIZE / steps;
+        // No background for UP stairs as requested ("无背景")? 
+        // Or usually stairs have floor background. Assuming transparent if "无背景" means just the stairs.
+        // But for game logic, it usually sits on floor. Let's make it sit on floor color for DOWN, 
+        // and maybe transparent/floor for UP. Let's stick to floor background for consistency unless transparent is strictly needed.
+        // User said "无背景" for UP stairs.
         
-        for (int i = 0; i < steps; i++) {
-            int y = i * stepH;
-            // Step Top
-            drawRect(p, 20, y, TEX_SIZE - 40, stepH - 10, Color.valueOf("#444444"));
-            // Step Front (Shadow)
-            drawRect(p, 20, y + stepH - 10, TEX_SIZE - 40, 10, Color.valueOf("#222222"));
+        if (!up) {
+            // STAIRS DOWN: Top Large, Bottom Small (Perspective going into ground)
+            // Or "上大下小" means top of image is wide, bottom is narrow?
+            // "营造往下地牢阴影感" -> Perspective funneling down.
+            // Let's draw a dark hole in center-ish
+            
+            drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#444444")); // Floor BG
+            
+            // Funnel
+            for(int i=0; i<5; i++) {
+                int inset = i * 20;
+                Color c = new Color(0.1f + i*0.1f, 0.1f + i*0.1f, 0.1f + i*0.1f, 1f); // Darker as we go deep? No, usually deeper is darker.
+                // Outer is light, inner is dark.
+                c = new Color(0.6f - i*0.1f, 0.6f - i*0.1f, 0.6f - i*0.1f, 1f);
+                drawRect(p, 20 + inset, 20 + inset, TEX_SIZE - 40 - inset*2, TEX_SIZE - 40 - inset*2, c);
+            }
+            // Black void at bottom
+            drawRect(p, 100, 100, 56, 56, Color.BLACK);
+            
+        } else {
+            // STAIRS UP: Top Small, Bottom Large (Perspective going up)
+            // "无背景" -> Transparent background
+            // "阶梯上小下大" -> Pyramid shape going up
+            
+            // Steps
+            int steps = 6;
+            for(int i=0; i<steps; i++) {
+                int width = 60 + i * 30; // Top is small (60), Bottom is large
+                int height = 30;
+                int x = (TEX_SIZE - width) / 2;
+                int y = 40 + i * 30; // Start from top-ish
+                
+                // Step top
+                drawRect(p, x, y, width, height, Color.valueOf("#8d6e63")); // Wood/Stone
+                // Step front highlight
+                drawRect(p, x, y, width, 5, Color.valueOf("#a1887f"));
+            }
         }
+        
         return toTexture(p);
+    }
+    
+    // For compatibility if needed, though we should update calls
+    public static Texture createStairs() {
+        return createStairs(false); // Default to down
     }
 
     public static Texture createDoor() {
@@ -203,12 +242,21 @@ public class SpriteGenerator {
         Color legs = Color.valueOf("#424242");
         Color boots = Color.valueOf("#3E2723");
 
-        // 1. Legs (Centered)
+        // 1. Legs (Centered) - Shorter for bigger head feel? Or normal. 
+        // User asked for "Head smaller", "Shoes bigger".
+        // Current: Head ~80x80, Body ~90h, Legs ~60h. Total ~230h.
+        // Make Head smaller: ~60x60.
+        // Make Shoes bigger: Width 45+, Height 20+.
+        
+        int startY = 30; // Shift down
+        
+        // Legs
         drawRect(p, 90, 180, 25, 60, legs);
         drawRect(p, 141, 180, 25, 60, legs);
-        // Boots
-        drawRect(p, 85, 240, 35, 16, boots);
-        drawRect(p, 136, 240, 35, 16, boots);
+        
+        // Boots (Big Shoes)
+        drawRect(p, 80, 230, 45, 26, boots); // Bigger
+        drawRect(p, 131, 230, 45, 26, boots);
 
         // 2. Body (Armor)
         // Main Chest
@@ -224,24 +272,31 @@ public class SpriteGenerator {
         drawRect(p, 70, 180, 116, 15, Color.valueOf("#3e2723"));
         drawRect(p, 118, 180, 20, 15, Color.GOLD); // Buckle
 
-        // 3. Head
-        drawRect(p, 80, 30, 96, 80, skin);
+        // 3. Head (Smaller)
+        // Old: 96x80. New: 76x64.
+        int headW = 76;
+        int headH = 64;
+        int headX = 128 - headW/2;
+        int headY = 36;
         
-        // 4. Helmet
+        drawRect(p, headX, headY, headW, headH, skin);
+        
+        // 4. Helmet (Smaller)
         // Top Dome
-        drawRect(p, 75, 10, 106, 40, helmet);
+        drawRect(p, headX - 5, headY - 10, headW + 10, 30, helmet);
         // Visor / Sides
-        drawRect(p, 70, 40, 20, 80, darkHelmet);
-        drawRect(p, 166, 40, 20, 80, darkHelmet);
-        // Center Crest (Red Plume?)
-        drawRect(p, 123, 0, 10, 20, Color.RED);
+        drawRect(p, headX - 5, headY + 10, 15, headH, darkHelmet);
+        drawRect(p, headX + headW - 10, headY + 10, 15, headH, darkHelmet);
+        // Center Crest
+        drawRect(p, 128 - 5, headY - 20, 10, 20, Color.RED);
         
         // 5. Face Details
-        // Eyes (Anime style bigger eyes)
-        drawRect(p, 100, 60, 12, 12, Color.BLACK);
-        drawRect(p, 144, 60, 12, 12, Color.BLACK);
-        drawRect(p, 102, 62, 4, 4, Color.WHITE);
-        drawRect(p, 146, 62, 4, 4, Color.WHITE);
+        // Eyes
+        int eyeY = headY + 30;
+        drawRect(p, 128 - 20, eyeY, 12, 12, Color.BLACK);
+        drawRect(p, 128 + 8, eyeY, 12, 12, Color.BLACK);
+        drawRect(p, 128 - 18, eyeY + 2, 4, 4, Color.WHITE);
+        drawRect(p, 128 + 10, eyeY + 2, 4, 4, Color.WHITE);
         
         return toTexture(p);
     }
