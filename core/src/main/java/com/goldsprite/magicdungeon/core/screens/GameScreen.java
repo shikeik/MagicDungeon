@@ -397,7 +397,7 @@ public class GameScreen extends GScreen {
 				if (tile != null) {
 					Texture texture = tileTextures.get(tile.type);
 					if (texture != null) {
-						batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE);
+						batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
 					}
 				}
 			}
@@ -422,7 +422,7 @@ public class GameScreen extends GScreen {
 					if (appliedFlash) {
 						batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
 					}
-					batch.draw(mTex, m.visualX + m.bumpX, m.visualY + m.bumpY);
+					batch.draw(mTex, m.visualX + m.bumpX, m.visualY + m.bumpY, Constants.TILE_SIZE, Constants.TILE_SIZE);
 					// Reset color if we changed it
 					if (appliedFlash) {
 						batch.setColor(1f, 1f, 1f, 1f);
@@ -436,7 +436,7 @@ public class GameScreen extends GScreen {
 						if (appliedFlash) {
 							batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
 						}
-						batch.draw(fallback, m.visualX + m.bumpX, m.visualY + m.bumpY);
+						batch.draw(fallback, m.visualX + m.bumpX, m.visualY + m.bumpY, Constants.TILE_SIZE, Constants.TILE_SIZE);
 						// Reset color if we changed it
 						if (appliedFlash) {
 							batch.setColor(1f, 1f, 1f, 1f);
@@ -453,7 +453,7 @@ public class GameScreen extends GScreen {
 			if (appliedFlash) {
 				batch.setColor(1f, 1f, 1f, 0.5f); // 半透明效果
 			}
-			batch.draw(playerTexture, player.visualX + player.bumpX, player.visualY + player.bumpY);
+			batch.draw(playerTexture, player.visualX + player.bumpX, player.visualY + player.bumpY, Constants.TILE_SIZE, Constants.TILE_SIZE);
 			if (appliedFlash) {
 				batch.setColor(1f, 1f, 1f, 1f);
 			}
