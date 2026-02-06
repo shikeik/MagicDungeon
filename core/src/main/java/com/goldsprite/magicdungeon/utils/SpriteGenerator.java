@@ -117,19 +117,19 @@ public class SpriteGenerator {
     public static Texture createFloor() {
         Pixmap p = createPixmap();
         
-        // Base Stone - Lighter
-        drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#444444")); // Previously #222222
+        // Base Stone - Darker
+        drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#222222"));
         
         // Big tiles pattern (2x2)
         int size = TEX_SIZE / 2;
-        p.setColor(Color.valueOf("#4d4d4d"));
+        p.setColor(Color.valueOf("#2a2a2a"));
         p.drawRectangle(0, 0, size, size);
         p.drawRectangle(size, size, size, size);
         p.drawRectangle(size, 0, size, size);
         p.drawRectangle(0, size, size, size);
 
         // Noise/Gravel
-        p.setColor(Color.valueOf("#555555"));
+        p.setColor(Color.valueOf("#333333"));
         for (int i = 0; i < 200; i++) {
             int x = MathUtils.random(TEX_SIZE);
             int y = MathUtils.random(TEX_SIZE);
@@ -138,7 +138,7 @@ public class SpriteGenerator {
         }
         
         // Cracks
-        p.setColor(Color.valueOf("#333333"));
+        p.setColor(Color.valueOf("#111111"));
         for (int i=0; i<5; i++) {
              int x1 = MathUtils.random(TEX_SIZE);
              int y1 = MathUtils.random(TEX_SIZE);
@@ -153,55 +153,64 @@ public class SpriteGenerator {
     public static Texture createStairs(boolean up) {
         Pixmap p = createPixmap();
         
-        // No background for UP stairs as requested ("无背景")? 
-        // Or usually stairs have floor background. Assuming transparent if "无背景" means just the stairs.
-        // But for game logic, it usually sits on floor. Let's make it sit on floor color for DOWN, 
-        // and maybe transparent/floor for UP. Let's stick to floor background for consistency unless transparent is strictly needed.
-        // User said "无背景" for UP stairs.
+        // Unify Color: Stone Grey Style for both
+        Color stairColor = Color.valueOf("#555555");
+        Color stairHighlight = Color.valueOf("#777777");
+        Color stairShadow = Color.valueOf("#333333");
+        
+        // Max Width: 2/3 of TEX_SIZE (approx 170px)
+        int maxWidth = (int)(TEX_SIZE * 0.66f);
         
         if (!up) {
-            // STAIRS DOWN: Trapezoid Perspective (梯形)
-            // Background Black
-            drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.BLACK);
+            // STAIRS DOWN: Trapezoid Perspective
+            // Background: Dark Floor
+            drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#222222"));
             
-            // Draw stairs from Top (Light) to Bottom (Dark/Black)
-            // Top is wide, Bottom is narrow
-            
+            // Draw stairs from Top (Light) to Bottom (Dark)
             int steps = 8;
             for(int i=0; i<steps; i++) {
-                // Interpolate color from Grey to Black
+                // Interpolate color for depth
                 float t = (float)i / (steps-1);
-                Color c = new Color(0.5f * (1-t), 0.5f * (1-t), 0.5f * (1-t), 1f);
+                Color c = stairColor.cpy().lerp(Color.BLACK, t * 0.8f);
                 
-                // Width decreases
-                int topW = TEX_SIZE - 20;
-                int botW = 100;
+                // Width decreases from maxWidth to ~80
+                int topW = maxWidth;
+                int botW = 80;
                 int currentW = (int)(topW - (topW - botW) * t);
-                int h = 30 - i * 2; // Height decreases slightly
+                int h = 30 - i * 2;
                 
                 int x = (TEX_SIZE - currentW) / 2;
-                int y = i * 35; // Position
+                int y = i * 35 + 10; // Start a bit lower
                 
                 drawRect(p, x, y, currentW, h, c);
+                // Highlight edge
+                drawRect(p, x, y, currentW, 2, c.cpy().add(0.1f, 0.1f, 0.1f, 0));
             }
             
         } else {
-            // STAIRS UP: Top Small, Bottom Large (Perspective going up)
-            // "无背景" -> Transparent background
-            // "阶梯上小下大" -> Pyramid shape going up
+            // STAIRS UP: Pyramid shape
+            // Background: Transparent (or simple floor)
             
-            // Steps
             int steps = 6;
             for(int i=0; i<steps; i++) {
-                int width = 60 + i * 30; // Top is small (60), Bottom is large
+                // Width increases from small to maxWidth
+                int topW = 60;
+                int botW = maxWidth;
+                // i=0 is top, i=steps-1 is bottom
+                float t = (float)i / (steps-1);
+                int width = (int)(topW + (botW - topW) * t);
+                
                 int height = 30;
                 int x = (TEX_SIZE - width) / 2;
-                int y = 40 + i * 30; // Start from top-ish
+                int y = 40 + i * 30;
                 
                 // Step top
-                drawRect(p, x, y, width, height, Color.valueOf("#8d6e63")); // Wood/Stone
+                drawRect(p, x, y, width, height, stairColor);
                 // Step front highlight
-                drawRect(p, x, y, width, 5, Color.valueOf("#a1887f"));
+                drawRect(p, x, y, width, 5, stairHighlight);
+                // Shadow sides
+                drawRect(p, x, y, 5, height, stairShadow);
+                drawRect(p, x + width - 5, y, 5, height, stairShadow);
             }
         }
         
@@ -246,21 +255,37 @@ public class SpriteGenerator {
         Color gold = Color.GOLD;
         Color helmet = Color.valueOf("#CFD8DC"); // Light Silver
         Color darkHelmet = Color.valueOf("#90A4AE");
-        Color legs = Color.valueOf("#8d6e63"); // Brown Pants (Contrast with floor)
+        Color legs = Color.valueOf("#8d6e63"); // Brown Pants
         Color boots = Color.valueOf("#3E2723");
 
         // 1. Legs (Centered)
-        // User asked for big shoes.
-        
         int startY = 30; // Shift down
         
         // Legs
         drawRect(p, 90, 180, 25, 60, legs);
         drawRect(p, 141, 180, 25, 60, legs);
         
-        // Boots (Big Shoes - Even Bigger)
-        drawRect(p, 75, 230, 55, 30, boots); // Bigger Width 55
-        drawRect(p, 126, 230, 55, 30, boots);
+        // Boots (Bigger, Taller, Wider, Separated)
+        // Center 128. Gap 10. Width 65. Height 45.
+        // Left Boot: 128 - 10 - 65 = 53
+        // Right Boot: 128 + 10 = 138
+        int bootW = 65;
+        int bootH = 45;
+        int bootY = 215;
+        
+        // Left Boot
+        drawRect(p, 53, bootY, bootW, bootH, boots);
+        // Right Boot
+        drawRect(p, 138, bootY, bootW, bootH, boots);
+        
+        // Boot Detail (Texture/Laces)
+        Color bootLight = boots.cpy().mul(1.2f);
+        // Soles
+        drawRect(p, 53, bootY + bootH - 10, bootW, 10, Color.BLACK);
+        drawRect(p, 138, bootY + bootH - 10, bootW, 10, Color.BLACK);
+        // Highlights
+        drawRect(p, 53 + 5, bootY + 5, 10, 20, bootLight);
+        drawRect(p, 138 + 5, bootY + 5, 10, 20, bootLight);
 
         // 2. Body (Armor)
         // Main Chest
@@ -312,7 +337,9 @@ public class SpriteGenerator {
             // Slime Body
             p.setColor(Color.valueOf("#44aaff"));
             p.fillCircle(128, 140, 100);
-            p.fillRectangle(28, 140, 200, 80);
+            // Fix: Extend rectangle width by 1 pixel to match circle edge perfectly (28+201=229 vs 128+100=228?)
+            // Actually circle boundary calculation might be slightly different. Let's add overlap.
+            p.fillRectangle(28, 140, 202, 80); 
             
             // Highlight (Glossy)
             p.setColor(Color.valueOf("#88ccff"));
@@ -325,62 +352,128 @@ public class SpriteGenerator {
             drawCircle(p, 166, 130, 8, Color.BLACK);
             
         } else if (type.equals("SKELETON")) {
-            // Skull
-            drawRect(p, 80, 40, 96, 80, Color.valueOf("#eeeeee"));
+            // Skull (Smaller)
+            int headW = 70;
+            int headH = 60;
+            int headX = 128 - headW/2;
+            int headY = 40;
+            drawRect(p, headX, headY, headW, headH, Color.valueOf("#eeeeee"));
+            
             // Jaw
-            drawRect(p, 90, 120, 76, 30, Color.valueOf("#dddddd"));
+            drawRect(p, headX + 10, headY + headH, headW - 20, 20, Color.valueOf("#dddddd"));
+            
             // Eyes
-            drawRect(p, 90, 60, 25, 25, Color.BLACK);
-            drawRect(p, 141, 60, 25, 25, Color.BLACK);
+            drawRect(p, headX + 10, headY + 20, 18, 18, Color.BLACK);
+            drawRect(p, headX + headW - 28, headY + 20, 18, 18, Color.BLACK);
+            
             // Ribs
-            drawRect(p, 100, 160, 56, 60, Color.valueOf("#dddddd"));
+            drawRect(p, 100, 130, 56, 60, Color.valueOf("#dddddd"));
             for(int i=0; i<3; i++) {
-                drawRect(p, 80, 160 + i*20, 96, 10, Color.valueOf("#eeeeee"));
+                drawRect(p, 80, 130 + i*20, 96, 10, Color.valueOf("#eeeeee"));
             }
-            // Legs (Fix: Higher up to avoid cut-off)
-            drawRect(p, 90, 220, 15, 30, Color.valueOf("#dddddd"));
-            drawRect(p, 151, 220, 15, 30, Color.valueOf("#dddddd"));
-            // Feet
-            drawRect(p, 85, 250, 25, 6, Color.valueOf("#aaaaaa"));
-            drawRect(p, 146, 250, 25, 6, Color.valueOf("#aaaaaa"));
+            // Legs
+            drawRect(p, 90, 200, 15, 30, Color.valueOf("#dddddd"));
+            drawRect(p, 151, 200, 15, 30, Color.valueOf("#dddddd"));
+            
+            // Feet (Bigger - match player)
+            drawRect(p, 60, 230, 50, 25, Color.valueOf("#aaaaaa")); // Left
+            drawRect(p, 146, 230, 50, 25, Color.valueOf("#aaaaaa")); // Right
             
         } else if (type.equals("ORC")) {
-            // Body
-            drawRect(p, 50, 50, 156, 180, Color.valueOf("#448822"));
-            // Leather Armor
-            drawRect(p, 60, 180, 136, 40, Color.valueOf("#5d4037")); // Belt
-            drawRect(p, 70, 60, 116, 100, Color.valueOf("#795548")); // Chest
+            // Body (Improved Color)
+            Color skin = Color.valueOf("#558b2f"); // Olive Green
+            drawRect(p, 50, 50, 156, 180, skin);
+            
+            // Armor (Improved)
+            Color armor = Color.valueOf("#3e2723"); // Dark Leather
+            Color metal = Color.GRAY;
+            
+            // Chest
+            drawRect(p, 60, 60, 136, 100, armor);
+            // Metal Plates
+            drawRect(p, 70, 70, 50, 80, metal);
+            drawRect(p, 136, 70, 50, 80, metal);
+            
+            // Belt
+            drawRect(p, 50, 170, 156, 30, Color.valueOf("#212121"));
+            
             // Tusks
-            drawRect(p, 80, 140, 15, 40, Color.WHITE);
-            drawRect(p, 161, 140, 15, 40, Color.WHITE);
+            drawRect(p, 80, 140, 15, 40, Color.valueOf("#fffde7"));
+            drawRect(p, 161, 140, 15, 40, Color.valueOf("#fffde7"));
+            
             // Eyes (Angry)
             drawRect(p, 80, 80, 30, 10, Color.RED);
             drawRect(p, 146, 80, 30, 10, Color.RED);
             
         } else if (type.equals("BAT")) {
-            // Wings
-            p.setColor(Color.DARK_GRAY);
+            // Wings (Dark Purple/Grey)
+            p.setColor(Color.valueOf("#424242"));
             p.fillTriangle(128, 128, 20, 40, 50, 180);
             p.fillTriangle(128, 128, 236, 40, 206, 180);
-            // Body
-            drawCircle(p, 128, 128, 40, Color.BLACK);
+            
+            // Wing membranes
+            p.setColor(Color.valueOf("#616161"));
+            p.fillTriangle(128, 128, 30, 50, 60, 170);
+            p.fillTriangle(128, 128, 226, 50, 196, 170);
+
+            // Body (Lighter than wings)
+            drawCircle(p, 128, 128, 40, Color.valueOf("#757575"));
+            
             // Eyes
             drawCircle(p, 118, 120, 8, Color.YELLOW);
             drawCircle(p, 138, 120, 8, Color.YELLOW);
+            drawCircle(p, 118, 120, 3, Color.RED); // Pupil
+            drawCircle(p, 138, 120, 3, Color.RED);
 
         } else if (type.equals("BOSS")) {
-            // Dragon Head
-            p.setColor(Color.valueOf("#aa0000"));
-            p.fillRectangle(60, 40, 136, 120);
+            // DRAGON (Magnificent)
+            
+            // Wings (Big, back)
+            p.setColor(Color.valueOf("#b71c1c")); // Dark Red
+            p.fillTriangle(128, 100, 10, 10, 80, 150);
+            p.fillTriangle(128, 100, 246, 10, 176, 150);
+            
+            // Body (Serpentine/Scaly)
+            Color bodyColor = Color.valueOf("#d32f2f");
+            Color scaleColor = Color.valueOf("#f44336");
+            
+            // Main torso
+            drawRect(p, 80, 80, 96, 140, bodyColor);
+            
+            // Scales
+            p.setColor(scaleColor);
+            for(int i=0; i<5; i++) {
+                for(int j=0; j<3; j++) {
+                    p.fillCircle(96 + j*30, 90 + i*25, 10);
+                }
+            }
+            
+            // Belly (Yellowish)
+            drawRect(p, 100, 80, 56, 140, Color.valueOf("#ffb300"));
+            // Belly lines
+            p.setColor(Color.valueOf("#e65100"));
+            for(int i=0; i<6; i++) {
+                drawRect(p, 100, 90 + i*20, 56, 4, Color.valueOf("#e65100"));
+            }
+
+            // Head
+            int headY = 40;
+            p.setColor(bodyColor);
+            p.fillRectangle(70, headY, 116, 80);
             // Snout
-            p.fillRectangle(80, 160, 96, 60);
-            // Eyes
-            drawRect(p, 70, 70, 30, 20, Color.GREEN);
-            drawRect(p, 156, 70, 30, 20, Color.GREEN);
-            // Horns
-            p.setColor(Color.YELLOW);
-            p.fillTriangle(70, 40, 50, 10, 90, 40);
-            p.fillTriangle(186, 40, 166, 40, 206, 10);
+            p.fillRectangle(90, headY + 60, 76, 40);
+            
+            // Horns (Large)
+            p.setColor(Color.GOLD);
+            p.fillTriangle(80, headY, 60, headY - 40, 100, headY);
+            p.fillTriangle(176, headY, 196, headY - 40, 156, headY);
+            
+            // Eyes (Glowing)
+            drawRect(p, 80, headY + 20, 20, 15, Color.GREEN);
+            drawRect(p, 156, headY + 20, 20, 15, Color.GREEN);
+            // Vertical Pupil
+            drawRect(p, 88, headY + 20, 4, 15, Color.BLACK);
+            drawRect(p, 164, headY + 20, 4, 15, Color.BLACK);
         }
         
         return toTexture(p);
@@ -423,153 +516,257 @@ public class SpriteGenerator {
             if (name.contains("Gold") || name.contains("Legendary") || name.contains("传奇")) bladeColor = Color.GOLD;
             if (name.contains("Rusty") || name.contains("生锈")) bladeColor = Color.valueOf("#8d6e63");
             
-            // Diagonal Sword (Broadsword, thicker)
-            // Handle (Bottom Left)
-            drawLine(p, 60, 200, 85, 175, 16, Color.valueOf("#3e2723")); // Thicker Handle
-            drawCircle(p, 55, 205, 12, Color.GOLD); // Bigger Pommel
+            // Broadsword (Wide)
+            // Handle
+            drawLine(p, 60, 200, 85, 175, 16, Color.valueOf("#3e2723")); 
+            drawCircle(p, 55, 205, 12, Color.GOLD); 
             
-            // Guard (Perpendicular to blade)
-            // Blade direction vector: (1, -1). Perpendicular: (1, 1).
-            // Center around (85, 175)
-            drawLine(p, 65, 155, 105, 195, 20, Color.valueOf("#5d4037")); // Thick Guard
+            // Guard
+            drawLine(p, 65, 155, 105, 195, 20, Color.valueOf("#5d4037"));
+            // Guard Ornaments
+            drawCircle(p, 65, 155, 10, Color.GOLD);
+            drawCircle(p, 105, 195, 10, Color.GOLD);
             
-            // Blade (Wide)
-            int bladeWidth = 24; // Thicker
+            // Blade (Wider: 40px)
+            int bladeWidth = 40; 
             drawLine(p, 90, 170, 210, 50, bladeWidth, bladeColor);
             
-            // Tip (Triangle)
-            // Hard to draw rotated triangle with current tools. 
-            // Just draw a line that tapers? Or manually draw lines to form tip.
-            // Let's draw a few lines of decreasing length at tip
-            drawLine(p, 210, 50, 220, 40, 10, bladeColor);
+            // Blade Edge (Lighter)
+            drawLine(p, 90, 170, 210, 50, bladeWidth - 8, bladeColor.cpy().mul(1.2f));
             
-            // Blood Groove (Fuller)
-            drawLine(p, 95, 165, 205, 55, 6, bladeColor.cpy().mul(0.7f)); // Darker center line
+            // Blood Groove (Darker Center)
+            drawLine(p, 95, 165, 205, 55, 6, bladeColor.cpy().mul(0.7f));
+            
+            // Tip
+            p.setColor(bladeColor);
+            // Draw a triangle at tip roughly
+            // Since we can't draw rotated triangle easily, just use lines to taper
+            drawLine(p, 210, 50, 225, 35, 20, bladeColor);
+            drawLine(p, 210, 50, 230, 30, 10, bladeColor);
 
         } else if (name.contains("Shield") || name.contains("盾")) {
-            Color c = name.contains("Iron") || name.contains("铁") ? Color.GRAY : Color.valueOf("#5d4037");
-            Color border = Color.DARK_GRAY;
+            boolean isIron = name.contains("Iron") || name.contains("铁");
+            Color c = isIron ? Color.GRAY : Color.valueOf("#5d4037");
+            Color border = isIron ? Color.LIGHT_GRAY : Color.valueOf("#8d6e63"); // Wood trim or Iron trim
             
-            // Classic U-Shape Shield
             // Main body
             p.setColor(c);
-            p.fillRectangle(50, 50, 156, 120); // Top part
-            p.fillCircle(128, 170, 78); // Bottom curve approximation
+            p.fillRectangle(50, 50, 156, 120); 
+            p.fillCircle(128, 170, 78); 
             
-            // Border
-            p.setColor(border);
-            // Draw lines for border (simplified)
-            drawRect(p, 45, 45, 166, 10, border); // Top rim
-            drawRect(p, 45, 45, 10, 120, border); // Left
-            drawRect(p, 201, 45, 10, 120, border); // Right
+            // Texture
+            if (!isIron) {
+                // Wood Grain
+                p.setColor(Color.valueOf("#4e342e"));
+                for(int i=1; i<5; i++) {
+                    drawRect(p, 50 + i*30, 50, 4, 180, Color.valueOf("#3e2723"));
+                }
+            } else {
+                // Metal Shine
+                p.setColor(Color.WHITE);
+                p.setBlending(Pixmap.Blending.SourceOver);
+                drawLine(p, 60, 60, 100, 100, 10, new Color(1,1,1,0.2f));
+            }
             
-            // Center Boss
+            // Border (Trim)
+            // Use lines to simulate border
+            int bThick = 10;
+            // Top
+            drawRect(p, 45, 45, 166, bThick, border);
+            // Sides
+            drawRect(p, 45, 45, bThick, 140, border);
+            drawRect(p, 201, 45, bThick, 140, border);
+            // Bottom Curve Border (Approximate with circles)
+            // Hard to do precise curve stroke. Just draw dots?
+            // Or draw a slightly larger circle behind? No, we are drawing on top.
+            // Just some rivets at bottom
+            drawCircle(p, 128, 230, 10, border);
+            drawCircle(p, 80, 210, 10, border);
+            drawCircle(p, 176, 210, 10, border);
+            
+            // Center Boss / Emblem
             drawGradientCircle(p, 128, 120, 30, border, c);
+            // Rivets
+            p.setColor(Color.GOLD);
+            drawCircle(p, 60, 60, 6, Color.GOLD);
+            drawCircle(p, 196, 60, 6, Color.GOLD);
+            drawCircle(p, 60, 160, 6, Color.GOLD);
+            drawCircle(p, 196, 160, 6, Color.GOLD);
 
         } else if (name.contains("Axe") || name.contains("斧")) {
-             // Handle (Thick) - Diagonal
-             // Top Right to Bottom Left
-             drawLine(p, 180, 40, 60, 200, 16, Color.valueOf("#5d4037"));
+             // Handle
+             drawLine(p, 180, 40, 60, 200, 16, Color.valueOf("#3e2723"));
              
-             // Head Position around (160, 60)
-             // Double Bit Moon Shape
-             p.setColor(Color.LIGHT_GRAY);
-             // Left Blade (Crescent)
-             // Draw circle and cut out? Or lines.
-             // Simple: 2 Triangles but curved?
-             // Let's use circles for curve
-             p.fillCircle(140, 80, 50); // Left big circle
-             p.fillCircle(180, 40, 50); // Right big circle
+             // Axe Head (Iron Standard)
+             // Use 2 Rectangles/Trapezoids to form double bit or single bit
+             // Let's do double bit standard shape
              
-             // Cutout to make it crescent/axe-like attached to handle?
-             // This is tricky with simple primitives.
-             // Let's use rects/triangles but better placed.
+             int cx = 165;
+             int cy = 60;
              
-             // Re-draw handle on top later
+             Color metal = Color.LIGHT_GRAY;
+             Color edge = Color.WHITE;
              
              // Left Blade
-             p.setColor(Color.LIGHT_GRAY);
-             // Top part
-             p.fillTriangle(160, 60, 100, 20, 130, 100);
-             // Bottom part
-             p.fillTriangle(160, 60, 130, 100, 200, 100); // This is messy.
+             // Trapezoid: Narrow near handle, Wide at edge
+             // Draw via lines of increasing width? Or multiple rects
+             // Rect 1 (Near handle)
+             drawRect(p, cx - 30, cy - 20, 30, 40, metal);
+             // Rect 2 (Mid)
+             drawRect(p, cx - 50, cy - 30, 20, 60, metal);
+             // Rect 3 (Edge)
+             drawRect(p, cx - 60, cy - 40, 10, 80, edge);
              
-             // Let's try simple "Butterfly" shape for axe head at (160, 60)
-             p.setColor(Color.LIGHT_GRAY);
-             // Left wing
-             p.fillTriangle(160, 60, 110, 20, 110, 100); 
-             // Right wing
-             p.fillTriangle(160, 60, 210, 20, 210, 100);
+             // Right Blade
+             drawRect(p, cx, cy - 20, 30, 40, metal);
+             drawRect(p, cx + 30, cy - 30, 20, 60, metal);
+             drawRect(p, cx + 50, cy - 40, 10, 80, edge);
              
-             // Add curve illusion by drawing smaller dark circles?
-             p.setColor(new Color(0,0,0,0)); // Transparent? No.
-             // Just stick to geometric butterfly for now, better than triangle.
-             
-             // Redraw handle
-             drawLine(p, 180, 40, 60, 200, 16, Color.valueOf("#5d4037"));
+             // Redraw handle top
+             drawLine(p, 180, 40, 150, 80, 16, Color.valueOf("#3e2723"));
              
         } else if (name.contains("Wand") || name.contains("Staff") || name.contains("魔杖")) {
-             // Staff - Diagonal
+             // Fancy Staff
+             // Shaft
              drawLine(p, 80, 200, 180, 60, 12, Color.valueOf("#5d4037"));
              
-             // Head Gem
-             drawGradientCircle(p, 180, 60, 25, Color.MAGENTA, Color.PURPLE);
-             // Ornaments (Gold Rings)
+             // Tassels (Wrapping around)
              p.setColor(Color.GOLD);
-             p.setBlending(Pixmap.Blending.None); // Overwrite
-             // Ring around gem?
-             // Just some dots
-             drawCircle(p, 180, 60, 30, new Color(1, 0.84f, 0, 0.5f)); // Halo
+             for(int i=0; i<5; i++) {
+                 int x = 100 + i*15;
+                 int y = 170 - i*15;
+                 drawCircle(p, x, y, 6, Color.RED); // Beads
+             }
+             
+             // Magic Core (Pyramid/Diamond)
+             // Center at 180, 60
+             // Diamond shape
+             p.setColor(Color.CYAN);
+             p.fillTriangle(180, 40, 160, 60, 200, 60); // Top half
+             p.fillTriangle(180, 80, 160, 60, 200, 60); // Bottom half
              
              // Glow
              p.setBlending(Pixmap.Blending.SourceOver);
-             p.setColor(new Color(1f, 0f, 1f, 0.4f));
+             p.setColor(new Color(0f, 1f, 1f, 0.4f));
              p.fillCircle(180, 60, 40);
              
-        } else if (name.contains("Scroll") || name.contains("卷轴")) {
-             // Paper
-             drawRect(p, 60, 60, 136, 136, Color.valueOf("#fff9c4"));
-             // Rolled parts
-             drawGradientCircle(p, 128, 60, 20, Color.valueOf("#fff9c4"), Color.valueOf("#cbc26d")); // Top roll
-             drawGradientCircle(p, 128, 196, 20, Color.valueOf("#fff9c4"), Color.valueOf("#cbc26d")); // Bottom roll
-             // Runes
+             // Prongs holding the gem
+             drawLine(p, 170, 70, 160, 50, 4, Color.GOLD);
+             drawLine(p, 190, 70, 200, 50, 4, Color.GOLD);
+             
+        } else if (name.contains("Scroll") || name.contains("卷轴") || name.contains("Book") || name.contains("书")) {
+             // Open Book / Flipping Book
+             // Left Page
+             p.setColor(Color.valueOf("#fff9c4")); // Paper
+             // Skewed rect for perspective?
+             // Simple: Rect
+             drawRect(p, 40, 80, 88, 100, Color.valueOf("#fff9c4"));
+             // Right Page
+             drawRect(p, 128, 80, 88, 100, Color.valueOf("#fff9c4"));
+             
+             // Spine
+             drawRect(p, 126, 80, 4, 100, Color.valueOf("#5d4037"));
+             
+             // Text/Runes
              p.setColor(Color.BLACK);
-             drawLine(p, 80, 100, 100, 100, 4, Color.BLACK);
-             drawLine(p, 110, 100, 130, 120, 4, Color.BLACK);
+             for(int i=0; i<6; i++) {
+                 drawLine(p, 50, 90 + i*12, 110, 90 + i*12, 2, Color.BLACK);
+                 drawLine(p, 140, 90 + i*12, 200, 90 + i*12, 2, Color.BLACK);
+             }
+             
+             // Flipping Page (Top Right)
+             p.setColor(Color.valueOf("#fff59d"));
+             p.fillTriangle(216, 80, 180, 80, 216, 110);
+             
+             // Cover
+             drawRect(p, 30, 70, 196, 10, Color.valueOf("#3e2723")); // Top cover edge (back)
+             drawRect(p, 30, 180, 196, 10, Color.valueOf("#3e2723")); // Bottom cover edge
              
         } else if (name.contains("Ring") || name.contains("戒指")) {
-             // Band
-             drawGradientCircle(p, 128, 128, 60, Color.GOLD, Color.YELLOW);
-             drawCircle(p, 128, 128, 50, new Color(0,0,0,0)); // Hole (Transparent) - Actually fill with clear?
-             // Pixmap doesn't support clear rect easily without blending mode.
-             // Re-draw center transparent? No, just draw ring as thick circle if possible.
-             // Let's just draw a filled circle and a smaller inner circle with background color?
-             // No background color known.
-             // Simple approach: Draw Gold Circle, then smaller Transparent Circle? 
-             // Pixmap.drawCircle is outline. fillCircle is fill.
-             // We need a donut.
+             boolean isPower = name.contains("Power") || name.contains("力量");
+             // Ring Band
+             Color bandColor = isPower ? Color.GOLD : Color.SILVER;
+             
+             // Draw Donut
+             p.setColor(bandColor);
+             p.fillCircle(128, 128, 50);
+             // Inner hole (Clear)
              p.setBlending(Pixmap.Blending.None);
              p.setColor(0,0,0,0);
-             p.fillCircle(128, 128, 45);
+             p.fillCircle(128, 128, 35);
              p.setBlending(Pixmap.Blending.SourceOver);
              
-             // Gem
-             drawGradientCircle(p, 128, 68, 15, Color.RED, Color.FIREBRICK);
+             // Gem / Setting
+             if (isPower) {
+                 // Red Gem, Square Cut
+                 drawRect(p, 110, 60, 36, 36, Color.RED);
+                 drawRect(p, 115, 65, 26, 26, Color.FIREBRICK);
+                 // Claws
+                 p.setColor(Color.GOLD);
+                 drawCircle(p, 108, 58, 4, Color.GOLD);
+                 drawCircle(p, 148, 58, 4, Color.GOLD);
+                 drawCircle(p, 108, 98, 4, Color.GOLD);
+                 drawCircle(p, 148, 98, 4, Color.GOLD);
+             } else {
+                 // Blue Gem, Oval Cut (Defense)
+                 drawGradientCircle(p, 128, 78, 18, Color.CYAN, Color.BLUE);
+                 // Silver Setting
+                 drawRect(p, 120, 120, 16, 20, Color.SILVER); // Connection
+             }
              
         } else if (name.contains("Coin") || name.contains("金币")) {
-            drawGradientCircle(p, 128, 128, 80, Color.GOLD, Color.ORANGE);
-            drawCircle(p, 128, 128, 60, Color.YELLOW);
+            // Multi-textured Gold Coin
+            // Outer Rim
+            drawGradientCircle(p, 128, 128, 80, Color.ORANGE, Color.GOLD);
+            // Inner Recess
+            drawGradientCircle(p, 128, 128, 60, Color.GOLD, Color.YELLOW);
+            
+            // Relief Profile (Head?)
             p.setColor(Color.ORANGE);
-            // $ Sign
-            drawRect(p, 124, 80, 8, 96, Color.ORANGE);
+            p.fillCircle(128, 128, 30);
+            
+            // Shine
+            p.setColor(new Color(1f, 1f, 1f, 0.6f));
+            p.fillCircle(110, 110, 10);
+            drawLine(p, 100, 100, 160, 160, 4, new Color(1,1,1,0.3f)); // Sparkle line
             
         } else if (name.contains("Armor") || name.contains("Mail") || name.contains("甲")) {
-            Color ac = name.contains("Leather") || name.contains("皮") ? Color.valueOf("#8d6e63") : Color.LIGHT_GRAY;
+            boolean isLeather = name.contains("Leather") || name.contains("皮");
+            Color base = isLeather ? Color.valueOf("#8d6e63") : Color.LIGHT_GRAY;
+            Color trim = isLeather ? Color.valueOf("#5d4037") : Color.GRAY;
+            
             // Chest piece
-            drawRect(p, 64, 64, 128, 128, ac);
-            // Shoulders
-            drawRect(p, 44, 64, 40, 40, ac.cpy().mul(0.8f));
-            drawRect(p, 172, 64, 40, 40, ac.cpy().mul(0.8f));
+            drawRect(p, 64, 64, 128, 128, base);
+            
+            // Texture
+            if (isLeather) {
+                // Stitching / Panels
+                drawRect(p, 64, 128, 128, 4, trim); // Horizontal seam
+                drawRect(p, 126, 64, 4, 128, trim); // Vertical seam
+                // Studs
+                p.setColor(Color.GOLD);
+                drawCircle(p, 80, 80, 4, Color.GOLD);
+                drawCircle(p, 176, 80, 4, Color.GOLD);
+                drawCircle(p, 80, 176, 4, Color.GOLD);
+                drawCircle(p, 176, 176, 4, Color.GOLD);
+            } else {
+                // Metal Plates
+                drawRect(p, 74, 74, 50, 50, Color.WHITE); // Highlight plate
+                drawRect(p, 132, 74, 50, 50, Color.WHITE);
+                drawRect(p, 74, 132, 50, 50, Color.WHITE);
+                drawRect(p, 132, 132, 50, 50, Color.WHITE);
+                // Darken base to show plates
+                drawRect(p, 64, 64, 128, 128, trim);
+                // Draw Plates
+                drawRect(p, 70, 70, 50, 50, base);
+                drawRect(p, 136, 70, 50, 50, base);
+                drawRect(p, 70, 136, 50, 50, base);
+                drawRect(p, 136, 136, 50, 50, base);
+            }
+            
+            // Shoulders (Common)
+            drawRect(p, 44, 64, 40, 40, trim);
+            drawRect(p, 172, 64, 40, 40, trim);
             
         } else {
             // Default Box
@@ -579,7 +776,7 @@ public class SpriteGenerator {
             drawRect(p, 120, 100, 16, 40, Color.WHITE);
             drawRect(p, 120, 150, 16, 16, Color.WHITE);
         }
-
+        
         return toTexture(p);
     }
 }
