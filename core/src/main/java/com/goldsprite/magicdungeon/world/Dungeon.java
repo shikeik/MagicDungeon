@@ -21,7 +21,8 @@ public class Dungeon {
 
 	public void generate() {
 		MapGenerator generator = new MapGenerator(this.width, this.height);
-		MapGenerator.GenResult result = generator.generate();
+		// Pass hasUpStairs = true if level > 1
+		MapGenerator.GenResult result = generator.generate(this.level > 1);
 		this.map = result.grid;
 		this.startPos = result.start;
 	}

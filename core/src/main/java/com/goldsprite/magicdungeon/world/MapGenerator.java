@@ -34,7 +34,7 @@ public class MapGenerator {
 		}
 	}
 
-	public GenResult generate() {
+	public GenResult generate(boolean hasUpStairs) {
 		Tile[][] map = new Tile[height][width];
 		List<Room> rooms = new ArrayList<>();
 
@@ -109,6 +109,14 @@ public class MapGenerator {
 		if (!rooms.isEmpty()) {
 			Room startRoom = rooms.get(0);
 			start.set(startRoom.x + startRoom.w / 2, startRoom.y + startRoom.h / 2);
+			
+			// Place Stairs Up in the start room if needed
+            if (hasUpStairs) {
+                // Place it slightly away from center if possible, or just at center (player spawns on it usually)
+                // Let's place it exactly at start position.
+                // Player spawns at start, so they will be standing on stairs up.
+                map[start.y][start.x].type = TileType.Stairs_Up;
+            }
 		}
 
 		return new GenResult(map, start);

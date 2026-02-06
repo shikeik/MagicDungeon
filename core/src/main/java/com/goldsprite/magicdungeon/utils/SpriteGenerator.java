@@ -192,10 +192,11 @@ public class SpriteGenerator {
 			// STAIRS UP: Pyramid shape
 			// Background: Transparent (or simple floor)
 
-			int steps = 6;
+			maxWidth = (int)(TEX_SIZE * 0.8f);
+			int steps = 7;
 			for(int i=0; i<steps; i++) {
 				// Width increases from small to maxWidth
-				int topW = 60;
+				int topW = 120;
 				int botW = maxWidth;
 				// i=0 is top, i=steps-1 is bottom
 				float t = (float)i / (steps-1);

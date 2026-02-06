@@ -106,6 +106,47 @@ public class GameScreen extends GScreen {
 		audio.playLevelUp(); // Reusing sound for now
 	}
 
+	private void prevLevel() {
+		if (dungeon.level > 1) {
+			dungeon.level--;
+			dungeon.generate();
+            // When going up, we might want to spawn at the down stairs of the previous level?
+            // But currently MapGenerator places stairs down at end room and stairs up at start room.
+            // If we assume linear progression, going UP should land us at the DOWN stairs of the upper floor.
+            // However, our MapGenerator randomizes everything each time.
+            // So for now, let's just spawn at startPos (which is where Stairs Up is) to be safe, 
+            // OR we can find the Stairs Down and spawn there to simulate "coming up from below".
+            
+            // Let's spawn at Stairs Down to simulate coming back up.
+            // Find Stairs Down
+            GridPoint2 stairsDownPos = null;
+            for(int y=0; y<dungeon.height; y++) {
+                for(int x=0; x<dungeon.width; x++) {
+                    Tile t = dungeon.getTile(x, y);
+                    if(t != null && t.type == TileType.Stairs_Down) {
+                        stairsDownPos = new GridPoint2(x, y);
+                        break;
+                    }
+                }
+                if(stairsDownPos != null) break;
+            }
+            
+            if (stairsDownPos != null) {
+                player.x = stairsDownPos.x;
+                player.y = stairsDownPos.y;
+            } else {
+                player.x = dungeon.startPos.x;
+                player.y = dungeon.startPos.y;
+            }
+
+			player.visualX = player.x * Constants.TILE_SIZE;
+			player.visualY = player.y * Constants.TILE_SIZE;
+			spawnEntities();
+			hud.showMessage("Ascended to Floor " + dungeon.level + "!");
+			audio.playLevelUp();
+		}
+	}
+
 	private void spawnEntities() {
 		monsters.clear();
 		items.clear();
@@ -203,7 +244,11 @@ public class GameScreen extends GScreen {
 					System.out.println("Stairs found! Current level: " + dungeon.level);
 					nextLevel();
 					System.out.println("New level: " + dungeon.level);
-				}
+				} else if (tile.type == TileType.Stairs_Up) {
+                    System.out.println("Stairs Up found! Current level: " + dungeon.level);
+                    prevLevel();
+                    System.out.println("New level: " + dungeon.level);
+                }
 			} else {
 				System.out.println("Tile is null at position: " + player.x + "," + player.y);
 			}
