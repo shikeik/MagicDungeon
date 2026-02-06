@@ -4,20 +4,43 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.goldsprite.magicdungeon.core.GameState;
+import com.goldsprite.magicdungeon.core.ItemState;
+import com.goldsprite.magicdungeon.core.MonsterState;
+import com.goldsprite.magicdungeon.entities.Item;
+import com.goldsprite.magicdungeon.entities.Monster;
 import com.goldsprite.magicdungeon.entities.Player;
 import com.goldsprite.magicdungeon.world.Dungeon;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SaveManager {
 	private static final String SAVE_DIR = "MagicDungeon/saves/";
 	private static final String SAVE_FILE_NAME = "game_save.json";
 	private static final String SAVE_PATH = SAVE_DIR + SAVE_FILE_NAME;
 
-	public static void saveGame(Player player, Dungeon dungeon) {
+	public static void saveGame(Player player, Dungeon dungeon, List<Monster> monsters, List<Item> items) {
 		GameState state = new GameState();
 		state.dungeonLevel = dungeon.level;
 		state.seed = dungeon.globalSeed;
 		state.playerStats = player.stats;
 		state.inventory = player.inventory;
+		state.playerX = player.x;
+		state.playerY = player.y;
+
+		// Save Monsters
+		state.monsters = new ArrayList<>();
+		for (Monster m : monsters) {
+			if (m.hp > 0) { // Only save live monsters
+				state.monsters.add(new MonsterState(m.x, m.y, m.type.name(), m.hp, m.maxHp));
+			}
+		}
+
+		// Save Items
+		state.items = new ArrayList<>();
+		for (Item item : items) {
+			state.items.add(new ItemState(item.x, item.y, item.data.name()));
+		}
 
 		Json json = new Json();
 		String stateJson = json.prettyPrint(state);

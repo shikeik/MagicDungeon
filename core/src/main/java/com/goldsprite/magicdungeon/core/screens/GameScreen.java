@@ -30,6 +30,9 @@ import java.util.List;
 
 import com.badlogic.gdx.math.RandomXS128;
 
+import com.goldsprite.magicdungeon.core.ItemState;
+import com.goldsprite.magicdungeon.core.MonsterState;
+
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
 	private Player player;
@@ -92,7 +95,7 @@ public class GameScreen extends GScreen {
 
 		// Set save listener for HUD save button
 		hud.setSaveListener(() -> {
-			SaveManager.saveGame(player, dungeon);
+			SaveManager.saveGame(player, dungeon, monsters, items);
 			hud.showMessage("Game Saved!");
 		});
 		getImp().addProcessor(hud.stage);
@@ -331,7 +334,7 @@ public class GameScreen extends GScreen {
 
 		// Save Game
 		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
-			SaveManager.saveGame(player, dungeon);
+			SaveManager.saveGame(player, dungeon, monsters, items);
 			hud.showMessage("Game Saved!");
 		}
 
@@ -487,11 +490,60 @@ public class GameScreen extends GScreen {
 
 			// Regenerate world
 			dungeon.generate();
-			player.x = dungeon.startPos.x;
-			player.y = dungeon.startPos.y;
+			
+			// Restore Player Position
+			// If save has coordinates (new save), use them. Otherwise (old save), use startPos.
+			if (state.playerX != 0 || state.playerY != 0) {
+				player.x = state.playerX;
+				player.y = state.playerY;
+			} else {
+				player.x = dungeon.startPos.x;
+				player.y = dungeon.startPos.y;
+			}
+			
 			player.visualX = player.x * Constants.TILE_SIZE;
 			player.visualY = player.y * Constants.TILE_SIZE;
-			spawnEntities();
+			
+			// Restore Entities
+			if (state.monsters != null && state.items != null) {
+				// New save system: restore from snapshot
+				monsters.clear();
+				for(MonsterState ms : state.monsters) {
+					MonsterType type = MonsterType.Slime;
+					try {
+						// Try to find by Enum name first
+						type = MonsterType.valueOf(ms.typeName);
+					} catch(IllegalArgumentException e) {
+						// Fallback: search by display name (chinese) or just default
+						for(MonsterType t : MonsterType.values()) {
+							if(t.name.equals(ms.typeName)) {
+								type = t;
+								break;
+							}
+						}
+					}
+					
+					Monster m = new Monster(ms.x, ms.y, type);
+					m.hp = ms.hp;
+					m.maxHp = ms.maxHp;
+					monsters.add(m);
+				}
+				
+				items.clear();
+				for(ItemState is : state.items) {
+					ItemData data = ItemData.Health_Potion;
+					try {
+						data = ItemData.valueOf(is.itemName);
+					} catch(IllegalArgumentException e) {
+						// Fallback logic if needed
+					}
+					items.add(new Item(is.x, is.y, data));
+				}
+				
+			} else {
+				// Old save system compatibility: regenerate randomly
+				spawnEntities();
+			}
 
 			hud.showMessage("Game Loaded!");
 		} else {
