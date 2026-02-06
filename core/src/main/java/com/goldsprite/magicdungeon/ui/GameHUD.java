@@ -1,6 +1,12 @@
 package com.goldsprite.magicdungeon.ui;
 
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
@@ -8,12 +14,14 @@ import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.InventoryItem;
 import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.entities.Player;
-import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisTable;
-import com.kotcrab.vis.ui.widget.VisWindow;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.VisScrollPane;
+import com.kotcrab.vis.ui.widget.*;
+import com.badlogic.gdx.scenes.scene2d.ui.Stack;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.HashMap;
 
 public class GameHUD {
     public Stage stage;
@@ -34,7 +42,15 @@ public class GameHUD {
     private VisTextButton inventoryBtn;
     private VisTextButton saveBtn;
     private VisTextButton helpBtn;
-    private VisWindow helpWindow;
+    private BaseDialog helpWindow;
+
+    private Map<String, Texture> itemTextures;
+    private Texture slotBgTexture;
+    private Texture slotBorderTexture;
+    private NinePatchDrawable slotBgDrawable;
+    private NinePatchDrawable slotBorderDrawable;
+
+    private Player currentPlayer;
 
     // Save listener interface
     private Runnable saveListener;
@@ -43,11 +59,134 @@ public class GameHUD {
     private class InventoryDialog extends BaseDialog {
         public InventoryDialog() {
             super("背包");
-            setSize(450, 550);
+            // Set size to 2/3 of the screen or fixed larger size
+            float width = Math.max(800, stage.getWidth() * 0.66f);
+            float height = Math.max(600, stage.getHeight() * 0.66f);
+            setSize(width, height);
+            setCenterOnAdd(true);
+			autoPack = true;
+
+			inventoryList = new VisTable();
+			inventoryList.top().left();
+
+			VisScrollPane inventoryScrollPane = new VisScrollPane(inventoryList);
+			inventoryScrollPane.setScrollingDisabled(true, false);
+			inventoryScrollPane.setFlickScroll(true);
+			inventoryScrollPane.setFadeScrollBars(false);
+
+			getContentTable().add(inventoryScrollPane).pad(10);
+        }
+    }
+
+    private class InventorySlot extends VisTable {
+        public InventorySlot(InventoryItem item, Player player) {
+            boolean isEquipped = (player.equipment.weapon != null && player.equipment.weapon.equals(item)) ||
+                                 (player.equipment.armor != null && player.equipment.armor.equals(item));
+
+            // Make sure the slot itself is touchable
+            setTouchable(Touchable.enabled);
+
+            // 1. Stack Layout
+            Stack stack = new Stack();
+
+            // 2. Background
+            VisTable bgTable = new VisTable();
+            bgTable.setBackground(slotBgDrawable);
+            bgTable.setTouchable(Touchable.disabled); // Prevent blocking events
+            stack.add(bgTable);
+
+            // 3. Icon
+            if (itemTextures != null && itemTextures.containsKey(item.data.name)) {
+                Texture tex = itemTextures.get(item.data.name);
+                VisImage icon = new VisImage(new TextureRegionDrawable(tex));
+                VisTable iconTable = new VisTable();
+                iconTable.add(icon).size(48, 48);
+                iconTable.setTouchable(Touchable.disabled); // Prevent blocking events
+                stack.add(iconTable);
+            }
+
+            // 4. Equipped Badge (Top-Right "E")
+            if (isEquipped) {
+                VisLabel badge = new VisLabel("E");
+                badge.setColor(Color.YELLOW);
+                badge.setFontScale(0.25f);
+
+                VisTable badgeTable = new VisTable();
+                badgeTable.bottom().right();
+                badgeTable.add(badge).pad(1);
+                badgeTable.setTouchable(Touchable.disabled); // Prevent blocking events
+                stack.add(badgeTable);
+            }
+
+            add(stack).size(64, 64);
+
+            // 5. Tooltip
+            createTooltip(item, isEquipped);
+
+            // 6. Click Listener
+            addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    player.equip(item);
+                    String action = item.data.type == ItemType.POTION ? "使用" : (isEquipped ? "卸下" : "装备");
+                    showMessage(action + " " + item.data.name);
+                    updateInventory(player);
+                }
+            });
+        }
+
+        private void createTooltip(InventoryItem item, boolean isEquipped) {
+            VisTable content = new VisTable();
+			content.setBackground("list");
+            content.pad(10);
+
+            // Title
+            VisLabel title = new VisLabel(item.data.name);
+            if (item.data.color != null) title.setColor(item.data.color);
+            content.add(title).left().row();
+
+			//uuid
+			int maxLen = 9;
+			String shortId = item.id.length() > maxLen ? item.id.substring(item.id.length()-maxLen) : item.id;
+			shortId = item.id;
+			VisLabel uuid = new VisLabel("#"+shortId);
+			uuid.setColor(Color.DARK_GRAY);
+			content.add(uuid).right().row();
+
+			content.add(new Separator()).growX().padBottom(15).row();
+
+            // Type
+            content.add(new VisLabel("类型: " + getTypeString(item.data.type))).left().row();
+
+            // Stats
+            if (item.data.atk > 0) content.add(new VisLabel("攻击: +" + item.data.atk)).left().row();
+            if (item.data.def > 0) content.add(new VisLabel("防御: +" + item.data.def)).left().row();
+            if (item.data.heal > 0) content.add(new VisLabel("回复: +" + item.data.heal)).left().row();
+
+            // Status
+            if (isEquipped) {
+                VisLabel status = new VisLabel("已装备");
+                status.setColor(Color.YELLOW);
+                content.add(status).left().padTop(5).row();
+            }
+
+            // Create Tooltip
+            new Tooltip.Builder(content).target(this).build();
+        }
+
+        private String getTypeString(ItemType type) {
+            switch(type) {
+                case WEAPON: return "武器";
+                case ARMOR: return "防具";
+                case POTION: return "药水";
+                default: return "未知";
+            }
         }
     }
 
     public GameHUD(Viewport viewport) {
+		Tooltip.DEFAULT_APPEAR_DELAY_TIME = 0.2f; // 缩短Tooltip浮现时间
+
         stage = new Stage(viewport);
 
         // Main root table
@@ -128,66 +267,92 @@ public class GameHUD {
 
         // Initialize inventory dialog
         inventoryDialog = new InventoryDialog();
-        inventoryList = new VisTable();
-        inventoryList.top().left();
-        inventoryDialog.add(inventoryList).expand().fill().top().left().pad(10);
 
         // Initialize help window
         createHelpWindow();
+
+        // Generate assets
+        generateAssets();
+    }
+
+    private void generateAssets() {
+        // 1. Slot Background (Rounded Rect with semi-transparent dark fill)
+        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.2f, 0.2f, 0.2f, 0.8f);
+        pixmap.fillRectangle(2, 2, 60, 60); // Inner fill
+        pixmap.setColor(0.5f, 0.5f, 0.5f, 1f);
+        pixmap.drawRectangle(0, 0, 64, 64); // Border
+        pixmap.drawRectangle(1, 1, 62, 62); // Thicker border
+
+        slotBgTexture = new Texture(pixmap);
+        slotBgDrawable = new NinePatchDrawable(new NinePatch(slotBgTexture, 4, 4, 4, 4));
+        pixmap.dispose();
+
+        // 2. Equipped Border (Gold)
+        Pixmap borderPm = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+        borderPm.setColor(1f, 0.8f, 0f, 1f); // Gold
+        // Draw thick border
+        for(int i=0; i<4; i++) {
+            borderPm.drawRectangle(i, i, 64-i*2, 64-i*2);
+        }
+
+        slotBorderTexture = new Texture(borderPm);
+        slotBorderDrawable = new NinePatchDrawable(new NinePatch(slotBorderTexture, 5, 5, 5, 5));
+        borderPm.dispose();
+    }
+
+    public void setItemTextures(Map<String, Texture> textures) {
+        this.itemTextures = textures;
     }
 
     // Removed createInventoryWindow method (replaced by InventoryDialog)
 
     private void createHelpWindow() {
-        helpWindow = new VisWindow("帮助");
+        helpWindow = new BaseDialog("帮助");
+		helpWindow.autoPack = false;
         helpWindow.setSize(400, 300);
         helpWindow.setCenterOnAdd(true);
         helpWindow.setMovable(true);
-        helpWindow.setVisible(false);
         helpWindow.setResizable(false);
-        helpWindow.addCloseButton();
 
         VisTable helpTable = new VisTable();
         helpTable.top().left();
         helpTable.pad(10);
 
         // Help content
-        helpTable.add(new VisLabel("游戏说明")).center().padBottom(15).row();
-        helpTable.add(new VisLabel("移动/攻击: WASD 或方向键")).left().padBottom(5).row();
-        helpTable.add(new VisLabel("撞击怪物会自动攻击")).left().padBottom(5).row();
-        helpTable.add(new VisLabel("技能: SPACE 键使用治疗技能")).left().padBottom(5).row();
-        helpTable.add(new VisLabel("下一关: 找到楼梯并踩上去")).left().padBottom(5).row();
-        helpTable.add(new VisLabel("物品: 踩上去自动拾取，背包中点击装备")).left().padBottom(5).row();
-        helpTable.add(new VisLabel("存档: 点击保存按钮保存游戏进度")).left().padBottom(5).row();
+        helpTable.add("游戏说明").center().padBottom(15).row();
+		String helpMsg = ""
+			+"移动/攻击: WASD 或方向键"
+			+"\n"+"撞击怪物会自动攻击"
+			+"\n"+"技能: SPACE 键使用治疗技能"
+			+"\n"+"下一关: 找到楼梯并踩上去"
+			+"\n"+"物品: 踩上去自动拾取，背包中点击装备"
+			+"\n"+"存档: 点击保存按钮保存游戏进度"
+			;
+		VisLabel helpLabel = new VisLabel(helpMsg);
+		helpLabel.setWrap(true);
+        helpTable.add(helpLabel).minWidth(0).grow().left();
 
         // Add scroll pane to handle long content
         VisScrollPane scrollPane = new VisScrollPane(helpTable);
-        scrollPane.setFlickScroll(false);
-        scrollPane.setScrollingDisabled(false, true); // Only vertical scrolling
+        scrollPane.setFlickScroll(true);
+        scrollPane.setScrollingDisabled(true, false); // Only vertical scrolling
 
-        helpWindow.add(scrollPane).expand().fill();
-        stage.addActor(helpWindow);
+        helpWindow.getContentTable().add(scrollPane).expand().fill();
     }
 
     private void showHelp() {
-        // Close other windows if open
-        if (inventoryDialog != null && inventoryDialog.isVisible()) {
-            inventoryDialog.hide();
-        }
-        helpWindow.setVisible(true);
-        helpWindow.centerWindow();
-        // Ensure the window is at the top
-        helpWindow.toFront();
+		helpWindow.show(stage);
     }
 
     public void update(Player player, int floor) {
+        this.currentPlayer = player;
         hpLabel.setText("HP: " + player.stats.hp + "/" + player.stats.maxHp);
         manaLabel.setText("MP: " + player.stats.mana + "/" + player.stats.maxMana);
         xpLabel.setText("XP: " + player.stats.xp);
         lvLabel.setText("LV: " + player.stats.level);
         floorLabel.setText("Floor: " + floor);
 
-        updateInventory(player);
         stage.act();
     }
 
@@ -205,13 +370,12 @@ public class GameHUD {
     }
 
     public void toggleInventory() {
-        // Close other windows if open
-        if (helpWindow.isVisible()) {
-            helpWindow.setVisible(false);
+        if (currentPlayer != null) {
+            updateInventory(currentPlayer);
         }
-
         // Show inventory dialog
-        inventoryDialog.show(stage);
+        if(stage.getActors().contains(inventoryDialog, true)) inventoryDialog.remove();
+        else inventoryDialog.show(stage);
     }
 
     // Method to update inventory dialog content
@@ -224,67 +388,23 @@ public class GameHUD {
     }
 
     public void updateInventory(Player player) {
+        if (player == null) return;
         inventoryList.clear();
         if (player.inventory.isEmpty()) {
-            inventoryList.add(new VisLabel("Empty")).pad(5);
+            inventoryList.add(new VisLabel("背包是空的")).pad(20);
         } else {
+            int itemsPerRow = 5;
+            int count = 0;
+
             for (InventoryItem item : player.inventory) {
-                // Create a table for each item
-                VisTable itemTable = new VisTable();
-                itemTable.left();
-                itemTable.pad(2);
-                itemTable.setWidth(300);
+                // Use new InventorySlot
+                InventorySlot slot = new InventorySlot(item, player);
+                inventoryList.add(slot).size(64, 64).pad(10);
 
-                // Check if item is equipped
-                // Now comparing InventoryItem instances (or by ID)
-                boolean isEquipped = (player.equipment.weapon != null && player.equipment.weapon.equals(item)) || 
-                                     (player.equipment.armor != null && player.equipment.armor.equals(item));
-
-                // Item name with equipped status
-                String equipIndicator = isEquipped ? " (Equipped)" : "";
-                VisLabel nameLabel = new VisLabel(item.data.name + equipIndicator);
-                if (isEquipped) {
-                    nameLabel.setColor(1.0f, 0.7f, 0.0f, 1.0f); // Gold color for equipped items
+                count++;
+                if (count % itemsPerRow == 0) {
+                    inventoryList.row();
                 }
-
-                // Item type
-                VisLabel typeLabel = new VisLabel("Type: " + item.data.type.name());
-                typeLabel.setColor(0.7f, 0.7f, 0.7f, 1.0f);
-
-                // Item stats
-                StringBuilder statsText = new StringBuilder();
-                if (item.data.atk > 0) statsText.append("ATK: +").append(item.data.atk).append(" ");
-                if (item.data.def > 0) statsText.append("DEF: +").append(item.data.def).append(" ");
-                if (item.data.heal > 0) statsText.append("HEAL: ").append(item.data.heal);
-                VisLabel statsLabel = new VisLabel(statsText.toString());
-                statsLabel.setColor(0.0f, 0.8f, 0.0f, 1.0f);
-
-                // Add to table
-                itemTable.add(nameLabel).left().pad(2).expandX().row();
-                itemTable.add(typeLabel).left().pad(2).row();
-                itemTable.add(statsLabel).left().pad(2).row();
-
-                // Add border
-                itemTable.add(new VisTable()).padTop(5).row();
-
-                // Add click listener
-                itemTable.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
-                    @Override
-                    public boolean touchDown(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y, int pointer, int button) {
-                        // Equip or use item
-                        player.equip(item);
-
-                        // Show message
-                        String action = item.data.type == ItemType.POTION ? "Used" : (isEquipped ? "Unequipped" : "Equipped");
-                        showMessage(action + " " + item.data.name);
-
-                        // Refresh inventory
-                        updateInventory(player);
-                        return true;
-                    }
-                });
-
-                inventoryList.add(itemTable).left().expandX().fillX().pad(2).row();
             }
         }
     }
@@ -295,5 +415,7 @@ public class GameHUD {
 
     public void dispose() {
         stage.dispose();
+        if (slotBgTexture != null) slotBgTexture.dispose();
+        if (slotBorderTexture != null) slotBorderTexture.dispose();
     }
 }

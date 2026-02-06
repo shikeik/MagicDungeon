@@ -39,6 +39,8 @@ public class GameScreen extends GScreen {
 	private AudioSystem audio;
 	private SpriteBatch batch;
 
+    private String cheatCodeBuffer = "";
+
 	@Override
 	protected void initViewport() {
 		// 使用 GScreen 的机制，这里设定视口参数
@@ -183,7 +185,26 @@ public class GameScreen extends GScreen {
 		itemTextures = new HashMap<>();
 		itemTextures.put(ItemData.HEALTH_POTION.name, SpriteGenerator.createItem("Health Potion"));
 		itemTextures.put(ItemData.MANA_POTION.name, SpriteGenerator.createItem("Mana Potion"));
+		itemTextures.put(ItemData.ELIXIR.name, SpriteGenerator.createItem("Elixir"));
 		itemTextures.put(ItemData.RUSTY_SWORD.name, SpriteGenerator.createItem("Rusty Sword"));
+		itemTextures.put(ItemData.IRON_SWORD.name, SpriteGenerator.createItem("Iron Sword"));
+		itemTextures.put(ItemData.STEEL_AXE.name, SpriteGenerator.createItem("Steel Axe"));
+		itemTextures.put(ItemData.MAGIC_WAND.name, SpriteGenerator.createItem("Magic Wand"));
+		itemTextures.put(ItemData.LEGENDARY_BLADE.name, SpriteGenerator.createItem("Legendary Blade"));
+		itemTextures.put(ItemData.LEATHER_ARMOR.name, SpriteGenerator.createItem("Leather Armor"));
+		itemTextures.put(ItemData.IRON_MAIL.name, SpriteGenerator.createItem("Iron Mail"));
+		itemTextures.put(ItemData.PLATE_ARMOR.name, SpriteGenerator.createItem("Plate Armor"));
+		itemTextures.put(ItemData.RING_OF_POWER.name, SpriteGenerator.createItem("Ring of Power"));
+		itemTextures.put(ItemData.RING_OF_DEFENSE.name, SpriteGenerator.createItem("Ring of Defense"));
+		itemTextures.put(ItemData.WOODEN_SHIELD.name, SpriteGenerator.createItem("Wooden Shield"));
+		itemTextures.put(ItemData.IRON_SHIELD.name, SpriteGenerator.createItem("Iron Shield"));
+		itemTextures.put(ItemData.GOLD_COIN.name, SpriteGenerator.createItem("Gold Coin"));
+		itemTextures.put(ItemData.MAGIC_SCROLL.name, SpriteGenerator.createItem("Magic Scroll"));
+
+        if (hud != null) {
+            hud.setItemTextures(itemTextures);
+        }
+
 		System.out.println("Textures Generated.");
 	}
 
@@ -252,7 +273,7 @@ public class GameScreen extends GScreen {
 					player.inventory.add(new InventoryItem(item.data));
 					hud.showMessage("Picked up " + item.data.name + "!");
 					// Update inventory dialog if it's open
-						hud.updateInventory(player);
+					hud.updateInventory(player);
 				}
 			}
 		}
@@ -305,9 +326,54 @@ public class GameScreen extends GScreen {
 			hud.toggleInventory();
 		}
 
+        // Cheat Code: Get All Items
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.GRAVE)) { // Tilde key (~) for easier access, or check for sequence if strictly "cheat666" needed
+             // Simple key binding for now, implementing "cheat666" sequence would require buffer
+             // Let's use F8 as "Cheat Key" or handle "cheat666" via input processor if strict
+        }
+
+        // Simple cheat trigger for testing: Press P to get all items (P for Presents/Power)
+        // Or strictly follow user request "input cheat666" - typically means typing.
+        // For simplicity in LibGDX without UI input field, let's use a debug key combo like CTRL+L
+        // But user asked for "input cheat666". Let's assume typing blind.
+
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUM_6) || Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUMPAD_6)) {
+             // Basic cheat implementation - Adds all items when F6 is pressed (easier than typing)
+             // Or better:
+        }
+
+        // Implementing "cheat666" typing detection
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.NUM_6)) {
+             cheatCodeBuffer += "6";
+        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.C)) {
+             cheatCodeBuffer += "c";
+        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.H)) {
+             cheatCodeBuffer += "h";
+        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.E)) {
+             cheatCodeBuffer += "e";
+        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.A)) {
+             cheatCodeBuffer += "a";
+        } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.T)) {
+             cheatCodeBuffer += "t";
+        } else {
+             // Reset buffer if too long or check on timer?
+             // Simplified: Check end of string
+        }
+
+        if (cheatCodeBuffer.endsWith("cheat666")) {
+            cheatCodeBuffer = "";
+            for (ItemData data : ItemData.values()) {
+                player.inventory.add(new InventoryItem(data));
+            }
+            hud.showMessage("Cheat Activated: All Items Added!");
+            hud.updateInventory(player);
+            audio.playLevelUp();
+        }
+        if (cheatCodeBuffer.length() > 20) cheatCodeBuffer = "";
+
 		// Update HUD
 		hud.update(player, dungeon.level);
-		hud.updateInventory(player);
+//		hud.updateInventory(player);
 
 		// 使用 GScreen 的 worldCamera
 		batch.setProjectionMatrix(worldCamera.combined);

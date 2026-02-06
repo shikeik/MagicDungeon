@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.log.Debug;
@@ -82,6 +83,23 @@ public class VisUIHelper {
 
 			// [新增] 移植 GlobalAssets 的其他样式定义
 			addGlobalAssetsStyles(skin, cnFont, smFont);
+
+			// [新增] 去除默认的蓝线框 (Window, Dialog, Tooltip)
+			// 使用 window-noborder (无边框深色背景) 替换默认的带蓝框背景
+			if (skin.has("window-noborder", Drawable.class)) {
+				Drawable noBorder = skin.getDrawable("window-noborder");
+
+				// 1. Window (默认样式)
+				skin.get(Window.WindowStyle.class).background = noBorder;
+
+				// 2. Dialog (VisDialog 使用 "dialog" 或 "default" 样式)
+				if (skin.has("dialog", Window.WindowStyle.class)) {
+					skin.get("dialog", Window.WindowStyle.class).background = noBorder;
+				}
+
+				// 3. Tooltip
+				skin.get(com.kotcrab.vis.ui.widget.Tooltip.TooltipStyle.class).background = noBorder;
+			}
 
 			Debug.log("VisUI 中文字体调整成功.");
 

@@ -5,6 +5,8 @@ import com.kotcrab.vis.ui.util.TableUtils;
 import com.kotcrab.vis.ui.widget.VisDialog;
 
 public class BaseDialog extends VisDialog {
+	public boolean autoPack = true;
+
 	public BaseDialog(String title) {
 		super(title);
 		setModal(true);
@@ -15,7 +17,7 @@ public class BaseDialog extends VisDialog {
 
 	// 方便子类显示
 	public VisDialog show(Stage stage) {
-		pack();
+		if(autoPack) pack();
 		centerWindow();
 		stage.addActor(this.fadeIn());
 		return this;
