@@ -8,6 +8,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.core.GameState;
 import com.goldsprite.magicdungeon.entities.*;
+import com.goldsprite.magicdungeon.entities.InventoryItem;
+import com.goldsprite.magicdungeon.entities.ItemData;
+import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.systems.AudioSystem;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.ui.GameHUD;
@@ -246,7 +249,7 @@ public class GameScreen extends GScreen {
 						hud.showMessage("Used Mana Potion!");
 					}
 				} else {
-					player.inventory.add(item.data);
+					player.inventory.add(new InventoryItem(item.data));
 					hud.showMessage("Picked up " + item.data.name + "!");
 					// Update inventory dialog if it's open
 						hud.updateInventory(player);

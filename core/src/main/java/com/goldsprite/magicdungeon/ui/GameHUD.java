@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.magicdungeon.entities.ItemData;
+import com.goldsprite.magicdungeon.entities.InventoryItem;
 import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.entities.Player;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -227,7 +228,7 @@ public class GameHUD {
         if (player.inventory.isEmpty()) {
             inventoryList.add(new VisLabel("Empty")).pad(5);
         } else {
-            for (ItemData item : player.inventory) {
+            for (InventoryItem item : player.inventory) {
                 // Create a table for each item
                 VisTable itemTable = new VisTable();
                 itemTable.left();
@@ -235,24 +236,26 @@ public class GameHUD {
                 itemTable.setWidth(300);
 
                 // Check if item is equipped
-                boolean isEquipped = (player.equipment.weapon == item) || (player.equipment.armor == item);
+                // Now comparing InventoryItem instances (or by ID)
+                boolean isEquipped = (player.equipment.weapon != null && player.equipment.weapon.equals(item)) || 
+                                     (player.equipment.armor != null && player.equipment.armor.equals(item));
 
                 // Item name with equipped status
                 String equipIndicator = isEquipped ? " (Equipped)" : "";
-                VisLabel nameLabel = new VisLabel(item.name + equipIndicator);
+                VisLabel nameLabel = new VisLabel(item.data.name + equipIndicator);
                 if (isEquipped) {
                     nameLabel.setColor(1.0f, 0.7f, 0.0f, 1.0f); // Gold color for equipped items
                 }
 
                 // Item type
-                VisLabel typeLabel = new VisLabel("Type: " + item.type.name());
+                VisLabel typeLabel = new VisLabel("Type: " + item.data.type.name());
                 typeLabel.setColor(0.7f, 0.7f, 0.7f, 1.0f);
 
                 // Item stats
                 StringBuilder statsText = new StringBuilder();
-                if (item.atk > 0) statsText.append("ATK: +").append(item.atk).append(" ");
-                if (item.def > 0) statsText.append("DEF: +").append(item.def).append(" ");
-                if (item.heal > 0) statsText.append("HEAL: ").append(item.heal);
+                if (item.data.atk > 0) statsText.append("ATK: +").append(item.data.atk).append(" ");
+                if (item.data.def > 0) statsText.append("DEF: +").append(item.data.def).append(" ");
+                if (item.data.heal > 0) statsText.append("HEAL: ").append(item.data.heal);
                 VisLabel statsLabel = new VisLabel(statsText.toString());
                 statsLabel.setColor(0.0f, 0.8f, 0.0f, 1.0f);
 
@@ -272,8 +275,8 @@ public class GameHUD {
                         player.equip(item);
 
                         // Show message
-                        String action = item.type == ItemType.POTION ? "Used" : (isEquipped ? "Unequipped" : "Equipped");
-                        showMessage(action + " " + item.name);
+                        String action = item.data.type == ItemType.POTION ? "Used" : (isEquipped ? "Unequipped" : "Equipped");
+                        showMessage(action + " " + item.data.name);
 
                         // Refresh inventory
                         updateInventory(player);

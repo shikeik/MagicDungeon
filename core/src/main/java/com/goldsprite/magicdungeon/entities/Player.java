@@ -13,13 +13,13 @@ public class Player extends Entity {
 
     // Stats
     public PlayerStats stats;
-    public List<ItemData> inventory;
+    public List<InventoryItem> inventory;
     public Equipment equipment;
 
     // Equipment class for storing equipped items
     public static class Equipment {
-        public ItemData weapon;
-        public ItemData armor;
+        public InventoryItem weapon;
+        public InventoryItem armor;
     }
     public Player(int x, int y) {
         super(x, y, Color.GREEN);
@@ -90,21 +90,21 @@ public class Player extends Entity {
         }
     }
 
-    public void equip(ItemData item) {
-        if (item.type == ItemType.WEAPON) {
+    public void equip(InventoryItem item) {
+        if (item.data.type == ItemType.WEAPON) {
             this.equipment.weapon = item;
             updateStats();
-        } else if (item.type == ItemType.ARMOR) {
+        } else if (item.data.type == ItemType.ARMOR) {
             this.equipment.armor = item;
             updateStats();
-        } else if (item.type == ItemType.POTION) {
+        } else if (item.data.type == ItemType.POTION) {
             usePotion(item);
         }
     }
 
-    private void usePotion(ItemData item) {
-        if (item.heal > 0) {
-            this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.heal);
+    private void usePotion(InventoryItem item) {
+        if (item.data.heal > 0) {
+            this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.data.heal);
             // Remove potion from inventory
             this.inventory.remove(item);
         }
@@ -115,10 +115,10 @@ public class Player extends Entity {
         int baseDef = 0; // Base defense
 
         if (equipment.weapon != null) {
-            baseAtk += equipment.weapon.atk;
+            baseAtk += equipment.weapon.data.atk;
         }
         if (equipment.armor != null) {
-            baseDef += equipment.armor.def;
+            baseDef += equipment.armor.data.def;
         }
 
         this.stats.atk = baseAtk;
