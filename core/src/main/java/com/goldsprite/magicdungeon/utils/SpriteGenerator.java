@@ -298,6 +298,14 @@ public class SpriteGenerator {
 		// Chest Plate Detail (Gold Trim)
 		drawRect(p, 80, 110, 96, 70, darkArmor);
 		drawRect(p, 118, 110, 20, 70, gold); // Center strip
+		
+		// Arms
+		Color armColor = skin; // Bare arms or armored? Let's do armored sleeves
+		drawRect(p, 40, 100, 25, 70, darkArmor); // Left Arm
+		drawRect(p, 191, 100, 25, 70, darkArmor); // Right Arm
+		// Hands
+		drawRect(p, 40, 170, 25, 25, skin); // Left Hand
+		drawRect(p, 191, 170, 25, 25, skin); // Right Hand
 
 		// Belt
 		drawRect(p, 70, 180, 116, 15, Color.valueOf("#3e2723"));
@@ -354,7 +362,7 @@ public class SpriteGenerator {
 			drawCircle(p, 166, 130, 8, Color.BLACK);
 
 		} else if (type.equals("Skeleton")) {
-			// Skull (Smaller)
+			// Skull (Improved)
 			int headW = 70;
 			int headH = 60;
 			int headX = 128 - headW/2;
@@ -363,49 +371,106 @@ public class SpriteGenerator {
 
 			// Jaw
 			drawRect(p, headX + 10, headY + headH, headW - 20, 20, Color.valueOf("#dddddd"));
+			// Teeth lines
+			p.setColor(Color.valueOf("#cccccc"));
+			for(int i=1; i<4; i++) {
+				drawRect(p, headX + 10 + i*10, headY + headH, 2, 20, Color.valueOf("#cccccc"));
+			}
 
 			// Eyes
 			drawRect(p, headX + 10, headY + 20, 18, 18, Color.BLACK);
 			drawRect(p, headX + headW - 28, headY + 20, 18, 18, Color.BLACK);
 
-			// Ribs
-			drawRect(p, 100, 130, 56, 60, Color.valueOf("#dddddd"));
-			for(int i=0; i<3; i++) {
-				drawRect(p, 80, 130 + i*20, 96, 10, Color.valueOf("#eeeeee"));
+			// Spine & Ribs (Detailed)
+			// Spine
+			drawRect(p, 120, 100, 16, 100, Color.valueOf("#dddddd"));
+			
+			// Ribs (Curved look via rects)
+			for(int i=0; i<4; i++) {
+				int ribY = 110 + i*18;
+				int ribW = 80 - i*10; // Tapering down
+				int ribX = 128 - ribW/2;
+				drawRect(p, ribX, ribY, ribW, 8, Color.valueOf("#eeeeee"));
 			}
-			// Legs
-			drawRect(p, 90, 200, 15, 30, Color.valueOf("#dddddd"));
-			drawRect(p, 151, 200, 15, 30, Color.valueOf("#dddddd"));
+			
+			// Arms (Bone segments)
+			// Left Arm
+			drawRect(p, 80, 110, 10, 40, Color.valueOf("#eeeeee")); // Upper
+			drawCircle(p, 85, 155, 6, Color.valueOf("#dddddd")); // Elbow
+			drawRect(p, 80, 160, 10, 35, Color.valueOf("#eeeeee")); // Lower
+			// Right Arm
+			drawRect(p, 166, 110, 10, 40, Color.valueOf("#eeeeee"));
+			drawCircle(p, 171, 155, 6, Color.valueOf("#dddddd"));
+			drawRect(p, 166, 160, 10, 35, Color.valueOf("#eeeeee"));
 
+			// Pelvis
+			drawRect(p, 108, 190, 40, 20, Color.valueOf("#dddddd"));
+
+			// Legs (Femur & Tibia)
+			// Left Leg
+			drawRect(p, 108, 210, 12, 40, Color.valueOf("#eeeeee")); // Upper
+			drawCircle(p, 114, 250, 6, Color.valueOf("#dddddd")); // Knee
+			drawRect(p, 108, 250, 10, 40, Color.valueOf("#eeeeee")); // Lower
+			// Right Leg
+			drawRect(p, 136, 210, 12, 40, Color.valueOf("#eeeeee"));
+			drawCircle(p, 142, 250, 6, Color.valueOf("#dddddd"));
+			drawRect(p, 136, 250, 10, 40, Color.valueOf("#eeeeee"));
+			
 			// Feet (Bigger - match player)
-			drawRect(p, 60, 230, 50, 25, Color.valueOf("#aaaaaa")); // Left
-			drawRect(p, 146, 230, 50, 25, Color.valueOf("#aaaaaa")); // Right
+			drawRect(p, 100, 280, 25, 15, Color.valueOf("#aaaaaa")); // Left
+			drawRect(p, 130, 280, 25, 15, Color.valueOf("#aaaaaa")); // Right
 
 		} else if (type.equals("Orc")) {
-			// Body (Improved Color)
+			// Orc Warrior (Full Body)
 			Color skin = Color.valueOf("#558b2f"); // Olive Green
-			drawRect(p, 50, 50, 156, 180, skin);
-
-			// Armor (Improved)
-			Color armor = Color.valueOf("#3e2723"); // Dark Leather
+			Color darkSkin = Color.valueOf("#33691e");
+			Color leather = Color.valueOf("#3e2723");
 			Color metal = Color.GRAY;
 
-			// Chest
-			drawRect(p, 60, 60, 136, 100, armor);
-			// Metal Plates
-			drawRect(p, 70, 70, 50, 80, metal);
-			drawRect(p, 136, 70, 50, 80, metal);
+			// Legs
+			drawRect(p, 90, 180, 30, 60, leather);
+			drawRect(p, 136, 180, 30, 60, leather);
+			
+			// Body (Muscular)
+			drawRect(p, 70, 90, 116, 100, skin);
+			// Pecs/Abs definition
+			drawRect(p, 80, 100, 45, 30, darkSkin);
+			drawRect(p, 131, 100, 45, 30, darkSkin);
+			drawRect(p, 90, 140, 30, 20, darkSkin);
+			drawRect(p, 136, 140, 30, 20, darkSkin);
+			drawRect(p, 90, 165, 30, 20, darkSkin);
+			drawRect(p, 136, 165, 30, 20, darkSkin);
 
-			// Belt
-			drawRect(p, 50, 170, 156, 30, Color.valueOf("#212121"));
+			// Arms (Big)
+			drawRect(p, 30, 90, 35, 90, skin); // Left
+			drawRect(p, 191, 90, 35, 90, skin); // Right
+			
+			// Armor: Shoulder Pad (One side)
+			drawRect(p, 180, 80, 50, 40, metal);
+			drawRect(p, 190, 90, 10, 10, Color.RED); // Spike?
 
+			// Belt/Loincloth
+			drawRect(p, 70, 180, 116, 30, leather);
+			drawRect(p, 118, 180, 20, 30, metal); // Buckle
+
+			// Head
+			int headW = 90;
+			int headH = 80;
+			int headX = 128 - headW/2;
+			int headY = 20;
+			
+			drawRect(p, headX, headY, headW, headH, skin);
+			
+			// Jaw (Big)
+			drawRect(p, headX - 5, headY + 50, headW + 10, 40, skin);
+			
 			// Tusks
-			drawRect(p, 80, 140, 15, 40, Color.valueOf("#fffde7"));
-			drawRect(p, 161, 140, 15, 40, Color.valueOf("#fffde7"));
-
-			// Eyes (Angry)
-			drawRect(p, 80, 80, 30, 10, Color.RED);
-			drawRect(p, 146, 80, 30, 10, Color.RED);
+			drawRect(p, headX + 10, headY + 70, 15, 30, Color.valueOf("#fffde7"));
+			drawRect(p, headX + headW - 25, headY + 70, 15, 30, Color.valueOf("#fffde7"));
+			
+			// Eyes (Red, small)
+			drawRect(p, headX + 10, headY + 30, 20, 10, Color.RED);
+			drawRect(p, headX + headW - 30, headY + 30, 20, 10, Color.RED);
 
 		} else if (type.equals("Bat")) {
 			// Wings (Dark Purple/Grey)
@@ -428,19 +493,39 @@ public class SpriteGenerator {
 			drawCircle(p, 138, 120, 3, Color.RED);
 
 		} else if (type.equals("Boss")) {
-			// DRAGON (Magnificent)
-
+			// DRAGON (Full Body Boss)
+			
 			// Wings (Big, back)
 			p.setColor(Color.valueOf("#b71c1c")); // Dark Red
-			p.fillTriangle(128, 100, 10, 10, 80, 150);
-			p.fillTriangle(128, 100, 246, 10, 176, 150);
+			p.fillTriangle(128, 80, 10, 0, 80, 140);
+			p.fillTriangle(128, 80, 246, 0, 176, 140);
+			
+			// Tail (Curved behind)
+			p.setColor(Color.valueOf("#d32f2f"));
+			// Simple representation: thick line
+			drawLine(p, 128, 200, 200, 240, 20, Color.valueOf("#d32f2f"));
+			drawLine(p, 200, 240, 240, 200, 10, Color.valueOf("#d32f2f"));
 
 			// Body (Serpentine/Scaly)
 			Color bodyColor = Color.valueOf("#d32f2f");
 			Color scaleColor = Color.valueOf("#f44336");
 
-			// Main torso
+			// Main torso (Upright)
 			drawRect(p, 80, 80, 96, 140, bodyColor);
+			
+			// Legs
+			drawRect(p, 70, 200, 40, 50, bodyColor);
+			drawRect(p, 146, 200, 40, 50, bodyColor);
+			// Claws
+			drawRect(p, 60, 240, 50, 10, Color.BLACK);
+			drawRect(p, 146, 240, 50, 10, Color.BLACK);
+			
+			// Arms
+			drawRect(p, 40, 100, 30, 80, bodyColor);
+			drawRect(p, 186, 100, 30, 80, bodyColor);
+			// Hands/Claws
+			drawCircle(p, 55, 190, 15, bodyColor);
+			drawCircle(p, 201, 190, 15, bodyColor);
 
 			// Scales
 			p.setColor(scaleColor);
@@ -459,7 +544,7 @@ public class SpriteGenerator {
 			}
 
 			// Head
-			int headY = 40;
+			int headY = 20;
 			p.setColor(bodyColor);
 			p.fillRectangle(70, headY, 116, 80);
 			// Snout
@@ -596,65 +681,99 @@ public class SpriteGenerator {
 			drawCircle(p, 196, 160, 6, Color.GOLD);
 
 		} else if (name.contains("Axe") || name.contains("斧")) {
+			 // Battle Axe (Double Bit)
 			 // Handle
 			 drawLine(p, 180, 40, 60, 200, 16, Color.valueOf("#3e2723"));
-
-			 // Axe Head (Iron Standard)
-			 // Use 2 Rectangles/Trapezoids to form double bit or single bit
-			 // Let's do double bit standard shape
-
-			 int cx = 165;
-			 int cy = 60;
-
-			 Color metal = Color.LIGHT_GRAY;
-			 Color edge = Color.WHITE;
-
-			 // Left Blade
-			 // Trapezoid: Narrow near handle, Wide at edge
-			 // Draw via lines of increasing width? Or multiple rects
-			 // Rect 1 (Near handle)
-			 drawRect(p, cx - 30, cy - 20, 30, 40, metal);
-			 // Rect 2 (Mid)
-			 drawRect(p, cx - 50, cy - 30, 20, 60, metal);
-			 // Rect 3 (Edge)
-			 drawRect(p, cx - 60, cy - 40, 10, 80, edge);
-
-			 // Right Blade
-			 drawRect(p, cx, cy - 20, 30, 40, metal);
-			 drawRect(p, cx + 30, cy - 30, 20, 60, metal);
-			 drawRect(p, cx + 50, cy - 40, 10, 80, edge);
-
-			 // Redraw handle top
-			 drawLine(p, 180, 40, 150, 80, 16, Color.valueOf("#3e2723"));
-
-		} else if (name.contains("Wand") || name.contains("Staff") || name.contains("魔杖")) {
-			 // Fancy Staff
-			 // Shaft
-			 drawLine(p, 80, 200, 180, 60, 12, Color.valueOf("#5d4037"));
-
-			 // Tassels (Wrapping around)
-			 p.setColor(Color.GOLD);
-			 for(int i=0; i<5; i++) {
-				 int x = 100 + i*15;
-				 int y = 170 - i*15;
-				 drawCircle(p, x, y, 6, Color.RED); // Beads
+			 // Grip
+			 for(int i=0; i<3; i++) {
+				 drawRect(p, 65+i*20, 175-i*25, 20, 10, Color.valueOf("#5d4037"));
 			 }
 
-			 // Magic Core (Pyramid/Diamond)
-			 // Center at 180, 60
-			 // Diamond shape
-			 p.setColor(Color.CYAN);
-			 p.fillTriangle(180, 40, 160, 60, 200, 60); // Top half
-			 p.fillTriangle(180, 80, 160, 60, 200, 60); // Bottom half
+			 // Axe Head Center
+			 int cx = 165;
+			 int cy = 60;
+			 Color metal = Color.LIGHT_GRAY;
+			 Color darkMetal = Color.GRAY;
+			 Color edge = Color.WHITE;
 
-			 // Glow
+			 // Central Block
+			 drawRect(p, cx - 15, cy - 25, 30, 50, darkMetal);
+			 drawCircle(p, cx, cy, 8, Color.BLACK); // Bolt
+
+			 // Left Blade (Curved)
+			 // Draw using triangles/rects to simulate curve
+			 p.setColor(metal);
+			 p.fillTriangle(cx - 15, cy - 15, cx - 15, cy + 15, cx - 70, cy); 
+			 p.fillTriangle(cx - 15, cy - 25, cx - 60, cy - 40, cx - 15, cy);
+			 p.fillTriangle(cx - 15, cy + 25, cx - 60, cy + 40, cx - 15, cy);
+			 // Edge
+			 p.setColor(edge);
+			 p.fillTriangle(cx - 70, cy, cx - 60, cy - 40, cx - 65, cy - 45); // Top tip
+			 p.fillTriangle(cx - 70, cy, cx - 60, cy + 40, cx - 65, cy + 45); // Bottom tip
+			 drawLine(p, cx - 60, cy - 40, cx - 60, cy + 40, 6, edge);
+
+			 // Right Blade (Mirror)
+			 p.setColor(metal);
+			 p.fillTriangle(cx + 15, cy - 15, cx + 15, cy + 15, cx + 70, cy);
+			 p.fillTriangle(cx + 15, cy - 25, cx + 60, cy - 40, cx + 15, cy);
+			 p.fillTriangle(cx + 15, cy + 25, cx + 60, cy + 40, cx + 15, cy);
+			 // Edge
+			 p.setColor(edge);
+			 p.fillTriangle(cx + 70, cy, cx + 60, cy - 40, cx + 65, cy - 45);
+			 p.fillTriangle(cx + 70, cy, cx + 60, cy + 40, cx + 65, cy + 45);
+			 drawLine(p, cx + 60, cy - 40, cx + 60, cy + 40, 6, edge);
+
+			 // Top Spike
+			 p.setColor(darkMetal);
+			 p.fillTriangle(cx - 10, cy - 25, cx + 10, cy - 25, cx, cy - 50);
+
+		} else if (name.contains("Wand") || name.contains("Staff") || name.contains("魔杖")) {
+			 // Fancy Staff (Improved)
+			 // Shaft (Twisted/Gnarled wood)
+			 p.setColor(Color.valueOf("#5d4037"));
+			 // Draw overlapping circles to simulate twist
+			 for(int i=0; i<20; i++) {
+				 drawCircle(p, 80 + i*5, 200 - i*7, 8, Color.valueOf("#5d4037"));
+			 }
+			 
+			 // Magic Aura (Outer Glow)
 			 p.setBlending(Pixmap.Blending.SourceOver);
-			 p.setColor(new Color(0f, 1f, 1f, 0.4f));
-			 p.fillCircle(180, 60, 40);
+			 drawGradientCircle(p, 180, 60, 60, new Color(0, 1, 1, 0), new Color(0, 1, 1, 0.3f));
 
-			 // Prongs holding the gem
-			 drawLine(p, 170, 70, 160, 50, 4, Color.GOLD);
-			 drawLine(p, 190, 70, 200, 50, 4, Color.GOLD);
+			 // Tassels / Vines
+			 p.setColor(Color.valueOf("#2e7d32")); // Vines
+			 for(int i=0; i<10; i++) {
+				 drawCircle(p, 100 + i*8 + (int)(Math.sin(i)*5), 180 - i*10, 4, Color.valueOf("#2e7d32"));
+			 }
+
+			 // Magic Core (Crystal)
+			 // Center at 180, 60
+			 // Octagon shape
+			 p.setColor(Color.CYAN);
+			 p.fillCircle(180, 60, 25);
+			 p.setColor(Color.WHITE);
+			 p.fillCircle(180, 60, 15);
+			 p.setColor(Color.CYAN);
+			 p.fillCircle(180, 60, 10);
+
+			 // Inner Glow
+			 p.setColor(new Color(0.5f, 1f, 1f, 0.8f));
+			 p.fillCircle(175, 55, 5);
+
+			 // Prongs holding the gem (Gold)
+			 p.setColor(Color.GOLD);
+			 drawLine(p, 160, 80, 170, 70, 6, Color.GOLD);
+			 drawLine(p, 200, 80, 190, 70, 6, Color.GOLD);
+			 drawLine(p, 160, 40, 170, 50, 6, Color.GOLD);
+			 drawLine(p, 200, 40, 190, 50, 6, Color.GOLD);
+			 
+			 // Particles
+			 for(int i=0; i<10; i++) {
+				 int px = 180 + (int)(Math.random()*60 - 30);
+				 int py = 60 + (int)(Math.random()*60 - 30);
+				 p.setColor(new Color(0, 1, 1, 0.5f));
+				 p.fillCircle(px, py, 2);
+			 }
 
 		} else if (name.contains("Scroll") || name.contains("卷轴") || name.contains("Book") || name.contains("书")) {
 			 // Open Book / Flipping Book
@@ -736,39 +855,70 @@ public class SpriteGenerator {
 			boolean isLeather = name.contains("Leather") || name.contains("皮");
 			Color base = isLeather ? Color.valueOf("#8d6e63") : Color.LIGHT_GRAY;
 			Color trim = isLeather ? Color.valueOf("#5d4037") : Color.GRAY;
+			Color highlight = isLeather ? base.cpy().mul(1.2f) : Color.WHITE;
+			Color shadow = isLeather ? base.cpy().mul(0.8f) : Color.GRAY;
 
-			// Chest piece
-			drawRect(p, 64, 64, 128, 128, base);
+			// Base Shape (Torso) - Tapered
+			// Instead of a box, draw a breastplate shape
+			// Main body background
+			// drawRect(p, 64, 64, 128, 128, shadow); // Removed simple rect
 
-			// Texture
 			if (isLeather) {
-				// Stitching / Panels
-				drawRect(p, 64, 128, 128, 4, trim); // Horizontal seam
-				drawRect(p, 126, 64, 4, 128, trim); // Vertical seam
-				// Studs
-				p.setColor(Color.GOLD);
-				drawCircle(p, 80, 80, 4, Color.GOLD);
-				drawCircle(p, 176, 80, 4, Color.GOLD);
-				drawCircle(p, 80, 176, 4, Color.GOLD);
-				drawCircle(p, 176, 176, 4, Color.GOLD);
+				// Leather Armor (Studded)
+				// Chest
+				drawRect(p, 70, 60, 116, 80, base);
+				// Stomach (Segmented)
+				drawRect(p, 75, 145, 106, 25, base);
+				drawRect(p, 75, 175, 106, 20, base);
+				
+				// Straps / Belts
+				drawRect(p, 60, 100, 136, 10, trim); // Chest strap
+				drawRect(p, 120, 60, 16, 140, trim); // Center vertical strap
+				
+				// Shoulders (Rounded)
+				drawCircle(p, 60, 70, 25, trim);
+				drawCircle(p, 196, 70, 25, trim);
+				
+				// Studs (Gold/Brass)
+				p.setColor(Color.valueOf("#ffd54f"));
+				for(int i=0; i<3; i++) {
+					for(int j=0; j<3; j++) {
+						if ((i+j)%2==0)
+							drawCircle(p, 80 + j*48, 80 + i*40, 5, Color.valueOf("#ffd54f"));
+					}
+				}
+				
 			} else {
-				// Metal Plates
-				drawRect(p, 74, 74, 50, 50, Color.WHITE); // Highlight plate
-				drawRect(p, 132, 74, 50, 50, Color.WHITE);
-				drawRect(p, 74, 132, 50, 50, Color.WHITE);
-				drawRect(p, 132, 132, 50, 50, Color.WHITE);
-				// Darken base to show plates
-				drawRect(p, 64, 64, 128, 128, trim);
-				// Draw Plates
-				drawRect(p, 70, 70, 50, 50, base);
-				drawRect(p, 136, 70, 50, 50, base);
-				drawRect(p, 70, 136, 50, 50, base);
-				drawRect(p, 136, 136, 50, 50, base);
+				// Plate Mail (Segmented)
+				// Gorget (Neck)
+				drawRect(p, 100, 50, 56, 20, trim);
+				
+				// Breastplate
+				drawRect(p, 60, 70, 136, 70, base);
+				// Highlight curve
+				p.setColor(highlight);
+				p.fillTriangle(60, 70, 196, 70, 128, 140);
+				
+				// Plackart (Stomach plates) - Overlapping
+				drawRect(p, 70, 145, 116, 20, base);
+				drawRect(p, 75, 165, 106, 20, base);
+				drawRect(p, 80, 185, 96, 20, base);
+				
+				// Pauldrons (Shoulders) - Large, layered
+				// Left
+				drawCircle(p, 50, 70, 30, trim);
+				drawCircle(p, 50, 70, 20, base);
+				// Right
+				drawCircle(p, 206, 70, 30, trim);
+				drawCircle(p, 206, 70, 20, base);
+				
+				// Trim / Edges
+				drawRect(p, 126, 70, 4, 70, trim); // Center line
+				// Rivets
+				p.setColor(Color.LIGHT_GRAY);
+				drawCircle(p, 70, 80, 4, Color.LIGHT_GRAY);
+				drawCircle(p, 186, 80, 4, Color.LIGHT_GRAY);
 			}
-
-			// Shoulders (Common)
-			drawRect(p, 44, 64, 40, 40, trim);
-			drawRect(p, 172, 64, 40, 40, trim);
 
 		} else {
 			// Default Box

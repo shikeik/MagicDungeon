@@ -110,7 +110,7 @@ public class GameHUD {
 				badge.setFontScale(0.25f);
 
 				VisTable badgeTable = new VisTable();
-				badgeTable.bottom().right();
+				badgeTable.top().right();
 				badgeTable.add(badge).pad(1);
 				badgeTable.setTouchable(Touchable.disabled); // Prevent blocking events
 				stack.add(badgeTable);
