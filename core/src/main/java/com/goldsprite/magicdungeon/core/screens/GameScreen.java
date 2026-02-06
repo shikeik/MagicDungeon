@@ -35,7 +35,7 @@ public class GameScreen extends GScreen {
 	private AudioSystem audio;
 	private SpriteBatch batch;
 
-    private String cheatCodeBuffer = "";
+	private String cheatCodeBuffer = "";
 
 	@Override
 	protected void initViewport() {
@@ -68,14 +68,14 @@ public class GameScreen extends GScreen {
 		spawnEntities();
 
 		// Scene2D HUD
-        // 传递 uiViewport 给 HUD
-        hud = new GameHUD(getUIViewport());
+		// 传递 uiViewport 给 HUD
+		hud = new GameHUD(getUIViewport());
 
-        // Set save listener for HUD save button
-        hud.setSaveListener(() -> {
-            SaveManager.saveGame(player, dungeon);
-            hud.showMessage("Game Saved!");
-        });
+		// Set save listener for HUD save button
+		hud.setSaveListener(() -> {
+			SaveManager.saveGame(player, dungeon);
+			hud.showMessage("Game Saved!");
+		});
 		getImp().addProcessor(hud.stage);
 
 		// Audio
@@ -114,11 +114,11 @@ public class GameScreen extends GScreen {
 				if (Math.abs(pos.x - player.x) < 5 && Math.abs(pos.y - player.y) < 5) continue;
 
 				// Varied Monster Types based on Level
-                MonsterType type = MonsterType.Slime;
-                if (dungeon.level >= 2 && Math.random() < 0.3) type = MonsterType.Bat;
-                if (dungeon.level >= 3 && Math.random() < 0.3) type = MonsterType.Skeleton;
-                if (dungeon.level >= 5 && Math.random() < 0.3) type = MonsterType.Orc;
-                if (dungeon.level % 6 == 0 && Math.random() < 0.3) type = MonsterType.Boss;
+				MonsterType type = MonsterType.Slime;
+				if (dungeon.level >= 2 && Math.random() < 0.3) type = MonsterType.Bat;
+				if (dungeon.level >= 3 && Math.random() < 0.3) type = MonsterType.Skeleton;
+				if (dungeon.level >= 5 && Math.random() < 0.3) type = MonsterType.Orc;
+				if (dungeon.level % 6 == 0 && Math.random() < 0.3) type = MonsterType.Boss;
 
 				Monster m = new Monster(pos.x, pos.y, type);
 				// Apply difficulty
@@ -166,17 +166,17 @@ public class GameScreen extends GScreen {
 
 		// Input Handling
 		int dx = 0;
-        int dy = 0;
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) dx = -1;
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) dx = 1;
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy = 1;
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy = -1;
+		int dy = 0;
+		if (Gdx.input.isKeyPressed(Input.Keys.A)) dx = -1;
+		if (Gdx.input.isKeyPressed(Input.Keys.D)) dx = 1;
+		if (Gdx.input.isKeyPressed(Input.Keys.W)) dy = 1;
+		if (Gdx.input.isKeyPressed(Input.Keys.S)) dy = -1;
 
-        if (dx != 0 || dy != 0) {
-            audio.playMove();
-        }
+		if (dx != 0 || dy != 0) {
+			audio.playMove();
+		}
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 			if (player.stats.mana >= 10) {
 				player.useSkill();
 				audio.playLevelUp();
@@ -251,77 +251,77 @@ public class GameScreen extends GScreen {
 		updateCamera();
 
 		// Regenerate map
-        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-            dungeon.generate();
-            player.x = dungeon.startPos.x;
-            player.y = dungeon.startPos.y;
-            player.visualX = player.x * Constants.TILE_SIZE;
-            player.visualY = player.y * Constants.TILE_SIZE;
-            player.stats.hp = player.stats.maxHp;
-            spawnEntities();
-            hud.showMessage("Map Regenerated!");
-        }
+		if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+			dungeon.generate();
+			player.x = dungeon.startPos.x;
+			player.y = dungeon.startPos.y;
+			player.visualX = player.x * Constants.TILE_SIZE;
+			player.visualY = player.y * Constants.TILE_SIZE;
+			player.stats.hp = player.stats.maxHp;
+			spawnEntities();
+			hud.showMessage("Map Regenerated!");
+		}
 
-        // Save Game
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
-            SaveManager.saveGame(player, dungeon);
-            hud.showMessage("Game Saved!");
-        }
+		// Save Game
+		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+			SaveManager.saveGame(player, dungeon);
+			hud.showMessage("Game Saved!");
+		}
 
-        // Load Game
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
-            loadGame();
-        }
+		// Load Game
+		if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+			loadGame();
+		}
 
-        // Toggle Inventory
-        if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
-            hud.toggleInventory();
-        }
+		// Toggle Inventory
+		if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+			hud.toggleInventory();
+		}
 
-        // Cheat Code: Get All Items
-        if (Gdx.input.isKeyJustPressed(Input.Keys.GRAVE)) { // Tilde key (~) for easier access, or check for sequence if strictly "cheat666" needed
-             // Simple key binding for now, implementing "cheat666" sequence would require buffer
-             // Let's use F8 as "Cheat Key" or handle "cheat666" via input processor if strict
-        }
+		// Cheat Code: Get All Items
+		if (Gdx.input.isKeyJustPressed(Input.Keys.GRAVE)) { // Tilde key (~) for easier access, or check for sequence if strictly "cheat666" needed
+			 // Simple key binding for now, implementing "cheat666" sequence would require buffer
+			 // Let's use F8 as "Cheat Key" or handle "cheat666" via input processor if strict
+		}
 
-        // Simple cheat trigger for testing: Press P to get all items (P for Presents/Power)
-        // Or strictly follow user request "input cheat666" - typically means typing.
-        // For simplicity in LibGDX without UI input field, let's use a debug key combo like CTRL+L
-        // But user asked for "input cheat666". Let's assume typing blind.
+		// Simple cheat trigger for testing: Press P to get all items (P for Presents/Power)
+		// Or strictly follow user request "input cheat666" - typically means typing.
+		// For simplicity in LibGDX without UI input field, let's use a debug key combo like CTRL+L
+		// But user asked for "input cheat666". Let's assume typing blind.
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6)) {
-             // Basic cheat implementation - Adds all items when F6 is pressed (easier than typing)
-             // Or better:
-        }
+		if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6)) {
+			 // Basic cheat implementation - Adds all items when F6 is pressed (easier than typing)
+			 // Or better:
+		}
 
-        // Implementing "cheat666" typing detection
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
-             cheatCodeBuffer += "6";
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
-             cheatCodeBuffer += "c";
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
-             cheatCodeBuffer += "h";
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-             cheatCodeBuffer += "e";
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
-             cheatCodeBuffer += "a";
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
-             cheatCodeBuffer += "t";
-        } else {
-             // Reset buffer if too long or check on timer?
-             // Simplified: Check end of string
-        }
+		// Implementing "cheat666" typing detection
+		if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
+			 cheatCodeBuffer += "6";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
+			 cheatCodeBuffer += "c";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
+			 cheatCodeBuffer += "h";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+			 cheatCodeBuffer += "e";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+			 cheatCodeBuffer += "a";
+		} else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+			 cheatCodeBuffer += "t";
+		} else {
+			 // Reset buffer if too long or check on timer?
+			 // Simplified: Check end of string
+		}
 
-        if (cheatCodeBuffer.endsWith("cheat666")) {
-            cheatCodeBuffer = "";
-            for (ItemData data : ItemData.values()) {
-                player.inventory.add(new InventoryItem(data));
-            }
-            hud.showMessage("Cheat Activated: All Items Added!");
-            hud.updateInventory(player);
-            audio.playLevelUp();
-        }
-        if (cheatCodeBuffer.length() > 20) cheatCodeBuffer = "";
+		if (cheatCodeBuffer.endsWith("cheat666")) {
+			cheatCodeBuffer = "";
+			for (ItemData data : ItemData.values()) {
+				player.inventory.add(new InventoryItem(data));
+			}
+			hud.showMessage("Cheat Activated: All Items Added!");
+			hud.updateInventory(player);
+			audio.playLevelUp();
+		}
+		if (cheatCodeBuffer.length() > 20) cheatCodeBuffer = "";
 
 		// Update HUD
 		hud.update(player, dungeon.level);

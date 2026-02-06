@@ -22,94 +22,94 @@ import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 
 public class TexturePreviewScreen extends GScreen {
-    private SpriteBatch batch;
-    private OrthographicCamera camera;
-    private Viewport viewport;
-    private BitmapFont font;
+	private SpriteBatch batch;
+	private OrthographicCamera camera;
+	private Viewport viewport;
+	private BitmapFont font;
 
-    private List<PreviewItem> previews;
-    private static final int GRID_SIZE = 128;
-    private static final int PADDING = 20;
+	private List<PreviewItem> previews;
+	private static final int GRID_SIZE = 128;
+	private static final int PADDING = 20;
 
-    private static class PreviewItem {
-        Texture texture;
-        String name;
-        int x, y;
+	private static class PreviewItem {
+		Texture texture;
+		String name;
+		int x, y;
 
-        public PreviewItem(Texture texture, String name, int x, int y) {
-            this.texture = texture;
-            this.name = name;
-            this.x = x;
-            this.y = y;
-        }
-    }
+		public PreviewItem(Texture texture, String name, int x, int y) {
+			this.texture = texture;
+			this.name = name;
+			this.x = x;
+			this.y = y;
+		}
+	}
 
-    @Override
-    public void create() {
-        batch = new SpriteBatch();
-        camera = new OrthographicCamera();
-        viewport = new ExtendViewport(1280, 720, camera); // Use ExtendViewport to prevent stretching
-        viewport.apply(true);
+	@Override
+	public void create() {
+		batch = new SpriteBatch();
+		camera = new OrthographicCamera();
+		viewport = new ExtendViewport(1280, 720, camera); // Use ExtendViewport to prevent stretching
+		viewport.apply(true);
 
-        font = new BitmapFont();
-        font.setColor(Color.WHITE);
+		font = new BitmapFont();
+		font.setColor(Color.WHITE);
 
-        previews = new ArrayList<>();
-        int col = 0;
-        int row = 0;
-        int startX = 50;
-        int startY = 0; // Will be set in resize or dynamic
-        // Let's keep fixed layout but center camera initially
+		previews = new ArrayList<>();
+		int col = 0;
+		int row = 0;
+		int startX = 50;
+		int startY = 0; // Will be set in resize or dynamic
+		// Let's keep fixed layout but center camera initially
 
-        // Use TextureManager
-        TextureManager tm = TextureManager.getInstance();
+		// Use TextureManager
+		TextureManager tm = TextureManager.getInstance();
 
-        // Iterate all textures
-        for (java.util.Map.Entry<String, Texture> entry : tm.getAllTextures().entrySet()) {
-            if (col >= 6) { col = 0; row++; }
-            addPreview(entry.getValue(), entry.getKey(), col++, row);
-        }
+		// Iterate all textures
+		for (java.util.Map.Entry<String, Texture> entry : tm.getAllTextures().entrySet()) {
+			if (col >= 6) { col = 0; row++; }
+			addPreview(entry.getValue(), entry.getKey(), col++, row);
+		}
 
-        // Camera Controller
-        SimpleCameraController controller = new SimpleCameraController(camera);
-        controller.setCoordinateMapper((x, y) -> viewport.unproject(new com.badlogic.gdx.math.Vector2(x, y)));
-        getImp().addProcessor(controller);
-    }
+		// Camera Controller
+		SimpleCameraController controller = new SimpleCameraController(camera);
+		controller.setCoordinateMapper((x, y) -> viewport.unproject(new com.badlogic.gdx.math.Vector2(x, y)));
+		getImp().addProcessor(controller);
+	}
 
-    private void addPreview(Texture tex, String name, int col, int row) {
-        // Calculate position based on grid
-        int x = 50 + col * (GRID_SIZE + PADDING);
-        int y = -50 - row * (GRID_SIZE + PADDING + 30); // Grow downwards
-        previews.add(new PreviewItem(tex, name, x, y));
-    }
+	private void addPreview(Texture tex, String name, int col, int row) {
+		// Calculate position based on grid
+		int x = 50 + col * (GRID_SIZE + PADDING);
+		int y = -50 - row * (GRID_SIZE + PADDING + 30); // Grow downwards
+		previews.add(new PreviewItem(tex, name, x, y));
+	}
 
-    @Override
-    public void render(float delta) {
-        ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
+	@Override
+	public void render(float delta) {
+		ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
 
 		viewport.apply();
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
+		camera.update();
+		batch.setProjectionMatrix(camera.combined);
 
-        batch.begin();
-        for (PreviewItem item : previews) {
-            batch.draw(item.texture, item.x, item.y, GRID_SIZE, GRID_SIZE);
-            font.draw(batch, item.name, item.x, item.y - 10);
-        }
-        batch.end();
+		batch.begin();
+		for (PreviewItem item : previews) {
+			batch.draw(item.texture, item.x, item.y, GRID_SIZE, GRID_SIZE);
+			font.draw(batch, item.name, item.x, item.y - 10);
+		}
+		batch.end();
 
-        // HUD
-        batch.setProjectionMatrix(batch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
-        batch.begin();
-        font.draw(batch, "Texture Preview Mode - Drag to Pan, Scroll to Zoom, ESC to Exit", 20, Gdx.graphics.getHeight() - 20);
-        batch.end();
-    }
+		// HUD
+		batch.setProjectionMatrix(batch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+		batch.begin();
+		font.draw(batch, "Texture Preview Mode - Drag to Pan, Scroll to Zoom, ESC to Exit", 20, Gdx.graphics.getHeight() - 20);
+		batch.end();
+	}
 
-    @Override
-    public void resize(int width, int height) {
-        viewport.update(width, height);
-        // Reset camera position if needed or keep user position
-    }
+	@Override
+	public void resize(int width, int height) {
+		viewport.update(width, height);
+		// Reset camera position if needed or keep user position
+	}
 
-    // ... (dispose)
+	// ... (dispose)
 }

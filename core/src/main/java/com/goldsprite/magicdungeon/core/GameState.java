@@ -5,11 +5,11 @@ import com.goldsprite.magicdungeon.entities.PlayerStats;
 import java.util.List;
 
 public class GameState {
-    public int dungeonLevel;
-    public PlayerStats playerStats;
-    public List<InventoryItem> inventory;
+	public int dungeonLevel;
+	public PlayerStats playerStats;
+	public List<InventoryItem> inventory;
 
-    public GameState() {
-        // No-arg constructor for Json
-    }
+	public GameState() {
+		// No-arg constructor for Json
+	}
 }
