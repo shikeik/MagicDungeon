@@ -17,6 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
+import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
@@ -158,66 +159,107 @@ public class GameHUD {
 
 			add(stack).size(64, 64);
 
-			createTooltip(item, isEquipped);
+			if (Gdx.app.getType() == ApplicationType.Android) {
+				addListener(new ActorGestureListener() {
+					@Override
+					public void tap(InputEvent event, float x, float y, int count, int button) {
+						handleEquipAction(item, isEquipped, player);
+					}
 
-			addListener(new ClickListener() {
-				@Override
-				public void clicked(InputEvent event, float x, float y) {
-					player.equip(item);
-					String action = item.data.type == ItemType.POTION ? "使用" : (isEquipped ? "卸下" : "装备");
-					showMessage(action + " " + item.data.name);
-					updateInventory(player);
-				}
-			});
+					@Override
+					public boolean longPress(Actor actor, float x, float y) {
+						showAndroidTooltip(item, isEquipped);
+						return true;
+					}
+				});
+			} else {
+				VisTable tooltipContent = createItemTooltipTable(item, isEquipped);
+				new Tooltip.Builder(tooltipContent).target(this).build();
+
+				addListener(new ClickListener() {
+					@Override
+					public void clicked(InputEvent event, float x, float y) {
+						handleEquipAction(item, isEquipped, player);
+					}
+				});
+			}
 		}
 
-		private void createTooltip(InventoryItem item, boolean isEquipped) {
-			VisTable borderTable = new VisTable();
-			if (whiteDrawable != null) {
-				borderTable.setBackground(whiteDrawable);
-				borderTable.setColor(item.quality.color);
-			}
+		private void handleEquipAction(InventoryItem item, boolean isEquipped, Player player) {
+			player.equip(item);
+			String action = item.data.type == ItemType.POTION ? "使用" : (isEquipped ? "卸下" : "装备");
+			showMessage(action + " " + item.data.name);
+			updateInventory(player);
+		}
+	}
 
-			VisTable content = new VisTable();
-			content.setBackground("list");
-			content.pad(10);
-			borderTable.add(content).grow().pad(2);
-
-			String titleText = "[" + item.quality.name + "] " + item.data.name;
-			VisLabel title = new VisLabel(titleText);
-			title.setColor(item.quality.color);
-			content.add(title).left().row();
-
-			int maxLen = 9;
-			String shortId = item.id.length() > maxLen ? item.id.substring(item.id.length()-maxLen) : item.id;
-			VisLabel uuid = new VisLabel("#"+shortId);
-			uuid.setColor(Color.DARK_GRAY);
-			uuid.setFontScale(0.8f);
-			content.add(uuid).right().row();
-
-			content.add(new Separator()).growX().padBottom(15).row();
-			content.add(new VisLabel("类型: " + getTypeString(item.data.type))).left().row();
-
-			if (item.atk > 0) content.add(new VisLabel("攻击: +" + item.atk)).left().row();
-			if (item.def > 0) content.add(new VisLabel("防御: +" + item.def)).left().row();
-			if (item.heal > 0) content.add(new VisLabel("回复: +" + item.heal)).left().row();
-
-			if (isEquipped) {
-				VisLabel status = new VisLabel("已装备");
-				status.setColor(Color.YELLOW);
-				content.add(status).left().padTop(5).row();
-			}
-
-			new Tooltip.Builder(borderTable).target(this).build();
+	private VisTable createItemTooltipTable(InventoryItem item, boolean isEquipped) {
+		VisTable borderTable = new VisTable();
+		if (whiteDrawable != null) {
+			borderTable.setBackground(whiteDrawable);
+			borderTable.setColor(item.quality.color);
 		}
 
-		private String getTypeString(ItemType type) {
-			switch(type) {
-				case WEAPON: return "武器";
-				case ARMOR: return "防具";
-				case POTION: return "药水";
-				default: return "未知";
+		VisTable content = new VisTable();
+		content.setBackground("list");
+		content.pad(10);
+		borderTable.add(content).grow().pad(2);
+
+		String titleText = "[" + item.quality.name + "] " + item.data.name;
+		VisLabel title = new VisLabel(titleText);
+		title.setColor(item.quality.color);
+		content.add(title).left().row();
+
+		int maxLen = 9;
+		String shortId = item.id.length() > maxLen ? item.id.substring(item.id.length()-maxLen) : item.id;
+		VisLabel uuid = new VisLabel("#"+shortId);
+		uuid.setColor(Color.DARK_GRAY);
+		uuid.setFontScale(0.8f);
+		content.add(uuid).right().row();
+
+		content.add(new Separator()).growX().padBottom(15).row();
+		content.add(new VisLabel("类型: " + getTypeString(item.data.type))).left().row();
+
+		if (item.atk > 0) content.add(new VisLabel("攻击: +" + item.atk)).left().row();
+		if (item.def > 0) content.add(new VisLabel("防御: +" + item.def)).left().row();
+		if (item.heal > 0) content.add(new VisLabel("回复: +" + item.heal)).left().row();
+
+		if (isEquipped) {
+			VisLabel status = new VisLabel("已装备");
+			status.setColor(Color.YELLOW);
+			content.add(status).left().padTop(5).row();
+		}
+		
+		return borderTable;
+	}
+
+	private void showAndroidTooltip(InventoryItem item, boolean isEquipped) {
+		VisTable overlay = new VisTable();
+		overlay.setFillParent(true);
+		overlay.setTouchable(Touchable.enabled);
+		// Click anywhere to close
+		overlay.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				overlay.remove();
 			}
+		});
+
+		// Darken background slightly
+		overlay.setBackground(logBgDrawable);
+
+		VisTable tooltip = createItemTooltipTable(item, isEquipped);
+		overlay.add(tooltip).center();
+
+		stage.addActor(overlay);
+	}
+
+	private String getTypeString(ItemType type) {
+		switch(type) {
+			case WEAPON: return "武器";
+			case ARMOR: return "防具";
+			case POTION: return "药水";
+			default: return "未知";
 		}
 	}
 

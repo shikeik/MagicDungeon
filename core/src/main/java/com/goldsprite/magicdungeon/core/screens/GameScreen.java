@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.utils.SimpleCameraController;
@@ -83,6 +84,8 @@ public class GameScreen extends GScreen {
 		// 保持世界相机的缩放比例为 1.0 (1 unit = 1 pixel)
 		// 或者如果需要像素放大，可以调整 worldScale, 例如 0.5f 会放大两倍
 		this.worldScale = 0.3f;
+
+		this.uiViewportScale = PlatformImpl.isDesktopUser() ? 1 : 1.4f;
 
 		super.initViewport();
 
@@ -380,16 +383,16 @@ public class GameScreen extends GScreen {
 
 		// Cheat Codes
 		handleCheatInput();
-		
+
 		// Mouse Click Selection
 		if (Gdx.input.justTouched()) {
 			// Convert screen coordinates to world coordinates
 			com.badlogic.gdx.math.Vector3 touchPos = new com.badlogic.gdx.math.Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
 			worldCamera.unproject(touchPos);
-			
+
 			float wx = touchPos.x;
 			float wy = touchPos.y;
-			
+
 			// Check collisions with Monsters
 			boolean clickedMonster = false;
 			for (Monster m : monsters) {
@@ -406,7 +409,7 @@ public class GameScreen extends GScreen {
 					}
 				}
 			}
-			
+
 			// If clicked elsewhere, maybe hide info?
 			// But user might want to keep it open while fighting.
 			// Let's keep it open unless explicitly closed or clicked on empty space?
@@ -606,9 +609,9 @@ public class GameScreen extends GScreen {
 			if (itemTex != null) {
 				// Render slightly smaller to distinguish from tiles
 				// batch.setColor(item.item.quality.color); // Apply Quality Color Tint -> Cancelled per user request
-				batch.setColor(Color.WHITE); 
+				batch.setColor(Color.WHITE);
 				batch.draw(itemTex, item.visualX + 4, item.visualY + 4, 24, 24);
-				
+
 				// Draw Quality Star at Top-Left
 				Texture starTex = TextureManager.getInstance().getQualityStar();
 				if (starTex != null) {
@@ -617,7 +620,7 @@ public class GameScreen extends GScreen {
 					// Draw at top-left corner of the tile/item area
 					batch.draw(starTex, item.visualX + 2, item.visualY + 20, starSize, starSize);
 				}
-				
+
 				batch.setColor(Color.WHITE); // Reset
 			}
 		}
