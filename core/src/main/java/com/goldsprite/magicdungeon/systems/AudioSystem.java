@@ -63,8 +63,9 @@ public class AudioSystem {
 
 	/** 移动音效: 柔和的低频脉冲 */
 	public void playMove() {
-		// 替换刺耳的白噪，使用极短的低频正弦波，类似软鞋底接触地面的声音
-		playTone(80, WaveType.SINE, 0.05f, 0.2f, 40);
+		// 提高一点音量和频率，确保可听见但不过分
+		// 80Hz -> 100Hz, 0.05s -> 0.08s, vol 0.2 -> 0.4
+		playTone(100, WaveType.SINE, 0.08f, 0.4f, 50);
 	}
 
 	/** 攻击音效: 快速下行的锯齿波 */
@@ -117,33 +118,36 @@ public class AudioSystem {
 			this.volume = vol;
 		}
 
-		public boolean process(float[] mixBuffer, int len) {
-			for (int i = 0; i < len; i++) {
-				if (currentSample >= duration) return false;
-				float t = currentSample / duration;
-				float currFreq = freqStart + (freqEnd - freqStart) * t;
-				// Linear Decay Envelope
-				float currVol = volume * (1f - t);
+		public float getSample() {
+			if (currentSample >= duration) return 0;
+			
+			float t = currentSample / duration;
+			float currFreq = freqStart + (freqEnd - freqStart) * t;
+			// Linear Decay Envelope
+			float currVol = volume * (1f - t);
 
-				float phaseIncrement = (float) (Math.PI * 2 * currFreq / SAMPLE_RATE);
-				phase += phaseIncrement;
-				if (phase > Math.PI * 2) phase -= Math.PI * 2;
+			float phaseIncrement = (float) (Math.PI * 2 * currFreq / SAMPLE_RATE);
+			phase += phaseIncrement;
+			if (phase > Math.PI * 2) phase -= Math.PI * 2;
 
-				float sampleValue = 0;
-				switch (type) {
-					case SINE: sampleValue = (float) Math.sin(phase); break;
-					case SQUARE: sampleValue = (phase < Math.PI) ? 1f : -1f; break;
-					case SAWTOOTH: sampleValue = (float) (phase / Math.PI - 1f); break;
-					case TRIANGLE:
-						float raw = (float) (phase / Math.PI - 1f);
-						sampleValue = 2f * (0.5f - Math.abs(raw));
-						break;
-					case NOISE: sampleValue = MathUtils.random(-1f, 1f); break;
-				}
-				mixBuffer[i] += sampleValue * currVol;
-				currentSample++;
+			float sampleValue = 0;
+			switch (type) {
+				case SINE: sampleValue = (float) Math.sin(phase); break;
+				case SQUARE: sampleValue = (phase < Math.PI) ? 1f : -1f; break;
+				case SAWTOOTH: sampleValue = (float) (phase / Math.PI - 1f); break;
+				case TRIANGLE:
+					float raw = (float) (phase / Math.PI - 1f);
+					sampleValue = 2f * (0.5f - Math.abs(raw));
+					break;
+				case NOISE: sampleValue = MathUtils.random(-1f, 1f); break;
 			}
-			return true;
+			currentSample++;
+			return sampleValue * currVol;
+		}
+
+		// Legacy block process removed in favor of per-sample mixing for precision
+		public boolean process(float[] mixBuffer, int len) {
+			return false; 
 		}
 	}
 
@@ -166,35 +170,46 @@ public class AudioSystem {
 		@Override
 		public void run() {
 			while (running) {
-				for (int i = 0; i < BUFFER_SIZE; i++) mixBuffer[i] = 0;
-
-				// --- 1. BGM Sequencer Logic ---
-				if (bgmEnabled) {
-					sampleCounter += BUFFER_SIZE;
-					if (sampleCounter >= samplesPerBeat) {
-						sampleCounter -= samplesPerBeat;
-						triggerBeat(step);
-						step = (step + 1) % 16;
+				// --- 1. BGM Sequencer Logic (Sample Precise) ---
+				// 移动到混音循环内部以获得采样级精度
+				
+				for (int i = 0; i < BUFFER_SIZE; i++) {
+					mixBuffer[i] = 0;
+					
+					// BGM Trigger Check per Sample
+					if (bgmEnabled) {
+						sampleCounter++;
+						if (sampleCounter >= samplesPerBeat) {
+							sampleCounter -= samplesPerBeat;
+							triggerBeat(step);
+							step = (step + 1) % 16;
+						}
 					}
-				}
-
-				// --- 2. Mixing Voices ---
-				Iterator<Voice> it = activeVoices.iterator();
-				boolean hasSound = false;
-				while (it.hasNext()) {
-					Voice v = it.next();
-					boolean alive = v.process(mixBuffer, BUFFER_SIZE);
-					if (!alive) it.remove();
-					else hasSound = true;
+					
+					// Mixing Voices per Sample
+					Iterator<Voice> it = activeVoices.iterator();
+					while (it.hasNext()) {
+						Voice v = it.next();
+						if (v.currentSample < v.duration) {
+							float val = v.getSample(); // 获取单采样
+							mixBuffer[i] += val;
+						} else {
+							it.remove();
+						}
+					}
 				}
 
 				// --- 3. Output ---
-				if (hasSound) {
-					for (int i = 0; i < BUFFER_SIZE; i++) {
-						float val = mixBuffer[i];
-						if (val > 1f) val = 1f; if (val < -1f) val = -1f;
-						outBuffer[i] = (short) (val * 32767);
-					}
+				// 简单的限幅处理
+				boolean hasSound = false;
+				for (int i = 0; i < BUFFER_SIZE; i++) {
+					float val = mixBuffer[i];
+					if (Math.abs(val) > 0.001f) hasSound = true;
+					if (val > 1f) val = 1f; if (val < -1f) val = -1f;
+					outBuffer[i] = (short) (val * 32767);
+				}
+				
+				if (hasSound || bgmEnabled) { // BGM开启时始终写入，保持时钟连续
 					device.writeSamples(outBuffer, 0, BUFFER_SIZE);
 				} else {
 					try { Thread.sleep(10); } catch (InterruptedException e) {}
