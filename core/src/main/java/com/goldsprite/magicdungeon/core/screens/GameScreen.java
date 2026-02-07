@@ -608,24 +608,15 @@ public class GameScreen extends GScreen {
 
 		// Render Items
 		for (Item item : items) {
-			Texture itemTex = TextureManager.getInstance().get(item.item.data.name());
-			if (itemTex != null) {
-				// Render slightly smaller to distinguish from tiles
-				// batch.setColor(item.item.quality.color); // Apply Quality Color Tint -> Cancelled per user request
-				batch.setColor(Color.WHITE);
-				batch.draw(itemTex, item.visualX + 4, item.visualY + 4, 24, 24);
-
-				// Draw Quality Star at Top-Left
-				Texture starTex = TextureManager.getInstance().getQualityStar();
-				if (starTex != null) {
-					batch.setColor(item.item.quality.color);
-					float starSize = 12;
-					// Draw at top-left corner of the tile/item area
-					batch.draw(starTex, item.visualX + 2, item.visualY + 20, starSize, starSize);
-				}
-
-				batch.setColor(Color.WHITE); // Reset
-			}
+			// Use unified ItemRenderer for map rendering
+			// Center the item slightly in the tile (size 24 vs tile 32)
+			com.goldsprite.magicdungeon.ui.ItemRenderer.drawItem(
+				batch, 
+				item.item, 
+				item.visualX + 4, 
+				item.visualY + 4, 
+				24
+			);
 		}
 
 		// Render Monsters

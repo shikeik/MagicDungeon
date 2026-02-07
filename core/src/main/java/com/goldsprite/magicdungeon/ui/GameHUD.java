@@ -143,15 +143,9 @@ public class GameHUD {
 			stack.add(bgTable);
 
 			// Icon
-			Texture tex = TextureManager.getInstance().getItem(item.data.name());
-			if (tex != null) {
-				VisImage icon = new VisImage(new TextureRegionDrawable(tex));
-				icon.setColor(item.quality.color);
-				VisTable iconTable = new VisTable();
-				iconTable.add(icon).size(48, 48);
-				iconTable.setTouchable(Touchable.disabled);
-				stack.add(iconTable);
-			}
+			VisTable iconTable = ItemRenderer.createItemIcon(item, 48);
+			iconTable.setTouchable(Touchable.disabled);
+			stack.add(iconTable);
 
 			// Equipped Badge
 			if (isEquipped) {
