@@ -225,47 +225,152 @@ public class TitleParallaxRenderer {
         float hover = MathUtils.sin(stateTime * 1.5f) * 20f;
         cy += hover;
 
+        // --- Spine Control Points ---
+        // P0: Head Base (Neck start)
+        float p0x = cx - 100;
+        float p0y = cy + 80;
+        // P1: Chest (Lowest point of neck curve)
+        float p1x = cx - 20;
+        float p1y = cy - 60;
+        // P2: Hip (Body arch)
+        float p2x = cx + 80;
+        float p2y = cy + 20;
+        // P3: Tail Tip (Waving)
+        float tailWave = MathUtils.sin(stateTime * 2f) * 40f;
+        float p3x = cx + 200;
+        float p3y = cy - 80 + tailWave;
+
         // --- 1. Rear Wing (Behind body) ---
-        drawDragonWing(batch, cx + 30, cy + 50, -1, 0.8f);
+        // Attach to approx chest area (t ~ 0.3)
+        drawDragonWing(batch, cx + 10, cy + 20, -1, 0.9f);
 
-        // --- 2. Tail ---
-        // Bezier tail curling down
-        drawDragonTail(batch, cx - 40, cy - 20);
+        // --- 2. Rear Leg (Behind body) ---
+        // Attach to hip area (t ~ 0.7)
+        drawDragonLeg(batch, cx + 70, cy - 20, true);
 
-        // --- 3. Rear Leg (Thigh + Shin + Claw) ---
-        drawDragonLeg(batch, cx + 40, cy - 40, true);
+        // --- 3. The Body (Unified Tube) ---
+        drawDragonBody(batch, p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y);
 
-        // --- 4. Body (Torso) ---
-        // Oval shape, rotated
-        batch.drawOval(cx, cy, 140, 90, 20, 0, COL_DRAGON_SCALE_DARK, 16, true);
-        // Belly (Lighter area)
-        batch.drawOval(cx - 10, cy - 10, 100, 60, 20, 0, COL_DRAGON_BELLY, 16, true);
+        // --- 4. Front Leg (In front of body) ---
+        drawDragonLeg(batch, cx - 10, cy - 30, false);
 
-        // --- 5. Front Leg (Arm + Claw) ---
-        drawDragonLeg(batch, cx - 20, cy - 30, false);
+        // --- 5. Head (Attached to P0) ---
+        // Calculate tangent at P0 to align head?
+        // For simplicity, just place it at P0 offset
+        drawDragonHead(batch, p0x - 30, p0y + 30);
 
-        // --- 6. Neck ---
-        // Curved segments leading to head
-        float nx = cx - 60;
-        float ny = cy + 30;
-        // Draw thick line or polys for neck
-        for(int i=0; i<5; i++) {
-            float t = i / 4f;
-            float px = cx - 50 - i * 15;
-            float py = cy + 20 + i * 20;
-            float size = 40 - i * 3;
-            batch.drawCircle(px, py, size/2, 0, COL_DRAGON_SCALE_DARK, 8, true);
-            // Belly stripe
-            batch.drawCircle(px + 5, py - 5, size/3, 0, COL_DRAGON_BELLY, 8, true);
+        // --- 6. Front Wing (In front of body) ---
+        drawDragonWing(batch, cx - 30, cy + 30, 1, 1.1f);
+    }
+
+    /**
+     * Draws a tapered, curved tube using a Triangle Strip
+     */
+    private void drawDragonBody(NeonBatch batch, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
+        int segments = 60;
+        float[] vertices = new float[segments * 2]; // xy
+        float[] colors = new float[segments]; // color bits
+
+        int count = segments * 2;
+        float[] stripVerts = new float[count * 2];
+        float[] stripCols = new float[count];
+
+        float darkBits = COL_DRAGON_SCALE_DARK.toFloatBits();
+        float bellyBits = COL_DRAGON_BELLY.toFloatBits();
+
+        for(int i=0; i<segments; i++) {
+            float t = i / (float)(segments - 1);
+
+            // 1. Cubic Bezier Position
+            float u = 1 - t;
+            float tt = t * t;
+            float uu = u * u;
+            float uuu = uu * u;
+            float ttt = tt * t;
+
+            float px = uuu * x0 + 3 * uu * t * x1 + 3 * u * tt * x2 + ttt * x3;
+            float py = uuu * y0 + 3 * uu * t * y1 + 3 * u * tt * y2 + ttt * y3;
+
+            // 2. Derivative (Tangent) for Normal
+            // dP/dt = 3(1-t)^2(P1-P0) + 6(1-t)t(P2-P1) + 3t^2(P3-P2)
+            float tx = 3*uu*(x1-x0) + 6*u*t*(x2-x1) + 3*tt*(x3-x2);
+            float ty = 3*uu*(y1-y0) + 6*u*t*(y2-y1) + 3*tt*(y3-y2);
+
+            // Normalize Tangent
+            float len = (float)Math.sqrt(tx*tx + ty*ty);
+            if(len > 0) {
+                tx /= len;
+                ty /= len;
+            }
+
+            // Normal = (-ty, tx)
+            float nx = -ty;
+            float ny = tx;
+
+            // 3. Radius Profile (Tapering)
+            float rTop, rBot;
+            if (t < 0.3f) {
+                // Neck: 15 -> 35
+                float progress = t / 0.3f;
+                rTop = 15 + progress * 20;
+            } else if (t < 0.6f) {
+                // Chest/Belly: 35 -> 45 -> 35
+                float progress = (t - 0.3f) / 0.3f;
+                // Parabola arc for belly
+                rTop = 35 + MathUtils.sin(progress * MathUtils.PI) * 15;
+            } else {
+                // Tail: 35 -> 0
+                float progress = (t - 0.6f) / 0.4f;
+                rTop = 35 * (1 - progress);
+            }
+            rBot = rTop * 0.8f; // Belly slightly thinner? Or same.
+
+            // 4. Generate Vertices
+            // Top Vertex (Back)
+            int idx = i * 2;
+            stripVerts[idx * 2] = px + nx * rTop;
+            stripVerts[idx * 2 + 1] = py + ny * rTop;
+            stripCols[idx] = darkBits;
+
+            // Bottom Vertex (Belly)
+            stripVerts[(idx + 1) * 2] = px - nx * rBot;
+            stripVerts[(idx + 1) * 2 + 1] = py - ny * rBot;
+            stripCols[idx + 1] = bellyBits;
         }
 
-        // --- 7. Head ---
-        float headX = cx - 130;
-        float headY = cy + 110;
-        drawDragonHead(batch, headX, headY);
+        batch.drawTriangleStrip(stripVerts, stripCols, count);
 
-        // --- 8. Front Wing (In front of body) ---
-        drawDragonWing(batch, cx - 10, cy + 60, 1, 1f);
+        // --- Draw Spikes (Second pass) ---
+        // Re-traverse to draw spikes on the back
+        for(int i=2; i<segments-5; i+=3) {
+             // Re-calculate for simplicity
+             float t = i / (float)(segments - 1);
+             float u = 1 - t; float tt = t * t; float uu = u * u; float uuu = uu * u; float ttt = tt * t;
+             float px = uuu * x0 + 3 * uu * t * x1 + 3 * u * tt * x2 + ttt * x3;
+             float py = uuu * y0 + 3 * uu * t * y1 + 3 * u * tt * y2 + ttt * y3;
+             float tx = 3*uu*(x1-x0) + 6*u*t*(x2-x1) + 3*tt*(x3-x2);
+             float ty = 3*uu*(y1-y0) + 6*u*t*(y2-y1) + 3*tt*(y3-y2);
+             float len = (float)Math.sqrt(tx*tx + ty*ty);
+             if(len > 0) { tx /= len; ty /= len; }
+             float nx = -ty; float ny = tx;
+
+             // Radius at t
+             float r;
+             if (t < 0.3f) r = 15 + (t/0.3f) * 20;
+             else if (t < 0.6f) r = 35 + MathUtils.sin(((t-0.3f)/0.3f)*MathUtils.PI)*15;
+             else r = 35 * (1 - (t-0.6f)/0.4f);
+
+             // Spike Base
+             float bx = px + nx * r;
+             float by = py + ny * r;
+
+             // Spike Tip
+             float spikeH = 15f;
+             float sx = bx + nx * spikeH - tx * 5; // Slight backward tilt
+             float sy = by + ny * spikeH - ty * 5;
+
+             batch.drawTriangle(bx - tx*5, by - ty*5, bx + tx*5, by + ty*5, sx, sy, 0, COL_DRAGON_HORN, true);
+        }
     }
 
     private void drawDragonWing(NeonBatch batch, float rootX, float rootY, float dir, float scale) {
@@ -309,20 +414,6 @@ public class TitleParallaxRenderer {
         // Claws
         batch.drawTriangle(footX, footY, footX-10, footY-15, footX+5, footY, 0, COL_DRAGON_HORN, true);
         batch.drawTriangle(footX+5, footY, footX+10, footY-10, footX+15, footY, 0, COL_DRAGON_HORN, true);
-    }
-
-    private void drawDragonTail(NeonBatch batch, float rootX, float rootY) {
-        // Curve down and right
-        float cx = rootX;
-        float cy = rootY;
-        for(int i=0; i<15; i++) {
-            float t = i/15f;
-            float px = cx + i * 15 + i*i*0.5f;
-            float py = cy - i * 10 + MathUtils.sin(stateTime + i*0.2f)*10;
-            float r = 25 - i * 1.2f;
-            batch.drawCircle(px, py, r, 0, COL_DRAGON_SCALE_DARK, 8, true);
-            if(i%2==0) batch.drawCircle(px, py-r*0.5f, r*0.6f, 0, COL_DRAGON_BELLY, 8, true); // Underbelly
-        }
     }
 
     private void drawDragonHead(NeonBatch batch, float x, float y) {
