@@ -104,20 +104,26 @@ public class GameHUD {
 		public InventoryDialog() {
 			super("背包");
 			float width = Math.max(800, stage.getWidth() * 0.66f);
-			float height = Math.max(600, stage.getHeight() * 0.66f);
+			float height = stage.getHeight() * 0.6f; // Max 3/5 of screen height
+
 			setSize(width, height);
 			setCenterOnAdd(true);
-			autoPack = true;
+			autoPack = false; // Disable autoPack to respect setSize
+
+			// Main Layout Table
+			VisTable mainTable = new VisTable();
+			mainTable.setFillParent(true);
 
 			inventoryList = new VisTable();
 			inventoryList.top().left();
 
 			VisScrollPane inventoryScrollPane = new VisScrollPane(inventoryList);
-			inventoryScrollPane.setScrollingDisabled(true, false);
+			inventoryScrollPane.setScrollingDisabled(true, false); // Horizontal disabled, Vertical enabled
 			inventoryScrollPane.setFlickScroll(true);
 			inventoryScrollPane.setFadeScrollBars(false);
 
-			getContentTable().add(inventoryScrollPane).pad(10);
+			// Add ScrollPane to Dialog
+			getContentTable().add(inventoryScrollPane).grow().pad(10);
 		}
 	}
 
@@ -207,15 +213,16 @@ public class GameHUD {
 
 	private VisTable createItemTooltipTable(InventoryItem item, boolean isEquipped) {
 		VisTable borderTable = new VisTable();
-		if (whiteDrawable != null) {
-			borderTable.setBackground(whiteDrawable);
-			borderTable.setColor(item.quality.color);
+		// 复用 slotBorderDrawable 来作为 tooltip 的边框
+		if (slotBorderDrawable != null) {
+			borderTable.setBackground(slotBorderDrawable);
+			borderTable.setColor(item.quality.color); // 边框颜色跟随品质
 		}
 
 		VisTable content = new VisTable();
 		content.setBackground("list");
 		content.pad(10);
-		borderTable.add(content).grow().pad(2);
+		borderTable.add(content).grow().pad(2); // pad(2) 是为了露出背景的边框
 
 		String titleText = "[" + item.quality.name + "] " + item.data.name;
 		VisLabel title = new VisLabel(titleText);
@@ -250,7 +257,7 @@ public class GameHUD {
 		hideAndroidTooltip();
 
 		VisTable tooltip = createItemTooltipTable(item, isEquipped);
-		tooltip.setBackground(logBgDrawable); // Darken bg slightly for readability
+		// 不需要额外的背景，因为 createItemTooltipTable 已经创建了带边框的背景
 		tooltip.setTouchable(Touchable.disabled); // Don't block touches
 
 		stage.addActor(tooltip);

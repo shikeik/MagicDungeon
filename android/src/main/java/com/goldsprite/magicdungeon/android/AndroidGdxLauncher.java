@@ -346,7 +346,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 
 	private void initKeyMap() {
 		for (char c = 'A'; c <= 'Z'; c++) keyMap.put(String.valueOf(c), KeyEvent.keyCodeFromString(String.valueOf(c)));
-		for (char c = '0'; c <= '9'; c++) keyMap.put(String.valueOf(c), KeyEvent.keyCodeFromString(String.valueOf(c)));
+		for (char c = '0'; c <= '9'; c++) keyMap.put(String.valueOf(c), KeyEvent.KEYCODE_0 + (c - '0'));
 
 		keyMap.put("-", KeyEvent.KEYCODE_MINUS);
 		keyMap.put("=", KeyEvent.KEYCODE_EQUALS);

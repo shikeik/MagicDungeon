@@ -83,7 +83,7 @@ public class GameScreen extends GScreen {
 
 		// 保持世界相机的缩放比例为 1.0 (1 unit = 1 pixel)
 		// 或者如果需要像素放大，可以调整 worldScale, 例如 0.5f 会放大两倍
-		this.worldScale = PlatformImpl.isDesktopUser() ? 0.3f : 0.4f;
+		this.worldScale = PlatformImpl.isDesktopUser() ? 0.3f : 0.36f;
 
 		this.uiViewportScale = PlatformImpl.isDesktopUser() ? 1 : 1.4f;
 
