@@ -220,14 +220,14 @@ public class GameScreen extends GScreen {
 			hud.showMessage("你已经在营地了。");
 			return;
 		}
-
-		// 2. Must be on Stairs Down
+		
+		// 2. Must be on Stairs Up (changed from Stairs Down)
 		Tile tile = dungeon.getTile(player.x, player.y);
-		if (tile == null || tile.type != TileType.Stairs_Down) {
-			hud.showMessage("你需要站在下一层入口处才能返回营地。");
+		if (tile == null || tile.type != TileType.Stairs_Up) {
+			hud.showMessage("你需要站在上层入口处才能返回营地。");
 			return;
 		}
-
+		
 		// 3. No monsters in room?
 		// Simple check: visible range? or active monsters?
 		// For simplicity, check if any monster is within 10 tiles.
@@ -238,12 +238,12 @@ public class GameScreen extends GScreen {
 				break;
 			}
 		}
-
+		
 		if (!safe) {
 			hud.showMessage("附近有怪物，无法传送!");
 			return;
 		}
-
+		
 		enterCamp();
 	}
 
@@ -662,6 +662,14 @@ public class GameScreen extends GScreen {
 				if (tile.type == TileType.Stairs_Down) {
 					// Go deeper
 					enterDungeon(dungeon.level + 1);
+				} else if (tile.type == TileType.Stairs_Up) {
+					// Go back up
+					if (dungeon.level > 1) {
+						enterDungeon(dungeon.level - 1);
+					} else {
+						// Level 1 -> Camp
+						enterCamp();
+					}
 				} else if (tile.type == TileType.Dungeon_Entrance) {
 					// Show Level Selection
 					hud.showLevelSelection(maxDepth, (level) -> {
