@@ -100,6 +100,15 @@ public class AudioSystem {
 		playTone(200, WaveType.SINE, 0.5f, 0.5f, 600);
 	}
 
+	/** 游戏结束音效: 悲伤的下行小调 */
+	public void playGameOver() {
+		// C4 -> G3 -> Eb3 -> C3
+		playTone(261.63f, WaveType.TRIANGLE, 0.3f, 0.5f);
+		playTone(196.00f, WaveType.TRIANGLE, 0.3f, 0.5f);
+		playTone(155.56f, WaveType.TRIANGLE, 0.3f, 0.5f);
+		playTone(130.81f, WaveType.TRIANGLE, 1.5f, 0.6f);
+	}
+
 	// --- Inner Classes from SynthAudio ---
 
 	private static class Voice {

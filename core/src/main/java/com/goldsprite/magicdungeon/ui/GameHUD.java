@@ -100,6 +100,49 @@ public class GameHUD {
 
 	// --- Inner Classes ---
 
+	private static class GameOverWindow extends BaseDialog {
+		public GameOverWindow(Runnable onRestart, Runnable onQuit) {
+			super("GAME OVER");
+			setModal(true);
+			setMovable(false);
+			setResizable(false);
+
+			Table content = getContentTable();
+			content.pad(20);
+
+			VisLabel title = new VisLabel("你死掉了!");
+			title.setColor(Color.RED);
+			title.setFontScale(1.5f);
+			content.add(title).padBottom(20).row();
+
+			VisTextButton restartBtn = new VisTextButton("重新开始");
+			restartBtn.addListener(new ClickListener() {
+				@Override
+				public void clicked(InputEvent event, float x, float y) {
+					onRestart.run();
+					hide();
+				}
+			});
+
+			VisTextButton quitBtn = new VisTextButton("退出游戏");
+			quitBtn.addListener(new ClickListener() {
+				@Override
+				public void clicked(InputEvent event, float x, float y) {
+					onQuit.run();
+				}
+			});
+
+			VisTable btnTable = new VisTable();
+			btnTable.add(restartBtn).width(120).padRight(20);
+			btnTable.add(quitBtn).width(120);
+
+			content.add(btnTable);
+
+			pack();
+			centerWindow();
+		}
+	}
+
 	private class InventoryDialog extends BaseDialog {
 		public InventoryDialog() {
 			super("背包");
@@ -765,12 +808,25 @@ public class GameHUD {
 		currentTargetMonster = null;
 	}
 
+	public void reset() {
+		if (inventoryDialog.getParent() != null) inventoryDialog.remove();
+		if (helpWindow.getParent() != null) helpWindow.remove();
+		hideMonsterInfo();
+		logMessages.clear();
+		msgLabel.setText("");
+		setPaused(false);
+	}
+
 	public void showMessage(String msg) {
 		logMessages.add(msg);
 		if (logMessages.size() > 8) {
 			logMessages.remove(0);
 		}
 		msgLabel.setText(String.join("\n", logMessages));
+	}
+
+	public void showGameOver(Runnable onRestart, Runnable onQuit) {
+		new GameOverWindow(onRestart, onQuit).show(stage);
 	}
 
 	public void setPaused(boolean paused) {

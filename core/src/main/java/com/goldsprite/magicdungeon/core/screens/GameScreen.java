@@ -58,6 +58,7 @@ public class GameScreen extends GScreen {
 
 	private String cheatCodeBuffer = "";
 	public static boolean isPaused = false;
+	private boolean isGameOver = false;
 
 	private boolean wasAttackPressed = false;
 	private boolean wasInteractPressed = false;
@@ -455,6 +456,12 @@ public class GameScreen extends GScreen {
 	}
 
 	private void updateLogic(float delta) {
+		if (isGameOver) {
+			// Even if game over, we must update HUD so stage can act (process input/animations for dialogs)
+			hud.update(player, dungeon.level);
+			return;
+		}
+
 		// Game Input Handling (WASD)
 		int dx = 0;
 		int dy = 0;
@@ -559,7 +566,7 @@ public class GameScreen extends GScreen {
 				player.hitFlashTimer = 0.2f; // Trigger red flash
 				hud.showMessage("受到来自 " + m.name + " 的 " + damage + " 点伤害!");
 				if (player.stats.hp <= 0) {
-					hud.showMessage("游戏结束!");
+					triggerGameOver();
 				}
 			}
 			m.updateVisuals(delta);
@@ -570,6 +577,62 @@ public class GameScreen extends GScreen {
 
 		// Update HUD Data
 		hud.update(player, dungeon.level);
+	}
+
+	private void triggerGameOver() {
+		if (isGameOver) return;
+		isGameOver = true;
+		
+		// Play Game Over Sound and Stop BGM
+		if (audio != null) {
+			audio.stopBGM();
+			audio.playGameOver();
+		}
+		
+		hud.showGameOver(new Runnable() {
+			@Override
+			public void run() {
+				// Return to Main Menu
+				getScreenManager().setCurScreen(MainMenuScreen.class);
+			}
+		}, new Runnable() {
+			@Override
+			public void run() {
+				Gdx.app.exit();
+			}
+		});
+	}
+
+	private void restartGame() {
+		isGameOver = false;
+		isPaused = false;
+
+		// 1. Reset Dungeon World
+		dungeon.level = 1;
+		dungeon.globalSeed = System.currentTimeMillis(); // New random seed
+		dungeon.generate();
+
+		// 2. Clear History
+		visitedLevels.clear();
+
+		// 3. Reset Player
+		// Re-create player to reset all stats and inventory
+		player = new Player(dungeon.startPos.x, dungeon.startPos.y);
+		player.visualX = player.x * Constants.TILE_SIZE;
+		player.visualY = player.y * Constants.TILE_SIZE;
+
+		// 4. Reset Entities
+		spawnEntities();
+
+		// 5. Update UI
+		hud.reset();
+		hud.showMessage("游戏重新开始!");
+		// Important: Update HUD with new player instance
+		hud.update(player, dungeon.level);
+		// If HUD caches player reference (it does: currentPlayer), update ensures it's refreshed.
+		// However, check if HUD has other references that need update.
+		// HUD.update() does: this.currentPlayer = player; so it's fine.
+		// But inventory dialog? toggleInventory() uses currentPlayer, so it's fine.
 	}
 
 	private void draw(float delta) {
@@ -611,10 +674,10 @@ public class GameScreen extends GScreen {
 			// Use unified ItemRenderer for map rendering
 			// Center the item slightly in the tile (size 24 vs tile 32)
 			com.goldsprite.magicdungeon.ui.ItemRenderer.drawItem(
-				batch, 
-				item.item, 
-				item.visualX + 4, 
-				item.visualY + 4, 
+				batch,
+				item.item,
+				item.visualX + 4,
+				item.visualY + 4,
 				24
 			);
 		}
@@ -761,6 +824,24 @@ public class GameScreen extends GScreen {
 			hud.showMessage("游戏已加载!");
 		} else {
 			hud.showMessage("未找到存档!");
+		}
+	}
+
+	@Override
+	public void show() {
+		super.show();
+		// Resume BGM when screen is shown (if not game over)
+		if (audio != null && !isGameOver) {
+			audio.playBGM();
+		}
+	}
+
+	@Override
+	public void hide() {
+		super.hide();
+		// Stop BGM when screen is hidden (e.g. going to main menu)
+		if (audio != null) {
+			audio.stopBGM();
 		}
 	}
 
