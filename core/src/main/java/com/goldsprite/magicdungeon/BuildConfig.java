@@ -1,6 +1,6 @@
 package com.goldsprite.magicdungeon;
 public class BuildConfig {
 	public static final String PROJECT_NAME = "MagicDungeon";
-	public static final String DEV_VERSION = "0.1.0";
+	public static final String DEV_VERSION = "0.2.0";
 	public static final String JDK_VERSION = "17";
 }
