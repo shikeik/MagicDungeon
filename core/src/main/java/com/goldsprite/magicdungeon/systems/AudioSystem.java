@@ -61,10 +61,10 @@ public class AudioSystem {
 
 	// --- Convenience Methods (Legacy Support) ---
 
-	/** 移动音效: 极短促的脚步声 (白噪) */
+	/** 移动音效: 柔和的低频脉冲 */
 	public void playMove() {
-		// 0.02s 线性衰减噪音
-		playTone(0, WaveType.NOISE, 0.02f, 0.3f);
+		// 替换刺耳的白噪，使用极短的低频正弦波，类似软鞋底接触地面的声音
+		playTone(80, WaveType.SINE, 0.05f, 0.2f, 40);
 	}
 
 	/** 攻击音效: 快速下行的锯齿波 */
@@ -153,13 +153,15 @@ public class AudioSystem {
 		short[] outBuffer = new short[BUFFER_SIZE];
 
 		// BGM 状态机
-		int bpm = 80; // 较慢的速度，营造压抑感
+		int bpm = 110; // 提高BGM速度，增强动感 (Cyberpunk/Synthwave 常用速度)
 		int samplesPerBeat = (SAMPLE_RATE * 60) / (bpm * 4); // 16分音符
 		long sampleCounter = 0;
 		int step = 0; // 0-15
 
-		// 小调五声 (C Minor Pentatonic): C, Eb, F, G, Bb
-		float[] melodyScale = { 261.63f, 311.13f, 349.23f, 392.00f, 466.16f }; 
+		// C Minor Scale (C小调): C3, Eb3, F3, G3, Bb3 (低八度，减少刺耳感)
+		float[] melodyScale = { 130.81f, 155.56f, 174.61f, 196.00f, 233.08f }; 
+		// Bass Scale: C2, Eb2, F2, G2
+		float[] bassScale = { 65.41f, 77.78f, 87.31f, 98.00f };
 
 		@Override
 		public void run() {
@@ -201,31 +203,52 @@ public class AudioSystem {
 		}
 
 		private void triggerBeat(int s) {
-			// 1. Pulse (心跳律动): 每拍一次
+			// 1. Kick Drum (底鼓): 更有力的低频冲击
+			// 4/4拍强拍: 0, 4, 8, 12
 			if (s % 4 == 0) {
-				// 极低频正弦波
-				activeVoices.add(new Voice(60, WaveType.SINE, 0.15f, 0.4f, 40));
+				// 快速下潜的正弦波，模拟底鼓
+				activeVoices.add(new Voice(150, WaveType.SINE, 0.15f, 0.7f, 10));
 			}
 
-			// 2. Drone (环境底噪): 长音持续
-			// 每小节触发一次 (16步)
-			if (s == 0) {
-				// 两个接近频率产生拍频，低音量
-				activeVoices.add(new Voice(110, WaveType.TRIANGLE, 4.0f, 0.15f, 0));
-				activeVoices.add(new Voice(112, WaveType.TRIANGLE, 4.0f, 0.15f, 0));
+			// 2. Hi-Hat (踩镲): 闭镲，增加律动
+			// 反拍: 2, 6, 10, 14
+			if (s % 4 == 2) {
+				// 极短的噪音，音量降低防止刺耳
+				activeVoices.add(new Voice(0, WaveType.NOISE, 0.03f, 0.15f, 0));
+			}
+			// 16分音符弱拍点缀: 奇数位
+			if (s % 2 == 1 && MathUtils.randomBoolean(0.5f)) {
+				activeVoices.add(new Voice(0, WaveType.NOISE, 0.01f, 0.1f, 0));
 			}
 
-			// 3. Eerie Melody (随机旋律): 随机触发
-			if (s % 2 == 0 && MathUtils.randomBoolean(0.25f)) {
+			// 3. Bassline (贝斯): 16分音符驱动，锯齿波低通滤波效果(模拟)
+			// 逻辑: 每一拍变换一个音，或者持续律动
+			if (s % 2 == 0) { // 8分音符
+				float note = bassScale[MathUtils.random(bassScale.length - 1)];
+				// 使用三角波代替锯齿波，声音更圆润厚实，不刺耳
+				activeVoices.add(new Voice(note, WaveType.TRIANGLE, 0.15f, 0.4f, 0));
+				// 叠加一个低八度正弦波增强厚度
+				activeVoices.add(new Voice(note / 2, WaveType.SINE, 0.15f, 0.5f, 0));
+			}
+
+			// 4. Lead Melody (主旋律): 减少随机性，增加回声感
+			// 使用正弦波代替方波，更加空灵
+			if (s % 8 == 0 || (s % 8 == 6 && MathUtils.randomBoolean(0.4f))) {
 				float note = melodyScale[MathUtils.random(melodyScale.length - 1)];
-				// 方波，带一点滑音效果
-				activeVoices.add(new Voice(note, WaveType.SQUARE, 0.3f, 0.15f, note - 5));
+				// 正弦波 + 慢速Attack (模拟Pad音色)
+				activeVoices.add(new Voice(note, WaveType.SINE, 0.4f, 0.3f, 0));
 				
-				// 简单的回声 (Delay)
+				// Delay/Echo
 				new Thread(() -> {
-					try { Thread.sleep(300); } catch (Exception e) {}
-					activeVoices.add(new Voice(note, WaveType.SQUARE, 0.3f, 0.08f, note - 5));
+					try { Thread.sleep(250); } catch (Exception e) {}
+					activeVoices.add(new Voice(note, WaveType.SINE, 0.4f, 0.15f, 0));
 				}).start();
+			}
+
+			// 5. Arp (琶音点缀): 极高频，极低音量，增加空间感
+			if (MathUtils.randomBoolean(0.1f)) {
+				float note = melodyScale[MathUtils.random(melodyScale.length - 1)] * 2;
+				activeVoices.add(new Voice(note, WaveType.SINE, 0.1f, 0.1f, 0));
 			}
 		}
 	}
