@@ -340,16 +340,17 @@ public class GameHUD {
 		
 		private void useItem() {
 			if (currentItem != null && player != null) {
-				player.equip(currentItem);
-				showMessage("使用了 " + currentItem.data.name);
+				InventoryItem itemToUse = currentItem; // Cache reference
+				player.equip(itemToUse);
+				showMessage("使用了 " + itemToUse.data.name);
 				updateInventory(player); // Refresh Inventory Dialog if open
-				update(player); // Refresh self
+				update(player); // Refresh self (currentItem might become null here)
 				
 				// Update Bars Immediately
-				if (currentItem.data == ItemData.Health_Potion) {
+				if (itemToUse.data == ItemData.Health_Potion) {
 					hpBar.setValue(player.stats.hp);
 					hpLabel.setText(player.stats.hp + "/" + player.stats.maxHp);
-				} else if (currentItem.data == ItemData.Mana_Potion) {
+				} else if (itemToUse.data == ItemData.Mana_Potion) {
 					manaBar.setValue(player.stats.mana);
 					manaLabel.setText(player.stats.mana + "/" + player.stats.maxMana);
 				}

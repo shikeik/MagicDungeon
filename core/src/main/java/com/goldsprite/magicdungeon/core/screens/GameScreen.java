@@ -110,7 +110,7 @@ public class GameScreen extends GScreen {
 		this.items = new ArrayList<>();
 
 		// Start at Camp
-		enterCamp();
+		enterCamp(false);
 
 		// Scene2D HUD
 		// 传递 uiViewport 给 HUD
@@ -123,7 +123,7 @@ public class GameScreen extends GScreen {
 		});
 
 		hud.setReturnToCampListener(() -> {
-			returnToCamp();
+			enterCamp(false);
 		});
 		getImp().addProcessor(hud.stage);
 
@@ -165,16 +165,16 @@ public class GameScreen extends GScreen {
 		visitedLevels.put(dungeon.level, new LevelState(monsterStates, itemStates));
 	}
 
-	private void enterCamp() {
-		boolean fromDungeon = dungeon.level > 0;
-		if (dungeon.level > 0) {
+	private void enterCamp(boolean fromStairs) {
+		boolean wasInDungeon = dungeon.level > 0;
+		if (wasInDungeon) {
 			saveCurrentLevelState();
 		}
 		
 		dungeon.level = 0;
 		dungeon.generate();
 		
-		if (fromDungeon) {
+		if (fromStairs && wasInDungeon) {
 			// Find Dungeon Entrance position
 			GridPoint2 entPos = findTilePosition(TileType.Dungeon_Entrance);
 			if (entPos != null) {
@@ -262,10 +262,12 @@ public class GameScreen extends GScreen {
 		
 		// 2. Must be on Stairs Up (changed from Stairs Down)
 		Tile tile = dungeon.getTile(player.x, player.y);
+		/* // Disabled strict check for now, allow return anytime via UI button?
 		if (tile == null || tile.type != TileType.Stairs_Up) {
 			hud.showMessage("你需要站在上层入口处才能返回营地。");
 			return;
 		}
+		*/
 		
 		// 3. No monsters in room?
 		// Simple check: visible range? or active monsters?
@@ -283,7 +285,7 @@ public class GameScreen extends GScreen {
 			return;
 		}
 		
-		enterCamp();
+		enterCamp(false);
 	}
 
 	private void restoreLevelState(int level) {
@@ -709,7 +711,7 @@ public class GameScreen extends GScreen {
 						enterDungeon(dungeon.level - 1);
 					} else {
 						// Level 1 -> Camp
-						enterCamp();
+						enterCamp(true);
 					}
 				} else if (tile.type == TileType.Dungeon_Entrance) {
 					// Show Level Selection
@@ -792,7 +794,7 @@ public class GameScreen extends GScreen {
 				maxDepth = 1;
 
 				// Enter Camp
-				enterCamp();
+				enterCamp(false);
 
 				hud.showMessage("你已复活。一切归零。");
 			}
