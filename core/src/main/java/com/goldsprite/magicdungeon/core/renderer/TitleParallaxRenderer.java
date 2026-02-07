@@ -5,21 +5,21 @@ import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 
 public class TitleParallaxRenderer {
-    
+
     private float stateTime = 0;
-    
+
     // Colors
     private static final Color COL_SKY_TOP = Color.valueOf("0B0E25");
     private static final Color COL_SKY_BOT = Color.valueOf("1B264F");
     private static final Color COL_MOON = Color.valueOf("FDFDC0");
     private static final Color COL_MOON_GLOW = new Color(1, 1, 1, 0.1f);
-    
+
     private static final Color COL_TOWER = Color.valueOf("15111A");
     private static final Color COL_TOWER_WIN = Color.valueOf("D93B3B"); // Red light
-    
+
     private static final Color COL_MTN_FAR = Color.valueOf("0A0A0A");
     private static final Color COL_MTN_NEAR = Color.valueOf("111111");
-    
+
     private static final Color COL_DRAGON_BODY = Color.valueOf("2D2D2D");
     private static final Color COL_DRAGON_OUTLINE = Color.valueOf("000000");
     private static final Color COL_DRAGON_EYE = Color.valueOf("FF0000");
@@ -55,7 +55,7 @@ public class TitleParallaxRenderer {
         // 1. Sky (Static gradient)
         // Draw using gradient rect simulation (or just solid for now if NeonBatch doesn't support easy gradient rect)
         // NeonBatch supports gradient via drawSkewGradientRect or custom vertices.
-        // Let's use drawSkewGradientRect with 0 skew for vertical gradient? 
+        // Let's use drawSkewGradientRect with 0 skew for vertical gradient?
         // Wait, drawSkewGradientRect is Horizontal gradient (Left-Right).
         // For Vertical, we can use drawTriangleStrip with custom colors.
         drawSky(batch, width, height);
@@ -121,10 +121,10 @@ public class TitleParallaxRenderer {
             float x = (stars[i*3] * w + scrollX * 0.1f) % w; // Loop stars
             float y = stars[i*3+1] * h;
             float size = stars[i*3+2];
-            
+
             float alpha = 0.5f + 0.5f * MathUtils.sin(stateTime * 3f + i);
             Color c = new Color(1,1,1, alpha);
-            
+
             batch.drawCircle(x, y, size, 0, c, 8, true);
         }
     }
@@ -135,16 +135,16 @@ public class TitleParallaxRenderer {
         float baseH = h * 0.2f;
         float peakH = h * 0.4f;
         float segmentW = 100f;
-        
+
         int segments = (int)(w / segmentW) + 4;
         float startX = -(scrollX % segmentW) - segmentW;
-        
+
         // Far Mountains
         for(int i=0; i<segments; i++) {
             float x1 = startX + i * segmentW;
             float seed = (int)(scrollX / segmentW) + i; // Pseudo random based on position
             float h1 = baseH + MathUtils.sin(seed)*50 + MathUtils.cos(seed * 0.5f)*30;
-            
+
             // Draw a big triangle
             float[] poly = new float[] {
                 x1, 0,
@@ -160,18 +160,18 @@ public class TitleParallaxRenderer {
         // Let's place it at x=800 initially
         float towerWorldX = 800f;
         float drawX = towerWorldX - scrollX; // Moves left
-        
+
         // Loop it or just let it pass? For title screen, maybe loop it far away
         float loopW = 2000f;
         drawX = (drawX % loopW);
         if(drawX < -200) drawX += loopW;
-        
+
         float tw = 80f;
         float th = h * 0.6f;
-        
+
         // Base
         batch.drawRect(drawX, 0, tw, th, 0, 0, COL_TOWER, true);
-        
+
         // Top Spire
         float[] spire = new float[] {
             drawX - 10, th,
@@ -179,7 +179,7 @@ public class TitleParallaxRenderer {
             drawX + tw/2, th + 100
         };
         batch.drawPolygon(spire, 3, 0, COL_TOWER, true);
-        
+
         // Windows
         int floors = 5;
         for(int i=0; i<floors; i++) {
@@ -190,103 +190,201 @@ public class TitleParallaxRenderer {
     }
 
     private void drawDragon(NeonBatch batch, float w, float h) {
-        // Right side of screen
-        float centerX = w * 0.8f;
+        // Right side of screen (More centered but offset right)
+        float centerX = w * 0.7f;
         float centerY = h * 0.5f;
-        
+
         // Hover animation
-        float hoverY = MathUtils.sin(stateTime) * 20f;
-        
-        // 1. Wings (Back)
-        float wingSpan = 200f;
-        float wingFlap = MathUtils.sin(stateTime * 2f) * 0.2f;
-        
-        float[] wingL = new float[] {
-            centerX, centerY + hoverY,
-            centerX - wingSpan, centerY + 150 + hoverY - wingFlap*100,
-            centerX - wingSpan/2, centerY - 50 + hoverY
+        float hoverY = MathUtils.sin(stateTime * 1.5f) * 15f;
+
+        // --- 1. Wings (More detailed & animated) ---
+        float wingSpan = 220f;
+        float wingFlap = MathUtils.sin(stateTime * 3f) * 0.3f;
+
+        // Wing Structure (Bone)
+        float wx = centerX + 20;
+        float wy = centerY + 80 + hoverY;
+        float wTipX = centerX - wingSpan;
+        float wTipY = wy + 120 - wingFlap * 100;
+
+        // Draw Wing Membrane (Translucent)
+        // Use a fan shape for membrane
+        float[] wingMembrane = new float[] {
+            wx, wy, // Shoulder
+            wTipX, wTipY, // Tip
+            wTipX + 50, wTipY - 80, // Edge 1
+            wTipX + 100, wTipY - 60, // Edge 2
+            centerX - 20, centerY + hoverY // Back to body
         };
-        batch.drawPolygon(wingL, 3, 0, COL_DRAGON_WING, true);
-        
-        // 2. Body (Bezier S-shape)
-        // Tail -> Head
-        float tailX = centerX + 150;
-        float tailY = centerY - 200 + hoverY;
-        float headX = centerX - 50;
-        float headY = centerY + 100 + hoverY;
-        
-        // Control points for S-curve
-        float cp1x = centerX + 200; 
-        float cp1y = centerY + hoverY;
-        float cp2x = centerX - 100;
-        float cp2y = centerY - 50 + hoverY;
-        
-        // Use multiple quadratic or one cubic? NeonBatch has Cubic.
-        float[] curve = new float[] {
-            tailX, tailY,
-            cp1x, cp1y,
-            cp2x, cp2y,
-            headX, headY
-        };
-        
-        // Draw thick body segments manually or thick line
-        // NeonBatch drawCubicBezier draws a line.
-        // To make it look like a body, we can draw multiple parallel lines or just a very thick line.
-        // Let's try a thick line first.
-        batch.drawCubicBezier(curve, 40f, COL_DRAGON_BODY, 20);
-        
-        // 3. Head (Polygon)
-        float[] head = new float[] {
-            headX - 10, headY - 10,
-            headX - 60, headY + 10, // Snout
-            headX - 10, headY + 40, // Horn base
-            headX + 20, headY + 20
-        };
-        batch.drawPolygon(head, 4, 0, COL_DRAGON_BODY, true);
-        
-        // Eye
-        batch.drawCircle(headX - 30, headY + 15, 5, 0, COL_DRAGON_EYE, 8, true);
+        batch.drawPolygon(wingMembrane, 5, 0, COL_DRAGON_WING, true);
+
+        // Wing Bones (Thick Lines)
+        batch.drawLine(wx, wy, wTipX, wTipY, 8f, COL_DRAGON_BODY);
+        batch.drawLine(wTipX, wTipY, wTipX + 50, wTipY - 80, 4f, COL_DRAGON_BODY);
+
+        // --- 2. Body (Segmented for volume) ---
+        // Instead of a single line, we draw a series of circles along the path
+
+        // Tail -> Head Path Control
+        float tX = centerX + 180;
+        float tY = centerY - 250 + hoverY * 0.5f;
+        float hX = centerX - 80;
+        float hY = centerY + 120 + hoverY;
+
+        // Control Points
+        float c1x = centerX + 250; float c1y = centerY + hoverY;
+        float c2x = centerX - 150; float c2y = centerY - 50 + hoverY;
+
+        int segments = 40;
+        for(int i=0; i<=segments; i++) {
+            float t = i / (float)segments;
+            float u = 1 - t;
+            float tt = t*t; float uu = u*u;
+            float uuu = uu*u; float ttt = tt*t;
+
+            // Cubic Bezier Point
+            float px = uuu * tX + 3 * uu * t * c1x + 3 * u * tt * c2x + ttt * hX;
+            float py = uuu * tY + 3 * uu * t * c1y + 3 * u * tt * c2y + ttt * hY;
+
+            // Radius tapers from chest to tail
+            // t=0 (tail), t=1 (head)
+            // Chest is around t=0.7
+            float radius;
+            if (t < 0.7f) {
+                radius = 10f + t * 50f; // 10 -> 45
+            } else {
+                radius = 45f - (t-0.7f) * 60f; // 45 -> 27
+            }
+            radius = Math.max(5f, radius);
+
+            // Body Segment
+            batch.drawCircle(px, py, radius, 0, COL_DRAGON_BODY, 12, true);
+
+            // Spikes (Dorsal fin) - Every few segments
+            if (i % 3 == 0 && i < segments - 2) {
+                // Approximate normal (simplified, just pointing up/back)
+                float spikeH = 20f;
+                batch.drawPolygon(new float[]{
+                    px - 5, py + radius*0.5f,
+                    px + 5, py + radius*0.5f,
+                    px, py + radius + spikeH
+                }, 3, 0, COL_DRAGON_OUTLINE, true);
+            }
+        }
+
+        // --- 3. Head (More menacing) ---
+        // Jaw
+        batch.drawPolygon(new float[]{
+            hX + 10, hY - 10,
+            hX - 50, hY - 20, // Lower jaw tip
+            hX - 20, hY + 10
+        }, 3, 0, COL_DRAGON_BODY, true);
+
+        // Upper Head
+        batch.drawPolygon(new float[]{
+            hX + 20, hY + 10,
+            hX - 70, hY + 20, // Snout tip
+            hX - 30, hY + 50, // Forehead
+            hX + 30, hY + 30
+        }, 4, 0, COL_DRAGON_BODY, true);
+
+        // Horns
+        batch.drawPolygon(new float[]{
+            hX + 10, hY + 40,
+            hX + 40, hY + 90, // Horn tip
+            hX + 30, hY + 40
+        }, 3, 0, COL_DRAGON_OUTLINE, true);
+
+        // Glowing Eye (Pulsing)
+        float eyePulse = 1f + MathUtils.sin(stateTime * 5f) * 0.3f;
+        batch.drawCircle(hX - 30, hY + 25, 6 * eyePulse, 0, COL_DRAGON_EYE, 8, true);
+
+        // Breath Particles (Fire)
+        if (MathUtils.randomBoolean(0.3f)) {
+            float pX = hX - 70;
+            float pY = hY + 10;
+            batch.drawRect(pX - MathUtils.random(20), pY - MathUtils.random(10),
+                           MathUtils.random(5,10), MathUtils.random(5,10),
+                           MathUtils.random(360), 0, new Color(1, 0.2f, 0, 0.8f), true);
+        }
     }
 
     private void drawHero(NeonBatch batch, float w, float h) {
-        float cx = w * 0.25f;
-        float cy = h * 0.25f; // On a hill?
-        
-        // Bobbing
-        float bob = MathUtils.sin(stateTime * 3f) * 2f;
-        
-        // 1. Cape (Flowing)
-        float capeEndY = cy - 20 + MathUtils.sin(stateTime * 5f) * 10f;
-        float capeEndX = cx - 60;
-        
-        batch.drawQuadraticBezier(cx, cy + 30, cx - 30, cy + 10, capeEndX, capeEndY, 5f, COL_HERO_CAPE, 10);
-        
-        // Fill Cape (Triangle approx)
-        float[] capePoly = new float[] {
-            cx, cy + 30,
-            cx, cy - 10,
-            capeEndX, capeEndY
-        };
-        batch.drawPolygon(capePoly, 3, 0, COL_HERO_CAPE, true);
+        float cx = w * 0.35f;
+        float cy = h * 0.3f; // Slightly higher
 
-        // 2. Body
-        batch.drawRect(cx - 10, cy, 20, 40, 0, 0, COL_HERO_BODY, true);
-        
-        // 3. Head
-        batch.drawCircle(cx, cy + 50, 12, 0, COL_HERO_BODY, 16, true);
-        
-        // 4. Sword (Glowing)
-        float swAngle = 45f + MathUtils.sin(stateTime) * 5f; // Breathing stance
-        // Pivot at hand (cx+10, cy+20)
-        float hx = cx + 10;
-        float hy = cy + 20;
-        
-        float len = 60f;
+        // Breathing animation
+        float breath = MathUtils.sin(stateTime * 2f) * 2f;
+
+        // 1. Cape (More dynamic flow)
+        // Simulate wave passing through cape
+        int capeSegs = 10;
+        float[] capeVerts = new float[(capeSegs + 1) * 2 * 2]; // Triangle strip
+        float capeLen = 80f;
+
+        // Attach point (Shoulders)
+        float sx = cx - 5;
+        float sy = cy + 45 + breath;
+
+        // Draw Cape using Bezier curve + thickness simulation
+        float endX = sx - capeLen - 20 + MathUtils.sin(stateTime)*10;
+        float endY = sy - 40 + MathUtils.cos(stateTime * 1.5f)*10;
+
+        // Cape Body
+        batch.drawQuadraticBezier(sx, sy, sx - 30, sy - 50, endX, endY, 20f, COL_HERO_CAPE, 10);
+
+        // 2. Legs (Stance)
+        batch.drawRect(cx - 15, cy, 12, 45, 10, 0, COL_HERO_BODY, true); // Left leg
+        batch.drawRect(cx + 5, cy, 12, 45, -10, 0, COL_HERO_BODY, true); // Right leg
+
+        // 3. Torso (Armor Plate)
+        // Use a hexagon for armor look
+        float bodyY = cy + 35 + breath;
+        batch.drawPolygon(new float[] {
+            cx, bodyY - 25, // Waist
+            cx - 15, bodyY, // Left shoulder
+            cx, bodyY + 10, // Neck base
+            cx + 15, bodyY  // Right shoulder
+        }, 4, 0, COL_HERO_BODY, true);
+
+        // 4. Head (Helmet)
+        float headY = cy + 65 + breath;
+        // Helmet base
+        batch.drawRect(cx - 10, headY - 10, 20, 25, 0, 0, COL_HERO_BODY, true);
+        // Visor (Dark slit)
+        batch.drawRect(cx - 8, headY, 16, 4, 0, 0, Color.BLACK, true);
+        // Plume/Crest
+        batch.drawPolygon(new float[] {
+            cx - 5, headY + 15,
+            cx + 5, headY + 15,
+            cx - 10, headY + 35
+        }, 3, 0, COL_HERO_CAPE, true);
+
+        // 5. Sword (Big Glowing Energy Blade)
+        float swAngle = 30f + MathUtils.sin(stateTime * 2f) * 2f;
+        float hx = cx + 20; // Hand pos
+        float hy = bodyY - 5;
+
+        float bladeLen = 90f;
+        float bladeW = 8f;
         float rad = swAngle * MathUtils.degreesToRadians;
-        float tipX = hx + MathUtils.cos(rad) * len;
-        float tipY = hy + MathUtils.sin(rad) * len;
-        
-        batch.drawLine(hx, hy, tipX, tipY, 4f, COL_HERO_SWORD);
+        float cos = MathUtils.cos(rad);
+        float sin = MathUtils.sin(rad);
+
+        float tipX = hx + cos * bladeLen;
+        float tipY = hy + sin * bladeLen;
+
+        // Hilt
+        batch.drawLine(hx, hy, hx - cos*20, hy - sin*20, 4f, Color.DARK_GRAY);
+        // Guard
+        batch.drawLine(hx - sin*10, hy + cos*10, hx + sin*10, hy - cos*10, 4f, Color.GOLD);
+
+        // Blade (Core)
+        batch.drawLine(hx, hy, tipX, tipY, bladeW, Color.WHITE);
+        // Blade (Glow)
+        Color glowCol = new Color(COL_HERO_SWORD);
+        glowCol.a = 0.5f + MathUtils.sin(stateTime * 10f) * 0.2f;
+        batch.drawLine(hx, hy, tipX, tipY, bladeW * 2.5f, glowCol);
     }
 
     private void drawGround(NeonBatch batch, float w, float h, float scrollX) {
@@ -294,29 +392,29 @@ public class TitleParallaxRenderer {
         float[] verts = new float[22]; // 10 segments -> 20 verts + 2 ends
         int segments = 10;
         float step = w / (segments-1);
-        
-        // Triangle strip for ground? 
+
+        // Triangle strip for ground?
         // Or just polygon. Polygon is easier for filling bottom.
         // Let's make a big polygon
         float[] poly = new float[(segments + 2) * 2];
-        
+
         // Start bottom-left
         poly[0] = 0; poly[1] = 0;
-        
+
         for(int i=0; i<segments; i++) {
             float x = i * step;
             // Ground height noise
             float worldX = x + scrollX;
             float y = 50 + MathUtils.sin(worldX * 0.01f) * 20 + MathUtils.cos(worldX * 0.05f) * 10;
-            
+
             poly[(i+1)*2] = x;
             poly[(i+1)*2+1] = y;
         }
-        
+
         // End bottom-right
         poly[(segments+1)*2] = w;
         poly[(segments+1)*2+1] = 0;
-        
+
         batch.drawPolygon(poly, segments+2, 0, COL_MTN_NEAR, true);
     }
 
@@ -324,7 +422,7 @@ public class TitleParallaxRenderer {
         // Embers rising
         // For simplicity, just draw random rects based on hash of time+index
         // A real particle system would be better but this is "Neon" procedural.
-        
+
         int count = 20;
         for(int i=0; i<count; i++) {
             // Pseudo-random lifecycle
@@ -332,13 +430,13 @@ public class TitleParallaxRenderer {
             float timeOffset = i * (loopTime / count);
             float t = (stateTime + timeOffset) % loopTime;
             float progress = t / loopTime;
-            
+
             float x = (i * 7393 + 123) % w;
             float y = progress * h; // Rising
-            
+
             float alpha = 1f - progress;
             float size = 4f * (1f - progress);
-            
+
             Color c = new Color(1, 0.5f, 0, alpha);
             batch.drawRect(x, y, size, size, progress * 360, 0, c, true);
         }
