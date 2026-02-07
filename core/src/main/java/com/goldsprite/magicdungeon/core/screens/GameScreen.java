@@ -165,31 +165,46 @@ public class GameScreen extends GScreen {
 	}
 
 	private void enterCamp() {
+		boolean fromDungeon = dungeon.level > 0;
 		if (dungeon.level > 0) {
 			saveCurrentLevelState();
 		}
-
+		
 		dungeon.level = 0;
 		dungeon.generate();
-
-		player.x = dungeon.startPos.x;
-		player.y = dungeon.startPos.y;
+		
+		if (fromDungeon) {
+			// Find Dungeon Entrance position
+			GridPoint2 entPos = findTilePosition(TileType.Dungeon_Entrance);
+			if (entPos != null) {
+				player.x = entPos.x;
+				player.y = entPos.y;
+			} else {
+				player.x = dungeon.startPos.x;
+				player.y = dungeon.startPos.y;
+			}
+		} else {
+			player.x = dungeon.startPos.x;
+			player.y = dungeon.startPos.y;
+		}
+		
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
-
+		
 		monsters.clear();
 		items.clear();
-
+		
 		if (hud != null) hud.showMessage("回到了营地.");
 	}
-
+	
 	private void enterDungeon(int level) {
+		int prevLevel = dungeon.level;
 		if (dungeon.level > 0) {
 			saveCurrentLevelState();
 		}
-
+		
 		dungeon.level = level;
-
+		
 		if (visitedLevels.containsKey(level)) {
 			// Restore
 			dungeon.generate(); // Re-generate geometry (same seed)
@@ -199,18 +214,41 @@ public class GameScreen extends GScreen {
 			dungeon.generate();
 			spawnEntities();
 		}
-
-		// Reset player to start if not restored?
-		// Actually restoreLevelState handles entities, but position?
-		// Usually we want to start at StartPos when entering a level unless we track exit pos.
-		// For simplicity: always start at StartPos (Stairs Up).
-		player.x = dungeon.startPos.x;
-		player.y = dungeon.startPos.y;
+		
+		// Set Player Position
+		if (level < prevLevel) {
+			// Going UP (e.g. 2 -> 1): Spawn at Stairs Down
+			GridPoint2 downPos = findTilePosition(TileType.Stairs_Down);
+			if (downPos != null) {
+				player.x = downPos.x;
+				player.y = downPos.y;
+			} else {
+				player.x = dungeon.startPos.x; // Fallback
+				player.y = dungeon.startPos.y;
+			}
+		} else {
+			// Going DOWN (e.g. 1 -> 2) or from Camp (0 -> X): Spawn at Start (Stairs Up)
+			player.x = dungeon.startPos.x;
+			player.y = dungeon.startPos.y;
+		}
+		
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
-
+		
 		hud.showMessage("进入了第 " + level + " 层.");
 		if (level > maxDepth) maxDepth = level;
+	}
+	
+	private GridPoint2 findTilePosition(TileType type) {
+		for (int y = 0; y < dungeon.height; y++) {
+			for (int x = 0; x < dungeon.width; x++) {
+				Tile t = dungeon.getTile(x, y);
+				if (t != null && t.type == type) {
+					return new GridPoint2(x, y);
+				}
+			}
+		}
+		return null;
 	}
 
 	private void returnToCamp() {
