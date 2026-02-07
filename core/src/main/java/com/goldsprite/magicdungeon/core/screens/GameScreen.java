@@ -58,6 +58,9 @@ public class GameScreen extends GScreen {
 	private String cheatCodeBuffer = "";
 	public static boolean isPaused = false;
 
+	private boolean wasAttackPressed = false;
+	private boolean wasInteractPressed = false;
+
 	public GameScreen() {
 		this(MathUtils.random(Long.MIN_VALUE, Long.MAX_VALUE));
 	}
@@ -451,6 +454,18 @@ public class GameScreen extends GScreen {
 		if (Gdx.input.isKeyPressed(Input.Keys.W)) dy = 1;
 		if (Gdx.input.isKeyPressed(Input.Keys.S)) dy = -1;
 
+		// Android Touchpad Support
+		Vector2 pad = hud.getMovementDirection();
+		if (pad.len() > 0.3f) {
+			if (Math.abs(pad.x) > Math.abs(pad.y)) {
+				dx = pad.x > 0 ? 1 : -1;
+				dy = 0;
+			} else {
+				dy = pad.y > 0 ? 1 : -1;
+				dx = 0;
+			}
+		}
+
 		if (dx != 0 || dy != 0) {
 			// Auto-select target monster if attacking
 			int nextX = player.x + dx;
@@ -466,7 +481,11 @@ public class GameScreen extends GScreen {
 		}
 
 		// Use Potion (Health) - SPACE
-		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+		boolean isSpacePressed = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+		boolean isAttackBtnJustPressed = hud.isAttackPressed() && !wasAttackPressed;
+		wasAttackPressed = hud.isAttackPressed();
+
+		if (isSpacePressed || isAttackBtnJustPressed) {
 			// Simple heal logic (if no items)
 			if (player.stats.mana >= 10) {
 				player.stats.mana -= 10;
@@ -479,7 +498,11 @@ public class GameScreen extends GScreen {
 		}
 
 		// Interact / Next Level - E
-		if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.E)) {
+		boolean isEPressed = Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.E);
+		boolean isInteractBtnJustPressed = hud.isInteractPressed() && !wasInteractPressed;
+		wasInteractPressed = hud.isInteractPressed();
+
+		if (isEPressed || isInteractBtnJustPressed) {
 			Tile tile = dungeon.getTile(player.x, player.y);
 			if (tile != null) {
 				if (tile.type == TileType.Stairs_Down) {
@@ -492,6 +515,7 @@ public class GameScreen extends GScreen {
 
 		// Update Player
 		player.update(delta, dungeon, dx, dy, monsters, audio);
+
 
 		// Item Pickup
 		for (int i = 0; i < items.size(); i++) {

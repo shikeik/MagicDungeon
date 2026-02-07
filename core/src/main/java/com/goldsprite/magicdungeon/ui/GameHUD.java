@@ -1,10 +1,13 @@
 package com.goldsprite.magicdungeon.ui;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Application.ApplicationType;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
@@ -13,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
@@ -27,6 +31,7 @@ import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.entities.Monster;
 import com.goldsprite.magicdungeon.entities.Player;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
+import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
 import java.util.ArrayList;
@@ -70,6 +75,13 @@ public class GameHUD {
 	private VisTextButton saveBtn;
 	private VisTextButton helpBtn;
 	private BaseDialog helpWindow;
+
+	// Android Controls
+	private Touchpad touchpad;
+	private VisTextButton attackBtn;
+	private VisTextButton interactBtn;
+	private boolean isAttackPressed;
+	private boolean isInteractPressed;
 
 	// Assets
 	private Texture slotBgTexture;
@@ -274,6 +286,73 @@ public class GameHUD {
 		// --- Windows ---
 		inventoryDialog = new InventoryDialog();
 		createHelpWindow();
+
+		// --- Android Controls ---
+		if (Gdx.app.getType() == ApplicationType.Android) {
+			createAndroidControls();
+		}
+	}
+
+	private void createAndroidControls() {
+		// Touchpad (Bottom Left)
+		touchpad = new Touchpad(10, VisUI.getSkin());
+		touchpad.setSize(200, 200);
+		// Manual positioning for overlay feel
+		touchpad.setPosition(20, 20);
+		// Make it semi-transparent
+		touchpad.setColor(1f, 1f, 1f, 0.7f);
+		stage.addActor(touchpad);
+
+		// Action Buttons (Bottom Right)
+		VisTable actionTable = new VisTable();
+		actionTable.bottom().right();
+
+		// Interact Button (E)
+		interactBtn = new VisTextButton("交互"); // Interact
+		interactBtn.addListener(new InputListener() {
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				isInteractPressed = true;
+				return true;
+			}
+			@Override
+			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+				isInteractPressed = false;
+			}
+		});
+
+		// Attack/Use Button (Space)
+		attackBtn = new VisTextButton("动作"); // Action
+		attackBtn.addListener(new InputListener() {
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				isAttackPressed = true;
+				return true;
+			}
+			@Override
+			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+				isAttackPressed = false;
+			}
+		});
+
+		// Layout buttons
+		// [Interact]
+		//        [Attack]
+		// Stacked or side-by-side?
+		// Ideally: Attack is big, Interact is smaller nearby.
+
+		// Let's use absolute positioning for better ergonomic control on mobile
+		float screenW = stage.getWidth();
+
+		attackBtn.setSize(120, 120);
+		attackBtn.setPosition(screenW - 140, 40);
+		attackBtn.setColor(1f, 1f, 1f, 0.7f);
+		stage.addActor(attackBtn);
+
+		interactBtn.setSize(90, 90);
+		interactBtn.setPosition(screenW - 140 - 100, 20); // To the left of Attack
+		interactBtn.setColor(1f, 1f, 1f, 0.7f);
+		stage.addActor(interactBtn);
 	}
 
 	private void initStyles() {
@@ -639,6 +718,19 @@ public class GameHUD {
 
 	public void updateInventoryDialog(Player player) {
 		updateInventory(player);
+	}
+
+	public Vector2 getMovementDirection() {
+		if (touchpad == null) return new Vector2(0,0);
+		return new Vector2(touchpad.getKnobPercentX(), touchpad.getKnobPercentY());
+	}
+
+	public boolean isAttackPressed() {
+		return isAttackPressed;
+	}
+
+	public boolean isInteractPressed() {
+		return isInteractPressed;
 	}
 
 	public void setSaveListener(Runnable saveListener) {
