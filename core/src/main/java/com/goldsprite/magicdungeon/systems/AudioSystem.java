@@ -158,8 +158,16 @@ public class AudioSystem {
 
 		// BGM 状态机
 		int bpm = 110; // 提高BGM速度，增强动感 (Cyberpunk/Synthwave 常用速度)
-		int samplesPerBeat = (SAMPLE_RATE * 60) / (bpm * 4); // 16分音符
-		long sampleCounter = 0;
+		
+		// 采样级计数器需要更精确
+		// SAMPLE_RATE = 44100
+		// Beat Duration = 60 / BPM
+		// 16th Note Duration = Beat Duration / 4 = 15 / BPM
+		// Samples Per 16th = SAMPLE_RATE * 15 / BPM
+		// 对于 110 BPM: 44100 * 15 / 110 ≈ 6013.63
+		// 使用 float 累加器以保持长期精度，避免整数截断误差累积
+		float samplesPerStep = (SAMPLE_RATE * 15f) / bpm;
+		float sampleCounter = 0;
 		int step = 0; // 0-15
 
 		// C Minor Scale (C小调): C3, Eb3, F3, G3, Bb3 (低八度，减少刺耳感)
@@ -169,6 +177,9 @@ public class AudioSystem {
 
 		@Override
 		public void run() {
+			// 设置线程优先级为最高，以减少系统调度带来的延迟抖动
+			Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+			
 			while (running) {
 				// --- 1. BGM Sequencer Logic (Sample Precise) ---
 				// 移动到混音循环内部以获得采样级精度
@@ -179,8 +190,8 @@ public class AudioSystem {
 					// BGM Trigger Check per Sample
 					if (bgmEnabled) {
 						sampleCounter++;
-						if (sampleCounter >= samplesPerBeat) {
-							sampleCounter -= samplesPerBeat;
+						if (sampleCounter >= samplesPerStep) {
+							sampleCounter -= samplesPerStep;
 							triggerBeat(step);
 							step = (step + 1) % 16;
 						}
@@ -209,11 +220,10 @@ public class AudioSystem {
 					outBuffer[i] = (short) (val * 32767);
 				}
 				
-				if (hasSound || bgmEnabled) { // BGM开启时始终写入，保持时钟连续
-					device.writeSamples(outBuffer, 0, BUFFER_SIZE);
-				} else {
-					try { Thread.sleep(10); } catch (InterruptedException e) {}
-				}
+				// 关键修复：始终写入音频数据，无论是否有声音
+				// 这确保了音频设备的缓冲区始终被填满，维持稳定的时钟
+				// 避免在静音时暂停写入导致的后续写入延迟
+				device.writeSamples(outBuffer, 0, BUFFER_SIZE);
 			}
 		}
 
