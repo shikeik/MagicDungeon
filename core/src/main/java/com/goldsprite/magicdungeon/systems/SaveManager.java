@@ -64,7 +64,8 @@ public class SaveManager {
 				item.item.quality.name(),
 				item.item.atk,
 				item.item.def,
-				item.item.heal
+				item.item.heal,
+				item.item.count
 			));
 		}
 

@@ -13,6 +13,8 @@ public class InventoryItem {
 	public int atk;
 	public int def;
 	public int heal;
+	
+	public int count = 1;
 
 	public InventoryItem() {
 	}

@@ -157,7 +157,8 @@ public class GameScreen extends GScreen {
 				item.item.quality.name(),
 				item.item.atk,
 				item.item.def,
-				item.item.heal
+				item.item.heal,
+				item.item.count
 			));
 		}
 
@@ -326,6 +327,7 @@ public class GameScreen extends GScreen {
 			int heal = is.heal > 0 ? is.heal : data.heal;
 
 			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+			invItem.count = is.count > 0 ? is.count : 1;
 			items.add(new Item(is.x, is.y, invItem));
 		}
 	}
@@ -371,6 +373,7 @@ public class GameScreen extends GScreen {
 			int heal = is.heal > 0 ? is.heal : data.heal;
 
 			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+			invItem.count = is.count > 0 ? is.count : 1;
 			items.add(new Item(is.x, is.y, invItem));
 		}
 	}
@@ -725,23 +728,17 @@ public class GameScreen extends GScreen {
 		for (int i = 0; i < items.size(); i++) {
 			Item item = items.get(i);
 			if (item.x == player.x && item.y == player.y) {
-				items.remove(i);
-				i--;
-				audio.playItem();
 				// Apply Item Effect
-				if (item.item.data.type == ItemType.POTION) {
-					if (item.item.data == ItemData.Health_Potion) {
-						player.stats.hp = Math.min(player.stats.hp + item.item.heal, player.stats.maxHp);
-						hud.showMessage("使用了 [" + item.item.quality.name + "] 生命药水! 回复了 " + item.item.heal + " 点生命!");
-					} else if (item.item.data == ItemData.Mana_Potion) {
-						player.stats.mana = Math.min(player.stats.mana + item.item.heal, player.stats.maxMana);
-						hud.showMessage("使用了 [" + item.item.quality.name + "] 法力药水! 回复了 " + item.item.heal + " 点法力!");
-					}
-				} else {
-					player.inventory.add(item.item);
+				boolean added = player.addItem(item.item);
+				if (added) {
+					items.remove(i);
+					i--;
+					audio.playItem();
 					hud.showMessage("拾取了 [" + item.item.quality.name + "] " + item.item.data.name + "!");
 					// Update inventory dialog if it's open
 					hud.updateInventory(player);
+				} else {
+					hud.showMessage("背包已满!");
 				}
 			}
 		}
@@ -1026,6 +1023,7 @@ public class GameScreen extends GScreen {
 					int heal = is.heal > 0 ? is.heal : data.heal;
 
 					InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+					invItem.count = is.count > 0 ? is.count : 1;
 					items.add(new Item(is.x, is.y, invItem));
 				}
 

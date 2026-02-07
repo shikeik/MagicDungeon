@@ -10,10 +10,11 @@ public class ItemState {
 	public int atk;
 	public int def;
 	public int heal;
+	public int count = 1;
 
 	public ItemState() {}
 
-	public ItemState(int x, int y, String itemName, String quality, int atk, int def, int heal) {
+	public ItemState(int x, int y, String itemName, String quality, int atk, int def, int heal, int count) {
 		this.x = x;
 		this.y = y;
 		this.itemName = itemName;
@@ -21,5 +22,6 @@ public class ItemState {
 		this.atk = atk;
 		this.def = def;
 		this.heal = heal;
+		this.count = count;
 	}
 }

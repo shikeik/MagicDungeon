@@ -105,10 +105,38 @@ public class Player extends Entity {
 		}
 	}
 
-	private void usePotion(InventoryItem item) {
-		if (item.data.heal > 0) {
-			this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.data.heal);
-			// Remove potion from inventory
+	public boolean addItem(InventoryItem newItem) {
+		// 1. Try to stack if it's a potion
+		if (newItem.data.type == ItemType.POTION) {
+			// Iterate backwards to find stackable item
+			for (int i = inventory.size() - 1; i >= 0; i--) {
+				InventoryItem existing = inventory.get(i);
+				if (existing.data == newItem.data && existing.quality == newItem.quality) {
+					existing.count += newItem.count;
+					return true;
+				}
+			}
+		}
+		
+		// 2. Add to new slot if space available
+		if (inventory.size() < 30) {
+			inventory.add(newItem);
+			return true;
+		}
+		
+		// 3. Inventory full
+		return false;
+	}
+
+	public void usePotion(InventoryItem item) {
+		if (item.data == ItemData.Mana_Potion) {
+			this.stats.mana = Math.min(this.stats.maxMana, this.stats.mana + item.heal);
+		} else if (item.heal > 0) {
+			this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.heal);
+		}
+		
+		item.count--;
+		if (item.count <= 0) {
 			this.inventory.remove(item);
 		}
 	}

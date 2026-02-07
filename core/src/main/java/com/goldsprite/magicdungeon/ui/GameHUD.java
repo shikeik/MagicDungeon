@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 
+import com.goldsprite.magicdungeon.entities.ItemData;
+import java.util.function.Predicate;
 import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
 
 public class GameHUD {
@@ -57,6 +59,10 @@ public class GameHUD {
 	private VisImage avatarImage;
 	private VisLabel levelBadge;
 	private VisLabel floorLabel;
+	
+	// Quick Slots
+	private QuickSlot hpQuickSlot;
+	private QuickSlot mpQuickSlot;
 
 	// System Log
 	private VisLabel msgLabel;
@@ -205,6 +211,17 @@ public class GameHUD {
 				stack.add(badgeTable);
 			}
 
+			// Count Badge
+			if (item.count > 1) {
+				VisLabel countLabel = new VisLabel(String.valueOf(item.count));
+				countLabel.setFontScale(0.4f);
+				VisTable countTable = new VisTable();
+				countTable.bottom().right();
+				countTable.add(countLabel).pad(2);
+				countTable.setTouchable(Touchable.disabled);
+				stack.add(countTable);
+			}
+
 			add(stack).size(64, 64);
 
 			if (Gdx.app.getType() == ApplicationType.Android) {
@@ -248,6 +265,97 @@ public class GameHUD {
 			String action = item.data.type == ItemType.POTION ? "使用" : (isEquipped ? "卸下" : "装备");
 			showMessage(action + " " + item.data.name);
 			updateInventory(player);
+		}
+	}
+
+	private class QuickSlot extends VisTable {
+		private VisImage iconImage;
+		private VisLabel countLabel;
+		private InventoryItem currentItem;
+		private Predicate<InventoryItem> filter;
+		private Player player;
+
+		public QuickSlot(Predicate<InventoryItem> filter) {
+			this.filter = filter;
+			
+			setBackground(slotBgDrawable);
+			setTouchable(Touchable.enabled);
+			
+			Stack stack = new Stack();
+			
+			// Icon Container
+			VisTable iconContainer = new VisTable();
+			iconImage = new VisImage();
+			iconImage.setVisible(false);
+			iconContainer.add(iconImage).size(48, 48);
+			stack.add(iconContainer);
+			
+			// Count Container
+			VisTable countContainer = new VisTable();
+			countContainer.bottom().right();
+			countLabel = new VisLabel("");
+			countLabel.setFontScale(0.4f);
+			countLabel.setVisible(false);
+			countContainer.add(countLabel).pad(2);
+			stack.add(countContainer);
+			
+			add(stack).size(64, 64);
+			
+			addListener(new ClickListener() {
+				@Override
+				public void clicked(InputEvent event, float x, float y) {
+					useItem();
+				}
+			});
+		}
+		
+		public void update(Player player) {
+			this.player = player;
+			if (player == null) return;
+			
+			// Find item in inventory
+			currentItem = null;
+			if (player.inventory != null) {
+				for (InventoryItem item : player.inventory) {
+					if (filter.test(item)) {
+						currentItem = item;
+						break;
+					}
+				}
+			}
+			
+			if (currentItem != null) {
+				Texture tex = TextureManager.getInstance().getItem(currentItem.data.name());
+				if (tex != null) {
+					iconImage.setDrawable(new TextureRegionDrawable(tex));
+					iconImage.setVisible(true);
+				}
+				countLabel.setText(String.valueOf(currentItem.count));
+				countLabel.setVisible(true);
+			} else {
+				iconImage.setVisible(false);
+				countLabel.setVisible(false);
+			}
+		}
+		
+		private void useItem() {
+			if (currentItem != null && player != null) {
+				player.equip(currentItem);
+				showMessage("使用了 " + currentItem.data.name);
+				updateInventory(player); // Refresh Inventory Dialog if open
+				update(player); // Refresh self
+				
+				// Update Bars Immediately
+				if (currentItem.data == ItemData.Health_Potion) {
+					hpBar.setValue(player.stats.hp);
+					hpLabel.setText(player.stats.hp + "/" + player.stats.maxHp);
+				} else if (currentItem.data == ItemData.Mana_Potion) {
+					manaBar.setValue(player.stats.mana);
+					manaLabel.setText(player.stats.mana + "/" + player.stats.maxMana);
+				}
+			} else {
+				// showMessage("没有可用的物品!");
+			}
 		}
 	}
 
@@ -545,6 +653,16 @@ public class GameHUD {
 
 		hud.add(barsTable);
 
+		// Quick Slots
+		VisTable quickTable = new VisTable();
+		hpQuickSlot = new QuickSlot((item) -> item.data == ItemData.Health_Potion || item.data == ItemData.Elixir);
+		mpQuickSlot = new QuickSlot((item) -> item.data == ItemData.Mana_Potion);
+		
+		quickTable.add(hpQuickSlot).size(64,64).pad(5);
+		quickTable.add(mpQuickSlot).size(64,64).pad(5);
+		
+		hud.add(quickTable).padLeft(20);
+
 		// Floor info
 		floorLabel = new VisLabel("Floor 1");
 		hud.add(floorLabel).padLeft(20);
@@ -751,6 +869,10 @@ public class GameHUD {
 
 	public void update(Player player, int floor) {
 		this.currentPlayer = player;
+
+		// Update Quick Slots
+		if (hpQuickSlot != null) hpQuickSlot.update(player);
+		if (mpQuickSlot != null) mpQuickSlot.update(player);
 
 		// Update Bars (Fix Range Bug)
 		hpBar.setRange(0, player.stats.maxHp);
