@@ -5,5 +5,10 @@ public enum TileType {
 	Floor,
 	Door,
 	Stairs_Down,
-	Stairs_Up
+	Stairs_Up,
+	Tree,
+	Grass,
+	Sand,
+	StonePath,
+	Dungeon_Entrance
 }

@@ -35,6 +35,13 @@ public class TextureManager implements Disposable {
 		textureCache.put(TileType.Stairs_Down.name(), SpriteGenerator.createStairs(false));
 		textureCache.put(TileType.Stairs_Up.name(), SpriteGenerator.createStairs(true));
 		
+		// Camp Tiles
+		textureCache.put(TileType.Tree.name(), SpriteGenerator.createTree());
+		textureCache.put(TileType.Grass.name(), SpriteGenerator.createGrass());
+		textureCache.put(TileType.Sand.name(), SpriteGenerator.createSand());
+		textureCache.put(TileType.StonePath.name(), SpriteGenerator.createStonePath());
+		textureCache.put(TileType.Dungeon_Entrance.name(), SpriteGenerator.createDungeonEntrance());
+		
 		// Player
 		textureCache.put("PLAYER", SpriteGenerator.createPlayer());
 		

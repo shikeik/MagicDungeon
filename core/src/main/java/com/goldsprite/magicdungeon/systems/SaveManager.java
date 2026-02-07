@@ -22,9 +22,10 @@ public class SaveManager {
 	private static final String SAVE_FILE_NAME = "game_save.json";
 	private static final String SAVE_PATH = SAVE_DIR + SAVE_FILE_NAME;
 
-	public static void saveGame(Player player, Dungeon dungeon, List<Monster> monsters, List<Item> items, Map<Integer, LevelState> visitedLevels) {
+	public static void saveGame(Player player, Dungeon dungeon, List<Monster> monsters, List<Item> items, Map<Integer, LevelState> visitedLevels, int maxDepth) {
 		GameState state = new GameState();
 		state.dungeonLevel = dungeon.level;
+		state.maxDepth = maxDepth;
 		state.seed = dungeon.globalSeed;
 		state.playerStats = player.stats;
 		state.inventory = player.inventory;

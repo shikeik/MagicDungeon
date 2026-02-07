@@ -53,6 +53,8 @@ public class GameScreen extends GScreen {
 	private NeonBatch batch;
 	private long seed;
 
+	private int maxDepth = 1;
+
 	// History of visited levels
 	private Map<Integer, LevelState> visitedLevels = new HashMap<>();
 
@@ -102,11 +104,13 @@ public class GameScreen extends GScreen {
 
 		System.out.println("GameScreen Constructor Started");
 		this.dungeon = new Dungeon(50, 50, seed);
-		this.player = new Player(dungeon.startPos.x, dungeon.startPos.y);
+		this.player = new Player(0, 0); // Temp pos, will be set by enterCamp
 
 		this.monsters = new ArrayList<>();
 		this.items = new ArrayList<>();
-		spawnEntities();
+
+		// Start at Camp
+		enterCamp();
 
 		// Scene2D HUD
 		// 传递 uiViewport 给 HUD
@@ -114,8 +118,12 @@ public class GameScreen extends GScreen {
 
 		// Set save listener for HUD save button
 		hud.setSaveListener(() -> {
-			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
+			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
 			hud.showMessage("游戏已保存!");
+		});
+
+		hud.setReturnToCampListener(() -> {
+			returnToCamp();
 		});
 		getImp().addProcessor(hud.stage);
 
@@ -131,6 +139,8 @@ public class GameScreen extends GScreen {
 
 	private void saveCurrentLevelState() {
 		// Save current level state to history
+		if (dungeon.level == 0) return; // Don't save camp state
+
 		List<MonsterState> monsterStates = new ArrayList<>();
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
@@ -153,6 +163,135 @@ public class GameScreen extends GScreen {
 
 		visitedLevels.put(dungeon.level, new LevelState(monsterStates, itemStates));
 	}
+
+	private void enterCamp() {
+		if (dungeon.level > 0) {
+			saveCurrentLevelState();
+		}
+
+		dungeon.level = 0;
+		dungeon.generate();
+
+		player.x = dungeon.startPos.x;
+		player.y = dungeon.startPos.y;
+		player.visualX = player.x * Constants.TILE_SIZE;
+		player.visualY = player.y * Constants.TILE_SIZE;
+
+		monsters.clear();
+		items.clear();
+
+		if (hud != null) hud.showMessage("回到了营地.");
+	}
+
+	private void enterDungeon(int level) {
+		if (dungeon.level > 0) {
+			saveCurrentLevelState();
+		}
+
+		dungeon.level = level;
+
+		if (visitedLevels.containsKey(level)) {
+			// Restore
+			dungeon.generate(); // Re-generate geometry (same seed)
+			restoreLevelState(level);
+		} else {
+			// Generate New
+			dungeon.generate();
+			spawnEntities();
+		}
+
+		// Reset player to start if not restored?
+		// Actually restoreLevelState handles entities, but position?
+		// Usually we want to start at StartPos when entering a level unless we track exit pos.
+		// For simplicity: always start at StartPos (Stairs Up).
+		player.x = dungeon.startPos.x;
+		player.y = dungeon.startPos.y;
+		player.visualX = player.x * Constants.TILE_SIZE;
+		player.visualY = player.y * Constants.TILE_SIZE;
+
+		hud.showMessage("进入了第 " + level + " 层.");
+		if (level > maxDepth) maxDepth = level;
+	}
+
+	private void returnToCamp() {
+		// Check conditions:
+		// 1. Must be in Dungeon (Level > 0)
+		if (dungeon.level == 0) {
+			hud.showMessage("你已经在营地了。");
+			return;
+		}
+
+		// 2. Must be on Stairs Down
+		Tile tile = dungeon.getTile(player.x, player.y);
+		if (tile == null || tile.type != TileType.Stairs_Down) {
+			hud.showMessage("你需要站在下一层入口处才能返回营地。");
+			return;
+		}
+
+		// 3. No monsters in room?
+		// Simple check: visible range? or active monsters?
+		// For simplicity, check if any monster is within 10 tiles.
+		boolean safe = true;
+		for (Monster m : monsters) {
+			if (m.hp > 0 && Math.abs(m.x - player.x) < 10 && Math.abs(m.y - player.y) < 10) {
+				safe = false;
+				break;
+			}
+		}
+
+		if (!safe) {
+			hud.showMessage("附近有怪物，无法传送!");
+			return;
+		}
+
+		enterCamp();
+	}
+
+	private void restoreLevelState(int level) {
+		LevelState state = visitedLevels.get(level);
+		if (state == null) return;
+
+		monsters.clear();
+		for(MonsterState ms : state.monsters) {
+			MonsterType type = MonsterType.Slime;
+			try {
+				type = MonsterType.valueOf(ms.typeName);
+			} catch(IllegalArgumentException e) {
+				for(MonsterType t : MonsterType.values()) {
+					if(t.name.equals(ms.typeName)) {
+						type = t;
+						break;
+					}
+				}
+			}
+
+			Monster m = new Monster(ms.x, ms.y, type);
+			m.hp = ms.hp;
+			m.maxHp = ms.maxHp;
+			monsters.add(m);
+		}
+
+		items.clear();
+		for(ItemState is : state.items) {
+			ItemData data = ItemData.Health_Potion;
+			try {
+				data = ItemData.valueOf(is.itemName);
+			} catch(IllegalArgumentException e) {}
+
+			ItemQuality quality = ItemQuality.COMMON;
+			try {
+				if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
+			} catch(IllegalArgumentException e) {}
+
+			int atk = is.atk > 0 ? is.atk : data.atk;
+			int def = is.def > 0 ? is.def : data.def;
+			int heal = is.heal > 0 ? is.heal : data.heal;
+
+			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+			items.add(new Item(is.x, is.y, invItem));
+		}
+	}
+
 
 	private void loadLevelState(LevelState state) {
 		monsters.clear();
@@ -273,6 +412,8 @@ public class GameScreen extends GScreen {
 	}
 
 	private void spawnEntities() {
+		if (dungeon.level == 0) return;
+
 		monsters.clear();
 		items.clear();
 
@@ -362,7 +503,7 @@ public class GameScreen extends GScreen {
 
 		// Save Game
 		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
-			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels);
+			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
 			hud.showMessage("游戏已保存!");
 		}
 
@@ -519,9 +660,13 @@ public class GameScreen extends GScreen {
 			Tile tile = dungeon.getTile(player.x, player.y);
 			if (tile != null) {
 				if (tile.type == TileType.Stairs_Down) {
-					nextLevel();
-				} else if (tile.type == TileType.Stairs_Up) {
-					prevLevel();
+					// Go deeper
+					enterDungeon(dungeon.level + 1);
+				} else if (tile.type == TileType.Dungeon_Entrance) {
+					// Show Level Selection
+					hud.showLevelSelection(maxDepth, (level) -> {
+						enterDungeon(level);
+					});
 				}
 			}
 		}
@@ -582,23 +727,42 @@ public class GameScreen extends GScreen {
 	private void triggerGameOver() {
 		if (isGameOver) return;
 		isGameOver = true;
-		
+
 		// Play Game Over Sound and Stop BGM
 		if (audio != null) {
 			audio.stopBGM();
 			audio.playGameOver();
 		}
-		
+
 		hud.showGameOver(new Runnable() {
 			@Override
 			public void run() {
-				// Return to Main Menu
-				getScreenManager().setCurScreen(MainMenuScreen.class);
+				// Restart (Respawn at Camp with reset progress)
+				isGameOver = false;
+				if (audio != null) audio.playBGM();
+
+				// Reset Player
+				player = new Player(0, 0);
+
+				// Reset World History
+				visitedLevels.clear();
+				maxDepth = 1;
+
+				// Enter Camp
+				enterCamp();
+
+				hud.showMessage("你已复活。一切归零。");
 			}
 		}, new Runnable() {
 			@Override
 			public void run() {
-				Gdx.app.exit();
+				// Quit
+				Gdx.app.postRunnable(new Runnable() {
+					@Override
+					public void run() {
+						getScreenManager().setCurScreen(new MainMenuScreen());
+					}
+				});
 			}
 		});
 	}
@@ -737,6 +901,9 @@ public class GameScreen extends GScreen {
 			player.stats = state.playerStats;
 			player.inventory = state.inventory;
 			dungeon.level = state.dungeonLevel;
+			if (state.maxDepth > 0) maxDepth = state.maxDepth;
+			else maxDepth = Math.max(1, dungeon.level);
+
 			dungeon.globalSeed = state.seed; // Restore seed
 
 			// Restore Equipment

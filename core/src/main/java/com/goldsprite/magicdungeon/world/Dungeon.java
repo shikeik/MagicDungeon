@@ -40,11 +40,23 @@ public class Dungeon {
 	}
 
 	public void generate() {
-		MapGenerator generator = new MapGenerator(this.width, this.height);
-		// Pass hasUpStairs = true if level > 1
-		MapGenerator.GenResult result = generator.generate(this.level > 1, getMapRNG());
-		this.map = result.grid;
-		this.startPos = result.start;
+		if (this.level == 0) {
+			MapGenerator.GenResult result = CampMapGenerator.generate();
+			this.map = result.grid;
+			this.height = this.map.length;
+			this.width = this.map[0].length;
+			this.startPos = result.start;
+		} else {
+			// Reset to standard dungeon size
+			this.width = 50;
+			this.height = 50;
+			
+			MapGenerator generator = new MapGenerator(this.width, this.height);
+			// Pass hasUpStairs = true if level > 1
+			MapGenerator.GenResult result = generator.generate(this.level > 1, getMapRNG());
+			this.map = result.grid;
+			this.startPos = result.start;
+		}
 	}
 
 	public Tile getTile(int x, int y) {

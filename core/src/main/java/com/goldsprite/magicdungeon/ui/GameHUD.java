@@ -38,6 +38,8 @@ import com.kotcrab.vis.ui.widget.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 
 import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
 
@@ -95,6 +97,7 @@ public class GameHUD {
 
 	private Player currentPlayer;
 	private Runnable saveListener;
+	private Runnable returnToCampListener;
 
 	private Actor currentTooltip;
 
@@ -637,6 +640,16 @@ public class GameHUD {
 			}
 		});
 		container.add(inventoryBtn).pad(5);
+		
+		VisTextButton campBtn = new VisTextButton("回城");
+		campBtn.addListener(new InputListener() {
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				if (returnToCampListener != null) returnToCampListener.run();
+				return true;
+			}
+		});
+		container.add(campBtn).pad(5);
 
 		saveBtn = new VisTextButton("保存");
 		saveBtn.addListener(new InputListener() {
@@ -866,6 +879,40 @@ public class GameHUD {
 
 	public void setSaveListener(Runnable saveListener) {
 		this.saveListener = saveListener;
+	}
+
+	public void setReturnToCampListener(Runnable listener) {
+		this.returnToCampListener = listener;
+	}
+	
+	public void showLevelSelection(int maxDepth, Consumer<Integer> onSelect) {
+		BaseDialog dialog = new BaseDialog("选择层数");
+		dialog.addCloseButton();
+		
+		VisTable content = new VisTable();
+		content.top().left();
+		
+		// Grid of buttons
+		for (int i = 1; i <= maxDepth; i++) {
+			final int level = i;
+			VisTextButton btn = new VisTextButton("第 " + level + " 层");
+			btn.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					onSelect.accept(level);
+					dialog.fadeOut();
+				}
+			});
+			content.add(btn).size(80, 40).pad(5);
+			if (i % 4 == 0) content.row();
+		}
+		
+		VisScrollPane scroll = new VisScrollPane(content);
+		scroll.setFlickScroll(true);
+		scroll.setFadeScrollBars(false);
+		
+		dialog.add(scroll).size(400, 300);
+		dialog.show(stage);
 	}
 
 	public void updateInventory(Player player) {

@@ -274,6 +274,129 @@ public class SpriteGenerator {
 		return toTexture(p);
 	}
 
+	public static Texture createTree() {
+		Pixmap p = createPixmap();
+		
+		// Grass Background
+		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#4caf50"));
+		
+		// Tree Trunk
+		drawRect(p, 110, 150, 36, 106, Color.valueOf("#5d4037"));
+		
+		// Leaves (Cluster of circles)
+		Color leaves = Color.valueOf("#2e7d32");
+		Color lightLeaves = Color.valueOf("#43a047");
+		
+		// Bottom Layer
+		drawCircle(p, 80, 160, 40, leaves);
+		drawCircle(p, 176, 160, 40, leaves);
+		drawCircle(p, 128, 160, 45, leaves);
+		
+		// Middle Layer
+		drawCircle(p, 60, 100, 40, leaves);
+		drawCircle(p, 196, 100, 40, leaves);
+		drawCircle(p, 128, 90, 50, leaves);
+		
+		// Top Layer
+		drawCircle(p, 128, 50, 40, leaves);
+		
+		// Highlights
+		drawCircle(p, 110, 40, 20, lightLeaves);
+		drawCircle(p, 150, 80, 20, lightLeaves);
+		drawCircle(p, 70, 90, 15, lightLeaves);
+
+		return toTexture(p);
+	}
+
+	public static Texture createGrass() {
+		Pixmap p = createPixmap();
+		
+		// Base Green
+		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#4caf50"));
+		
+		// Grass blades / Texture
+		p.setColor(Color.valueOf("#388e3c"));
+		for(int i=0; i<300; i++) {
+			int x = MathUtils.random(TEX_SIZE);
+			int y = MathUtils.random(TEX_SIZE);
+			int h = MathUtils.random(4, 10);
+			p.drawLine(x, y, x, y - h);
+		}
+		
+		// Flowers
+		for(int i=0; i<10; i++) {
+			int x = MathUtils.random(20, TEX_SIZE-20);
+			int y = MathUtils.random(20, TEX_SIZE-20);
+			Color flowerColor = MathUtils.randomBoolean() ? Color.YELLOW : Color.WHITE;
+			drawCircle(p, x, y, 3, flowerColor);
+		}
+
+		return toTexture(p);
+	}
+
+	public static Texture createSand() {
+		Pixmap p = createPixmap();
+		
+		// Base Sand
+		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#fff59d"));
+		
+		// Grain
+		p.setColor(Color.valueOf("#fbc02d"));
+		for(int i=0; i<500; i++) {
+			int x = MathUtils.random(TEX_SIZE);
+			int y = MathUtils.random(TEX_SIZE);
+			p.drawPixel(x, y);
+		}
+		
+		return toTexture(p);
+	}
+
+	public static Texture createStonePath() {
+		Pixmap p = createPixmap();
+		
+		// Base Dirt/Grass
+		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#795548")); // Brown dirt
+		
+		// Stones
+		Color stoneColor = Color.GRAY;
+		Color highlight = Color.LIGHT_GRAY;
+		
+		for(int i=0; i<10; i++) {
+			int w = MathUtils.random(40, 70);
+			int h = MathUtils.random(30, 60);
+			int x = MathUtils.random(0, TEX_SIZE - w);
+			int y = MathUtils.random(0, TEX_SIZE - h);
+			
+			drawRect(p, x, y, w, h, stoneColor);
+			drawRect(p, x+2, y+2, w-4, h-4, highlight);
+		}
+		
+		return toTexture(p);
+	}
+
+	public static Texture createDungeonEntrance() {
+		Pixmap p = createPixmap();
+		
+		// Base Grass
+		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#4caf50"));
+		
+		// Stone Structure
+		drawRect(p, 20, 20, TEX_SIZE-40, TEX_SIZE-40, Color.DARK_GRAY);
+		
+		// Dark Entrance (Stairs Down)
+		drawRect(p, 60, 60, TEX_SIZE-120, TEX_SIZE-100, Color.BLACK);
+		
+		// Archway / Portal effect
+		p.setColor(Color.PURPLE);
+		for(int i=0; i<20; i++) {
+			int x = MathUtils.random(60, TEX_SIZE-60);
+			int y = MathUtils.random(60, TEX_SIZE-60);
+			p.fillCircle(x, y, MathUtils.random(2, 5));
+		}
+		
+		return toTexture(p);
+	}
+
 	// --- Character Generators ---
 
 	public static Texture createPlayer() {
