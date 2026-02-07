@@ -14,7 +14,7 @@ public class NeonBatch extends BaseShapeBatch {
 	private float[] pathBuffer = new float[2048];
 
 	// ==========================================================
-	// 1. 基础形状 (Line, Rect)
+	// 1. 基础形状 (Line, Rect, Triangle)
 	// ==========================================================
 
 	public void drawLine(float x1, float y1, float x2, float y2, float width, Color color) {
@@ -61,6 +61,19 @@ public class NeonBatch extends BaseShapeBatch {
 
 		if (filled) pathFill(verts, 4, color);
 		else pathStroke(verts, 4, lineWidth, true, color);
+	}
+
+	/**
+	 * [新增] 绘制三角形
+	 */
+	public void drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float lineWidth, Color color, boolean filled) {
+		float[] verts = getBuffer(3);
+		verts[0] = x1; verts[1] = y1;
+		verts[2] = x2; verts[3] = y2;
+		verts[4] = x3; verts[5] = y3;
+		
+		if (filled) pathFill(verts, 3, color);
+		else pathStroke(verts, 3, lineWidth, true, color);
 	}
 
 	// ==========================================================
@@ -143,7 +156,7 @@ public class NeonBatch extends BaseShapeBatch {
 	}
 
 	// ==========================================================
-	// 3. 圆形 和 圆弧 (Circle 和 Arcs)
+	// 3. 圆形 和 圆弧 (Circle, Oval, Arcs)
 	// ==========================================================
 
 	/**
@@ -155,6 +168,37 @@ public class NeonBatch extends BaseShapeBatch {
 		radius = filled ? radius : radius - lineWidth/2f;
 		// 圆形就是边数很多的正多边形
 		drawRegularPolygon(x, y, radius, segments, 0, lineWidth, color, filled);
+	}
+
+	/**
+	 * [新增] 椭圆 (Oval)
+	 */
+	public void drawOval(float x, float y, float width, float height, float rotationDeg, float lineWidth, Color color, int segments, boolean filled) {
+		if (segments < 3) return;
+		
+		//处理空心厚度修正
+		float w = filled ? width : width - lineWidth;
+		float h = filled ? height : height - lineWidth;
+		float halfW = w / 2;
+		float halfH = h / 2;
+		
+		float[] verts = getBuffer(segments);
+		float angleStep = 360f / segments;
+		float rotRad = rotationDeg * MathUtils.degreesToRadians;
+		float cosRot = MathUtils.cos(rotRad);
+		float sinRot = MathUtils.sin(rotRad);
+
+		for (int i = 0; i < segments; i++) {
+			float rad = i * angleStep * MathUtils.degreesToRadians;
+			float lx = MathUtils.cos(rad) * halfW;
+			float ly = MathUtils.sin(rad) * halfH;
+			
+			// Rotate and translate
+			verts[i * 2] = x + (lx * cosRot - ly * sinRot);
+			verts[i * 2 + 1] = y + (lx * sinRot + ly * cosRot);
+		}
+		
+		drawPolygon(verts, segments, lineWidth, color, filled);
 	}
 
 	/**

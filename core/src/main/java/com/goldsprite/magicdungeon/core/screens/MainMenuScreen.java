@@ -88,85 +88,37 @@ public class MainMenuScreen extends GScreen {
 		stage.addActor(mainTable);
 
 		// Seed Input Area
-		VisTable seedTable = new VisTable();
-		seedTable.add(new VisLabel("Seed: ")).padRight(5);
-		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
-		seedTable.add(seedField).width(120).padRight(5);
-
-		VisTextButton randomSeedBtn = new VisTextButton("Dice");
-		randomSeedBtn.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				seedField.setText(String.valueOf(MathUtils.random(1000000)));
-			}
-		});
-		seedTable.add(randomSeedBtn).width(50);
-
-		// Add rows to table
-		// Note: We want staggered animation, so we might need to add them as individual actors to stage?
-		// Or we can just animate the cells?
-		// Easier approach: Add to table, but set table to be transparent initially?
-		// No, user wants "one by one".
-		// Best approach: Add them to table, but then get the cells and apply transform?
-		// Actually, let's keep the table for layout, but animate the Table itself for entrance?
-		// User said: "not all at once but one by one".
-		// So we should NOT use a single table for everything if we want them to fly in separately easily.
-		// OR, we use a Table but set `Transform` to true and animate actors.
-
-		// Let's use a Table for layout, but make the table invisible/transparent and animate children?
-		// No, children positions are relative to table.
-
-		// Alternative: Separate Actors.
-		// Let's stick to Table for Seed (it's a group), but Buttons can be separate.
-
-		mainTable.add(seedTable).padBottom(30).row();
-
-		// We will add buttons to the table, but we will animate the TABLE itself as a group?
-		// No, user wants "one by one".
-		// So we need to apply actions to the actors inside the table?
-		// Layout might fight with actions if we move them.
-		// Unless we use `Transform` and `Layout` properly.
-
-		// Let's Try:
-		// Add everything to mainTable.
-		// In show(), iterate over children and add MoveAction with delay.
-		// But children are constrained by Table Layout.
-		// If we move them, Table layout might reset them next frame.
-		// Solution: Use `Transform` on actors and animate `translation`.
-		// OR: Don't use Table for main layout, use absolute positioning or a VerticalGroup that doesn't force position every frame?
-		// Let's use `VerticalGroup` or just absolute positioning relative to a container.
-
-		// Let's revert to adding to mainTable, but use a trick:
-		// Animate the alpha or scale? User said "move in".
-		// Okay, let's just make mainTable act as a container anchor,
-		// and we animate the buttons "flying in" to their slots?
-		// That's hard with Table.
-
-		// Simplest "Staggered Entrance":
-		// 1. Table is placed at final position.
-		// 2. All children are set to invisible or offset.
-		// 3. We apply actions to children to move them from offset to 0.
-		// (Table layout sets X/Y. We can use `setTransform(true)` on buttons and animate `visual` position? No, Table controls position.)
-
-		// Better approach:
-		// Don't use Table. Use a customized Group or just Stage coordinates.
-		// Given it's a simple menu:
-		// Title (already added)
-		// Seed Group (Actor 1)
-		// Button 1 (Actor 2)
-		// Button 2 (Actor 3)
-		// Button 3 (Actor 4)
-
-		// Let's redo buildUI to not use a master Table for layout, but place actors manually or use a helper.
+ 		VisTable seedTable = new VisTable();
+ 		// Content is added later during layout
+ 		// Just initialize here
 
 		float startY = centerY + 150;
-		float gap = 70;
+ 		float gap = 70;
 
-		// Seed Group
-		seedTable.setPosition(targetX+150, startY+50);
-		stage.addActor(seedTable);
+ 		// Seed Group
+ 		// Ensure width matches buttons (220)
+ 		seedTable.setSize(220, 50); // Set explicit size
+ 		seedTable.setPosition(targetX, startY);
 
-		startY -= gap;
+ 		// Re-layout seed table to ensure alignment
+ 		seedTable.clearChildren();
+ 		seedTable.left(); // Align left content
+ 		seedTable.add(new VisLabel("Seed: ")).width(50).padRight(5); // Fixed width label
+ 		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
+	 	seedField.setAlignment(Align.center);
+ 		seedTable.add(seedField).expandX().fillX().padRight(5); // Field takes remaining space
+ 		VisTextButton randomSeedBtn = new VisTextButton("R"); // Smaller text "R" for Roll/Random to save space or icon
+ 		randomSeedBtn.addListener(new ClickListener() {
+ 			@Override
+ 			public void clicked(InputEvent event, float x, float y) {
+ 				seedField.setText(String.valueOf(MathUtils.random(1000000)));
+ 			}
+ 		});
+ 		seedTable.add(randomSeedBtn).width(30); // Fixed width button
+
+ 		stage.addActor(seedTable);
+
+ 		startY -= gap;
 
 		// Buttons
 		createMenuButton("New Game", targetX, startY, 0.1f, new ClickListener() {
