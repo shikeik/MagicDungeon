@@ -230,10 +230,10 @@ public class GameScreen extends GScreen {
 		
 		// 3. No monsters in room?
 		// Simple check: visible range? or active monsters?
-		// For simplicity, check if any monster is within 10 tiles.
+		// For simplicity, check if any monster is within 3 tiles.
 		boolean safe = true;
 		for (Monster m : monsters) {
-			if (m.hp > 0 && Math.abs(m.x - player.x) < 10 && Math.abs(m.y - player.y) < 10) {
+			if (m.hp > 0 && Math.abs(m.x - player.x) < 3 && Math.abs(m.y - player.y) < 3) {
 				safe = false;
 				break;
 			}

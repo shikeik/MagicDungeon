@@ -26,12 +26,15 @@ public class CampMapGenerator {
 					map[y][x].walkable = false;
 				}
 				
-				// Add some random trees inside for "foresty" feel, but keep center clear
+				// Add some random trees inside for "foresty" feel, but keep center and path clear
 				if (MathUtils.randomBoolean(0.05f)) {
 					// Avoid center area
 					if (Math.abs(x - WIDTH/2) > 5 || Math.abs(y - HEIGHT/2) > 5) {
-						map[y][x].type = TileType.Tree;
-						map[y][x].walkable = false;
+						// Also avoid area around entrance
+						if (Math.abs(x - 5) > 3 || Math.abs(y - (HEIGHT - 6)) > 3) {
+							map[y][x].type = TileType.Tree;
+							map[y][x].walkable = false;
+						}
 					}
 				}
 			}
@@ -95,6 +98,24 @@ public class CampMapGenerator {
 		// Ensure Start and Entrance are walkable/correct
 		map[startY][startX].type = TileType.StonePath; // Start on path
 		map[entY][entX].type = TileType.Dungeon_Entrance;
+		map[startY][startX].walkable = true;
+		map[entY][entX].walkable = true;
+		
+		// Ensure path is walkable (override any trees generated later)
+		currX = startX;
+		currY = startY;
+		
+		// Re-trace path and clear trees
+		while(currY < entY) {
+			currY++;
+			map[currY][currX].walkable = true;
+			if (map[currY][currX].type == TileType.Tree) map[currY][currX].type = TileType.StonePath;
+		}
+		while(currX > entX) {
+			currX--;
+			map[currY][currX].walkable = true;
+			if (map[currY][currX].type == TileType.Tree) map[currY][currX].type = TileType.StonePath;
+		}
 
 		return new MapGenerator.GenResult(map, startPos);
 	}

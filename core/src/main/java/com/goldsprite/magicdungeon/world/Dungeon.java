@@ -52,8 +52,8 @@ public class Dungeon {
 			this.height = 50;
 			
 			MapGenerator generator = new MapGenerator(this.width, this.height);
-			// Pass hasUpStairs = true if level > 1
-			MapGenerator.GenResult result = generator.generate(this.level > 1, getMapRNG());
+			// Always enable up stairs for levels >= 1 (to allow returning to camp from level 1)
+			MapGenerator.GenResult result = generator.generate(true, getMapRNG());
 			this.map = result.grid;
 			this.startPos = result.start;
 		}
