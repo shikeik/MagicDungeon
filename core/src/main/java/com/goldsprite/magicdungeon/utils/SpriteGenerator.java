@@ -70,6 +70,35 @@ public class SpriteGenerator {
 		}
 	}
 
+	public static Texture createQualityStar() {
+		Pixmap p = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+		p.setColor(0, 0, 0, 0);
+		p.fill();
+
+		p.setColor(Color.WHITE);
+		
+		// Draw a 4-pointed star
+		int c = 32;
+		int r = 32;
+		int w = 8; // Half width of the star arm at center
+
+		// Vertical arm
+		p.fillTriangle(c, c, c - w, c, c, c - r); // Top-Left part
+		p.fillTriangle(c, c, c + w, c, c, c - r); // Top-Right part
+		p.fillTriangle(c, c, c - w, c, c, c + r); // Bottom-Left part
+		p.fillTriangle(c, c, c + w, c, c, c + r); // Bottom-Right part
+
+		// Horizontal arm
+		p.fillTriangle(c, c, c, c - w, c - r, c); // Left-Top part
+		p.fillTriangle(c, c, c, c + w, c - r, c); // Left-Bottom part
+		p.fillTriangle(c, c, c, c - w, c + r, c); // Right-Top part
+		p.fillTriangle(c, c, c, c + w, c + r, c); // Right-Bottom part
+
+		Texture t = new Texture(p);
+		p.dispose();
+		return t;
+	}
+
 	// --- Tile Generators ---
 
 	public static Texture createWall() {

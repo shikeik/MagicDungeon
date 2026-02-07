@@ -73,6 +73,13 @@ public class TextureManager implements Disposable {
 		return get(name);
 	}
 	
+	public Texture getQualityStar() {
+		if (!textureCache.containsKey("QUALITY_STAR")) {
+			textureCache.put("QUALITY_STAR", SpriteGenerator.createQualityStar());
+		}
+		return textureCache.get("QUALITY_STAR");
+	}
+	
 	public Texture getPlayer() {
 		return get("PLAYER");
 	}
