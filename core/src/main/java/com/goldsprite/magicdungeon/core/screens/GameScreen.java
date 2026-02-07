@@ -104,6 +104,9 @@ public class GameScreen extends GScreen {
 
 		System.out.println("GameScreen Constructor Started");
 		this.dungeon = new Dungeon(50, 50, seed);
+		// IMPORTANT: Set level to 0 immediately to prevent enterCamp() from saving an empty Level 1 state
+		this.dungeon.level = 0; 
+		
 		this.player = new Player(0, 0); // Temp pos, will be set by enterCamp
 
 		this.monsters = new ArrayList<>();
