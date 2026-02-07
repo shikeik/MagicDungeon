@@ -16,7 +16,7 @@ import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 
-public class GdxLauncher extends Game {
+public class GdxLauncher extends Game {int k6;
 	private Stage toastStage;
 	public Debug debug;
 	private Application.ApplicationType userType;

@@ -22,9 +22,11 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import com.badlogic.gdx.math.MathUtils;
+import com.goldsprite.gdengine.neonbatch.BloomRenderer;
 
 public class MainMenuScreen extends GScreen {
 	private NeonBatch batch;
+	private BloomRenderer bloomRender;
 	private TitleParallaxRenderer renderer;
 	private Stage stage;
 
@@ -45,6 +47,7 @@ public class MainMenuScreen extends GScreen {
 		// 1. Init Renderer
 		batch = new NeonBatch();
 		renderer = new TitleParallaxRenderer();
+		bloomRender = new BloomRenderer();
 
 		// 2. Init UI Stage
 		stage = new Stage(getUIViewport());
@@ -223,11 +226,19 @@ public class MainMenuScreen extends GScreen {
 	public void render(float delta) {
 		ScreenUtils.clear(0, 0, 0, 1);
 
-		float scl = 1.5f;
+		float scl = 1f;
 		// 1. Draw Background
 		// Use UI Viewport size for renderer to match screen
+		
+		bloomRender.captureStart(batch);
+		
+		batch.setProjectionMatrix(getUICamera().combined);
 		renderer.render(batch, delta, getUIViewport().getWorldWidth()*scl, getUIViewport().getWorldHeight()*scl);
-
+		
+		bloomRender.captureEnd();
+		bloomRender.process();
+		bloomRender.render(batch);
+		
 		// 2. Draw UI
 		stage.act(delta);
 		stage.draw();
@@ -240,6 +251,7 @@ public class MainMenuScreen extends GScreen {
 		if(mainTable != null) {
 			mainTable.setY((getUIViewport().getWorldHeight() - mainTable.getHeight()) / 2);
 		}
+		bloomRender.resize((int)getViewSize().x, (int)getViewSize().y);
 	}
 
 	@Override
