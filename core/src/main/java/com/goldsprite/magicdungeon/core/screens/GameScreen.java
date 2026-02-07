@@ -83,7 +83,7 @@ public class GameScreen extends GScreen {
 
 		// 保持世界相机的缩放比例为 1.0 (1 unit = 1 pixel)
 		// 或者如果需要像素放大，可以调整 worldScale, 例如 0.5f 会放大两倍
-		this.worldScale = 0.3f;
+		this.worldScale = PlatformImpl.isDesktopUser() ? 0.3f : 0.4f;
 
 		this.uiViewportScale = PlatformImpl.isDesktopUser() ? 1 : 1.4f;
 
@@ -439,9 +439,14 @@ public class GameScreen extends GScreen {
 		if (cheatCodeBuffer.endsWith("cheat666")) {
 			cheatCodeBuffer = "";
 			for (ItemData data : ItemData.values()) {
-				player.inventory.add(new InventoryItem(data));
+				for (ItemQuality quality : ItemQuality.values()) {
+					int atk = Math.max(0, Math.round(data.atk * quality.multiplier));
+					int def = Math.max(0, Math.round(data.def * quality.multiplier));
+					int heal = Math.max(0, Math.round(data.heal * quality.multiplier));
+					player.inventory.add(new InventoryItem(data, quality, atk, def, heal));
+				}
 			}
-			hud.showMessage("作弊已激活: 所有物品已添加!");
+			hud.showMessage("作弊已激活: 所有品质物品已添加!");
 			hud.updateInventory(player);
 			audio.playLevelUp();
 		}

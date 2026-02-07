@@ -14,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.utils.Constants;
@@ -31,7 +32,8 @@ public class MainMenuScreen extends GScreen {
 	protected void initViewport() {
 		this.viewSizeShort = Constants.VIEWPORT_HEIGHT;
 		this.viewSizeLong = Constants.VIEWPORT_WIDTH;
-		this.uiViewportScale = 0.6f;
+
+		this.uiViewportScale = PlatformImpl.isDesktopUser() ? 0.6f : 1.0f;
 
 		super.initViewport();
 	}
@@ -52,7 +54,7 @@ public class MainMenuScreen extends GScreen {
 		seedTable.add(new VisLabel("Seed: ")).padRight(5);
 		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
 		seedTable.add(seedField).width(150).padRight(5);
-		
+
 		VisTextButton randomSeedBtn = new VisTextButton("Dice");
 		randomSeedBtn.addListener(new ClickListener() {
 			@Override
@@ -61,7 +63,7 @@ public class MainMenuScreen extends GScreen {
 			}
 		});
 		seedTable.add(randomSeedBtn).width(50);
-		
+
 		table.add(seedTable).padBottom(20).colspan(2).row();
 
 		VisTextButton startButton = new VisTextButton("New Game");
@@ -74,7 +76,7 @@ public class MainMenuScreen extends GScreen {
 				} catch (NumberFormatException e) {
 					seed = seedField.getText().hashCode();
 				}
-				
+
 				GameScreen gameScreen = new GameScreen(seed);
 				getScreenManager().setCurScreen(gameScreen);
 				dispose();

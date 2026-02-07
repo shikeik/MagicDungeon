@@ -96,6 +96,8 @@ public class GameHUD {
 	private Player currentPlayer;
 	private Runnable saveListener;
 
+	private Actor currentTooltip;
+
 	// --- Inner Classes ---
 
 	private class InventoryDialog extends BaseDialog {
@@ -160,18 +162,28 @@ public class GameHUD {
 			add(stack).size(64, 64);
 
 			if (Gdx.app.getType() == ApplicationType.Android) {
-				addListener(new ActorGestureListener() {
+				ActorGestureListener listener = new ActorGestureListener() {
 					@Override
 					public void tap(InputEvent event, float x, float y, int count, int button) {
 						handleEquipAction(item, isEquipped, player);
+						hideAndroidTooltip(); // 确保点击时清除可能残留的 tooltip
 					}
 
 					@Override
 					public boolean longPress(Actor actor, float x, float y) {
-						showAndroidTooltip(item, isEquipped);
+						showAndroidTooltip(InventorySlot.this, item, isEquipped);
 						return true;
 					}
-				});
+
+					@Override
+					public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+						super.touchUp(event, x, y, pointer, button);
+						// 长按后松开，或者点击后松开，都尝试隐藏
+						hideAndroidTooltip();
+					}
+				};
+				listener.getGestureDetector().setLongPressSeconds(0.18f); // 缩短长按时间
+				addListener(listener);
 			} else {
 				VisTable tooltipContent = createItemTooltipTable(item, isEquipped);
 				new Tooltip.Builder(tooltipContent).target(this).build();
@@ -229,29 +241,49 @@ public class GameHUD {
 			status.setColor(Color.YELLOW);
 			content.add(status).left().padTop(5).row();
 		}
-		
+
 		return borderTable;
 	}
 
-	private void showAndroidTooltip(InventoryItem item, boolean isEquipped) {
-		VisTable overlay = new VisTable();
-		overlay.setFillParent(true);
-		overlay.setTouchable(Touchable.enabled);
-		// Click anywhere to close
-		overlay.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				overlay.remove();
-			}
-		});
-
-		// Darken background slightly
-		overlay.setBackground(logBgDrawable);
+	private void showAndroidTooltip(Actor target, InventoryItem item, boolean isEquipped) {
+		// Remove existing tooltip if any
+		hideAndroidTooltip();
 
 		VisTable tooltip = createItemTooltipTable(item, isEquipped);
-		overlay.add(tooltip).center();
+		tooltip.setBackground(logBgDrawable); // Darken bg slightly for readability
+		tooltip.setTouchable(Touchable.disabled); // Don't block touches
 
-		stage.addActor(overlay);
+		stage.addActor(tooltip);
+
+		// Position above the target
+		Vector2 pos = target.localToStageCoordinates(new Vector2(0, 0));
+		float x = pos.x;
+		float y = pos.y + target.getHeight();
+
+		// Ensure within screen bounds
+		tooltip.pack();
+		float w = tooltip.getWidth();
+		float h = tooltip.getHeight();
+
+		// Clamp X
+		if (x + w > stage.getWidth()) x = stage.getWidth() - w;
+		if (x < 0) x = 0;
+
+		// Clamp Y (if top of screen, show below)
+		if (y + h > stage.getHeight()) {
+			y = pos.y - h;
+		}
+
+		tooltip.setPosition(x, y);
+
+		currentTooltip = tooltip;
+	}
+
+	private void hideAndroidTooltip() {
+		if (currentTooltip != null) {
+			currentTooltip.remove();
+			currentTooltip = null;
+		}
 	}
 
 	private String getTypeString(ItemType type) {
