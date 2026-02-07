@@ -78,6 +78,9 @@ public class SkewBar extends NeonActor {
 		if (style == null) throw new IllegalArgumentException("Style cannot be null");
 		this.style = style;
 	}
+	public BarStyle getStyle() {
+		return style;
+	}
 
 	/** 设置填充方向: true 为从右向左 (适合 P2) */
 	public void setFillFromRight(boolean fromRight) {
@@ -92,36 +95,46 @@ public class SkewBar extends NeonActor {
 		setValue(this.value);
 	}
 
-	/** 设置当前数值 (自动处理范围限制) */
+	/** 设置当前数值 (自动处理范围限制) - 带动画 */
 	public void setValue(float newValue) {
-		float oldVal = this.value;
 		this.value = MathUtils.clamp(newValue, min, max);
-
-		// 如果是回血，视觉值瞬间跟上；如果是扣血，视觉值滞后(保持原样等待 act 更新)
-		if (this.value > this.visualValue) {
-			this.visualValue = this.value;
-		}
 	}
 
-	/** 设置当前百分比 (0.0 - 1.0) */
+	/** 瞬间设置数值 (无动画) */
+	public void setInstantValue(float newValue) {
+		this.value = MathUtils.clamp(newValue, min, max);
+		this.visualValue = this.value;
+	}
+
+	/** 设置百分比 - 带动画 */
 	public void setPercent(float percent) {
 		setValue(min + (max - min) * percent);
 	}
 
 	public float getValue() { return value; }
-	public float getPercent() { return (value - min) / (max - min); }
-	public float getVisualPercent() { return (visualValue - min) / (max - min); }
+	public float getPercent() { return (max == min) ? 0 : (value - min) / (max - min); }
+	public float getVisualPercent() { return (max == min) ? 0 : (visualValue - min) / (max - min); }
 
 	@Override
 	public void act(float delta) {
 		super.act(delta);
 
-		// 伤害缓冲动画 logic
-		if (visualValue > value) {
-			// 计算每帧扣除量 (总范围 * 速度 * dt)
-			float dropAmount = (max - min) * style.damageSpeed * delta;
-			visualValue -= dropAmount;
-			if (visualValue < value) visualValue = value;
+		float range = max - min;
+		if (range <= 0) return;
+
+		// 动画逻辑
+		if (visualValue != value) {
+			float speed = range * style.damageSpeed * delta;
+
+			if (visualValue > value) {
+				// 扣血 (Drop)
+				visualValue -= speed;
+				if (visualValue < value) visualValue = value;
+			} else {
+				// 回血 (Rise)
+				visualValue += speed;
+				if (visualValue > value) visualValue = value;
+			}
 		}
 	}
 

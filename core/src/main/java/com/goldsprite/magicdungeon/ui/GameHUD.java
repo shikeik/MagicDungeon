@@ -29,7 +29,9 @@ import com.goldsprite.magicdungeon.entities.Player;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 import com.kotcrab.vis.ui.widget.*;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
 
@@ -50,7 +52,7 @@ public class GameHUD {
 
 	// System Log
 	private VisLabel msgLabel;
-	private LinkedList<String> logMessages = new LinkedList<>();
+	private List<String> logMessages = new ArrayList<>();
 
 	// Monster Info
 	private VisTable monsterInfoTable;
@@ -224,37 +226,45 @@ public class GameHUD {
 		root.setFillParent(true);
 		root.top();
 
-		// --- Top Area ---
-		VisTable topTable = new VisTable();
-
-		// Top Left: System Log
-		VisTable logTable = new VisTable();
-		logTable.setBackground(logBgDrawable);
-		msgLabel = new VisLabel("欢迎来到地下城!");
-		msgLabel.setWrap(true);
-		msgLabel.setAlignment(Align.topLeft);
-		logTable.add(msgLabel).grow().pad(10);
-
-		topTable.add(logTable).width(400).height(150).top().left().expandX();
-
-		// Top Right: Buttons
+		// 1. Toolbar (Top, Full Width)
+		VisTable toolbar = new VisTable();
+		toolbar.setBackground(logBgDrawable); // Optional background
 		VisTable buttonGroup = new VisTable();
 		createButtons(buttonGroup);
-		topTable.add(buttonGroup).top().right().pad(10);
+		toolbar.add(buttonGroup).growX().right().pad(5);
+		root.add(toolbar).growX().top().row();
 
-		root.add(topTable).growX().top().row();
+		// 2. System Log (Top Left, Overlay)
+		// We use a separate container for Log to allow it to be an overlay or just flow.
+		// Since root is table based, we can put it in the next row, left aligned.
+		VisTable logContainer = new VisTable();
+		logContainer.setBackground(logBgDrawable);
+		msgLabel = new VisLabel("欢迎来到地下城!", "small");
+		msgLabel.setFontScale(0.3f);
+		msgLabel.setWrap(true);
+		msgLabel.setAlignment(Align.topLeft);
+		logContainer.add(msgLabel).width(500).pad(10).top().left();
 
-		// --- Middle Area (Spacer) ---
-		root.add().expand().row();
+		// Add Log to root (Left aligned, expand Y to push bottom HUD down, but don't take all space)
+		// Actually, we want log to be top-left, but not push other things too much.
+		// Let's use an intermediate table for the "Middle" area
+		VisTable middleTable = new VisTable();
+		middleTable.top().left();
+		middleTable.add(logContainer).top().left().pad(10);
+		root.add(middleTable).expand().fill().row();
 
-		// --- Bottom Area: Player HUD ---
+		// 3. Bottom Area: Player HUD
 		VisTable playerHud = createPlayerHud();
 		root.add(playerHud).bottom().padBottom(20);
 
 		stage.addActor(root);
 
-		// --- Overlay: Monster Info (Hidden by default) ---
+		// --- Overlay: Monster Info (Top Right) ---
 		createMonsterInfo();
+		// Manually position or add to stage.
+		// Since we want it fixed at Top-Right, we can add it to stage and set position in resize or update.
+		// Or use a root-like table that fills parent?
+		// Let's add directly to stage and set position.
 		stage.addActor(monsterInfoTable);
 
 		// --- Overlay: Pause Label ---
@@ -285,17 +295,20 @@ public class GameHUD {
 		frame.add(avatarImage).size(80, 80);
 
 		// Level Badge
-		levelBadge = new VisLabel("1");
-		levelBadge.setColor(Color.CYAN);
-		levelBadge.setFontScale(1.2f);
+		levelBadge = new VisLabel("Lv1");
+		levelBadge.setColor(Color.YELLOW);
+		levelBadge.setFontScale(0.5f);
+		VisTable container = new VisTable();
 		VisTable badgeTable = new VisTable();
+		container.add(badgeTable).size(30, 20);
+//		badgeTable.setBackground("window-noborder");
 		badgeTable.bottom().right();
-		badgeTable.add(levelBadge).pad(5);
+		badgeTable.add(levelBadge).pad(2);
 
 		avatarStack.add(frame);
-		avatarStack.add(badgeTable);
+		avatarStack.add(container);
 
-		hud.add(avatarStack).size(80, 80).padRight(15);
+		hud.add(avatarStack).size(150, 150).padRight(15);
 
 		// 2. Bars Area
 		VisTable barsTable = new VisTable();
@@ -352,26 +365,40 @@ public class GameHUD {
 		return stack;
 	}
 
+	private VisLabel monsterHpLabel;
+
 	private void createMonsterInfo() {
 		monsterInfoTable = new VisTable();
 		monsterInfoTable.setBackground(logBgDrawable); // Reuse semi-transparent bg
 		monsterInfoTable.setVisible(false);
-		monsterInfoTable.setTouchable(Touchable.disabled); // Don't block clicks? Or maybe yes if we want to interact
+		monsterInfoTable.setTouchable(Touchable.disabled);
 
 		// Layout
-		// [Head] [Name & Level]
+		// [Head] [Name Lv.X]
 		//        [HP Bar]
 
-		monsterHead = new VisImage(); // Placeholder
-		monsterInfoTable.add(monsterHead).size(48, 48).left().pad(5);
+		VisTable stackContainer = new VisTable();
+		Stack headStack = new Stack();
+		monsterHead = new VisImage();
+		headStack.add(monsterHead);
+
+		monsterLvLabel = new VisLabel("1");
+		monsterLvLabel.setColor(Color.CYAN);
+		monsterLvLabel.setFontScale(0.3f);
+		VisTable badgeTable = new VisTable();
+		badgeTable.bottom().right();
+		badgeTable.add(monsterLvLabel).pad(0);
+		headStack.add(badgeTable);
+
+		stackContainer.add(headStack);
+		monsterInfoTable.add(stackContainer).size(48, 48).left().pad(5);
 
 		VisTable info = new VisTable();
 		monsterNameLabel = new VisLabel("Monster");
-		monsterLvLabel = new VisLabel("Lv.1"); // Placeholder
 
 		VisTable nameRow = new VisTable();
 		nameRow.add(monsterNameLabel).left().padRight(10);
-		nameRow.add(monsterLvLabel).left();
+		// monsterLvLabel moved to head
 		info.add(nameRow).left().row();
 
 		SkewBar.BarStyle mobHpStyle = new SkewBar.BarStyle();
@@ -379,13 +406,16 @@ public class GameHUD {
 		mobHpStyle.gradientEnd = Color.valueOf("b71c1c");
 		mobHpStyle.skewDeg = -15f;
 		monsterHpBar = new SkewBar(0, 100, mobHpStyle);
-		info.add(monsterHpBar).size(120, 15).left();
+		monsterHpLabel = new VisLabel("100/100");
+		monsterHpLabel.setFontScale(0.4f);
+
+		info.add(createBarWithLabel(monsterHpBar, monsterHpLabel, 120, 15)).left();
 
 		monsterInfoTable.add(info).pad(5);
 
-		// Position at top center or custom
-		monsterInfoTable.setPosition(450, 400); // Initial pos, updated dynamically or fixed
-		monsterInfoTable.pack();
+		// Position handled in showMonsterInfo or update
+//		monsterInfoTable.pack();
+		monsterInfoTable.pad(10);
 	}
 
 	private void createPauseLabel() {
@@ -512,17 +542,20 @@ public class GameHUD {
 	public void update(Player player, int floor) {
 		this.currentPlayer = player;
 
-		// Update Bars
+		// Update Bars (Fix Range Bug)
+		hpBar.setRange(0, player.stats.maxHp);
 		hpBar.setValue(player.stats.hp);
 		hpLabel.setText(player.stats.hp + "/" + player.stats.maxHp);
 
+		manaBar.setRange(0, player.stats.maxMana);
 		manaBar.setValue(player.stats.mana);
 		manaLabel.setText(player.stats.mana + "/" + player.stats.maxMana);
 
+		xpBar.setRange(0, player.stats.xpToNextLevel);
 		xpBar.setValue(player.stats.xp);
 		xpLabel.setText(player.stats.xp + "/" + player.stats.xpToNextLevel);
 
-		levelBadge.setText(String.valueOf(player.stats.level));
+		levelBadge.setText("Lv"+String.valueOf(player.stats.level));
 		floorLabel.setText("层数: " + floor);
 
 		// Update Monster Info if visible
@@ -530,7 +563,10 @@ public class GameHUD {
 			if (currentTargetMonster.hp <= 0) {
 				hideMonsterInfo();
 			} else {
+				// Ensure range is up to date (in case of buffs?)
+				monsterHpBar.setRange(0, currentTargetMonster.maxHp);
 				monsterHpBar.setValue(currentTargetMonster.hp);
+				monsterHpLabel.setText(currentTargetMonster.hp + "/" + currentTargetMonster.maxHp);
 			}
 		}
 
@@ -540,9 +576,9 @@ public class GameHUD {
 	public void showMonsterInfo(Monster monster) {
 		this.currentTargetMonster = monster;
 		monsterNameLabel.setText(monster.name);
-		monsterLvLabel.setText(""); // Or calculate level based on difficulty
-
-//		monsterHpBar.setStyle(new SkewBar.BarStyle(monsterHpBar.getStyle())); // Reset style if needed
+		// Estimate level or use simple calc
+		int estLevel = 1 + (monster.maxHp / 20);
+		monsterLvLabel.setText(String.valueOf(estLevel));
 
 		// Update Visuals
 		Texture monsterTex = TextureManager.getInstance().getMonster(monster.type.name());
@@ -551,13 +587,23 @@ public class GameHUD {
 		}
 
 		monsterInfoTable.setVisible(true);
+		monsterInfoTable.pack(); // Ensure size is correct
 
-		// Position at fixed position
-		monsterInfoTable.setPosition(stage.getWidth() / 2 - monsterInfoTable.getWidth() / 2, stage.getHeight() / 2 + 100);
+		// Position at Top Right (UI Viewport)
+		// x = right edge - width - padding
+		// y = top edge - toolbar height - height - padding
+		float padding = 20;
+		float toolbarHeight = 50; // Approx or calculate
+		monsterInfoTable.setPosition(
+			stage.getWidth() - monsterInfoTable.getWidth() - padding - 20,
+			stage.getHeight() - monsterInfoTable.getHeight() - padding - 60 // offset from toolbar
+		);
 
-		// Set initial value
+		// Set initial value INSTANTLY
+		monsterHpBar.getStyle().skewDeg = 15;
 		monsterHpBar.setRange(0, monster.maxHp);
-		monsterHpBar.setValue(monster.hp);
+		monsterHpBar.setInstantValue(monster.hp);
+		monsterHpLabel.setText(monster.hp + "/" + monster.maxHp);
 	}
 
 	public void hideMonsterInfo() {
@@ -568,14 +614,9 @@ public class GameHUD {
 	public void showMessage(String msg) {
 		logMessages.add(msg);
 		if (logMessages.size() > 8) {
-			logMessages.removeFirst();
+			logMessages.remove(0);
 		}
-
-		StringBuilder sb = new StringBuilder();
-		for (String s : logMessages) {
-			sb.append(s).append("\n");
-		}
-		msgLabel.setText(sb.toString());
+		msgLabel.setText(String.join("\n", logMessages));
 	}
 
 	public void setPaused(boolean paused) {
@@ -588,8 +629,12 @@ public class GameHUD {
 		if (currentPlayer != null) {
 			updateInventory(currentPlayer);
 		}
-		if(stage.getActors().contains(inventoryDialog, true)) inventoryDialog.remove();
-		else inventoryDialog.show(stage);
+		if(stage.getActors().contains(inventoryDialog, true)){
+			inventoryDialog.remove();
+		}
+		else{
+			inventoryDialog.show(stage);
+		}
 	}
 
 	public void updateInventoryDialog(Player player) {
