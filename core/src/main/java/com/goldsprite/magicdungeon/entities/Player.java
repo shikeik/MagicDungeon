@@ -58,7 +58,7 @@ public class Player extends Entity {
 			if (targetMonster != null) {
 				// Attack Monster
 				triggerBump(dx, dy);
-				audio.playHit(); // Play hit sound
+				audio.playAttack(); // Play attack sound
 				targetMonster.hp -= this.stats.atk;
 				targetMonster.triggerHitFlash(0.2f); // Trigger hit flash
 				// Simple knockback/hit effect could be added here
@@ -83,11 +83,14 @@ public class Player extends Entity {
 		}
 	}
 
-	public void useSkill() {
+	public boolean useSkill(AudioSystem audio) {
 		if (this.stats.mana >= 10) {
 			this.stats.mana -= 10;
 			this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + 20);
+			audio.playSkill();
+			return true;
 		}
+		return false;
 	}
 
 	public void equip(InventoryItem item) {

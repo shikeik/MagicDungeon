@@ -120,6 +120,7 @@ public class GameScreen extends GScreen {
 
 		// Audio
 		audio = new AudioSystem();
+		audio.playBGM();
 
 		// 初始化相机位置
 		updateCamera();
@@ -495,11 +496,8 @@ public class GameScreen extends GScreen {
 
 		if (isSpacePressed || isAttackBtnJustPressed) {
 			// Simple heal logic (if no items)
-			if (player.stats.mana >= 10) {
-				player.stats.mana -= 10;
-				player.stats.hp = Math.min(player.stats.hp + 20, player.stats.maxHp);
+			if (player.useSkill(audio)) {
 				hud.showMessage("使用了治疗术! 回复了 20 点生命!");
-				audio.playItem();
 			} else {
 				hud.showMessage("法力不足!");
 			}
@@ -778,6 +776,7 @@ public class GameScreen extends GScreen {
 	@Override
 	public void dispose() {
 		if (audio != null) {
+			audio.stopBGM();
 			audio.dispose();
 		}
 		if (hud != null) {
