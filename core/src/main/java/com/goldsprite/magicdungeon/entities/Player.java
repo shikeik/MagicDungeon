@@ -125,6 +125,24 @@ public class Player extends Entity {
 				return;
 		}
 		updateStats();
+		updateVisuals();
+	}
+
+	private void updateVisuals() {
+		// Update player texture in TextureManager or notify systems
+		// Since TextureManager is global, we can regenerate the "PLAYER" texture
+		// But "PLAYER" texture is shared. If we have multiple players or want dynamic updates,
+		// we should probably store the texture in the Player entity or update the shared one.
+		// For single player game, updating the global texture is fine.
+		
+		String mainHand = equipment.mainHand != null ? equipment.mainHand.data.name() : null;
+		String offHand = equipment.offHand != null ? equipment.offHand.data.name() : null;
+		String helmet = equipment.helmet != null ? equipment.helmet.data.name() : null;
+		String armor = equipment.armor != null ? equipment.armor.data.name() : null;
+		String boots = equipment.boots != null ? equipment.boots.data.name() : null;
+		
+		com.badlogic.gdx.graphics.Texture newTex = com.goldsprite.magicdungeon.utils.SpriteGenerator.generateCharacterTexture(mainHand, offHand, helmet, armor, boots);
+		com.goldsprite.magicdungeon.assets.TextureManager.getInstance().updateTexture("PLAYER", newTex);
 	}
 
 	private void equipAccessory(InventoryItem item) {

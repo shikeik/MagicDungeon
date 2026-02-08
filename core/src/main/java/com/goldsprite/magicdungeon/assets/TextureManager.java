@@ -93,6 +93,29 @@ public class TextureManager implements Disposable {
 		}
 	}
 
+	public void updateTexture(String key, Texture newTexture) {
+		String lowerKey = key.toLowerCase();
+		
+		// If exists, we might need to dispose old texture if it was managed and generated
+		// But be careful if it's shared from Atlas. 
+		// Our "generated" textures are individual Texture objects in managedTextures.
+		
+		TextureRegion oldRegion = regionCache.get(lowerKey);
+		if (oldRegion != null) {
+			Texture oldTex = oldRegion.getTexture();
+			if (managedTextures.contains(oldTex)) {
+				// Only dispose if it's one of our managed individual textures
+				// And check if no other region uses it? 
+				// For generated textures, usually 1 region = 1 texture.
+				managedTextures.remove(oldTex);
+				oldTex.dispose();
+			}
+		}
+		
+		managedTextures.add(newTexture);
+		regionCache.put(lowerKey, new TextureRegion(newTexture));
+	}
+
 	public Map<String, TextureRegion> getAllTextures() {
 		return regionCache;
 	}

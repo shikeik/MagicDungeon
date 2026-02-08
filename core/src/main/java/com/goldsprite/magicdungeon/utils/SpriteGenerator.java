@@ -445,7 +445,6 @@ public class SpriteGenerator {
 		// 5. Weapons
 		if (mainHand != null) {
 			// Draw Main Hand (Right Hand -> Screen Left)
-			// Need to flip or just draw on left
 			drawWeapon(p, mainHand, true);
 		}
 		
@@ -583,6 +582,9 @@ public class SpriteGenerator {
 		if (name.contains("Gold") || name.contains("Legendary")) c = Color.GOLD;
 		if (name.contains("Wood") || name.contains("Club")) c = Color.valueOf("#5d4037");
 		
+		// For Main Hand, we might want to mirror the weapon if it's directional (like a sword curve)
+		// But our draw primitives are simple.
+		
 		if (name.contains("Shield")) {
 			// Draw Shield
 			p.setColor(c);
@@ -595,8 +597,15 @@ public class SpriteGenerator {
 			drawLine(p, x, y + 20, x, y - 20, 8, Color.valueOf("#3e2723"));
 			// Guard
 			drawLine(p, x - 15, y - 20, x + 15, y - 20, 6, Color.GOLD);
+			
 			// Blade
+			// If Main Hand (Left on screen), blade points up/out? 
+			// Standard hold: Up
 			drawLine(p, x, y - 20, x, y - 100, 10, c);
+			
+			// If we want to simulate "Holding item texture", we would need to redraw the item shape
+			// scaled down and positioned at the hand.
+			// Since we are procedural, we just draw similar shapes.
 		}
 	}
 
@@ -1100,14 +1109,17 @@ public class SpriteGenerator {
 			Color c = name.contains("Iron") || name.contains("铁") ? Color.GRAY : Color.valueOf("#5d4037");
 			Color trim = name.contains("Iron") ? Color.LIGHT_GRAY : Color.valueOf("#3e2723");
 
-			// Left Boot
+			// Left Boot (Left side of icon)
 			drawRect(p, 60, 80, 50, 100, c); // Leg
 			drawRect(p, 60, 160, 70, 40, c); // Foot
 			drawRect(p, 60, 80, 50, 10, trim); // Top Trim
 			
-			// Right Boot
+			// Right Boot (Right side of icon) - Mirror image
 			drawRect(p, 140, 80, 50, 100, c);
-			drawRect(p, 140, 160, 70, 40, c);
+			drawRect(p, 120, 160, 70, 40, c); // Foot points left (inward) or right?
+			// Standard icon: both feet pointing outward or forward
+			// Let's make right boot point right (x > 140)
+			drawRect(p, 140, 160, 70, 40, c); // Foot
 			drawRect(p, 140, 80, 50, 10, trim);
 
 		} else if (name.contains("Necklace") || name.contains("项链")) {

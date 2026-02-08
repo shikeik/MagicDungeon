@@ -743,7 +743,12 @@ public class GameHUD {
 		Stack avatarStack = new Stack();
 
 		// Avatar Image
-		Texture avatarTex = SpriteGenerator.createAvatar();
+		// Use TextureManager to get the shared "PLAYER" texture which is dynamically updated
+		TextureRegion avatarTex = TextureManager.getInstance().get("PLAYER");
+		if (avatarTex == null) {
+			// Fallback if not loaded yet
+			avatarTex = new TextureRegion(SpriteGenerator.createAvatar());
+		}
 		avatarImage = new VisImage(new TextureRegionDrawable(avatarTex));
 
 		// Frame (Simple border)
@@ -1037,6 +1042,23 @@ public class GameHUD {
 
 		levelBadge.setText("Lv"+String.valueOf(player.stats.level));
 		floorLabel.setText("层数: " + floor);
+		
+		// Update HUD Avatar (Top Left)
+		// We want to use the same texture as the player entity ("PLAYER")
+		// The Player entity updates "PLAYER" texture in TextureManager when equipment changes.
+		// So we just fetch it.
+		TextureRegion playerTex = TextureManager.getInstance().get("PLAYER");
+		if (playerTex != null) {
+			// We might want to crop to just the head if it's too big, or scale it.
+			// The createPlayer texture is 256x256, but the actual sprite is centered.
+			// Let's just use it as is, it's an avatar.
+			avatarImage.setDrawable(new TextureRegionDrawable(playerTex));
+			
+			// If we want just the head, we would need to know where the head is.
+			// For now, full body avatar is fine, or maybe scale/crop?
+			// The original code used SpriteGenerator.createAvatar() which returned a texture.
+			// Now we use the shared player texture.
+		}
 
 		// Update Monster Info if visible
 		if (monsterInfoTable.isVisible() && currentTargetMonster != null) {
