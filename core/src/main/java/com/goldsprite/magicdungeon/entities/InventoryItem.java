@@ -71,4 +71,20 @@ public class InventoryItem {
 	public int hashCode() {
 		return id != null ? id.hashCode() : 0;
 	}
+	
+	public int getValue() {
+		// Basic value calculation
+		int baseValue = 10;
+		
+		// High value for "Coin" type items (Treasure)
+		if (data.name().contains("Coin") || data.name().contains("Gold")) {
+			baseValue = 100;
+		} else {
+			// Equipment value based on stats
+			baseValue += (atk + def + heal) * 5;
+		}
+		
+		// Multiplier by quality
+		return Math.round(baseValue * quality.multiplier);
+	}
 }

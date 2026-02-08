@@ -12,6 +12,8 @@ public class Player extends Entity {
 	public float moveDelay;
 	
 	private float regenTimer = 0;
+	
+	public long coins = 0;
 
 	// Stats
 	public PlayerStats stats;
@@ -228,13 +230,39 @@ public class Player extends Entity {
 		}
 		
 		// 2. Add to new slot if space available
-		if (inventory.size() < 30) {
+		if (inventory.size() < Constants.MAX_INVENTORY_SLOTS) {
 			inventory.add(newItem);
 			return true;
 		}
 		
 		// 3. Inventory full
 		return false;
+	}
+
+	public void sellItem(InventoryItem item) {
+		// Unequip first if equipped
+		if (equipment.mainHand == item) equipment.mainHand = null;
+		else if (equipment.offHand == item) equipment.offHand = null;
+		else if (equipment.helmet == item) equipment.helmet = null;
+		else if (equipment.armor == item) equipment.armor = null;
+		else if (equipment.boots == item) equipment.boots = null;
+		else {
+			for(int i=0; i<equipment.accessories.length; i++) {
+				if (equipment.accessories[i] == item) {
+					equipment.accessories[i] = null;
+					break;
+				}
+			}
+		}
+		
+		// Calculate Price
+		// Base value * quality
+		int price = item.getValue();
+		this.coins += price * item.count;
+		
+		this.inventory.remove(item);
+		updateStats();
+		updateVisuals();
 	}
 
 	public void usePotion(InventoryItem item) {

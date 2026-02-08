@@ -49,6 +49,8 @@ import com.goldsprite.magicdungeon.entities.ItemData;
 import java.util.function.Predicate;
 import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
 
+import com.goldsprite.magicdungeon.utils.Constants;
+
 public class GameHUD {
 	public Stage stage;
 	private NeonBatch neonBatch;
@@ -63,6 +65,8 @@ public class GameHUD {
 	private VisImage avatarImage;
 	private VisLabel levelBadge;
 	private VisLabel floorLabel;
+	
+	private VisLabel coinLabel; // New Coin Label
 	
 	// Quick Slots
 	private QuickSlot hpQuickSlot;
@@ -230,8 +234,9 @@ public class GameHUD {
 			rightCol.add(inventoryScrollPane).grow().pad(10);
 
 			// Add columns to main table
-			mainTable.add(leftCol).width(width * 0.4f).growY().padRight(10);
-			mainTable.add(rightCol).width(width * 0.6f).growY();
+			// Modified: Adjusted ratio to 30:70 to fit 8 columns in inventory
+			mainTable.add(leftCol).width(width * 0.3f).growY().padRight(10);
+			mainTable.add(rightCol).width(width * 0.7f).growY();
 
 			getContentTable().add(mainTable).grow();
 		}
@@ -599,7 +604,21 @@ public class GameHUD {
 		uuid.setFontScale(0.8f);
 		rightCol.add(uuid).left().padBottom(5).row();
 
-		// 3. 分割线
+		// 3. Price
+		VisLabel priceLabel = new VisLabel("价值: " + item.getValue());
+		priceLabel.setColor(Color.GOLD);
+		priceLabel.setFontScale(0.8f);
+		rightCol.add(priceLabel).left().row();
+
+		// 4. Sell Hint
+		if (!isEquipped) {
+			VisLabel sellHint = new VisLabel("右键点击出售");
+			sellHint.setColor(Color.GRAY);
+			sellHint.setFontScale(0.7f);
+			rightCol.add(sellHint).left().row();
+		}
+
+		// 5. 分割线
 		rightCol.add(new Separator()).growX().padBottom(8).row();
 
 		// 4. 类型
@@ -899,6 +918,11 @@ public class GameHUD {
 		// Floor info
 		floorLabel = new VisLabel("Floor 1");
 		hud.add(floorLabel).padLeft(20);
+		
+		// Coin info
+		coinLabel = new VisLabel("Coins: 0");
+		coinLabel.setColor(Color.GOLD);
+		hud.add(coinLabel).padLeft(20);
 
 		return hud;
 	}
@@ -1122,6 +1146,7 @@ public class GameHUD {
 
 		levelBadge.setText("Lv"+String.valueOf(player.stats.level));
 		floorLabel.setText("层数: " + floor);
+		coinLabel.setText("金币: " + player.coins);
 		
 		// Update HUD Avatar (Top Left)
 		// We want to use the same texture as the player entity ("PLAYER")
