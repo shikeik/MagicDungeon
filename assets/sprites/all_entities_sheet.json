@@ -1,0 +1,27 @@
+{
+	"gridWidth": 64,
+	"gridHeight": 64,
+	"regions": {
+		"slime": ["0", "史莱姆"],
+		"bat": ["1", "蝙蝠"],
+		"skeleton": ["2", "骷髅"],
+		"goblin": ["3", "哥布林"],
+		"dragon": ["4", "红龙"],
+		"black_knight_1": ["5", "黑甲卫士"],
+		"black_knight_2": ["6", "黑甲队长"],
+		"orc_1": ["7", "兽人步兵"],
+		"orc_2": ["8", "兽人卫士"],
+		"orc_3": ["9", "兽人督军"],
+		"gold_knight": ["10", "金甲骑士"],
+		"green_warrior_1": ["11", "绿发剑士"],
+		"green_warrior_2": ["12", "绿发重剑"],
+		"duo": ["13", "双人组"],
+		"statue": ["14", "石像鬼"],
+		"blue_warrior_1": ["15", "蓝发剑士"],
+		"blue_warrior_2": ["16", "蓝发法师"],
+		"silver_warrior": ["17", "银甲盾卫"],
+		"dark_knight": ["18", "暗黑骑士"],
+		"dark_lord": ["19", "暗黑领主"],
+		"paladin": ["20", "圣骑士"]
+	}
+}

@@ -1,0 +1,30 @@
+{
+	"gridWidth": 64,
+	"gridHeight": 64,
+	"regions": {
+		"rusty_sword": ["0", "锈剑"],
+		"old_sword": ["1", "古剑"],
+		"rune_sword": ["2", "符文剑"],
+		"iron_sword": ["3", "铁剑"],
+		"steel_sword": ["4", "钢剑"],
+		"gold_sword": ["5", "金剑"],
+		"holy_sword": ["6", "圣剑"],
+		"iron_axe": ["7", "铁斧"],
+		"silver_sword": ["8", "银剑"],
+		"hero_sword": ["9", "勇者剑"],
+		"battle_axe": ["10", "战斧"],
+		"blue_staff": ["11", "蓝宝杖"],
+		"iron_shield": ["12", "铁盾"],
+		"double_axe": ["13", "双刃斧"],
+		"crystal_staff": ["14", "水晶杖"],
+		"hero_shield": ["15", "勇者盾"],
+		"necro_staff": ["16", "死灵杖"],
+		"lightning_staff": ["17", "雷电杖"],
+		"bone_shield": ["18", "骨盾"],
+		"giant_axe": ["19", "巨斧"],
+		"frost_staff": ["20", "冰霜杖"],
+		"silver_shield": ["21", "银盾"],
+		"berserk_axe": ["22", "狂战斧"],
+		"gold_shield": ["23", "金盾"]
+	}
+}
