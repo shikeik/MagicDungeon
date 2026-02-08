@@ -72,6 +72,7 @@ public class SaveManager {
 				item.item.atk,
 				item.item.def,
 				item.item.heal,
+				item.item.manaRegen,
 				item.item.count
 			));
 		}

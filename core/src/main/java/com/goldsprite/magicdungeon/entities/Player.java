@@ -168,7 +168,7 @@ public class Player extends Entity {
 		updateVisuals();
 	}
 
-	private void updateVisuals() {
+	public void updateVisuals() {
 		// Update player texture in TextureManager or notify systems
 		// Since TextureManager is global, we can regenerate the "PLAYER" texture
 		// But "PLAYER" texture is shared. If we have multiple players or want dynamic updates,
@@ -281,21 +281,47 @@ public class Player extends Entity {
 	private void updateStats() {
 		int baseAtk = 5; // Base attack
 		int baseDef = 0; // Base defense
+		int baseHpRegen = 1; // Base HP Regen
+		int baseManaRegen = 1; // Base Mana Regen
 
-		if (equipment.mainHand != null) baseAtk += equipment.mainHand.atk;
-		if (equipment.offHand != null) baseDef += equipment.offHand.def; // Shields give def, maybe atk?
-		if (equipment.helmet != null) baseDef += equipment.helmet.def;
-		if (equipment.armor != null) baseDef += equipment.armor.def;
-		if (equipment.boots != null) baseDef += equipment.boots.def;
+		if (equipment.mainHand != null) {
+			baseAtk += equipment.mainHand.atk;
+			baseHpRegen += equipment.mainHand.heal;
+			baseManaRegen += equipment.mainHand.manaRegen;
+		}
+		if (equipment.offHand != null) {
+			baseDef += equipment.offHand.def; // Shields give def, maybe atk?
+			baseHpRegen += equipment.offHand.heal;
+			baseManaRegen += equipment.offHand.manaRegen;
+		}
+		if (equipment.helmet != null) {
+			baseDef += equipment.helmet.def;
+			baseHpRegen += equipment.helmet.heal;
+			baseManaRegen += equipment.helmet.manaRegen;
+		}
+		if (equipment.armor != null) {
+			baseDef += equipment.armor.def;
+			baseHpRegen += equipment.armor.heal;
+			baseManaRegen += equipment.armor.manaRegen;
+		}
+		if (equipment.boots != null) {
+			baseDef += equipment.boots.def;
+			baseHpRegen += equipment.boots.heal;
+			baseManaRegen += equipment.boots.manaRegen;
+		}
 		
 		for (InventoryItem acc : equipment.accessories) {
 			if (acc != null) {
 				baseAtk += acc.atk;
 				baseDef += acc.def;
+				baseHpRegen += acc.heal;
+				baseManaRegen += acc.manaRegen;
 			}
 		}
 
 		this.stats.atk = baseAtk;
 		this.stats.def = baseDef;
+		this.stats.hpRegen = baseHpRegen;
+		this.stats.manaRegen = baseManaRegen;
 	}
 }

@@ -606,16 +606,21 @@ public class SpriteGenerator {
 		// Hand Positions (Adjusted to be closer to body center)
 		// Body Hands are at ~52 (Left) and ~203 (Right)
 		int handX = isMainHand ? 52 : 203; // Screen X
-		int handY = 140;
+		int handY = 160; // Moved down from 140
 		
 		if (name.contains("Shield") || name.contains("盾")) {
 			// Shield: Center on hand, scale down
-			int size = 64; // Smaller shield (was 80)
-			p.drawPixmap(itemP, 0, 0, 256, 256, handX - size/2, handY - size/2, size, size);
+			int size = 96; // Larger shield (was 64)
+			// Adjust X to be closer to body to avoid clipping
+			int drawX = isMainHand ? handX + 10 : handX - 10;
+			p.drawPixmap(itemP, 0, 0, 256, 256, drawX - size/2, handY - size/2, size, size);
 		} else {
 			// Weapon (Sword, Axe, etc.)
-			float scale = 0.4f; // Smaller scale (was 0.5f)
+			float scale = 0.6f; // Larger scale (was 0.4f)
 			int targetSize = (int)(256 * scale);
+			
+			// Adjust overlap to pull weapon inward
+			int overlap = 30; 
 			
 			if (isMainHand) {
 				// Mirror for Main Hand (Left Side of Screen)
@@ -625,7 +630,7 @@ public class SpriteGenerator {
 				// Original Handle X ~ 60. Flipped X = 196.
 				// We want Flipped Handle (196*scale, 200*scale) to align with Hand (handX, handY).
 				
-				int destX = (int)(handX - 196 * scale);
+				int destX = (int)(handX - 196 * scale) + overlap; // Pull right
 				int destY = (int)(handY - 200 * scale);
 				
 				p.drawPixmap(flipped, 0, 0, 256, 256, destX, destY, targetSize, targetSize);
@@ -634,7 +639,7 @@ public class SpriteGenerator {
 				// Off Hand (Right Side of Screen)
 				// Handle X ~ 60.
 				
-				int destX = (int)(handX - 60 * scale);
+				int destX = (int)(handX - 60 * scale) - overlap; // Pull left
 				int destY = (int)(handY - 200 * scale);
 				
 				p.drawPixmap(itemP, 0, 0, 256, 256, destX, destY, targetSize, targetSize);

@@ -13,6 +13,7 @@ public class InventoryItem {
 	public int atk;
 	public int def;
 	public int heal;
+	public int manaRegen;
 	
 	public int count = 1;
 
@@ -43,6 +44,15 @@ public class InventoryItem {
 		this.def = Math.max(0, Math.round(data.def * multiplier));
 		this.heal = Math.max(0, Math.round(data.heal * multiplier));
 		
+		// Mana Regen Logic (New)
+		this.manaRegen = 0;
+		if (data.name().contains("Mana") || data.name().contains("Magic") || data.name().contains("Ring") || data.name().contains("Wand") || data.name().contains("Necklace")) {
+			// Small chance for mana regen on magic items
+			if (rng.nextFloat() < 0.5f || data.name().contains("Mana")) {
+				this.manaRegen = Math.max(1, Math.round(1 * multiplier));
+			}
+		}
+		
 		// Ensure non-zero base stats don't become zero unless intended
 		if (data.atk > 0 && this.atk == 0) this.atk = 1;
 		if (data.def > 0 && this.def == 0) this.def = 1;
@@ -50,13 +60,14 @@ public class InventoryItem {
 	}
 	
 	// Constructor for restoring from save
-	public InventoryItem(ItemData data, ItemQuality quality, int atk, int def, int heal) {
+	public InventoryItem(ItemData data, ItemQuality quality, int atk, int def, int heal, int manaRegen) {
 		this.id = UUID.randomUUID().toString();
 		this.data = data;
 		this.quality = quality;
 		this.atk = atk;
 		this.def = def;
 		this.heal = heal;
+		this.manaRegen = manaRegen;
 	}
 
 	@Override
@@ -81,7 +92,7 @@ public class InventoryItem {
 			baseValue = 100;
 		} else {
 			// Equipment value based on stats
-			baseValue += (atk + def + heal) * 5;
+			baseValue += (atk + def + heal + manaRegen) * 5;
 		}
 		
 		// Multiplier by quality

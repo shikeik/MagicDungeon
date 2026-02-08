@@ -115,6 +115,7 @@ public class GameScreen extends GScreen {
 
 		// Start at Camp
 		enterCamp(false);
+		player.updateVisuals();
 
 		// Scene2D HUD
 		// 传递 uiViewport 给 HUD
@@ -162,6 +163,7 @@ public class GameScreen extends GScreen {
 				item.item.atk,
 				item.item.def,
 				item.item.heal,
+				item.item.manaRegen,
 				item.item.count
 			));
 		}
@@ -331,8 +333,9 @@ public class GameScreen extends GScreen {
 			int atk = is.atk > 0 ? is.atk : data.atk;
 			int def = is.def > 0 ? is.def : data.def;
 			int heal = is.heal > 0 ? is.heal : data.heal;
+			int manaRegen = is.manaRegen; // New field
 
-			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal, manaRegen);
 			invItem.count = is.count > 0 ? is.count : 1;
 			items.add(new Item(is.x, is.y, invItem));
 		}
@@ -377,8 +380,9 @@ public class GameScreen extends GScreen {
 			int atk = is.atk > 0 ? is.atk : data.atk;
 			int def = is.def > 0 ? is.def : data.def;
 			int heal = is.heal > 0 ? is.heal : data.heal;
+			int manaRegen = is.manaRegen;
 
-			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal, manaRegen);
 			invItem.count = is.count > 0 ? is.count : 1;
 			items.add(new Item(is.x, is.y, invItem));
 		}
@@ -634,7 +638,11 @@ public class GameScreen extends GScreen {
 					int atk = Math.max(0, Math.round(data.atk * quality.multiplier));
 					int def = Math.max(0, Math.round(data.def * quality.multiplier));
 					int heal = Math.max(0, Math.round(data.heal * quality.multiplier));
-					player.inventory.add(new InventoryItem(data, quality, atk, def, heal));
+					int manaRegen = 0;
+					if (data.name().contains("Mana") || data.name().contains("Magic") || data.name().contains("Ring")) {
+						manaRegen = Math.max(1, Math.round(1 * quality.multiplier));
+					}
+					player.inventory.add(new InventoryItem(data, quality, atk, def, heal, manaRegen));
 				}
 			}
 			hud.showMessage("作弊已激活: 所有品质物品已添加!");
@@ -685,31 +693,21 @@ public class GameScreen extends GScreen {
 			audio.playMove();
 		}
 
-		// Use Potion (Health) - SPACE
-		boolean isSpacePressed = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
-		boolean isAttackBtnJustPressed = hud.isAttackPressed() && !wasAttackPressed;
-		wasAttackPressed = hud.isAttackPressed();
-
-		if (isSpacePressed || isAttackBtnJustPressed) {
-			// Simple heal logic (if no items)
-			if (player.useSkill(audio)) {
-				hud.showMessage("使用了治疗术! 回复了 20 点生命!");
-			} else {
-				hud.showMessage("法力不足!");
-			}
-		}
-
 		// Interact / Next Level - Space (Changed from E)
-		boolean isInteractKey = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+		boolean isSpacePressed = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
 		boolean isInteractBtnJustPressed = hud.isInteractPressed() && !wasInteractPressed;
 		wasInteractPressed = hud.isInteractPressed();
+		
+		boolean interactTriggered = isSpacePressed || isInteractBtnJustPressed;
+		boolean handledInteract = false;
 
-		if (isInteractKey || isInteractBtnJustPressed) {
+		if (interactTriggered) {
 			Tile tile = dungeon.getTile(player.x, player.y);
 			if (tile != null) {
 				if (tile.type == TileType.Stairs_Down) {
 					// Go deeper
 					enterDungeon(dungeon.level + 1);
+					handledInteract = true;
 				} else if (tile.type == TileType.Stairs_Up) {
 					// Go back up
 					if (dungeon.level > 1) {
@@ -718,12 +716,27 @@ public class GameScreen extends GScreen {
 						// Level 1 -> Camp
 						enterCamp(true);
 					}
+					handledInteract = true;
 				} else if (tile.type == TileType.Dungeon_Entrance) {
 					// Show Level Selection
 					hud.showLevelSelection(maxDepth, (level) -> {
 						enterDungeon(level);
 					});
+					handledInteract = true;
 				}
+			}
+		}
+
+		// Use Potion (Health) - SPACE (Only if not interacted)
+		boolean isAttackBtnJustPressed = hud.isAttackPressed() && !wasAttackPressed;
+		wasAttackPressed = hud.isAttackPressed();
+
+		if ((isSpacePressed && !handledInteract) || isAttackBtnJustPressed) {
+			// Simple heal logic (if no items)
+			if (player.useSkill(audio)) {
+				hud.showMessage("使用了治疗术! 回复了 20 点生命!");
+			} else {
+				hud.showMessage("法力不足!");
 			}
 		}
 
@@ -1037,8 +1050,9 @@ public class GameScreen extends GScreen {
 					int atk = is.atk > 0 ? is.atk : data.atk;
 					int def = is.def > 0 ? is.def : data.def;
 					int heal = is.heal > 0 ? is.heal : data.heal;
+					int manaRegen = is.manaRegen;
 
-					InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal);
+					InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal, manaRegen);
 					invItem.count = is.count > 0 ? is.count : 1;
 					items.add(new Item(is.x, is.y, invItem));
 				}
@@ -1049,7 +1063,8 @@ public class GameScreen extends GScreen {
 			}
 
 			hud.showMessage("游戏已加载!");
-		} else {
+		player.updateVisuals();
+	} else {
 			hud.showMessage("未找到存档!");
 		}
 	}

@@ -295,24 +295,6 @@ public class GameHUD {
 
 			add(stack).size(64, 64);
 
-			// Configure Drag Source
-			if (dragAndDrop != null && item != null) {
-				dragAndDrop.addSource(new Source(this) {
-					@Override
-					public Payload dragStart(InputEvent event, float x, float y, int pointer) {
-						Payload payload = new Payload();
-						payload.setObject(item);
-
-						// Create drag actor (copy of the icon)
-						VisTable dragActor = ItemRenderer.createItemIcon(item, 48);
-						payload.setDragActor(dragActor);
-
-						// Optional: set invalid/valid drag actors
-						return payload;
-					}
-				});
-			}
-
 			if (Gdx.app.getType() == ApplicationType.Android) {
 				if (item != null) {
 					ActorGestureListener listener = new ActorGestureListener() {
@@ -343,19 +325,47 @@ public class GameHUD {
 					VisTable tooltipContent = createItemTooltipTable(item, isEquipped);
 					new Tooltip.Builder(tooltipContent).target(this).build();
 
-					addListener(new ClickListener(-1) {
+					// Add Right Click Listener BEFORE DragAndDrop to capture event
+					addListener(new InputListener() {
 						@Override
-						public void clicked(InputEvent event, float x, float y) {
-							if (getButton() == Input.Buttons.RIGHT) {
-								// Show Context Menu
+						public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+							if (button == Input.Buttons.RIGHT) {
+								return true; // Capture right click
+							}
+							return false;
+						}
+						
+						@Override
+						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+							if (button == Input.Buttons.RIGHT) {
 								showContextMenu(item, isEquipped, player, event.getStageX(), event.getStageY());
 							}
 						}
 					});
 				}
 			}
-		}
 
+			// Configure Drag Source
+			if (dragAndDrop != null && item != null) {
+				dragAndDrop.addSource(new Source(this) {
+					@Override
+					public Payload dragStart(InputEvent event, float x, float y, int pointer) {
+						// Prevent drag if right button (just in case)
+						if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) return null;
+						
+						Payload payload = new Payload();
+						payload.setObject(item);
+
+						// Create drag actor (copy of the icon)
+						VisTable dragActor = ItemRenderer.createItemIcon(item, 48);
+						payload.setDragActor(dragActor);
+
+						// Optional: set invalid/valid drag actors
+						return payload;
+					}
+				});
+			}
+		}
 	}
 
 	private class EquipmentSlot extends VisTable {
@@ -656,7 +666,8 @@ public class GameHUD {
 		// 5. 属性
 		if (item.atk > 0) rightCol.add(new VisLabel("攻击: +" + item.atk)).left().padBottom(2).row();
 		if (item.def > 0) rightCol.add(new VisLabel("防御: +" + item.def)).left().padBottom(2).row();
-		if (item.heal > 0) rightCol.add(new VisLabel("回复: +" + item.heal)).left().padBottom(2).row();
+		if (item.heal > 0) rightCol.add(new VisLabel("生命回复: +" + item.heal)).left().padBottom(2).row();
+		if (item.manaRegen > 0) rightCol.add(new VisLabel("法力回复: +" + item.manaRegen)).left().padBottom(2).row();
 
 		// 6. 状态 (已装备)
 		if (isEquipped) {
