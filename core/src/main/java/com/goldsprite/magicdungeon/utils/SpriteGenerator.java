@@ -592,7 +592,7 @@ public class SpriteGenerator {
 		int dstW = 90;
 		int dstH = 80;
 		int dstX = 128 - dstW/2;
-		int dstY = 20; // Slightly above head
+		int dstY = 10; // Moved up from 20 to 10 (higher on texture/screen?) - Pixmap 0,0 is Top-Left. So 10 is higher.
 		
 		p.drawPixmap(itemP, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
 		

@@ -702,8 +702,19 @@ public class GameHUD {
 		// 5. 属性
 		if (item.atk > 0) rightCol.add(new VisLabel("攻击: +" + item.atk)).left().padBottom(2).row();
 		if (item.def > 0) rightCol.add(new VisLabel("防御: +" + item.def)).left().padBottom(2).row();
-		if (item.heal > 0) rightCol.add(new VisLabel("回血: +" + item.heal)).left().padBottom(2).row();
-		if (item.manaRegen > 0) rightCol.add(new VisLabel("回魔: +" + item.manaRegen)).left().padBottom(2).row();
+		
+		if (item.data == ItemData.Mana_Potion) {
+			rightCol.add(new VisLabel("回魔: +" + item.heal)).left().padBottom(2).row();
+		} else if (item.data == ItemData.Elixir) {
+			rightCol.add(new VisLabel("回血: +" + item.heal)).left().padBottom(2).row();
+			rightCol.add(new VisLabel("回魔: +" + item.heal)).left().padBottom(2).row();
+		} else {
+			String hpRegenLabel = item.data.type == ItemType.POTION ? "回血: +" : "自然回血: +";
+			String mpRegenLabel = item.data.type == ItemType.POTION ? "回魔: +" : "自然回魔: +";
+			
+			if (item.heal > 0) rightCol.add(new VisLabel(hpRegenLabel + item.heal)).left().padBottom(2).row();
+			if (item.manaRegen > 0) rightCol.add(new VisLabel(mpRegenLabel + item.manaRegen)).left().padBottom(2).row();
+		}
 
 		// 6. 状态 (已装备)
 		if (isEquipped) {
@@ -1438,43 +1449,59 @@ public class GameHUD {
 			// Helper for small text
 			float fontScale = 0.25f;
 
-			// Layout: 2 Columns
-			// Level | XP
-			// HP | HP Regen
-			// MP | MP Regen
-			// Atk | Def
-
+			// Layout: 2 Columns with Separator
+			// [Left Table] | [Right Table]
+			
+			VisTable container = new VisTable();
+			
+			// Left Table (Level, HP, MP, Atk)
+			VisTable leftStats = new VisTable();
+			leftStats.defaults().left().padBottom(5);
+			
 			VisLabel lvlLabel = new VisLabel("等级: " + player.stats.level);
 			lvlLabel.setFontScale(fontScale);
-			statsTable.add(lvlLabel).left();
-
-			VisLabel xpLabel = new VisLabel("经验: " + player.stats.xp + "/" + player.stats.xpToNextLevel);
-			xpLabel.setFontScale(fontScale);
-			statsTable.add(xpLabel).left().row();
-
+			leftStats.add(lvlLabel).row();
+			
 			VisLabel hpLabel = new VisLabel("生命: " + player.stats.hp + "/" + player.stats.maxHp);
 			hpLabel.setFontScale(fontScale);
-			statsTable.add(hpLabel).left();
-
-			VisLabel hpRegenLabel = new VisLabel("回血: " + player.stats.hpRegen + "/5s");
-			hpRegenLabel.setFontScale(fontScale);
-			statsTable.add(hpRegenLabel).left().row();
-
+			leftStats.add(hpLabel).row();
+			
 			VisLabel mpLabel = new VisLabel("魔法: " + player.stats.mana + "/" + player.stats.maxMana);
 			mpLabel.setFontScale(fontScale);
-			statsTable.add(mpLabel).left();
-
-			VisLabel mpRegenLabel = new VisLabel("回魔: " + player.stats.manaRegen + "/5s");
-			mpRegenLabel.setFontScale(fontScale);
-			statsTable.add(mpRegenLabel).left().row();
-
+			leftStats.add(mpLabel).row();
+			
 			VisLabel atkLabel = new VisLabel("攻击: " + player.stats.atk);
 			atkLabel.setFontScale(fontScale);
-			statsTable.add(atkLabel).left();
-
+			leftStats.add(atkLabel).row();
+			
+			container.add(leftStats).padRight(15).top();
+			
+			// Vertical Separator
+			container.add(new Separator("vertical")).growY().padRight(15);
+			
+			// Right Table (XP, HP Regen, MP Regen, Def)
+			VisTable rightStats = new VisTable();
+			rightStats.defaults().left().padBottom(5);
+			
+			VisLabel xpLabel = new VisLabel("经验: " + player.stats.xp + "/" + player.stats.xpToNextLevel);
+			xpLabel.setFontScale(fontScale);
+			rightStats.add(xpLabel).row();
+			
+			VisLabel hpRegenLabel = new VisLabel("自然回血: " + player.stats.hpRegen + "/5s");
+			hpRegenLabel.setFontScale(fontScale);
+			rightStats.add(hpRegenLabel).row();
+			
+			VisLabel mpRegenLabel = new VisLabel("自然回魔: " + player.stats.manaRegen + "/5s");
+			mpRegenLabel.setFontScale(fontScale);
+			rightStats.add(mpRegenLabel).row();
+			
 			VisLabel defLabel = new VisLabel("防御: " + player.stats.def);
 			defLabel.setFontScale(fontScale);
-			statsTable.add(defLabel).left().row();
+			rightStats.add(defLabel).row();
+			
+			container.add(rightStats).top();
+			
+			statsTable.add(container).grow();
 		}
 
 		// 3. Update Avatar
@@ -1503,14 +1530,14 @@ public class GameHUD {
 	}
 
 	private boolean checkIsEquipped(Player player, InventoryItem item) {
-		if (player.equipment.mainHand == item) return true;
-		if (player.equipment.offHand == item) return true;
-		if (player.equipment.helmet == item) return true;
-		if (player.equipment.armor == item) return true;
-		if (player.equipment.boots == item) return true;
+		if (player.equipment.mainHand != null && player.equipment.mainHand.id.equals(item.id)) return true;
+		if (player.equipment.offHand != null && player.equipment.offHand.id.equals(item.id)) return true;
+		if (player.equipment.helmet != null && player.equipment.helmet.id.equals(item.id)) return true;
+		if (player.equipment.armor != null && player.equipment.armor.id.equals(item.id)) return true;
+		if (player.equipment.boots != null && player.equipment.boots.id.equals(item.id)) return true;
 		if (player.equipment.accessories != null) {
 			for (InventoryItem acc : player.equipment.accessories) {
-				if (acc == item) return true;
+				if (acc != null && acc.id.equals(item.id)) return true;
 			}
 		}
 		return false;

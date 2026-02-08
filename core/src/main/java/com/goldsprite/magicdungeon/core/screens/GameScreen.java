@@ -729,11 +729,12 @@ public class GameScreen extends GScreen {
 			}
 		}
 
-		// Use Potion (Health) - SPACE (Only if not interacted)
+		// Use Potion (Health) - H (Changed from SPACE)
+		boolean isSkillKeyPressed = Gdx.input.isKeyJustPressed(Input.Keys.H);
 		boolean isAttackBtnJustPressed = hud.isAttackPressed() && !wasAttackPressed;
 		wasAttackPressed = hud.isAttackPressed();
 
-		if ((isSpacePressed && !handledInteract) || isAttackBtnJustPressed) {
+		if (isSkillKeyPressed || isAttackBtnJustPressed) {
 			// Simple heal logic (if no items)
 			if (player.useSkill(audio)) {
 				hud.showMessage("使用了治疗术! 回复了 20 点生命!");
