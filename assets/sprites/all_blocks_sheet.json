@@ -1,0 +1,11 @@
+{
+	"gridWidth": 64,
+	"gridHeight": 64,
+	"regions": {
+		"tree": ["0"],
+		"grass": ["1"],
+		"sand": ["2"],
+		"stone_road": ["3"],
+		"portal": ["4"]
+	}
+}
