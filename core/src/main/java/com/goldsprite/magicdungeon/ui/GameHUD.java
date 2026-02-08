@@ -334,7 +334,7 @@ public class GameHUD {
 							}
 							return false;
 						}
-						
+
 						@Override
 						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
 							if (button == Input.Buttons.RIGHT) {
@@ -352,7 +352,7 @@ public class GameHUD {
 					public Payload dragStart(InputEvent event, float x, float y, int pointer) {
 						// Prevent drag if right button (just in case)
 						if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) return null;
-						
+
 						Payload payload = new Payload();
 						payload.setObject(item);
 
@@ -473,6 +473,7 @@ public class GameHUD {
 		private VisLabel countLabel;
 		private InventoryItem currentItem;
 		private Predicate<InventoryItem> filter;
+		private ItemData targetItemData; // Specific item to look for
 		private Player player;
 
 		public QuickSlot(Predicate<InventoryItem> filter) {
@@ -507,6 +508,12 @@ public class GameHUD {
 					useItem();
 				}
 			});
+		}
+
+		public void setTargetItem(ItemData data) {
+			this.targetItemData = data;
+			this.filter = (item) -> item.data == data;
+			if (player != null) update(player);
 		}
 
 		public void update(Player player) {
@@ -569,7 +576,7 @@ public class GameHUD {
 
 	private void showContextMenu(InventoryItem item, boolean isEquipped, Player player, float x, float y) {
 			PopupMenu menu = new PopupMenu();
-			
+
 			// Equip / Unequip / Use
 			if (item.data.type == ItemType.POTION || item.data.type == ItemType.ETC) {
 				MenuItem useItem = new MenuItem("使用", new ChangeListener() {
@@ -579,6 +586,33 @@ public class GameHUD {
 					}
 				});
 				menu.addItem(useItem);
+
+				// Potion Quick Slot
+				if (item.data.type == ItemType.POTION) {
+					// Add Quick Slot Options
+					MenuItem quickSlot1 = new MenuItem("设为快捷栏 1 (HP)", new ChangeListener() {
+						@Override
+						public void changed(ChangeEvent event, Actor actor) {
+							if (hpQuickSlot != null) {
+								hpQuickSlot.setTargetItem(item.data);
+								showMessage("快捷栏 1 已设置为: " + item.data.name);
+							}
+						}
+					});
+					menu.addItem(quickSlot1);
+
+					MenuItem quickSlot2 = new MenuItem("设为快捷栏 2 (MP)", new ChangeListener() {
+						@Override
+						public void changed(ChangeEvent event, Actor actor) {
+							if (mpQuickSlot != null) {
+								mpQuickSlot.setTargetItem(item.data);
+								showMessage("快捷栏 2 已设置为: " + item.data.name);
+							}
+						}
+					});
+					menu.addItem(quickSlot2);
+				}
+
 			} else {
 				if (isEquipped) {
 					MenuItem unequipItem = new MenuItem("卸下", new ChangeListener() {
@@ -598,18 +632,20 @@ public class GameHUD {
 					menu.addItem(equipItem);
 				}
 			}
-			
-			// Sell
-			MenuItem sellItem = new MenuItem("出售 (" + item.getValue() + "硬币)", new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					player.sellItem(item);
-					showMessage("出售了 " + item.data.name + " 获得 " + item.getValue() + " 硬币");
-					updateInventory(player);
-				}
-			});
-			menu.addItem(sellItem);
-			
+
+			// Sell (Only if NOT equipped)
+			if (!isEquipped) {
+				MenuItem sellItem = new MenuItem("出售 (" + item.getValue() + "硬币)", new ChangeListener() {
+					@Override
+					public void changed(ChangeEvent event, Actor actor) {
+						player.sellItem(item);
+						showMessage("出售了 " + item.data.name + " 获得 " + item.getValue() + " 硬币");
+						updateInventory(player);
+					}
+				});
+				menu.addItem(sellItem);
+			}
+
 			menu.showMenu(stage, x, y);
 		}
 
@@ -666,8 +702,8 @@ public class GameHUD {
 		// 5. 属性
 		if (item.atk > 0) rightCol.add(new VisLabel("攻击: +" + item.atk)).left().padBottom(2).row();
 		if (item.def > 0) rightCol.add(new VisLabel("防御: +" + item.def)).left().padBottom(2).row();
-		if (item.heal > 0) rightCol.add(new VisLabel("生命回复: +" + item.heal)).left().padBottom(2).row();
-		if (item.manaRegen > 0) rightCol.add(new VisLabel("法力回复: +" + item.manaRegen)).left().padBottom(2).row();
+		if (item.heal > 0) rightCol.add(new VisLabel("回血: +" + item.heal)).left().padBottom(2).row();
+		if (item.manaRegen > 0) rightCol.add(new VisLabel("回魔: +" + item.manaRegen)).left().padBottom(2).row();
 
 		// 6. 状态 (已装备)
 		if (isEquipped) {
@@ -1396,23 +1432,49 @@ public class GameHUD {
 		// 2. Update Stats
 		if (statsTable != null) {
 			statsTable.clear();
+			statsTable.setBackground(slotBorderDrawable); // Add border
+			statsTable.pad(10); // Add padding inside border
+
+			// Helper for small text
+			float fontScale = 0.25f;
+
 			// Layout: 2 Columns
 			// Level | XP
 			// HP | HP Regen
 			// MP | MP Regen
 			// Atk | Def
 
-			statsTable.add(new VisLabel("等级: " + player.stats.level)).left();
-			statsTable.add(new VisLabel("经验: " + player.stats.xp + "/" + player.stats.xpToNextLevel)).left().row();
+			VisLabel lvlLabel = new VisLabel("等级: " + player.stats.level);
+			lvlLabel.setFontScale(fontScale);
+			statsTable.add(lvlLabel).left();
 
-			statsTable.add(new VisLabel("生命: " + player.stats.hp + "/" + player.stats.maxHp)).left();
-			statsTable.add(new VisLabel("回复: " + player.stats.hpRegen + "/5s")).left().row();
+			VisLabel xpLabel = new VisLabel("经验: " + player.stats.xp + "/" + player.stats.xpToNextLevel);
+			xpLabel.setFontScale(fontScale);
+			statsTable.add(xpLabel).left().row();
 
-			statsTable.add(new VisLabel("魔法: " + player.stats.mana + "/" + player.stats.maxMana)).left();
-			statsTable.add(new VisLabel("回复: " + player.stats.manaRegen + "/5s")).left().row();
+			VisLabel hpLabel = new VisLabel("生命: " + player.stats.hp + "/" + player.stats.maxHp);
+			hpLabel.setFontScale(fontScale);
+			statsTable.add(hpLabel).left();
 
-			statsTable.add(new VisLabel("攻击: " + player.stats.atk)).left();
-			statsTable.add(new VisLabel("防御: " + player.stats.def)).left().row();
+			VisLabel hpRegenLabel = new VisLabel("回血: " + player.stats.hpRegen + "/5s");
+			hpRegenLabel.setFontScale(fontScale);
+			statsTable.add(hpRegenLabel).left().row();
+
+			VisLabel mpLabel = new VisLabel("魔法: " + player.stats.mana + "/" + player.stats.maxMana);
+			mpLabel.setFontScale(fontScale);
+			statsTable.add(mpLabel).left();
+
+			VisLabel mpRegenLabel = new VisLabel("回魔: " + player.stats.manaRegen + "/5s");
+			mpRegenLabel.setFontScale(fontScale);
+			statsTable.add(mpRegenLabel).left().row();
+
+			VisLabel atkLabel = new VisLabel("攻击: " + player.stats.atk);
+			atkLabel.setFontScale(fontScale);
+			statsTable.add(atkLabel).left();
+
+			VisLabel defLabel = new VisLabel("防御: " + player.stats.def);
+			defLabel.setFontScale(fontScale);
+			statsTable.add(defLabel).left().row();
 		}
 
 		// 3. Update Avatar

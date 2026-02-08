@@ -115,6 +115,8 @@ public class GameScreen extends GScreen {
 
 		// Start at Camp
 		enterCamp(false);
+
+		// Ensure initial visual is generated
 		player.updateVisuals();
 
 		// Scene2D HUD
@@ -1062,9 +1064,11 @@ public class GameScreen extends GScreen {
 				spawnEntities();
 			}
 
+			// Ensure player visual is updated with loaded equipment
+			player.updateVisuals();
+
 			hud.showMessage("游戏已加载!");
-		player.updateVisuals();
-	} else {
+		} else {
 			hud.showMessage("未找到存档!");
 		}
 	}
