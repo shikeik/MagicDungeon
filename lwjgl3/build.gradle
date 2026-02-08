@@ -46,10 +46,10 @@ run {
 	workingDir = rootProject.projectDir
 	setIgnoreExitValue(true)
 
-	// 【关键】强制在运行前生成引擎 jar 并复制依赖
-	// 这样 assets/libs 目录才会有东西
-	dependsOn ':core:copyEngineLibs'
-	dependsOn ':core:packageEngineCore'
+//	// 【关键】强制在运行前生成引擎 jar 并复制依赖
+//	// 这样 assets/libs 目录才会有东西
+//	dependsOn ':core:copyEngineLibs'
+//	dependsOn ':core:packageEngineCore'
 
 	if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
 }
