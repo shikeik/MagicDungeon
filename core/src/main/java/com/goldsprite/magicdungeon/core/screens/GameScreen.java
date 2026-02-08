@@ -106,8 +106,8 @@ public class GameScreen extends GScreen {
 		System.out.println("GameScreen Constructor Started");
 		this.dungeon = new Dungeon(50, 50, seed);
 		// IMPORTANT: Set level to 0 immediately to prevent enterCamp() from saving an empty Level 1 state
-		this.dungeon.level = 0; 
-		
+		this.dungeon.level = 0;
+
 		this.player = new Player(0, 0); // Temp pos, will be set by enterCamp
 
 		this.monsters = new ArrayList<>();
@@ -174,10 +174,10 @@ public class GameScreen extends GScreen {
 		if (wasInDungeon) {
 			saveCurrentLevelState();
 		}
-		
+
 		dungeon.level = 0;
 		dungeon.generate();
-		
+
 		if (fromStairs && wasInDungeon) {
 			// Find Dungeon Entrance position
 			GridPoint2 entPos = findTilePosition(TileType.Dungeon_Entrance);
@@ -192,24 +192,24 @@ public class GameScreen extends GScreen {
 			player.x = dungeon.startPos.x;
 			player.y = dungeon.startPos.y;
 		}
-		
+
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
-		
+
 		monsters.clear();
 		items.clear();
-		
+
 		if (hud != null) hud.showMessage("回到了营地.");
 	}
-	
+
 	private void enterDungeon(int level) {
 		int prevLevel = dungeon.level;
 		if (dungeon.level > 0) {
 			saveCurrentLevelState();
 		}
-		
+
 		dungeon.level = level;
-		
+
 		if (visitedLevels.containsKey(level)) {
 			// Restore
 			dungeon.generate(); // Re-generate geometry (same seed)
@@ -219,7 +219,7 @@ public class GameScreen extends GScreen {
 			dungeon.generate();
 			spawnEntities();
 		}
-		
+
 		// Set Player Position
 		if (level < prevLevel) {
 			// Going UP (e.g. 2 -> 1): Spawn at Stairs Down
@@ -236,14 +236,14 @@ public class GameScreen extends GScreen {
 			player.x = dungeon.startPos.x;
 			player.y = dungeon.startPos.y;
 		}
-		
+
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
-		
+
 		hud.showMessage("进入了第 " + level + " 层.");
 		if (level > maxDepth) maxDepth = level;
 	}
-	
+
 	private GridPoint2 findTilePosition(TileType type) {
 		for (int y = 0; y < dungeon.height; y++) {
 			for (int x = 0; x < dungeon.width; x++) {
@@ -263,7 +263,7 @@ public class GameScreen extends GScreen {
 			hud.showMessage("你已经在营地了。");
 			return;
 		}
-		
+
 		// 2. Must be on Stairs Up (changed from Stairs Down)
 		Tile tile = dungeon.getTile(player.x, player.y);
 		/* // Disabled strict check for now, allow return anytime via UI button?
@@ -272,7 +272,7 @@ public class GameScreen extends GScreen {
 			return;
 		}
 		*/
-		
+
 		// 3. No monsters in room?
 		// Simple check: visible range? or active monsters?
 		// For simplicity, check if any monster is within 3 tiles.
@@ -283,12 +283,12 @@ public class GameScreen extends GScreen {
 				break;
 			}
 		}
-		
+
 		if (!safe) {
 			hud.showMessage("附近有怪物，无法传送!");
 			return;
 		}
-		
+
 		enterCamp(false);
 	}
 
@@ -964,7 +964,7 @@ public class GameScreen extends GScreen {
 				player.equipment.armor = state.equipment.armor;
 				player.equipment.boots = state.equipment.boots;
 				player.equipment.accessories = state.equipment.accessories;
-				
+
 				// Ensure accessories array is initialized if loaded state was null/old
 				if (player.equipment.accessories == null) {
 					player.equipment.accessories = new InventoryItem[3];
