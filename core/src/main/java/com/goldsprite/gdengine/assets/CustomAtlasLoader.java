@@ -107,6 +107,37 @@ public class CustomAtlasLoader {
 		return new TextureRegion(texture);
 	}
 
+	/**
+	 * 获取指定 Atlas 中所有定义的 Region 名称
+	 * @param imagePath 图片路径
+	 * @return Region 名称集合
+	 */
+	public java.util.Set<String> getRegionNames(String imagePath) {
+		if (!atlasDataCache.containsKey(imagePath)) {
+			loadAtlasData(imagePath);
+		}
+		AtlasData data = atlasDataCache.get(imagePath);
+		return data != null ? data.regions.keySet() : java.util.Collections.emptySet();
+	}
+
+	/**
+	 * 获取 Region 显示名称 (如果配置了)
+	 * @param imagePath 图片路径
+	 * @param regionName Region 名称
+	 * @return 显示名称，如果没有配置则返回 regionName
+	 */
+	public String getDisplayName(String imagePath, String regionName) {
+		if (!atlasDataCache.containsKey(imagePath)) return regionName;
+		AtlasData data = atlasDataCache.get(imagePath);
+		if (data != null && data.regions.containsKey(regionName)) {
+			String[] info = data.regions.get(regionName);
+			if (info.length > 1) {
+				return info[1];
+			}
+		}
+		return regionName;
+	}
+
 	private void loadAtlasData(String imagePath) {
 		String jsonPath = imagePath.substring(0, imagePath.lastIndexOf('.')) + ".json";
 		if (!Gdx.files.internal(jsonPath).exists()) return;

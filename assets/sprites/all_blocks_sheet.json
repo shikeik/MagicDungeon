@@ -2,10 +2,10 @@
 	"gridWidth": 64,
 	"gridHeight": 64,
 	"regions": {
-		"tree": ["0"],
-		"grass": ["1"],
-		"sand": ["2"],
-		"stone_road": ["3"],
-		"portal": ["4"]
+		"tree": ["0", "树木"],
+		"grass": ["1", "草地"],
+		"sand": ["2", "沙地"],
+		"stone_road": ["3", "石路"],
+		"portal": ["4", "传送门"]
 	}
 }
