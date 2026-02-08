@@ -957,8 +957,17 @@ public class GameScreen extends GScreen {
 
 			// Restore Equipment
 			if (state.equipment != null) {
-				player.equipment.weapon = state.equipment.weapon;
+				player.equipment.mainHand = state.equipment.mainHand;
+				player.equipment.offHand = state.equipment.offHand;
+				player.equipment.helmet = state.equipment.helmet;
 				player.equipment.armor = state.equipment.armor;
+				player.equipment.boots = state.equipment.boots;
+				player.equipment.accessories = state.equipment.accessories;
+				
+				// Ensure accessories array is initialized if loaded state was null/old
+				if (player.equipment.accessories == null) {
+					player.equipment.accessories = new InventoryItem[3];
+				}
 			}
 
 			// Restore History

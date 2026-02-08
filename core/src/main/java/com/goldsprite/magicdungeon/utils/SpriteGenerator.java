@@ -402,122 +402,207 @@ public class SpriteGenerator {
 	// --- Character Generators ---
 
 	public static Texture createPlayer() {
+		return generateCharacterTexture(null, null, null, null, null);
+	}
+
+	public static Texture generateCharacterTexture(String mainHand, String offHand, String helmet, String armor, String boots) {
 		Pixmap p = createPixmap();
 
 		// Colors
 		Color skin = Color.valueOf("#ffccaa");
-		Color armor = Color.valueOf("#2196F3"); // Brighter Blue
-		Color darkArmor = Color.valueOf("#1565C0");
-		Color gold = Color.GOLD;
-		Color helmet = Color.valueOf("#CFD8DC"); // Light Silver
-		Color darkHelmet = Color.valueOf("#90A4AE");
-		Color legs = Color.valueOf("#8d6e63"); // Brown Pants
-		Color boots = Color.valueOf("#3E2723");
+		Color pantsColor = Color.valueOf("#8d6e63"); // Brown Pants
+		
+		// 1. Body Base (Legs, Torso, Head, Arms)
+		drawBodyBase(p, skin, pantsColor);
+		
+		// 2. Boots
+		if (boots != null) {
+			drawBoots(p, boots);
+		} else {
+			// Default Shoes/Feet
+			drawDefaultFeet(p);
+		}
+		
+		// 3. Armor (Body)
+		if (armor != null) {
+			drawArmor(p, armor);
+		} else {
+			// Default Tunic
+			drawDefaultTunic(p);
+		}
+		
+		// 4. Head / Helmet
+		// Draw Face first
+		drawFace(p, 128, 68); // Center X, Face Y
+		
+		if (helmet != null) {
+			drawHelmet(p, helmet);
+		} else {
+			// Default Hair
+			drawHair(p);
+		}
+		
+		// 5. Weapons
+		if (mainHand != null) {
+			// Draw Main Hand (Right Hand -> Screen Left)
+			// Need to flip or just draw on left
+			drawWeapon(p, mainHand, true);
+		}
+		
+		if (offHand != null) {
+			// Draw Off Hand (Left Hand -> Screen Right)
+			drawWeapon(p, offHand, false);
+		}
 
-		// 1. Legs (Centered)
-		int startY = 30; // Shift down
+		return toTexture(p);
+	}
 
+	private static void drawBodyBase(Pixmap p, Color skin, Color pants) {
 		// Legs
-		drawRect(p, 90, 180, 25, 60, legs);
-		drawRect(p, 141, 180, 25, 60, legs);
-
-		// Boots (Bigger, Taller, Wider, Separated)
-		// Center 128. Gap 10. Width 65. Height 45.
-		// Left Boot: 128 - 10 - 65 = 53
-		// Right Boot: 128 + 10 = 138
-		int bootW = 65;
-		int bootH = 45;
-		int bootY = 215;
-
-		// Left Boot
-		drawRect(p, 53, bootY, bootW, bootH, boots);
-		// Right Boot
-		drawRect(p, 138, bootY, bootW, bootH, boots);
-
-		// Boot Detail (Texture/Laces)
-		Color bootLight = boots.cpy().mul(1.2f);
-		// Soles
-		drawRect(p, 53, bootY + bootH - 10, bootW, 10, Color.BLACK);
-		drawRect(p, 138, bootY + bootH - 10, bootW, 10, Color.BLACK);
-		// Highlights
-		drawRect(p, 53 + 5, bootY + 5, 10, 20, bootLight);
-		drawRect(p, 138 + 5, bootY + 5, 10, 20, bootLight);
-
-		// 2. Body (Armor)
-		// Main Chest
-		drawRect(p, 70, 100, 116, 90, armor);
-		// Shoulder Pads
-		drawRect(p, 50, 90, 30, 40, darkArmor);
-		drawRect(p, 176, 90, 30, 40, darkArmor);
-		// Chest Plate Detail (Gold Trim)
-		drawRect(p, 80, 110, 96, 70, darkArmor);
-		drawRect(p, 118, 110, 20, 70, gold); // Center strip
+		drawRect(p, 90, 180, 25, 60, pants);
+		drawRect(p, 141, 180, 25, 60, pants);
+		
+		// Torso (Skin/Undershirt)
+		drawRect(p, 70, 100, 116, 90, skin);
 		
 		// Arms
-		Color armColor = skin; // Bare arms or armored? Let's do armored sleeves
-		drawRect(p, 40, 100, 25, 70, darkArmor); // Left Arm
-		drawRect(p, 191, 100, 25, 70, darkArmor); // Right Arm
+		drawRect(p, 40, 100, 25, 70, skin); // Left Arm
+		drawRect(p, 191, 100, 25, 70, skin); // Right Arm
+		
 		// Hands
 		drawRect(p, 40, 170, 25, 25, skin); // Left Hand
 		drawRect(p, 191, 170, 25, 25, skin); // Right Hand
-
-		// Belt
-		drawRect(p, 70, 180, 116, 15, Color.valueOf("#3e2723"));
-		drawRect(p, 118, 180, 20, 15, Color.GOLD); // Buckle
-
-		// 3. Head (Smaller)
-		// Old: 96x80. New: 76x64.
+		
+		// Head Base
 		int headW = 76;
 		int headH = 64;
 		int headX = 128 - headW/2;
 		int headY = 36;
-
-		drawHead(p, headX, headY, headW, headH, skin, helmet, darkHelmet);
-
-		return toTexture(p);
+		drawRect(p, headX, headY, headW, headH, skin);
+	}
+	
+	private static void drawDefaultFeet(Pixmap p) {
+		Color shoes = Color.valueOf("#3E2723");
+		drawRect(p, 90, 230, 25, 10, shoes);
+		drawRect(p, 141, 230, 25, 10, shoes);
+	}
+	
+	private static void drawDefaultTunic(Pixmap p) {
+		// Simple Shirt
+		Color shirt = Color.valueOf("#a1887f");
+		drawRect(p, 70, 100, 116, 90, shirt);
+		// Belt
+		drawRect(p, 70, 180, 116, 15, Color.valueOf("#3e2723"));
+		drawRect(p, 118, 180, 20, 15, Color.GOLD);
+	}
+	
+	private static void drawHair(Pixmap p) {
+		Color hair = Color.valueOf("#5d4037");
+		int headX = 128 - 38;
+		int headY = 36;
+		drawRect(p, headX, headY, 76, 20, hair); // Top
+		drawRect(p, headX - 5, headY, 10, 50, hair); // Sideburns
+		drawRect(p, headX + 71, headY, 10, 50, hair);
 	}
 
-	private static void drawHead(Pixmap p, int headX, int headY, int headW, int headH, Color skin, Color helmet, Color darkHelmet) {
-		drawRect(p, headX, headY, headW, headH, skin);
-
-		// 4. Helmet (Smaller)
-		// Top Dome
-		drawRect(p, headX - 5, headY - 10, headW + 10, 30, helmet);
-		// Visor / Sides
-		drawRect(p, headX - 5, headY + 10, 15, headH, darkHelmet);
-		drawRect(p, headX + headW - 10, headY + 10, 15, headH, darkHelmet);
-		// Center Crest
-		drawRect(p, headX + headW/2 - 5, headY - 20, 10, 20, Color.RED); // Fixed center crest X calculation
-
-		// 5. Face Details
+	private static void drawFace(Pixmap p, int cx, int cy) {
 		// Eyes
-		int eyeY = headY + 30;
-		int centerX = headX + headW / 2;
-		drawRect(p, centerX - 20, eyeY, 12, 12, Color.BLACK);
-		drawRect(p, centerX + 8, eyeY, 12, 12, Color.BLACK);
-		drawRect(p, centerX - 18, eyeY + 2, 4, 4, Color.WHITE);
-		drawRect(p, centerX + 10, eyeY + 2, 4, 4, Color.WHITE);
+		drawRect(p, cx - 20, cy, 12, 12, Color.BLACK);
+		drawRect(p, cx + 8, cy, 12, 12, Color.BLACK);
+		drawRect(p, cx - 18, cy + 2, 4, 4, Color.WHITE);
+		drawRect(p, cx + 10, cy + 2, 4, 4, Color.WHITE);
+	}
+
+	private static void drawBoots(Pixmap p, String name) {
+		Color c = name.contains("Iron") ? Color.GRAY : Color.valueOf("#3e2723");
+		Color trim = name.contains("Iron") ? Color.LIGHT_GRAY : Color.valueOf("#5d4037");
+		
+		int bootW = 65;
+		int bootH = 45;
+		int bootY = 215;
+		
+		// Left Boot
+		drawRect(p, 53, bootY, bootW, bootH, c);
+		drawRect(p, 53, bootY, bootW, 10, trim); // Top Trim
+		
+		// Right Boot
+		drawRect(p, 138, bootY, bootW, bootH, c);
+		drawRect(p, 138, bootY, bootW, 10, trim); // Top Trim
+	}
+	
+	private static void drawArmor(Pixmap p, String name) {
+		boolean isIron = name.contains("Iron") || name.contains("Plate") || name.contains("Mail");
+		Color base = isIron ? Color.LIGHT_GRAY : Color.valueOf("#8d6e63");
+		Color trim = isIron ? Color.GRAY : Color.valueOf("#5d4037");
+		
+		// Chest
+		drawRect(p, 65, 95, 126, 100, base);
+		
+		// Shoulders
+		drawCircle(p, 50, 90, 25, trim);
+		drawCircle(p, 206, 90, 25, trim);
+		
+		// Detail
+		drawRect(p, 123, 95, 10, 100, trim); // Center line
+		
+		// Belt
+		drawRect(p, 70, 185, 116, 15, Color.valueOf("#3e2723"));
+		drawRect(p, 118, 185, 20, 15, Color.GOLD);
+	}
+	
+	private static void drawHelmet(Pixmap p, String name) {
+		boolean isIron = name.contains("Iron") || name.contains("Helm");
+		Color c = isIron ? Color.LIGHT_GRAY : Color.valueOf("#5d4037");
+		Color trim = isIron ? Color.GRAY : Color.valueOf("#3e2723");
+		
+		int headW = 76;
+		int headH = 64;
+		int headX = 128 - headW/2;
+		int headY = 36;
+		
+		// Dome
+		drawRect(p, headX - 5, headY - 15, headW + 10, 40, c);
+		
+		// Sides
+		drawRect(p, headX - 5, headY + 10, 15, headH, trim);
+		drawRect(p, headX + headW - 10, headY + 10, 15, headH, trim);
+		
+		// Crest
+		drawRect(p, 123, headY - 25, 10, 30, Color.RED);
+	}
+	
+	private static void drawWeapon(Pixmap p, String name, boolean isMainHand) {
+		// Simplified weapon drawing based on name
+		// If Main Hand (Right hand of character, Screen Left), we draw at X ~ 20
+		// If Off Hand (Left hand of character, Screen Right), we draw at X ~ 236
+		
+		int x = isMainHand ? 20 : 236;
+		int y = 140; // Hand height roughly
+		
+		Color c = Color.LIGHT_GRAY;
+		if (name.contains("Gold") || name.contains("Legendary")) c = Color.GOLD;
+		if (name.contains("Wood") || name.contains("Club")) c = Color.valueOf("#5d4037");
+		
+		if (name.contains("Shield")) {
+			// Draw Shield
+			p.setColor(c);
+			p.fillCircle(x, y, 40);
+			p.setColor(Color.valueOf("#3e2723"));
+			p.fillCircle(x, y, 10); // Boss
+		} else {
+			// Draw Sword/Weapon
+			// Handle
+			drawLine(p, x, y + 20, x, y - 20, 8, Color.valueOf("#3e2723"));
+			// Guard
+			drawLine(p, x - 15, y - 20, x + 15, y - 20, 6, Color.GOLD);
+			// Blade
+			drawLine(p, x, y - 20, x, y - 100, 10, c);
+		}
 	}
 
 	public static Texture createAvatar() {
-		int size = 128;
-		Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
-		p.setColor(0, 0, 0, 0);
-		p.fill();
-
-		// Colors
-		Color skin = Color.valueOf("#ffccaa");
-		Color helmet = Color.valueOf("#CFD8DC"); // Light Silver
-		Color darkHelmet = Color.valueOf("#90A4AE");
-
-		int headW = 76;
-		int headH = 64;
-		int headX = (size - headW) / 2;
-		int headY = (size - headH) / 2;
-
-		drawHead(p, headX, headY, headW, headH, skin, helmet, darkHelmet);
-
-		return toTexture(p);
+		// Just reuse the new generator with no equipment
+		return generateCharacterTexture(null, null, null, null, null);
 	}
 
 	public static Texture createMonster(String type) {
@@ -982,6 +1067,80 @@ public class SpriteGenerator {
 			 // Cover
 			 drawRect(p, 30, 70, 196, 10, Color.valueOf("#3e2723")); // Top cover edge (back)
 			 drawRect(p, 30, 180, 196, 10, Color.valueOf("#3e2723")); // Bottom cover edge
+
+		} else if (name.contains("Helmet") || name.contains("Hat") || name.contains("帽") || name.contains("盔")) {
+			// Helmet
+			boolean isIron = name.contains("Iron") || name.contains("铁");
+			Color c = isIron ? Color.LIGHT_GRAY : Color.valueOf("#5d4037");
+			Color trim = isIron ? Color.GRAY : Color.valueOf("#3e2723");
+
+			// Dome
+			p.setColor(c);
+			p.fillCircle(128, 128, 70);
+			// Bottom cut
+			p.setColor(new Color(0,0,0,0));
+			p.setBlending(Pixmap.Blending.None);
+			p.fillRectangle(50, 160, 156, 60);
+			p.setBlending(Pixmap.Blending.SourceOver);
+			
+			// Rim/Guard
+			drawRect(p, 50, 150, 156, 20, trim);
+			
+			// Top Spike or Decoration
+			drawRect(p, 123, 40, 10, 30, trim);
+			
+			if(isIron) {
+				// Visor slit
+				drawRect(p, 126, 100, 4, 50, Color.BLACK);
+				drawRect(p, 90, 120, 76, 4, Color.BLACK);
+			}
+
+		} else if (name.contains("Boots") || name.contains("Shoes") || name.contains("靴") || name.contains("鞋")) {
+			// Boots Pair
+			Color c = name.contains("Iron") || name.contains("铁") ? Color.GRAY : Color.valueOf("#5d4037");
+			Color trim = name.contains("Iron") ? Color.LIGHT_GRAY : Color.valueOf("#3e2723");
+
+			// Left Boot
+			drawRect(p, 60, 80, 50, 100, c); // Leg
+			drawRect(p, 60, 160, 70, 40, c); // Foot
+			drawRect(p, 60, 80, 50, 10, trim); // Top Trim
+			
+			// Right Boot
+			drawRect(p, 140, 80, 50, 100, c);
+			drawRect(p, 140, 160, 70, 40, c);
+			drawRect(p, 140, 80, 50, 10, trim);
+
+		} else if (name.contains("Necklace") || name.contains("项链")) {
+			// Chain
+			p.setColor(Color.GOLD);
+			drawCircle(p, 128, 100, 70, Color.GOLD);
+			p.setBlending(Pixmap.Blending.None);
+			p.setColor(0,0,0,0);
+			p.fillCircle(128, 100, 64);
+			p.setBlending(Pixmap.Blending.SourceOver);
+
+			// Pendant
+			Color gemColor = Color.RED;
+			if(name.contains("Blue") || name.contains("蓝")) gemColor = Color.BLUE;
+			if(name.contains("Green") || name.contains("绿")) gemColor = Color.GREEN;
+			
+			drawRect(p, 118, 170, 20, 30, Color.GOLD); // Setting
+			drawCircle(p, 128, 185, 12, gemColor); // Gem
+
+		} else if (name.contains("Bracelet") || name.contains("手环")) {
+			// Bracelet
+			p.setColor(Color.GOLD);
+			p.fillCircle(128, 128, 60);
+			p.setBlending(Pixmap.Blending.None);
+			p.setColor(0,0,0,0);
+			p.fillCircle(128, 128, 45);
+			p.setBlending(Pixmap.Blending.SourceOver);
+			
+			// Decoration
+			drawCircle(p, 128, 68, 8, Color.RED);
+			drawCircle(p, 128, 188, 8, Color.RED);
+			drawCircle(p, 68, 128, 8, Color.RED);
+			drawCircle(p, 188, 128, 8, Color.RED);
 
 		} else if (name.contains("Ring") || name.contains("戒指")) {
 			 boolean isPower = name.contains("Power") || name.contains("力量");

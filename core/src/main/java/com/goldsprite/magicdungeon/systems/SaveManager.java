@@ -34,7 +34,14 @@ public class SaveManager {
 		
 		// Save Equipment
 		if (player.equipment != null) {
-			state.equipment = new EquipmentState(player.equipment.weapon, player.equipment.armor);
+			state.equipment = new EquipmentState(
+				player.equipment.mainHand,
+				player.equipment.offHand,
+				player.equipment.helmet,
+				player.equipment.armor,
+				player.equipment.boots,
+				player.equipment.accessories
+			);
 		}
 		
 		// Save Visited Levels History

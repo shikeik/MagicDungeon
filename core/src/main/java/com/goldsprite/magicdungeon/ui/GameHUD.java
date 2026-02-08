@@ -80,6 +80,9 @@ public class GameHUD {
 	private VisLabel pauseLabel;
 	private InventoryDialog inventoryDialog;
 	private VisTable inventoryList;
+	private VisTable equipmentTable; // New: To hold equipment slots
+	private VisTable statsTable;     // New: To hold stats
+	private AvatarWidget avatarWidget; // New: Avatar
 	private VisTextButton inventoryBtn;
 	private VisTextButton saveBtn;
 	private VisTextButton helpBtn;
@@ -152,37 +155,85 @@ public class GameHUD {
 		}
 	}
 
+	private class AvatarWidget extends VisTable {
+		private Image avatarImage;
+		private Player player;
+
+		public AvatarWidget() {
+			avatarImage = new Image();
+			add(avatarImage).size(128, 128);
+		}
+
+		public void update(Player player) {
+			this.player = player;
+			if (player == null) return;
+			// Generate texture based on equipment
+			String mainHand = player.equipment.mainHand != null ? player.equipment.mainHand.data.name() : null;
+			String offHand = player.equipment.offHand != null ? player.equipment.offHand.data.name() : null;
+			String helmet = player.equipment.helmet != null ? player.equipment.helmet.data.name() : null;
+			String armor = player.equipment.armor != null ? player.equipment.armor.data.name() : null;
+			String boots = player.equipment.boots != null ? player.equipment.boots.data.name() : null;
+
+			Texture tex = SpriteGenerator.generateCharacterTexture(mainHand, offHand, helmet, armor, boots);
+			avatarImage.setDrawable(new TextureRegionDrawable(new TextureRegion(tex)));
+		}
+	}
+
 	private class InventoryDialog extends BaseDialog {
 		public InventoryDialog() {
 			super("背包");
-			float width = Math.max(800, stage.getWidth() * 0.66f);
-			float height = stage.getHeight() * 0.6f; // Max 3/5 of screen height
+			float width = Math.max(900, stage.getWidth() * 0.8f);
+			float height = stage.getHeight() * 0.8f;
 
 			setSize(width, height);
 			setCenterOnAdd(true);
-			autoPack = false; // Disable autoPack to respect setSize
+			autoPack = false;
 
-			// Main Layout Table
 			VisTable mainTable = new VisTable();
 			mainTable.setFillParent(true);
+			mainTable.pad(20);
+			
+			// Split Pane Layout
+			// Left: Character (40%)
+			VisTable leftCol = new VisTable();
+			leftCol.setBackground(slotBorderDrawable); // Border for area
+			
+			// Right: Inventory (60%)
+			VisTable rightCol = new VisTable();
+			rightCol.setBackground(slotBorderDrawable); // Border for area
 
+			// --- Left Column Setup ---
+			equipmentTable = new VisTable();
+			statsTable = new VisTable();
+			avatarWidget = new AvatarWidget();
+			
+			leftCol.add(new VisLabel("角色状态")).pad(10).top().row();
+			leftCol.add(equipmentTable).expand().fill().row();
+			leftCol.add(statsTable).growX().pad(10).bottom();
+
+			// --- Right Column Setup ---
 			inventoryList = new VisTable();
 			inventoryList.top().left();
-
+			
 			VisScrollPane inventoryScrollPane = new VisScrollPane(inventoryList);
-			inventoryScrollPane.setScrollingDisabled(true, false); // Horizontal disabled, Vertical enabled
+			inventoryScrollPane.setScrollingDisabled(true, false);
 			inventoryScrollPane.setFlickScroll(true);
 			inventoryScrollPane.setFadeScrollBars(false);
+			
+			rightCol.add(new VisLabel("物品栏")).pad(10).top().row();
+			rightCol.add(inventoryScrollPane).grow().pad(10);
 
-			// Add ScrollPane to Dialog
-			getContentTable().add(inventoryScrollPane).grow().pad(10);
+			// Add columns to main table
+			mainTable.add(leftCol).width(width * 0.4f).growY().padRight(10);
+			mainTable.add(rightCol).width(width * 0.6f).growY();
+
+			getContentTable().add(mainTable).grow();
 		}
 	}
 
 	private class InventorySlot extends VisTable {
 		public InventorySlot(InventoryItem item, Player player) {
-			boolean isEquipped = (player.equipment.weapon != null && player.equipment.weapon.equals(item)) ||
-								 (player.equipment.armor != null && player.equipment.armor.equals(item));
+			boolean isEquipped = checkIsEquipped(player, item);
 
 			setTouchable(Touchable.enabled);
 
@@ -260,11 +311,78 @@ public class GameHUD {
 			}
 		}
 
+		private boolean checkIsEquipped(Player player, InventoryItem item) {
+			if (player.equipment.mainHand == item) return true;
+			if (player.equipment.offHand == item) return true;
+			if (player.equipment.helmet == item) return true;
+			if (player.equipment.armor == item) return true;
+			if (player.equipment.boots == item) return true;
+			if (player.equipment.accessories != null) {
+				for (InventoryItem acc : player.equipment.accessories) {
+					if (acc == item) return true;
+				}
+			}
+			return false;
+		}
+
 		private void handleEquipAction(InventoryItem item, boolean isEquipped, Player player) {
 			player.equip(item);
 			String action = item.data.type == ItemType.POTION ? "使用" : (isEquipped ? "卸下" : "装备");
 			showMessage(action + " " + item.data.name);
 			updateInventory(player);
+		}
+	}
+
+	private class EquipmentSlot extends VisTable {
+		public EquipmentSlot(InventoryItem item, String placeholder, Player player) {
+			setBackground(slotBgDrawable);
+			
+			Stack stack = new Stack();
+			
+			// Background / Placeholder
+			VisTable bg = new VisTable();
+			if (item == null) {
+				VisLabel label = new VisLabel(placeholder);
+				label.setFontScale(0.4f);
+				label.setColor(Color.GRAY);
+				label.setAlignment(Align.center);
+				bg.add(label);
+			}
+			stack.add(bg);
+			
+			if (item != null) {
+				// Icon
+				VisTable icon = ItemRenderer.createItemIcon(item, 48);
+				stack.add(icon);
+				
+				// Tooltip
+				if (Gdx.app.getType() == ApplicationType.Android) {
+					ActorGestureListener listener = new ActorGestureListener() {
+						@Override
+						public void tap(InputEvent event, float x, float y, int count, int button) {
+							// No action on tap for now, or maybe show info
+							hideAndroidTooltip();
+						}
+						@Override
+						public boolean longPress(Actor actor, float x, float y) {
+							showAndroidTooltip(EquipmentSlot.this, item, true);
+							return true;
+						}
+						@Override
+						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+							super.touchUp(event, x, y, pointer, button);
+							hideAndroidTooltip();
+						}
+					};
+					listener.getGestureDetector().setLongPressSeconds(0.18f);
+					addListener(listener);
+				} else {
+					VisTable tooltipContent = createItemTooltipTable(item, true);
+					new Tooltip.Builder(tooltipContent).target(this).build();
+				}
+			}
+			
+			add(stack).size(64, 64);
 		}
 	}
 
@@ -468,9 +586,14 @@ public class GameHUD {
 
 	private String getTypeString(ItemType type) {
 		switch(type) {
-			case WEAPON: return "武器";
-			case ARMOR: return "防具";
+			case MAIN_HAND: return "主手";
+			case OFF_HAND: return "副手";
+			case HELMET: return "头盔";
+			case ARMOR: return "铠甲";
+			case BOOTS: return "鞋子";
+			case ACCESSORY: return "饰品";
 			case POTION: return "药水";
+			case ETC: return "杂物";
 			default: return "未知";
 		}
 	}
@@ -1064,6 +1187,61 @@ public class GameHUD {
 
 	public void updateInventory(Player player) {
 		if (player == null) return;
+		
+		// 1. Update Equipment Panel (Left Column)
+		if (equipmentTable != null) {
+			equipmentTable.clear();
+			
+			// Layout:
+			//      [Helm]
+			// [Main] Avatar [Off]
+			//      [Armor]
+			//      [Boots]
+			// [Acc] [Acc] [Acc]
+			
+			// Top: Helmet
+			equipmentTable.add(new EquipmentSlot(player.equipment.helmet, "头盔", player)).colspan(3).padBottom(5).row();
+			
+			// Middle: Main, Avatar, Off
+			equipmentTable.add(new EquipmentSlot(player.equipment.mainHand, "主手", player)).padRight(10);
+			if (avatarWidget != null) {
+				equipmentTable.add(avatarWidget).size(128, 128); // Avatar
+			} else {
+				equipmentTable.add().size(128, 128);
+			}
+			equipmentTable.add(new EquipmentSlot(player.equipment.offHand, "副手", player)).padLeft(10).row();
+			
+			// Bottom: Armor
+			equipmentTable.add(new EquipmentSlot(player.equipment.armor, "铠甲", player)).colspan(3).padTop(5).row();
+			
+			// Feet: Boots
+			equipmentTable.add(new EquipmentSlot(player.equipment.boots, "鞋子", player)).colspan(3).padTop(5).row();
+			
+			// Accessories
+			VisTable accTable = new VisTable();
+			for(int i=0; i<3; i++) {
+				InventoryItem item = (player.equipment.accessories != null && i < player.equipment.accessories.length) ? player.equipment.accessories[i] : null;
+				accTable.add(new EquipmentSlot(item, "饰品", player)).pad(2);
+			}
+			equipmentTable.add(accTable).colspan(3).padTop(10).row();
+		}
+
+		// 2. Update Stats
+		if (statsTable != null) {
+			statsTable.clear();
+			statsTable.add(new VisLabel("等级: " + player.stats.level)).left().row();
+			statsTable.add(new VisLabel("生命: " + player.stats.hp + "/" + player.stats.maxHp)).left().row();
+			statsTable.add(new VisLabel("魔法: " + player.stats.mana + "/" + player.stats.maxMana)).left().row();
+			statsTable.add(new VisLabel("攻击: " + player.stats.atk)).left().row();
+			statsTable.add(new VisLabel("防御: " + player.stats.def)).left().row();
+		}
+
+		// 3. Update Avatar
+		if (avatarWidget != null) {
+			avatarWidget.update(player);
+		}
+
+		// 4. Update Inventory List (Right Column)
 		inventoryList.clear();
 		if (player.inventory.isEmpty()) {
 			inventoryList.add(new VisLabel("背包是空的")).pad(20);
@@ -1072,12 +1250,29 @@ public class GameHUD {
 			int count = 0;
 
 			for (InventoryItem item : player.inventory) {
+				// Filter equipped items from inventory list to avoid duplicates
+				if (checkIsEquipped(player, item)) continue;
+
 				InventorySlot slot = new InventorySlot(item, player);
 				inventoryList.add(slot).size(64, 64).pad(10);
 				count++;
 				if (count % itemsPerRow == 0) inventoryList.row();
 			}
 		}
+	}
+
+	private boolean checkIsEquipped(Player player, InventoryItem item) {
+		if (player.equipment.mainHand == item) return true;
+		if (player.equipment.offHand == item) return true;
+		if (player.equipment.helmet == item) return true;
+		if (player.equipment.armor == item) return true;
+		if (player.equipment.boots == item) return true;
+		if (player.equipment.accessories != null) {
+			for (InventoryItem acc : player.equipment.accessories) {
+				if (acc == item) return true;
+			}
+		}
+		return false;
 	}
 
 	public void render() {

@@ -18,8 +18,12 @@ public class Player extends Entity {
 
 	// Equipment class for storing equipped items
 	public static class Equipment {
-		public InventoryItem weapon;
+		public InventoryItem mainHand;
+		public InventoryItem offHand;
+		public InventoryItem helmet;
 		public InventoryItem armor;
+		public InventoryItem boots;
+		public InventoryItem[] accessories = new InventoryItem[3];
 	}
 	public Player(int x, int y) {
 		super(x, y, Color.GREEN);
@@ -94,15 +98,46 @@ public class Player extends Entity {
 	}
 
 	public void equip(InventoryItem item) {
-		if (item.data.type == ItemType.WEAPON) {
-			this.equipment.weapon = item;
-			updateStats();
-		} else if (item.data.type == ItemType.ARMOR) {
-			this.equipment.armor = item;
-			updateStats();
-		} else if (item.data.type == ItemType.POTION) {
-			usePotion(item);
+		switch (item.data.type) {
+			case MAIN_HAND:
+				this.equipment.mainHand = item;
+				break;
+			case OFF_HAND:
+				this.equipment.offHand = item;
+				break;
+			case HELMET:
+				this.equipment.helmet = item;
+				break;
+			case ARMOR:
+				this.equipment.armor = item;
+				break;
+			case BOOTS:
+				this.equipment.boots = item;
+				break;
+			case ACCESSORY:
+				equipAccessory(item);
+				break;
+			case POTION:
+				usePotion(item);
+				return; // Don't update stats for potion use
+			default:
+				// Do nothing for unknown types
+				return;
 		}
+		updateStats();
+	}
+
+	private void equipAccessory(InventoryItem item) {
+		// 1. Try to fill empty slot
+		for (int i = 0; i < equipment.accessories.length; i++) {
+			if (equipment.accessories[i] == null) {
+				equipment.accessories[i] = item;
+				return;
+			}
+		}
+		// 2. If full, replace the first one (or maybe implement a way to choose?)
+		// For now, just replace slot 0
+		equipment.accessories[0] = item;
 	}
 
 	public boolean addItem(InventoryItem newItem) {
@@ -145,11 +180,17 @@ public class Player extends Entity {
 		int baseAtk = 5; // Base attack
 		int baseDef = 0; // Base defense
 
-		if (equipment.weapon != null) {
-			baseAtk += equipment.weapon.data.atk;
-		}
-		if (equipment.armor != null) {
-			baseDef += equipment.armor.data.def;
+		if (equipment.mainHand != null) baseAtk += equipment.mainHand.atk;
+		if (equipment.offHand != null) baseDef += equipment.offHand.def; // Shields give def, maybe atk?
+		if (equipment.helmet != null) baseDef += equipment.helmet.def;
+		if (equipment.armor != null) baseDef += equipment.armor.def;
+		if (equipment.boots != null) baseDef += equipment.boots.def;
+		
+		for (InventoryItem acc : equipment.accessories) {
+			if (acc != null) {
+				baseAtk += acc.atk;
+				baseDef += acc.def;
+			}
 		}
 
 		this.stats.atk = baseAtk;
