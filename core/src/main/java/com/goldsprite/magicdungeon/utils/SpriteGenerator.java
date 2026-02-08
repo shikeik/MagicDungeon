@@ -536,11 +536,38 @@ public class SpriteGenerator {
 		Pixmap itemP = createPixmap();
 		drawArmorIcon(itemP, name);
 		
-		// Icon Armor Top Y = 60.
-		// Character Torso Top Y = 100.
-		// Shift down by 40 pixels to align.
-		// We draw the full 256x256 overlay, shifted.
-		p.drawPixmap(itemP, 0, 0, 256, 256, 0, 40, 256, 256);
+		// Character Torso: x=70, y=100, w=116, h=90
+		// We want to fit the armor onto this torso.
+		// Previous implementation drew full 256x256 shifted by 40y.
+		// New implementation: Scale and position to fit torso with offset/stretch control.
+		
+		// Source Region (Approximate the armor part of the icon)
+		// Armor Icon usually fills 60-196 X, 60-190 Y.
+		int srcX = 50;
+		int srcY = 50;
+		int srcW = 156;
+		int srcH = 150;
+		
+		// Target Region (Covering Torso)
+		// Center X = 128. Torso W = 116.
+		// We make armor slightly wider to cover edges.
+		int dstW = 130; 
+		int dstH = 110;
+		int dstX = 128 - dstW/2;
+		int dstY = 90; // Slightly above torso start (100)
+		
+		// Apply Offset & Stretch (Configuration placeholders)
+		int offsetX = 0;
+		int offsetY = 0;
+		float scaleX = 1.0f;
+		float scaleY = 1.0f;
+		
+		dstX += offsetX;
+		dstY += offsetY;
+		dstW = (int)(dstW * scaleX);
+		dstH = (int)(dstH * scaleY);
+		
+		p.drawPixmap(itemP, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
 		
 		itemP.dispose();
 	}
@@ -576,58 +603,58 @@ public class SpriteGenerator {
 		Pixmap itemP = createPixmap();
 		drawItemToPixmap(itemP, name);
 		
-		// Hand Positions
-		int handX = isMainHand ? 20 : 236; // Screen X
+		// Hand Positions (Adjusted to be closer to body center)
+		// Body Hands are at ~52 (Left) and ~203 (Right)
+		int handX = isMainHand ? 52 : 203; // Screen X
 		int handY = 140;
 		
 		if (name.contains("Shield") || name.contains("盾")) {
 			// Shield: Center on hand, scale down
-			int size = 80;
+			int size = 64; // Smaller shield (was 80)
 			p.drawPixmap(itemP, 0, 0, 256, 256, handX - size/2, handY - size/2, size, size);
 		} else {
 			// Weapon (Sword, Axe, etc.)
-			// Icon Handle is approx at (60, 200) for Sword/Axe.
-			// We want to map (60, 200) to (handX, handY).
-			
-			// Let's use a scaling factor
-			float scale = 0.5f;
+			float scale = 0.4f; // Smaller scale (was 0.5f)
 			int targetSize = (int)(256 * scale);
 			
-			// Scaled Handle X = 60 * 0.5 = 30.
-			// Scaled Handle Y = 200 * 0.5 = 100.
-			
-			// Dest X = handX - 30.
-			// Dest Y = handY - 100.
-			
-			// For Main Hand (Right Hand, Screen Left), the sword points Left-Up in Icon?
-			// Icon Sword: Handle (60,200) to Tip (210,50). Diagonal Up-Right.
-			// If we draw it as is on Left Side (Main Hand):
-			// It will point towards the character body (Right). This might look like holding it across chest.
-			// Or if we mirror it?
-			
 			if (isMainHand) {
-				// Mirror for Main Hand?
-				// If we mirror, Handle (60,200) becomes (196, 200). Tip (210,50) becomes (46, 50).
-				// Points Up-Left (Away from body). This is better for Main Hand.
+				// Mirror for Main Hand (Left Side of Screen)
+				Pixmap flipped = flipPixmap(itemP);
 				
-				// LibGDX Pixmap doesn't support flip directly in drawPixmap?
-				// Actually it doesn't. We have to scanlines or just accept it.
-				// Or we can manually flip itemP before drawing.
+				// Handle in Flipped Image:
+				// Original Handle X ~ 60. Flipped X = 196.
+				// We want Flipped Handle (196*scale, 200*scale) to align with Hand (handX, handY).
 				
-				// Let's try simple drawing first.
-				// Diagonal Up-Right on Left Hand (Screen Left) -> Points into screen/body.
-				// Let's shift it so it looks like "Ready" pose.
+				int destX = (int)(handX - 196 * scale);
+				int destY = (int)(handY - 200 * scale);
 				
-				// Align Handle (60, 200) to Hand.
-				p.drawPixmap(itemP, 0, 0, 256, 256, handX - 30, handY - 100, targetSize, targetSize);
+				p.drawPixmap(flipped, 0, 0, 256, 256, destX, destY, targetSize, targetSize);
+				flipped.dispose();
 			} else {
-				// Off Hand (Screen Right).
-				// Diagonal Up-Right -> Points Away from body. Good.
-				p.drawPixmap(itemP, 0, 0, 256, 256, handX - 30, handY - 100, targetSize, targetSize);
+				// Off Hand (Right Side of Screen)
+				// Handle X ~ 60.
+				
+				int destX = (int)(handX - 60 * scale);
+				int destY = (int)(handY - 200 * scale);
+				
+				p.drawPixmap(itemP, 0, 0, 256, 256, destX, destY, targetSize, targetSize);
 			}
 		}
 		
 		itemP.dispose();
+	}
+
+	private static Pixmap flipPixmap(Pixmap src) {
+		int w = src.getWidth();
+		int h = src.getHeight();
+		Pixmap flipped = new Pixmap(w, h, src.getFormat());
+		
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < w; x++) {
+				flipped.drawPixel(w - 1 - x, y, src.getPixel(x, y));
+			}
+		}
+		return flipped;
 	}
 
 	public static Texture createAvatar() {
@@ -1169,17 +1196,14 @@ public class SpriteGenerator {
 		Color c = name.contains("Iron") || name.contains("铁") ? Color.GRAY : Color.valueOf("#5d4037");
 		Color trim = name.contains("Iron") ? Color.LIGHT_GRAY : Color.valueOf("#3e2723");
 
-		// Left Boot (Left side of icon)
+		// Left Boot (Left side of icon) - Points Left (Outward)
 		drawRect(p, 60, 80, 50, 100, c); // Leg
-		drawRect(p, 60, 160, 70, 40, c); // Foot
+		drawRect(p, 40, 160, 70, 40, c); // Foot (Moved left to point outward)
 		drawRect(p, 60, 80, 50, 10, trim); // Top Trim
 		
-		// Right Boot (Right side of icon) - Mirror image
+		// Right Boot (Right side of icon) - Points Right (Outward)
 		drawRect(p, 140, 80, 50, 100, c);
-		drawRect(p, 120, 160, 70, 40, c); // Foot points left (inward) or right?
-		// Standard icon: both feet pointing outward or forward
-		// Let's make right boot point right (x > 140)
-		drawRect(p, 140, 160, 70, 40, c); // Foot
+		drawRect(p, 140, 160, 70, 40, c); // Foot (Points right)
 		drawRect(p, 140, 80, 50, 10, trim);
 	}
 

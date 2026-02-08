@@ -544,7 +544,8 @@ public class GameScreen extends GScreen {
 		}
 
 		// Toggle Inventory (Always allowed)
-		if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+		// Modified: Changed to E key as requested
+		if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
 			hud.toggleInventory();
 		}
 
@@ -698,12 +699,12 @@ public class GameScreen extends GScreen {
 			}
 		}
 
-		// Interact / Next Level - E
-		boolean isEPressed = Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.E);
+		// Interact / Next Level - Space (Changed from E)
+		boolean isInteractKey = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
 		boolean isInteractBtnJustPressed = hud.isInteractPressed() && !wasInteractPressed;
 		wasInteractPressed = hud.isInteractPressed();
 
-		if (isEPressed || isInteractBtnJustPressed) {
+		if (isInteractKey || isInteractBtnJustPressed) {
 			Tile tile = dungeon.getTile(player.x, player.y);
 			if (tile != null) {
 				if (tile.type == TileType.Stairs_Down) {

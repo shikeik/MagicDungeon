@@ -10,6 +10,10 @@ public class PlayerStats {
 	public int def;
 	public int mana;
 	public int maxMana;
+	
+	// Regeneration (Amount per 5 seconds)
+	public int hpRegen;
+	public int manaRegen;
 
 	public PlayerStats() {
 		this.maxHp = 100;
@@ -21,6 +25,9 @@ public class PlayerStats {
 		this.def = 0;
 		this.maxMana = 50;
 		this.mana = 50;
+		
+		this.hpRegen = 1;
+		this.manaRegen = 1;
 	}
 
 	public void addXp(int amount) {

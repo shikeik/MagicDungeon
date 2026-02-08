@@ -10,6 +10,8 @@ import java.util.List;
 public class Player extends Entity {
 	public float moveTimer;
 	public float moveDelay;
+	
+	private float regenTimer = 0;
 
 	// Stats
 	public PlayerStats stats;
@@ -38,6 +40,18 @@ public class Player extends Entity {
 	}
 
 	public void update(float dt, Dungeon dungeon, int dx, int dy, List<Monster> monsters, AudioSystem audio) {
+		// Regeneration Logic (Every 5 seconds)
+		regenTimer += dt;
+		if (regenTimer >= 5.0f) {
+			regenTimer = 0;
+			if (this.stats.hp < this.stats.maxHp) {
+				this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + this.stats.hpRegen);
+			}
+			if (this.stats.mana < this.stats.maxMana) {
+				this.stats.mana = Math.min(this.stats.maxMana, this.stats.mana + this.stats.manaRegen);
+			}
+		}
+
 		this.moveTimer -= dt;
 		if (this.moveTimer > 0) return;
 
@@ -98,24 +112,48 @@ public class Player extends Entity {
 	}
 
 	public void equip(InventoryItem item) {
+		equip(item, -1);
+	}
+
+	public void equip(InventoryItem item, int slotIndex) {
 		switch (item.data.type) {
 			case MAIN_HAND:
-				this.equipment.mainHand = item;
+				if (this.equipment.mainHand == item) {
+					this.equipment.mainHand = null;
+				} else {
+					this.equipment.mainHand = item;
+				}
 				break;
 			case OFF_HAND:
-				this.equipment.offHand = item;
+				if (this.equipment.offHand == item) {
+					this.equipment.offHand = null;
+				} else {
+					this.equipment.offHand = item;
+				}
 				break;
 			case HELMET:
-				this.equipment.helmet = item;
+				if (this.equipment.helmet == item) {
+					this.equipment.helmet = null;
+				} else {
+					this.equipment.helmet = item;
+				}
 				break;
 			case ARMOR:
-				this.equipment.armor = item;
+				if (this.equipment.armor == item) {
+					this.equipment.armor = null;
+				} else {
+					this.equipment.armor = item;
+				}
 				break;
 			case BOOTS:
-				this.equipment.boots = item;
+				if (this.equipment.boots == item) {
+					this.equipment.boots = null;
+				} else {
+					this.equipment.boots = item;
+				}
 				break;
 			case ACCESSORY:
-				equipAccessory(item);
+				equipAccessory(item, slotIndex);
 				break;
 			case POTION:
 				usePotion(item);
@@ -145,16 +183,34 @@ public class Player extends Entity {
 		com.goldsprite.magicdungeon.assets.TextureManager.getInstance().updateTexture("PLAYER", newTex);
 	}
 
-	private void equipAccessory(InventoryItem item) {
-		// 1. Try to fill empty slot
+	private void equipAccessory(InventoryItem item, int slotIndex) {
+		// 0. If slotIndex is valid, use that specific slot
+		if (slotIndex >= 0 && slotIndex < equipment.accessories.length) {
+			// If clicking the same item in the same slot -> Unequip
+			if (equipment.accessories[slotIndex] == item) {
+				equipment.accessories[slotIndex] = null;
+			} else {
+				equipment.accessories[slotIndex] = item;
+			}
+			return;
+		}
+
+		// 1. Check if already equipped (Unequip)
+		for (int i = 0; i < equipment.accessories.length; i++) {
+			if (equipment.accessories[i] == item) {
+				equipment.accessories[i] = null;
+				return;
+			}
+		}
+
+		// 2. Try to fill empty slot
 		for (int i = 0; i < equipment.accessories.length; i++) {
 			if (equipment.accessories[i] == null) {
 				equipment.accessories[i] = item;
 				return;
 			}
 		}
-		// 2. If full, replace the first one (or maybe implement a way to choose?)
-		// For now, just replace slot 0
+		// 3. If full, replace the first one
 		equipment.accessories[0] = item;
 	}
 

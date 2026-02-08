@@ -40,6 +40,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 
 import com.goldsprite.magicdungeon.entities.ItemData;
 import java.util.function.Predicate;
@@ -109,6 +113,8 @@ public class GameHUD {
 	private Runnable returnToCampListener;
 
 	private Actor currentTooltip;
+	
+	private DragAndDrop dragAndDrop;
 
 	// --- Inner Classes ---
 
@@ -232,8 +238,8 @@ public class GameHUD {
 	}
 
 	private class InventorySlot extends VisTable {
-		public InventorySlot(InventoryItem item, Player player) {
-			boolean isEquipped = checkIsEquipped(player, item);
+		public InventorySlot(InventoryItem item, Player player, DragAndDrop dragAndDrop) {
+			boolean isEquipped = (item != null) && checkIsEquipped(player, item);
 
 			setTouchable(Touchable.enabled);
 
@@ -245,69 +251,93 @@ public class GameHUD {
 			bgTable.setTouchable(Touchable.disabled);
 			stack.add(bgTable);
 
-			// Icon
-			VisTable iconTable = ItemRenderer.createItemIcon(item, 48);
-			iconTable.setTouchable(Touchable.disabled);
-			stack.add(iconTable);
-
-			// Equipped Badge
-			if (isEquipped) {
-				VisLabel badge = new VisLabel("E");
-				badge.setColor(Color.YELLOW);
-				badge.setFontScale(0.25f);
-				VisTable badgeTable = new VisTable();
-				badgeTable.top().right();
-				badgeTable.add(badge).pad(1);
-				badgeTable.setTouchable(Touchable.disabled);
-				stack.add(badgeTable);
-			}
-
-			// Count Badge
-			if (item.count > 1) {
-				VisLabel countLabel = new VisLabel(String.valueOf(item.count));
-				countLabel.setFontScale(0.4f);
-				VisTable countTable = new VisTable();
-				countTable.bottom().right();
-				countTable.add(countLabel).pad(2);
-				countTable.setTouchable(Touchable.disabled);
-				stack.add(countTable);
+			if (item != null) {
+				// Icon
+				VisTable iconTable = ItemRenderer.createItemIcon(item, 48);
+				iconTable.setTouchable(Touchable.disabled);
+				stack.add(iconTable);
+	
+				// Equipped Badge
+				if (isEquipped) {
+					VisLabel badge = new VisLabel("E");
+					badge.setColor(Color.YELLOW);
+					badge.setFontScale(0.25f);
+					VisTable badgeTable = new VisTable();
+					badgeTable.top().right();
+					badgeTable.add(badge).pad(1);
+					badgeTable.setTouchable(Touchable.disabled);
+					stack.add(badgeTable);
+				}
+	
+				// Count Badge
+				if (item.count > 1) {
+					VisLabel countLabel = new VisLabel(String.valueOf(item.count));
+					countLabel.setFontScale(0.4f);
+					VisTable countTable = new VisTable();
+					countTable.bottom().right();
+					countTable.add(countLabel).pad(2);
+					countTable.setTouchable(Touchable.disabled);
+					stack.add(countTable);
+				}
 			}
 
 			add(stack).size(64, 64);
-
-			if (Gdx.app.getType() == ApplicationType.Android) {
-				ActorGestureListener listener = new ActorGestureListener() {
+			
+			// Configure Drag Source
+			if (dragAndDrop != null && item != null) {
+				dragAndDrop.addSource(new Source(this) {
 					@Override
-					public void tap(InputEvent event, float x, float y, int count, int button) {
-						handleEquipAction(item, isEquipped, player);
-						hideAndroidTooltip(); // 确保点击时清除可能残留的 tooltip
-					}
-
-					@Override
-					public boolean longPress(Actor actor, float x, float y) {
-						showAndroidTooltip(InventorySlot.this, item, isEquipped);
-						return true;
-					}
-
-					@Override
-					public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-						super.touchUp(event, x, y, pointer, button);
-						// 长按后松开，或者点击后松开，都尝试隐藏
-						hideAndroidTooltip();
-					}
-				};
-				listener.getGestureDetector().setLongPressSeconds(0.18f); // 缩短长按时间
-				addListener(listener);
-			} else {
-				VisTable tooltipContent = createItemTooltipTable(item, isEquipped);
-				new Tooltip.Builder(tooltipContent).target(this).build();
-
-				addListener(new ClickListener() {
-					@Override
-					public void clicked(InputEvent event, float x, float y) {
-						handleEquipAction(item, isEquipped, player);
+					public Payload dragStart(InputEvent event, float x, float y, int pointer) {
+						Payload payload = new Payload();
+						payload.setObject(item);
+						
+						// Create drag actor (copy of the icon)
+						VisTable dragActor = ItemRenderer.createItemIcon(item, 48);
+						payload.setDragActor(dragActor);
+						
+						// Optional: set invalid/valid drag actors
+						return payload;
 					}
 				});
+			}
+
+			if (Gdx.app.getType() == ApplicationType.Android) {
+				if (item != null) {
+					ActorGestureListener listener = new ActorGestureListener() {
+						@Override
+						public void tap(InputEvent event, float x, float y, int count, int button) {
+							handleEquipAction(item, isEquipped, player);
+							hideAndroidTooltip(); // 确保点击时清除可能残留的 tooltip
+						}
+	
+						@Override
+						public boolean longPress(Actor actor, float x, float y) {
+							showAndroidTooltip(InventorySlot.this, item, isEquipped);
+							return true;
+						}
+	
+						@Override
+						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+							super.touchUp(event, x, y, pointer, button);
+							// 长按后松开，或者点击后松开，都尝试隐藏
+							hideAndroidTooltip();
+						}
+					};
+					listener.getGestureDetector().setLongPressSeconds(0.18f); // 缩短长按时间
+					addListener(listener);
+				}
+			} else {
+				if (item != null) {
+					VisTable tooltipContent = createItemTooltipTable(item, isEquipped);
+					new Tooltip.Builder(tooltipContent).target(this).build();
+	
+					addListener(new ClickListener() {
+						@Override
+						public void clicked(InputEvent event, float x, float y) {
+							handleEquipAction(item, isEquipped, player);
+						}
+					});
+				}
 			}
 		}
 
@@ -334,7 +364,7 @@ public class GameHUD {
 	}
 
 	private class EquipmentSlot extends VisTable {
-		public EquipmentSlot(InventoryItem item, String placeholder, Player player) {
+		public EquipmentSlot(InventoryItem item, String placeholder, Player player, ItemType slotType, int slotIndex, DragAndDrop dragAndDrop) {
 			setBackground(slotBgDrawable);
 			
 			Stack stack = new Stack();
@@ -380,9 +410,56 @@ public class GameHUD {
 					VisTable tooltipContent = createItemTooltipTable(item, true);
 					new Tooltip.Builder(tooltipContent).target(this).build();
 				}
+				
+				// Click to Unequip (Standard click behavior)
+				addListener(new ClickListener() {
+					@Override
+					public void clicked(InputEvent event, float x, float y) {
+						player.equip(item, slotIndex);
+						updateInventory(player);
+					}
+				});
 			}
 			
 			add(stack).size(64, 64);
+			
+			// Configure Drag Target
+			if (dragAndDrop != null) {
+				dragAndDrop.addTarget(new Target(this) {
+					@Override
+					public boolean drag(Source source, Payload payload, float x, float y, int pointer) {
+						Object obj = payload.getObject();
+						if (obj instanceof InventoryItem) {
+							InventoryItem draggedItem = (InventoryItem) obj;
+							// Check if item type matches slot type
+							if (draggedItem.data.type == slotType) {
+								getActor().setColor(Color.GREEN); // Highlight
+								return true;
+							}
+						}
+						getActor().setColor(Color.RED); // Invalid
+						return false;
+					}
+
+					@Override
+					public void drop(Source source, Payload payload, float x, float y, int pointer) {
+						Object obj = payload.getObject();
+						if (obj instanceof InventoryItem) {
+							InventoryItem draggedItem = (InventoryItem) obj;
+							if (draggedItem.data.type == slotType) {
+								player.equip(draggedItem, slotIndex);
+								updateInventory(player);
+							}
+						}
+						getActor().setColor(Color.WHITE); // Reset color
+					}
+					
+					@Override
+					public void reset(Source source, Payload payload) {
+						getActor().setColor(Color.WHITE);
+					}
+				});
+			}
 		}
 	}
 
@@ -662,6 +739,7 @@ public class GameHUD {
 
 		// --- Windows ---
 		inventoryDialog = new InventoryDialog();
+		dragAndDrop = new DragAndDrop();
 		createHelpWindow();
 
 		// --- Android Controls ---
@@ -749,7 +827,9 @@ public class GameHUD {
 			// Fallback if not loaded yet
 			avatarTex = new TextureRegion(SpriteGenerator.createAvatar());
 		}
-		avatarImage = new VisImage(new TextureRegionDrawable(avatarTex));
+		// Crop initial avatar
+		TextureRegion headRegion = new TextureRegion(avatarTex, 88, 10, 80, 80);
+		avatarImage = new VisImage(new TextureRegionDrawable(headRegion));
 
 		// Frame (Simple border)
 		VisTable frame = new VisTable();
@@ -1049,15 +1129,12 @@ public class GameHUD {
 		// So we just fetch it.
 		TextureRegion playerTex = TextureManager.getInstance().get("PLAYER");
 		if (playerTex != null) {
-			// We might want to crop to just the head if it's too big, or scale it.
-			// The createPlayer texture is 256x256, but the actual sprite is centered.
-			// Let's just use it as is, it's an avatar.
-			avatarImage.setDrawable(new TextureRegionDrawable(playerTex));
-			
-			// If we want just the head, we would need to know where the head is.
-			// For now, full body avatar is fine, or maybe scale/crop?
-			// The original code used SpriteGenerator.createAvatar() which returned a texture.
-			// Now we use the shared player texture.
+			// Crop to Head (Center X=128, Top Y=10-20. Head W=76, H=64)
+			// Let's take a square region around the head.
+			// X: 128 - 40 = 88. W=80.
+			// Y: 10. H=80.
+			TextureRegion headRegion = new TextureRegion(playerTex, 88, 10, 80, 80);
+			avatarImage.setDrawable(new TextureRegionDrawable(headRegion));
 		}
 
 		// Update Monster Info if visible
@@ -1216,45 +1293,57 @@ public class GameHUD {
 			
 			// Layout:
 			//      [Helm]
+			//   [Acc] [Acc] [Acc]
 			// [Main] Avatar [Off]
 			//      [Armor]
 			//      [Boots]
-			// [Acc] [Acc] [Acc]
 			
 			// Top: Helmet
-			equipmentTable.add(new EquipmentSlot(player.equipment.helmet, "头盔", player)).colspan(3).padBottom(5).row();
+			equipmentTable.add(new EquipmentSlot(player.equipment.helmet, "头盔", player, ItemType.HELMET, -1, dragAndDrop)).colspan(3).padBottom(5).row();
+			
+			// Accessories (Moved to below Helmet)
+			VisTable accTable = new VisTable();
+			for(int i=0; i<3; i++) {
+				InventoryItem item = (player.equipment.accessories != null && i < player.equipment.accessories.length) ? player.equipment.accessories[i] : null;
+				accTable.add(new EquipmentSlot(item, "饰品", player, ItemType.ACCESSORY, i, dragAndDrop)).pad(2);
+			}
+			equipmentTable.add(accTable).colspan(3).padBottom(5).row();
 			
 			// Middle: Main, Avatar, Off
-			equipmentTable.add(new EquipmentSlot(player.equipment.mainHand, "主手", player)).padRight(10);
+			equipmentTable.add(new EquipmentSlot(player.equipment.mainHand, "主手", player, ItemType.MAIN_HAND, -1, dragAndDrop)).padRight(10);
 			if (avatarWidget != null) {
 				equipmentTable.add(avatarWidget).size(128, 128); // Avatar
 			} else {
 				equipmentTable.add().size(128, 128);
 			}
-			equipmentTable.add(new EquipmentSlot(player.equipment.offHand, "副手", player)).padLeft(10).row();
+			equipmentTable.add(new EquipmentSlot(player.equipment.offHand, "副手", player, ItemType.OFF_HAND, -1, dragAndDrop)).padLeft(10).row();
 			
 			// Bottom: Armor
-			equipmentTable.add(new EquipmentSlot(player.equipment.armor, "铠甲", player)).colspan(3).padTop(5).row();
+			equipmentTable.add(new EquipmentSlot(player.equipment.armor, "铠甲", player, ItemType.ARMOR, -1, dragAndDrop)).colspan(3).padTop(5).row();
 			
 			// Feet: Boots
-			equipmentTable.add(new EquipmentSlot(player.equipment.boots, "鞋子", player)).colspan(3).padTop(5).row();
-			
-			// Accessories
-			VisTable accTable = new VisTable();
-			for(int i=0; i<3; i++) {
-				InventoryItem item = (player.equipment.accessories != null && i < player.equipment.accessories.length) ? player.equipment.accessories[i] : null;
-				accTable.add(new EquipmentSlot(item, "饰品", player)).pad(2);
-			}
-			equipmentTable.add(accTable).colspan(3).padTop(10).row();
+			equipmentTable.add(new EquipmentSlot(player.equipment.boots, "鞋子", player, ItemType.BOOTS, -1, dragAndDrop)).colspan(3).padTop(5).row();
 		}
 
 		// 2. Update Stats
 		if (statsTable != null) {
 			statsTable.clear();
-			statsTable.add(new VisLabel("等级: " + player.stats.level)).left().row();
-			statsTable.add(new VisLabel("生命: " + player.stats.hp + "/" + player.stats.maxHp)).left().row();
-			statsTable.add(new VisLabel("魔法: " + player.stats.mana + "/" + player.stats.maxMana)).left().row();
-			statsTable.add(new VisLabel("攻击: " + player.stats.atk)).left().row();
+			// Layout: 2 Columns
+			// Level | XP
+			// HP | HP Regen
+			// MP | MP Regen
+			// Atk | Def
+			
+			statsTable.add(new VisLabel("等级: " + player.stats.level)).left();
+			statsTable.add(new VisLabel("经验: " + player.stats.xp + "/" + player.stats.xpToNextLevel)).left().row();
+			
+			statsTable.add(new VisLabel("生命: " + player.stats.hp + "/" + player.stats.maxHp)).left();
+			statsTable.add(new VisLabel("回复: " + player.stats.hpRegen + "/5s")).left().row();
+			
+			statsTable.add(new VisLabel("魔法: " + player.stats.mana + "/" + player.stats.maxMana)).left();
+			statsTable.add(new VisLabel("回复: " + player.stats.manaRegen + "/5s")).left().row();
+			
+			statsTable.add(new VisLabel("攻击: " + player.stats.atk)).left();
 			statsTable.add(new VisLabel("防御: " + player.stats.def)).left().row();
 		}
 
@@ -1265,21 +1354,25 @@ public class GameHUD {
 
 		// 4. Update Inventory List (Right Column)
 		inventoryList.clear();
-		if (player.inventory.isEmpty()) {
-			inventoryList.add(new VisLabel("背包是空的")).pad(20);
-		} else {
-			int itemsPerRow = 5;
-			int count = 0;
-
+		
+		// Collect display items (unequipped)
+		List<InventoryItem> displayItems = new ArrayList<>();
+		if (player.inventory != null) {
 			for (InventoryItem item : player.inventory) {
-				// Filter equipped items from inventory list to avoid duplicates
-				if (checkIsEquipped(player, item)) continue;
-
-				InventorySlot slot = new InventorySlot(item, player);
-				inventoryList.add(slot).size(64, 64).pad(10);
-				count++;
-				if (count % itemsPerRow == 0) inventoryList.row();
+				if (!checkIsEquipped(player, item)) {
+					displayItems.add(item);
+				}
 			}
+		}
+
+		int maxSlots = 30; // Fixed number of slots
+		int itemsPerRow = 5;
+
+		for (int i = 0; i < maxSlots; i++) {
+			InventoryItem item = (i < displayItems.size()) ? displayItems.get(i) : null;
+			InventorySlot slot = new InventorySlot(item, player, dragAndDrop);
+			inventoryList.add(slot).size(64, 64).pad(10);
+			if ((i + 1) % itemsPerRow == 0) inventoryList.row();
 		}
 	}
 
