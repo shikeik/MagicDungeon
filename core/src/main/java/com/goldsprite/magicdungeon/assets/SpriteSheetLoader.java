@@ -30,6 +30,7 @@ public class SpriteSheetLoader {
             }
             
             Texture texture = new Texture(Gdx.files.internal(pngPath));
+            texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
             
             // Split Texture
             TextureRegion[][] splits = TextureRegion.split(texture, gridW, gridH);

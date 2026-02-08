@@ -373,29 +373,53 @@ public class GameHUD {
 		content.pad(10);
 		borderTable.add(content).grow().pad(2); // pad(2) 是为了露出背景的边框
 
+		// === 布局重构：左右分栏 ===
+		// 主容器：水平布局
+		VisTable mainContainer = new VisTable();
+		content.add(mainContainer).growX().row();
+
+		// [左侧] 物品高清大图 (独占一列)
+		// 尺寸调整为 160px
+		VisTable leftCol = new VisTable();
+		VisTable bigIcon = ItemRenderer.createItemIcon(item, 160);
+		leftCol.add(bigIcon).top().left();
+		mainContainer.add(leftCol).top().left().padRight(15);
+
+		// [右侧] 物品信息
+		VisTable rightCol = new VisTable();
+		mainContainer.add(rightCol).growX().top().left();
+
+		// 1. 标题 (名称 + 品质)
 		String titleText = "[" + item.quality.name + "] " + item.data.name;
 		VisLabel title = new VisLabel(titleText);
 		title.setColor(item.quality.color);
-		content.add(title).left().row();
+		title.setWrap(true); // 防止标题过长
+		rightCol.add(title).growX().left().row();
 
+		// 2. ID
 		int maxLen = 9;
 		String shortId = item.id.length() > maxLen ? item.id.substring(item.id.length()-maxLen) : item.id;
 		VisLabel uuid = new VisLabel("#"+shortId);
 		uuid.setColor(Color.DARK_GRAY);
 		uuid.setFontScale(0.8f);
-		content.add(uuid).right().row();
+		rightCol.add(uuid).left().padBottom(5).row();
 
-		content.add(new Separator()).growX().padBottom(15).row();
-		content.add(new VisLabel("类型: " + getTypeString(item.data.type))).left().row();
+		// 3. 分割线
+		rightCol.add(new Separator()).growX().padBottom(8).row();
 
-		if (item.atk > 0) content.add(new VisLabel("攻击: +" + item.atk)).left().row();
-		if (item.def > 0) content.add(new VisLabel("防御: +" + item.def)).left().row();
-		if (item.heal > 0) content.add(new VisLabel("回复: +" + item.heal)).left().row();
+		// 4. 类型
+		rightCol.add(new VisLabel("类型: " + getTypeString(item.data.type))).left().padBottom(2).row();
 
+		// 5. 属性
+		if (item.atk > 0) rightCol.add(new VisLabel("攻击: +" + item.atk)).left().padBottom(2).row();
+		if (item.def > 0) rightCol.add(new VisLabel("防御: +" + item.def)).left().padBottom(2).row();
+		if (item.heal > 0) rightCol.add(new VisLabel("回复: +" + item.heal)).left().padBottom(2).row();
+
+		// 6. 状态 (已装备)
 		if (isEquipped) {
 			VisLabel status = new VisLabel("已装备");
 			status.setColor(Color.YELLOW);
-			content.add(status).left().padTop(5).row();
+			rightCol.add(status).left().padTop(8).row();
 		}
 
 		return borderTable;

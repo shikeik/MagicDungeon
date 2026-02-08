@@ -18,6 +18,7 @@ public class SpriteGenerator {
 
 	private static Texture toTexture(Pixmap pixmap) {
 		Texture texture = new Texture(pixmap);
+		texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 		pixmap.dispose();
 		return texture;
 	}
@@ -95,6 +96,7 @@ public class SpriteGenerator {
 		p.fillTriangle(c, c, c, c + w, c + r, c); // Right-Bottom part
 
 		Texture t = new Texture(p);
+		t.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 		p.dispose();
 		return t;
 	}
