@@ -3,6 +3,7 @@ package com.goldsprite.magicdungeon.ui;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.goldsprite.magicdungeon.assets.TextureManager;
@@ -22,7 +23,7 @@ public class ItemRenderer {
 		VisTable container = new VisTable();
 		
 		// 1. Base Icon
-		Texture tex = TextureManager.getInstance().getItem(item.data.name());
+		TextureRegion tex = TextureManager.getInstance().getItem(item.data.name());
 		if (tex != null) {
 			VisImage icon = new VisImage(new TextureRegionDrawable(tex));
 			// 移除颜色染色，保持原图色彩
@@ -32,7 +33,7 @@ public class ItemRenderer {
 			container.add(icon).size(size, size);
 			
 			// 2. Quality Star (Overlay)
-			Texture starTex = TextureManager.getInstance().getQualityStar();
+			TextureRegion starTex = TextureManager.getInstance().getQualityStar();
 			if (starTex != null) {
 				VisImage star = new VisImage(new TextureRegionDrawable(starTex));
 				star.setColor(item.quality.color);
@@ -55,7 +56,7 @@ public class ItemRenderer {
 		com.badlogic.gdx.scenes.scene2d.ui.Stack stack = new com.badlogic.gdx.scenes.scene2d.ui.Stack();
 		
 		// Layer 1: Item Icon
-		Texture tex = TextureManager.getInstance().getItem(item.data.name());
+		TextureRegion tex = TextureManager.getInstance().getItem(item.data.name());
 		if (tex != null) {
 			VisImage icon = new VisImage(new TextureRegionDrawable(tex));
 			icon.setColor(Color.WHITE);
@@ -65,7 +66,7 @@ public class ItemRenderer {
 		}
 		
 		// Layer 2: Quality Star (Top Left)
-		Texture starTex = TextureManager.getInstance().getQualityStar();
+		TextureRegion starTex = TextureManager.getInstance().getQualityStar();
 		if (starTex != null) {
 			VisImage star = new VisImage(new TextureRegionDrawable(starTex));
 			star.setColor(item.quality.color);
@@ -90,14 +91,14 @@ public class ItemRenderer {
 	 * @param size 绘制大小
 	 */
 	public static void drawItem(Batch batch, InventoryItem item, float x, float y, float size) {
-		Texture itemTex = TextureManager.getInstance().get(item.data.name());
+		TextureRegion itemTex = TextureManager.getInstance().get(item.data.name());
 		if (itemTex != null) {
 			// Draw Item
 			batch.setColor(Color.WHITE);
 			batch.draw(itemTex, x, y, size, size);
 
 			// Draw Quality Star
-			Texture starTex = TextureManager.getInstance().getQualityStar();
+			TextureRegion starTex = TextureManager.getInstance().getQualityStar();
 			if (starTex != null) {
 				batch.setColor(item.quality.color);
 				float starSize = size * 0.5f; // 50% size

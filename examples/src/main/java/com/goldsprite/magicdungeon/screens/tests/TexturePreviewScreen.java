@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.assets.FontUtils;
@@ -34,11 +35,11 @@ public class TexturePreviewScreen extends GScreen {
 	private static final int PADDING = 20;
 
 	private static class PreviewItem {
-		Texture texture;
+		TextureRegion texture;
 		String name;
 		int x, y;
 
-		public PreviewItem(Texture texture, String name, int x, int y) {
+		public PreviewItem(TextureRegion texture, String name, int x, int y) {
 			this.texture = texture;
 			this.name = name;
 			this.x = x;
@@ -67,7 +68,7 @@ public class TexturePreviewScreen extends GScreen {
 		TextureManager tm = TextureManager.getInstance();
 
 		// Iterate all textures
-		for (java.util.Map.Entry<String, Texture> entry : tm.getAllTextures().entrySet()) {
+		for (java.util.Map.Entry<String, TextureRegion> entry : tm.getAllTextures().entrySet()) {
 			if (col >= 6) { col = 0; row++; }
 			addPreview(entry.getValue(), entry.getKey(), col++, row);
 		}
@@ -78,7 +79,7 @@ public class TexturePreviewScreen extends GScreen {
 		getImp().addProcessor(controller);
 	}
 
-	private void addPreview(Texture tex, String name, int col, int row) {
+	private void addPreview(TextureRegion tex, String name, int col, int row) {
 		// Calculate position based on grid
 		int x = 50 + col * (GRID_SIZE + PADDING);
 		int y = -50 - row * (GRID_SIZE + PADDING + 30); // Grow downwards

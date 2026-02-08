@@ -325,7 +325,7 @@ public class GameHUD {
 			}
 			
 			if (currentItem != null) {
-				Texture tex = TextureManager.getInstance().getItem(currentItem.data.name());
+				TextureRegion tex = TextureManager.getInstance().getItem(currentItem.data.name());
 				if (tex != null) {
 					iconImage.setDrawable(new TextureRegionDrawable(tex));
 					iconImage.setVisible(true);
@@ -914,7 +914,7 @@ public class GameHUD {
 		monsterLvLabel.setText(String.valueOf(estLevel));
 
 		// Update Visuals
-		Texture monsterTex = TextureManager.getInstance().getMonster(monster.type.name());
+		TextureRegion monsterTex = TextureManager.getInstance().getMonster(monster.type.name());
 		if (monsterTex != null) {
 			monsterHead.setDrawable(new TextureRegionDrawable(monsterTex));
 		}

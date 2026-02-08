@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -867,13 +868,13 @@ public class GameScreen extends GScreen {
 				if (tile != null) {
 					// Fix: Draw Floor under transparent tiles (Stairs, Door) to show background properly
 					if (tile.type == TileType.Stairs_Down || tile.type == TileType.Stairs_Up || tile.type == TileType.Door) {
-						Texture floorTex = TextureManager.getInstance().getTile(TileType.Floor);
+						TextureRegion floorTex = TextureManager.getInstance().getTile(TileType.Floor);
 						if (floorTex != null) {
 							batch.draw(floorTex, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
 						}
 					}
 
-					Texture texture = TextureManager.getInstance().getTile(tile.type);
+					TextureRegion texture = TextureManager.getInstance().getTile(tile.type);
 					if (texture != null) {
 						batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
 					}
@@ -897,7 +898,7 @@ public class GameScreen extends GScreen {
 		// Render Monsters
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
-				Texture mTex = TextureManager.getInstance().get(m.type.name());
+				TextureRegion mTex = TextureManager.getInstance().get(m.type.name());
 				if (mTex == null) {
 					mTex = TextureManager.getInstance().get(MonsterType.Slime.name());
 				}
@@ -918,7 +919,7 @@ public class GameScreen extends GScreen {
 		}
 
 		// Render Player
-		Texture playerTex = TextureManager.getInstance().getPlayer();
+		TextureRegion playerTex = TextureManager.getInstance().getPlayer();
 		if (playerTex != null) {
 			// Apply hit flash effect using base class method
 			boolean appliedFlash = player.applyHitFlash();
