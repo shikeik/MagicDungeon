@@ -25,15 +25,14 @@ import com.kotcrab.vis.ui.widget.VisTable;
 public class DualGridDemoScreen extends GScreen {
 
     // ==========================================
-    // 1. 全局配置中心 (Config)
+    // 1. 全局配置中心 - 加大 Unit 尺寸
     // ==========================================
     public static class Config {
-        public static final int TILE_SIZE = 16;
-        public static final int GRID_W = 40;  // 逻辑网格宽度
-        public static final int GRID_H = 30;  // 逻辑网格高度
+        public static final int TILE_SIZE = 32; // 从 16 加大到 32
+        public static final int GRID_W = 30;
+        public static final int GRID_H = 20;
         public static final float DISPLAY_OFFSET = TILE_SIZE / 2f;
-        
-        // 渲染顺序：底层到顶层
+
         public static final TerrainType[] RENDER_ORDER = {
             TerrainType.GRASS, TerrainType.DIRT, TerrainType.SAND
         };
@@ -86,21 +85,22 @@ public class DualGridDemoScreen extends GScreen {
         }
     }
 
-    // ==========================================
-    // 4. 双格宫核心算法 (Renderer & Logic)
+	// ==========================================
+    // 4. 修正后的双格宫核心算法 (Renderer)
     // ==========================================
     public static class DualGridRenderer {
         private final TextureRegion[][] atlas = new TextureRegion[3][16];
-        // 映射位掩码到图集坐标 (基于原Godot项目规则)
-        // 掩码计算: (TL<<3 | TR<<2 | BL<<1 | BR)
-        private static final int[] MASK_TO_ATLAS_X = { -1, 1, 0, 3, 0, 1, 3, 1, 3, 2, 3, 3, 1, 2, 0, 2 };
-        private static final int[] MASK_TO_ATLAS_Y = { -1, 3, 0, 0, 2, 0, 2, 1, 3, 3, 0, 1, 2, 2, 1, 1 };
+
+        // 修正后的掩码映射表 (对应 libGDX Y-Up 环境)
+        // 索引顺序: 0:Empty, 1:BR, 2:BL, 3:BottomEdge, 4:TR, 5:RightEdge, 6:TR+BL, 7:Inner-TL...
+        // 这里直接使用 0-15 的二进制顺序
+        private static final int[] MASK_TO_ATLAS_X = {2, 0, 3, 3, 0, 1, 0, 2, 3, 2, 3, 3, 1, 1, 1, 2};
+        private static final int[] MASK_TO_ATLAS_Y = {3, 0, 3, 0, 2, 0, 1, 0, 2, 3, 2, 1, 2, 3, 1, 1};
 
         public void load() {
             for (TerrainType type : Config.RENDER_ORDER) {
                 Texture tex = new Texture(Gdx.files.internal(type.texPath));
-                TextureRegion[][] temp = TextureRegion.split(tex, Config.TILE_SIZE, Config.TILE_SIZE);
-                // 摊平 4x4 到 1x16 方便索引
+                TextureRegion[][] temp = TextureRegion.split(tex, 16, 16); // 原始素材是 16x16
                 for (int i = 0; i < 16; i++) {
                     atlas[type.id][i] = temp[i / 4][i % 4];
                 }
@@ -108,42 +108,34 @@ public class DualGridDemoScreen extends GScreen {
         }
 
         public void render(SpriteBatch batch, GridData grid, TerrainType type) {
-            // 显示网格比逻辑网格多出一圈
+            // 显示层坐标遍历
             for (int x = 0; x <= Config.GRID_W; x++) {
                 for (int y = 0; y <= Config.GRID_H; y++) {
                     int mask = calculateMask(grid, x, y, type);
-                    if (mask > 0) {
-                        int atlasIndex = getAtlasIndex(mask);
-                        if (atlasIndex != -1) {
-                            // 关键点：向左下偏移半个瓦片
-                            float drawX = x * Config.TILE_SIZE - Config.DISPLAY_OFFSET;
-                            float drawY = y * Config.TILE_SIZE - Config.DISPLAY_OFFSET;
-                            batch.draw(atlas[type.id][atlasIndex], drawX, drawY);
-                        }
-                    }
+                    if (mask == 0) continue; // 全空不画
+
+                    int tx = MASK_TO_ATLAS_X[mask];
+                    int ty = MASK_TO_ATLAS_Y[mask];
+
+                    // 渲染位置：以 (x,y) 为中心，向左下偏移半格
+                    float drawX = x * Config.TILE_SIZE - Config.DISPLAY_OFFSET;
+                    float drawY = y * Config.TILE_SIZE - Config.DISPLAY_OFFSET;
+
+                    batch.draw(atlas[type.id][ty * 4 + tx], drawX, drawY, Config.TILE_SIZE, Config.TILE_SIZE);
                 }
             }
         }
 
         private int calculateMask(GridData grid, int x, int y, TerrainType target) {
-            // 采样逻辑层周围的4个点
-            int tl = grid.getTileId(x - 1, y) == target.id ? 1 : 0;
-            int tr = grid.getTileId(x, y) == target.id ? 1 : 0;
-            int bl = grid.getTileId(x - 1, y - 1) == target.id ? 1 : 0;
-            int br = grid.getTileId(x, y - 1) == target.id ? 1 : 0;
-            return (tl << 3) | (tr << 2) | (bl << 1) | br;
-        }
+            // 在 libGDX (Y-Up) 中，(x,y) 是采样区域的右上方
+            // 我们检查以 (x,y) 交叉点为中心的四个逻辑象限
+            int tr = (grid.getTileId(x, y) == target.id) ? 1 : 0;         // Top Right
+            int tl = (grid.getTileId(x - 1, y) == target.id) ? 1 : 0;     // Top Left
+            int br = (grid.getTileId(x, y - 1) == target.id) ? 1 : 0;     // Bottom Right
+            int bl = (grid.getTileId(x - 1, y - 1) == target.id) ? 1 : 0; // Bottom Left
 
-        private int getAtlasIndex(int mask) {
-            // 将位掩码转为 4x4 图集坐标对应的数组索引
-            int tx = MASK_TO_ATLAS_X[mask];
-            int ty = MASK_TO_ATLAS_Y[mask];
-            if (tx == -1) return -1;
-            return ty * 4 + tx;
-        }
-        
-        public void dispose() {
-            for (int i=0; i<3; i++) atlas[i][0].getTexture().dispose();
+            // 构造 4 位掩码 (对应映射表顺序)
+            return (tl << 3) | (tr << 2) | (bl << 1) | br;
         }
     }
 
@@ -295,31 +287,58 @@ public class DualGridDemoScreen extends GScreen {
         uiStage.addActor(root);
     }
 
+    // ==========================================
+    // 5. 增强的渲染逻辑与网格辅助
+    // ==========================================
     @Override
     public void render0(float delta) {
-        // 1. 渲染游戏世界
+        // 1. 绘制地形
         batch.setProjectionMatrix(worldCamera.combined);
         batch.begin();
-        // 按顺序渲染各层，实现堆叠感
         for (TerrainType layer : Config.RENDER_ORDER) {
             dualRenderer.render(batch, worldData, layer);
         }
         batch.end();
 
-        // 2. 渲染辅助网格 (Debug)
+        // 2. 绘制辅助网格
         if (showGrid) {
             debugRenderer.setProjectionMatrix(worldCamera.combined);
-            debugRenderer.begin(ShapeRenderer.ShapeType.Point);
+            debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+			float blueWidth = 1.0f, yellowWidth = 0.5f;
+            // A. 蓝色：逻辑网格 (逻辑格点是交汇点)
+            debugRenderer.setColor(Color.BLUE);
+            for (int x = 0; x <= Config.GRID_W; x++) {
+                debugRenderer.rectLine(x * Config.TILE_SIZE, 0, x * Config.TILE_SIZE, Config.GRID_H * Config.TILE_SIZE, blueWidth);
+            }
+            for (int y = 0; y <= Config.GRID_H; y++) {
+                debugRenderer.rectLine(0, y * Config.TILE_SIZE, Config.GRID_W * Config.TILE_SIZE, y * Config.TILE_SIZE, blueWidth);
+            }
+
+            // B. 黄色：渲染瓦片边界 (相对于逻辑网格偏移了 0.5)
+            debugRenderer.setColor(Color.YELLOW);
+            float off = Config.DISPLAY_OFFSET;
+            for (int x = 0; x <= Config.GRID_W; x++) {
+                debugRenderer.rectLine(x * Config.TILE_SIZE - off, -off, x * Config.TILE_SIZE - off, Config.GRID_H * Config.TILE_SIZE - off, yellowWidth);
+            }
+            for (int y = 0; y <= Config.GRID_H; y++) {
+                debugRenderer.rectLine(-off, y * Config.TILE_SIZE - off, Config.GRID_W * Config.TILE_SIZE - off, y * Config.TILE_SIZE - off, yellowWidth);
+            }
+
+            // C. 红色：逻辑采样点 (点击生效的位置)
+            debugRenderer.end();
+            debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
             debugRenderer.setColor(Color.RED);
             for (int x = 0; x < Config.GRID_W; x++) {
                 for (int y = 0; y < Config.GRID_H; y++) {
-                    debugRenderer.point(x * Config.TILE_SIZE, y * Config.TILE_SIZE, 0);
+                    if (worldData.getTileId(x, y) != -1)
+                        debugRenderer.circle(x * Config.TILE_SIZE + off, y * Config.TILE_SIZE + off, 4);
                 }
             }
             debugRenderer.end();
         }
 
-        // 3. 渲染 UI
+        // 3. UI
         uiStage.act(delta);
         uiStage.draw();
     }
@@ -334,7 +353,6 @@ public class DualGridDemoScreen extends GScreen {
     public void dispose() {
         batch.dispose();
         debugRenderer.dispose();
-        dualRenderer.dispose();
         uiStage.dispose();
     }
 }
