@@ -160,6 +160,11 @@ public class DualGridDemoScreen extends GScreen {
     // 交互状态
     private TerrainType selectedTerrain = TerrainType.DIRT;
     private boolean showGrid = true;
+	
+	// 1. 在类成员变量中增加记录上一次坐标的变量
+	private int lastGx = -1;
+	private int lastGy = -1;
+	
 
     public DualGridDemoScreen() {
         // 安卓端缩放优化
@@ -183,30 +188,72 @@ public class DualGridDemoScreen extends GScreen {
         // 交互逻辑
         imp = new InputMultiplexer();
         imp.addProcessor(uiStage);
-        imp.addProcessor(new InputAdapter() {
-            @Override
-            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                handlePaint(screenX, screenY);
-                return true;
-            }
+        // 4. 更新输入监听器
+		imp.addProcessor(new InputAdapter() {
+				@Override
+				public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+					handlePaint(screenX, screenY, true); // 新的点击
+					return true;
+				}
 
-            @Override
-            public boolean touchDragged(int screenX, int screenY, int pointer) {
-                handlePaint(screenX, screenY);
-                return true;
-            }
-        });
-    }
+				@Override
+				public boolean touchDragged(int screenX, int screenY, int pointer) {
+					handlePaint(screenX, screenY, false); // 拖拽中
+					return true;
+				}
 
-    private void handlePaint(int sx, int sy) {
-        // 使用 GScreen 提供的 screenToWorldCoord
-        Vector2 worldPos = screenToWorldCoord(sx, sy);
-        int gx = Math.round(worldPos.x / Config.TILE_SIZE);
-        int gy = Math.round(worldPos.y / Config.TILE_SIZE);
-        
-        // 适配安卓操作：如果是删除模式（右键模拟），可以设为 EMPTY 或 GRASS
-        worldData.setTile(gx, gy, selectedTerrain);
+				@Override
+				public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+					lastGx = -1; // 重置
+					lastGy = -1;
+					return true;
+				}
+			});
     }
+	
+
+	// 2. 提取一个设置瓦片的方法，包含线性插值逻辑
+	private void paintPath(int x1, int y1, int x2, int y2) {
+		// Bresenham 直线算法：填充两点之间的所有逻辑格子
+		int dx = Math.abs(x2 - x1);
+		int dy = Math.abs(y2 - y1);
+		int sx = x1 < x2 ? 1 : -1;
+		int sy = y1 < y2 ? 1 : -1;
+		int err = dx - dy;
+
+		while (true) {
+			worldData.setTile(x1, y1, selectedTerrain);
+			if (x1 == x2 && y1 == y2) break;
+			int e2 = 2 * err;
+			if (e2 > -dy) {
+				err -= dy;
+				x1 += sx;
+			}
+			if (e2 < dx) {
+				err += dx;
+				y1 += sy;
+			}
+		}
+	}
+
+    // 3. 修改 handlePaint 处理逻辑
+	private void handlePaint(int sx, int sy, boolean isNewTouch) {
+		Vector2 worldPos = screenToWorldCoord(sx, sy);
+
+		// 使用 floor 代替 round，这样点击位置会更符合逻辑网格的采样点
+		int gx = (int) Math.floor(worldPos.x / Config.TILE_SIZE);
+		int gy = (int) Math.floor(worldPos.y / Config.TILE_SIZE);
+
+		if (isNewTouch) {
+			worldData.setTile(gx, gy, selectedTerrain);
+		} else if (lastGx != -1 && (gx != lastGx || gy != lastGy)) {
+			// 如果不是第一次点击，且坐标发生了变化，则插值填充
+			paintPath(lastGx, lastGy, gx, gy);
+		}
+
+		lastGx = gx;
+		lastGy = gy;
+	}
 
     private void setupUI() {
         VisTable root = new VisTable();
