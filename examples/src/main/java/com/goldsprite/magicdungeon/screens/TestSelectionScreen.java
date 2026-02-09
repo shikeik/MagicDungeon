@@ -8,7 +8,7 @@ import com.goldsprite.magicdungeon.screens.tests.NeonGenTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.TexturePreviewScreen;
 import java.util.Map;
 
-public class TestSelectionScreen extends BaseSelectionScreen {int k9;
+public class TestSelectionScreen extends BaseSelectionScreen {int k10;
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);

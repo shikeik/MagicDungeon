@@ -94,8 +94,9 @@ public class DualGridDemoScreen extends GScreen {
         // 修正后的掩码映射表 (对应 libGDX Y-Up 环境)
         // 索引顺序: 0:Empty, 1:BR, 2:BL, 3:BottomEdge, 4:TR, 5:RightEdge, 6:TR+BL, 7:Inner-TL...
         // 这里直接使用 0-15 的二进制顺序
-        private static final int[] MASK_TO_ATLAS_X = {2, 0, 3, 3, 0, 1, 0, 2, 3, 2, 3, 3, 1, 1, 1, 2};
-        private static final int[] MASK_TO_ATLAS_Y = {3, 0, 3, 0, 2, 0, 1, 0, 2, 3, 2, 1, 2, 3, 1, 1};
+		// 掩码计算: (TL<<3 | TR<<2 | BL<<1 | BR)
+		private static final int[] MASK_TO_ATLAS_X = { -1, 1, 0, 3, 0, 1, 3, 1, 3, 2, 3, 3, 1, 2, 0, 2 };
+		private static final int[] MASK_TO_ATLAS_Y = { -1, 3, 0, 0, 2, 0, 2, 1, 3, 3, 0, 1, 2, 2, 1, 1 };
 
         public void load() {
             for (TerrainType type : Config.RENDER_ORDER) {
