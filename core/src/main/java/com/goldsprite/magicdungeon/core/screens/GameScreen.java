@@ -48,6 +48,7 @@ public class GameScreen extends GScreen {
 	private Player player;
 	private List<Monster> monsters;
 	private List<Item> items;
+	private List<Chest> chests;
 	// Removed redundant viewport and camera
 	private GameHUD hud;
 	private AudioSystem audio;
@@ -112,6 +113,7 @@ public class GameScreen extends GScreen {
 
 		this.monsters = new ArrayList<>();
 		this.items = new ArrayList<>();
+		this.chests = new ArrayList<>();
 
 		// Start at Camp
 		enterCamp(false);
@@ -202,6 +204,7 @@ public class GameScreen extends GScreen {
 
 		monsters.clear();
 		items.clear();
+		chests.clear();
 
 		if (hud != null) hud.showMessage("回到了营地.");
 	}
@@ -516,6 +519,50 @@ public class GameScreen extends GScreen {
 				items.add(new Item(pos.x, pos.y, new InventoryItem(itemData, itemRng)));
 			}
 		}
+
+		// Chests
+		chests.clear();
+		int numChests = 2 + (dungeon.level / 2);
+		List<ItemData> rareLoot = new ArrayList<>();
+		for (ItemData d : ItemData.values()) {
+			// Exclude common items already spawned on floor (optional, but requested to spawn "new items")
+			if (d == ItemData.Health_Potion || d == ItemData.Mana_Potion || d == ItemData.Rusty_Sword) continue;
+			rareLoot.add(d);
+		}
+
+		for (int i = 0; i < numChests; i++) {
+			GridPoint2 pos = dungeon.getRandomWalkableTile(itemRng);
+			if (pos != null) {
+				// Avoid spawning on player
+				if (pos.x == player.x && pos.y == player.y) continue;
+				
+				// Avoid spawning on other entities (simple check)
+				boolean overlap = false;
+				for (Monster m : monsters) if (m.x == pos.x && m.y == pos.y) overlap = true;
+				for (Item it : items) if (it.x == pos.x && it.y == pos.y) overlap = true;
+				for (Chest c : chests) if (c.x == pos.x && c.y == pos.y) overlap = true;
+				
+				if (!overlap) {
+					Chest chest = new Chest(pos.x, pos.y);
+					// Add 1-3 random items
+					int lootCount = 1 + itemRng.nextInt(3);
+					for (int j = 0; j < lootCount; j++) {
+						if (!rareLoot.isEmpty()) {
+							ItemData lootData = rareLoot.get(itemRng.nextInt(rareLoot.size()));
+							chest.addItem(new InventoryItem(lootData, itemRng));
+						}
+					}
+					// Always add some coins
+					if (itemRng.nextFloat() < 0.5f) {
+						InventoryItem coins = new InventoryItem(ItemData.Gold_Coin, itemRng);
+						coins.count = 10 + itemRng.nextInt(50);
+						chest.addItem(coins);
+					}
+					
+					chests.add(chest);
+				}
+			}
+		}
 	}
 
 	private void updateCamera() {
@@ -682,9 +729,22 @@ public class GameScreen extends GScreen {
 		}
 
 		if (dx != 0 || dy != 0) {
-			// Auto-select target monster if attacking
 			int nextX = player.x + dx;
 			int nextY = player.y + dy;
+
+			// Check Chests
+			for (Chest chest : chests) {
+				if (chest.x == nextX && chest.y == nextY) {
+					hud.showChestDialog(chest, player);
+					chest.isOpen = true;
+					// Stop movement
+					dx = 0;
+					dy = 0;
+					return;
+				}
+			}
+
+			// Auto-select target monster if attacking
 			for (Monster m : monsters) {
 				if (m.hp > 0 && m.x == nextX && m.y == nextY) {
 					hud.showMonsterInfo(m);
@@ -910,6 +970,20 @@ public class GameScreen extends GScreen {
 				item.visualY + 4,
 				24
 			);
+		}
+
+		// Render Chests
+		for (Chest chest : chests) {
+			Color c = chest.isOpen ? Color.DARK_GRAY : Color.GOLD;
+			// Draw a simple box for chest
+			// Using batch.drawRect which uses a white pixel texture internally if configured, or we can use a known texture
+			// Assuming drawRect works as used in line 1002
+			batch.drawRect(chest.visualX + 4, chest.visualY + 4, 24, 24, 0, 0, c, true);
+			
+			// Optional: Draw a "border" or detail to look like a chest
+			if (!chest.isOpen) {
+				batch.drawRect(chest.visualX + 10, chest.visualY + 10, 12, 4, 0, 0, Color.BLACK, true);
+			}
 		}
 
 		// Render Monsters

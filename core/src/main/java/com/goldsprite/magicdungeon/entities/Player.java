@@ -267,10 +267,10 @@ public class Player extends Entity {
 
 	public void usePotion(InventoryItem item) {
 		if (item.data == ItemData.Mana_Potion) {
-			this.stats.mana = Math.min(this.stats.maxMana, this.stats.mana + item.heal);
+			this.stats.mana = Math.min(this.stats.maxMana, this.stats.mana + item.manaRegen);
 		} else if (item.data == ItemData.Elixir) {
 			this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.heal);
-			this.stats.mana = Math.min(this.stats.maxMana, this.stats.mana + item.heal);
+			this.stats.mana = Math.min(this.stats.maxMana, this.stats.mana + item.manaRegen);
 		} else if (item.heal > 0) {
 			this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.heal);
 		}

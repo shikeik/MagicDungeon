@@ -43,12 +43,12 @@ public class InventoryItem {
 		this.atk = Math.max(0, Math.round(data.atk * multiplier));
 		this.def = Math.max(0, Math.round(data.def * multiplier));
 		this.heal = Math.max(0, Math.round(data.heal * multiplier));
+		this.manaRegen = Math.max(0, Math.round(data.manaRegen * multiplier));
 		
-		// Mana Regen Logic (New)
-		this.manaRegen = 0;
-		if (data.name().contains("Mana") || data.name().contains("Magic") || data.name().contains("Ring") || data.name().contains("Wand") || data.name().contains("Necklace")) {
-			// Small chance for mana regen on magic items
-			if (rng.nextFloat() < 0.5f || data.name().contains("Mana")) {
+		// Random Bonus Logic
+		// Small chance for extra mana regen on magic items if they don't have it already
+		if (this.manaRegen == 0 && (data.name().contains("Magic") || data.name().contains("Ring") || data.name().contains("Wand") || data.name().contains("Necklace"))) {
+			if (rng.nextFloat() < 0.3f) { // 30% chance
 				this.manaRegen = Math.max(1, Math.round(1 * multiplier));
 			}
 		}

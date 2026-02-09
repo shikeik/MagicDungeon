@@ -28,6 +28,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.SkewBar;
 import com.goldsprite.magicdungeon.assets.TextureManager;
+import com.goldsprite.magicdungeon.entities.Chest;
 import com.goldsprite.magicdungeon.entities.InventoryItem;
 import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.entities.Monster;
@@ -96,6 +97,7 @@ public class GameHUD {
 	private VisTextButton saveBtn;
 	private VisTextButton helpBtn;
 	private BaseDialog helpWindow;
+	private ChestDialog chestDialog;
 
 	// Android Controls
 	private Touchpad touchpad;
@@ -704,10 +706,10 @@ public class GameHUD {
 		if (item.def > 0) rightCol.add(new VisLabel("防御: +" + item.def)).left().padBottom(2).row();
 		
 		if (item.data == ItemData.Mana_Potion) {
-			rightCol.add(new VisLabel("回魔: +" + item.heal)).left().padBottom(2).row();
+			rightCol.add(new VisLabel("回魔: +" + item.manaRegen)).left().padBottom(2).row();
 		} else if (item.data == ItemData.Elixir) {
 			rightCol.add(new VisLabel("回血: +" + item.heal)).left().padBottom(2).row();
-			rightCol.add(new VisLabel("回魔: +" + item.heal)).left().padBottom(2).row();
+			rightCol.add(new VisLabel("回魔: +" + item.manaRegen)).left().padBottom(2).row();
 		} else {
 			String hpRegenLabel = item.data.type == ItemType.POTION ? "回血: +" : "自然回血: +";
 			String mpRegenLabel = item.data.type == ItemType.POTION ? "回魔: +" : "自然回魔: +";
@@ -1188,26 +1190,45 @@ public class GameHUD {
 	private void createHelpWindow() {
 		helpWindow = new BaseDialog("帮助");
 		helpWindow.autoPack = false;
-		helpWindow.setSize(400, 300);
+		helpWindow.setSize(500, 400); // Increased size
 		helpWindow.setCenterOnAdd(true);
 		helpWindow.setMovable(true);
 		helpWindow.setResizable(false);
+		helpWindow.addCloseButton();
 
 		VisTable helpTable = new VisTable();
 		helpTable.top().left();
 		helpTable.pad(10);
 
-		helpTable.add("游戏说明").center().padBottom(15).row();
-		String helpMsg = "移动/攻击: WASD 或方向键\n撞击怪物会自动攻击\n技能: SPACE 键使用治疗技能\n下一关: 找到楼梯并踩上去\n物品: 踩上去自动拾取，背包中点击装备\n存档: 点击保存按钮保存游戏进度\n点击怪物查看详情";
+		helpTable.add(new VisLabel("游戏指南")).center().padBottom(15).row();
+		
+		String helpMsg = 
+			"【基本操作】\n" +
+			"移动: WASD 或 方向键 (移动端: 左下角摇杆)\n" +
+			"攻击: 撞击怪物自动攻击\n" +
+			"交互: SPACE 空格键 (移动端: 交互按钮) - 下楼/上楼/进关卡\n" +
+			"技能: H 键 (移动端: 动作按钮) - 使用治疗术 (消耗魔法)\n" +
+			"\n" +
+			"【物品与装备】\n" +
+			"拾取: 移动到物品上自动拾取\n" +
+			"宝箱: 撞击宝箱打开战利品界面\n" +
+			"背包: 按 E 键或点击背包按钮打开，点击物品进行装备/卸下/使用\n" +
+			"\n" +
+			"【其他】\n" +
+			"存档: F5 或 点击保存按钮\n" +
+			"读档: F9 (仅限PC调试)\n" +
+			"查看信息: 点击怪物或长按物品查看详情\n";
+			
 		VisLabel helpLabel = new VisLabel(helpMsg);
 		helpLabel.setWrap(true);
-		helpTable.add(helpLabel).minWidth(0).grow().left();
+		helpTable.add(helpLabel).width(450).left();
 
 		VisScrollPane scrollPane = new VisScrollPane(helpTable);
 		scrollPane.setFlickScroll(true);
 		scrollPane.setScrollingDisabled(true, false);
+		scrollPane.setFadeScrollBars(false);
 
-		helpWindow.getContentTable().add(scrollPane).expand().fill();
+		helpWindow.getContentTable().add(scrollPane).grow();
 	}
 
 	private void showHelp() {
@@ -1342,6 +1363,12 @@ public class GameHUD {
 		else{
 			inventoryDialog.show(stage);
 		}
+	}
+
+	public void showChestDialog(Chest chest, Player player) {
+		if (chestDialog != null) chestDialog.remove();
+		chestDialog = new ChestDialog(chest, player);
+		chestDialog.show(stage);
 	}
 
 	public void updateInventoryDialog(Player player) {
@@ -1560,5 +1587,180 @@ public class GameHUD {
 	// Accessor for MonsterHPBar to set range (will add method to SkewBar)
 	public SkewBar getMonsterHpBar() {
 		return monsterHpBar;
+	}
+
+	private class ChestDialog extends BaseDialog {
+		private Chest chest;
+		private Player player;
+		private VisTable chestItemsTable;
+		private VisTable playerItemsTable;
+
+		public ChestDialog(Chest chest, Player player) {
+			super("宝箱");
+			this.chest = chest;
+			this.player = player;
+			
+			float width = Math.max(900, stage.getWidth() * 0.8f);
+			float height = stage.getHeight() * 0.8f;
+			setSize(width, height);
+			setCenterOnAdd(true);
+			autoPack = false;
+			addCloseButton();
+
+			VisTable mainTable = new VisTable();
+			mainTable.setFillParent(true);
+			mainTable.pad(20);
+
+			// Left: Chest Items
+			VisTable leftCol = new VisTable();
+			leftCol.setBackground(slotBorderDrawable);
+			leftCol.add(new VisLabel("宝箱内容")).pad(10).top().row();
+			
+			chestItemsTable = new VisTable();
+			VisScrollPane chestScroll = new VisScrollPane(chestItemsTable);
+			chestScroll.setScrollingDisabled(true, false);
+			chestScroll.setFadeScrollBars(false);
+			leftCol.add(chestScroll).grow();
+
+			// Right: Player Inventory
+			VisTable rightCol = new VisTable();
+			rightCol.setBackground(slotBorderDrawable);
+			rightCol.add(new VisLabel("你的背包")).pad(10).top().row();
+			
+			playerItemsTable = new VisTable();
+			VisScrollPane playerScroll = new VisScrollPane(playerItemsTable);
+			playerScroll.setScrollingDisabled(true, false);
+			playerScroll.setFadeScrollBars(false);
+			rightCol.add(playerScroll).grow();
+
+			mainTable.add(leftCol).width(width * 0.5f).growY().padRight(10);
+			mainTable.add(rightCol).width(width * 0.5f).growY();
+
+			getContentTable().add(mainTable).grow();
+			
+			updateContent();
+		}
+		
+		public void updateContent() {
+			// Chest Items
+			chestItemsTable.clear();
+			int itemsPerRow = 5;
+			for (int i = 0; i < chest.items.size(); i++) {
+				InventoryItem item = chest.items.get(i);
+				ChestSlot slot = new ChestSlot(item, chest, player, true, this);
+				chestItemsTable.add(slot).size(64, 64).pad(5);
+				if ((i + 1) % itemsPerRow == 0) chestItemsTable.row();
+			}
+			
+			// Player Items
+			playerItemsTable.clear();
+			if (player.inventory != null) {
+				for (int i = 0; i < player.inventory.size(); i++) {
+					InventoryItem item = player.inventory.get(i);
+					ChestSlot slot = new ChestSlot(item, chest, player, false, this);
+					playerItemsTable.add(slot).size(64, 64).pad(5);
+					if ((i + 1) % itemsPerRow == 0) playerItemsTable.row();
+				}
+			}
+		}
+	}
+	
+	private class ChestSlot extends VisTable {
+		public ChestSlot(InventoryItem item, Chest chest, Player player, boolean isChestItem, ChestDialog dialog) {
+			setBackground(slotBgDrawable);
+			setTouchable(Touchable.enabled);
+			
+			Stack stack = new Stack();
+			
+			// Icon
+			if (item != null) {
+				stack.add(ItemRenderer.createItemIcon(item, 48));
+				
+				// Count
+				if (item.count > 1) {
+					VisLabel countLabel = new VisLabel(String.valueOf(item.count));
+					countLabel.setFontScale(0.4f);
+					VisTable countTable = new VisTable();
+					countTable.bottom().right();
+					countTable.add(countLabel).pad(2);
+					stack.add(countTable);
+				}
+				
+				// Tooltip
+				if (Gdx.app.getType() == ApplicationType.Android) {
+					ActorGestureListener listener = new ActorGestureListener() {
+						@Override
+						public void tap(InputEvent event, float x, float y, int count, int button) {
+							handleItemClick(item, isChestItem, dialog, chest, player);
+							hideAndroidTooltip();
+						}
+						@Override
+						public boolean longPress(Actor actor, float x, float y) {
+							showAndroidTooltip(ChestSlot.this, item, false);
+							return true;
+						}
+						@Override
+						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+							super.touchUp(event, x, y, pointer, button);
+							hideAndroidTooltip();
+						}
+					};
+					listener.getGestureDetector().setLongPressSeconds(0.18f);
+					addListener(listener);
+				} else {
+					VisTable tooltipContent = createItemTooltipTable(item, false);
+					new Tooltip.Builder(tooltipContent).target(this).build();
+					
+					// PC Click Listener
+					addListener(new ClickListener() {
+						@Override
+						public void clicked(InputEvent event, float x, float y) {
+							handleItemClick(item, isChestItem, dialog, chest, player);
+						}
+					});
+				}
+			}
+			
+			add(stack).size(64, 64);
+		}
+		
+		private void handleItemClick(InventoryItem item, boolean isChestItem, ChestDialog dialog, Chest chest, Player player) {
+			if (item == null) return;
+			
+			if (isChestItem) {
+				// Loot: Chest -> Player
+				if (player.addItem(item)) {
+					chest.items.remove(item);
+					showMessage("获得了 " + item.data.name);
+					dialog.updateContent();
+					updateInventory(player);
+				} else {
+					showMessage("背包已满!");
+				}
+			} else {
+				// Store: Player -> Chest
+				chest.addItem(item);
+				unequipItem(player, item);
+				player.inventory.remove(item);
+				dialog.updateContent();
+				updateInventory(player);
+			}
+		}
+	}
+	
+	private void unequipItem(Player player, InventoryItem item) {
+		if (player.equipment.mainHand == item) player.equipment.mainHand = null;
+		else if (player.equipment.offHand == item) player.equipment.offHand = null;
+		else if (player.equipment.helmet == item) player.equipment.helmet = null;
+		else if (player.equipment.armor == item) player.equipment.armor = null;
+		else if (player.equipment.boots == item) player.equipment.boots = null;
+		else {
+			for(int i=0; i<player.equipment.accessories.length; i++) {
+				if (player.equipment.accessories[i] == item) {
+					player.equipment.accessories[i] = null;
+					break;
+				}
+			}
+		}
 	}
 }
