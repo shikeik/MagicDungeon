@@ -1,7 +1,6 @@
-package com.goldsprite.gdengine.screens;
+package com.goldsprite.magicdungeon.screens.tests;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
@@ -12,11 +11,12 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
+import com.kotcrab.vis.ui.widget.VisCheckBox;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.VisCheckBox;
+import com.kotcrab.vis.ui.widget.VisTable;
 
 /**
  * Dual-grid Tilemap System for libGDX (Android Optimized)
@@ -44,9 +44,9 @@ public class DualGridDemoScreen extends GScreen {
     // ==========================================
     public enum TerrainType {
         EMPTY(-1, null),
-        GRASS(0, "grass.png"),
-        DIRT(1, "dirt.png"),
-        SAND(2, "sand.png");
+        GRASS(0, "sprites/tilesets/grass_tiles.png"),
+        DIRT(1, "sprites/tilesets/dirt_tiles.png"),
+        SAND(2, "sprites/tilesets/sand_tiles.png");
 
         public final int id;
         public final String texPath;
@@ -161,8 +161,7 @@ public class DualGridDemoScreen extends GScreen {
     private TerrainType selectedTerrain = TerrainType.DIRT;
     private boolean showGrid = true;
 
-    public DualGridDemoScreen(ScreenManager sm) {
-        super(sm);
+    public DualGridDemoScreen() {
         // 安卓端缩放优化
         this.worldScale = 0.5f; 
         this.autoCenterWorldCamera = true;
@@ -210,7 +209,7 @@ public class DualGridDemoScreen extends GScreen {
     }
 
     private void setupUI() {
-        Table root = new Table();
+        VisTable root = new VisTable();
         root.setFillParent(true);
         root.top().right();
 
@@ -236,7 +235,8 @@ public class DualGridDemoScreen extends GScreen {
         btnClear.addListener(e -> { worldData.clear(TerrainType.EMPTY); return true; });
 
         // 布局
-        Table menu = new Table();
+        VisTable menu = new VisTable();
+		menu.setBackground("window-bg");
         menu.add(title).padBottom(10).row();
         menu.add(btnGrass).fillX().pad(2).row();
         menu.add(btnDirt).fillX().pad(2).row();
@@ -244,7 +244,7 @@ public class DualGridDemoScreen extends GScreen {
         menu.add(cbGrid).padTop(10).row();
         menu.add(btnClear).fillX().padTop(20);
 
-        root.add(menu).pad(20).background(VisUI.getSkin().getDrawable("window-bg"));
+        root.add(menu).pad(20);
         uiStage.addActor(root);
     }
 
