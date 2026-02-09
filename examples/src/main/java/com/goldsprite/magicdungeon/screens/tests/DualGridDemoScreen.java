@@ -95,8 +95,45 @@ public class DualGridDemoScreen extends GScreen {
         // 索引顺序: 0:Empty, 1:BR, 2:BL, 3:BottomEdge, 4:TR, 5:RightEdge, 6:TR+BL, 7:Inner-TL...
         // 这里直接使用 0-15 的二进制顺序
 		// 掩码计算: (TL<<3 | TR<<2 | BL<<1 | BR)
-		private static final int[] MASK_TO_ATLAS_X = { -1, 1, 0, 3, 0, 1, 3, 1, 3, 2, 3, 3, 1, 2, 0, 2 };
-		private static final int[] MASK_TO_ATLAS_Y = { -1, 3, 0, 0, 2, 0, 2, 1, 3, 3, 0, 1, 2, 2, 1, 1 };
+		// 索引 0-15 分别对应二进制 0000 到 1111
+		// TL TR BL BR
+		private static final int[] MASK_TO_ATLAS_X = {
+			-1, // 0: 0000 (全空)
+			1, // 1: 0001 (只有BR) -> 外转角: 右下 (1,3)
+			0, // 2: 0010 (只有BL) -> 外转角: 左下 (0,0)
+			3, // 3: 0011 (BL+BR)  -> 底部边缘 (3,0)
+			0, // 4: 0100 (只有TR) -> 外转角: 右上 (0,2)
+			1, // 5: 0101 (TR+BR)  -> 右侧边缘 (1,0)
+			2, // 6: 0110 (TR+BL)  -> 对角线 (2,3)
+			1, // 7: 0111 (TR+BL+BR) -> 内转角: 左上 (3,1)
+			3, // 8: 1000 (只有TL) -> 外转角: 左上 (3,3)
+			0, // 9: 1001 (TL+BR)  -> 对角线 (0,1)
+			3, // 10: 1010 (TL+BL) -> 左侧边缘 (3,2)  <-- 【修复你图中的错误！】
+			2, // 11: 1011 (TL+BL+BR) -> 内转角: 右上 (2,2)
+			1, // 12: 1100 (TL+TR) -> 顶部边缘 (1,2)
+			2, // 13: 1101 (TL+TR+BR) -> 内转角: 左下 (2,0)
+			3, // 14: 1110 (TL+TR+BL) -> 内转角: 右下 (1,1)
+			2  // 15: 1111 (全满)  -> 中心块 (2,1)
+		};
+
+		private static final int[] MASK_TO_ATLAS_Y = {
+			-1, // 0
+			3, // 1
+			0, // 2
+			0, // 3
+			2, // 4
+			0, // 5
+			3, // 6
+			1, // 7
+			3, // 8
+			1, // 9
+			2, // 10
+			0, // 11
+			2, // 12
+			2, // 13
+			1, // 14
+			1  // 15
+		};
 
         public void load() {
             for (TerrainType type : Config.RENDER_ORDER) {
@@ -128,16 +165,15 @@ public class DualGridDemoScreen extends GScreen {
         }
 
         private int calculateMask(GridData grid, int x, int y, TerrainType target) {
-            // 在 libGDX (Y-Up) 中，(x,y) 是采样区域的右上方
-            // 我们检查以 (x,y) 交叉点为中心的四个逻辑象限
-            int tr = (grid.getTileId(x, y) == target.id) ? 1 : 0;         // Top Right
-            int tl = (grid.getTileId(x - 1, y) == target.id) ? 1 : 0;     // Top Left
-            int br = (grid.getTileId(x, y - 1) == target.id) ? 1 : 0;     // Bottom Right
-            int bl = (grid.getTileId(x - 1, y - 1) == target.id) ? 1 : 0; // Bottom Left
+			// 逻辑坐标 (x,y) 是当前黄色方块的【右上角顶点】
+			int tr = (grid.getTileId(x, y) == target.id) ? 1 : 0;         // 权重 4
+			int tl = (grid.getTileId(x - 1, y) == target.id) ? 1 : 0;     // 权重 8
+			int br = (grid.getTileId(x, y - 1) == target.id) ? 1 : 0;     // 权重 1
+			int bl = (grid.getTileId(x - 1, y - 1) == target.id) ? 1 : 0; // 权重 2
 
-            // 构造 4 位掩码 (对应映射表顺序)
-            return (tl << 3) | (tr << 2) | (bl << 1) | br;
-        }
+			// 这里的顺序要和上面的数组一一对应：TL是最高位，BR是最低位
+			return (tl << 3) | (tr << 2) | (bl << 1) | br;
+		}
     }
 
 
