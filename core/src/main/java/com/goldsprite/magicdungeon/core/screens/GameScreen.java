@@ -273,12 +273,10 @@ public class GameScreen extends GScreen {
 
 		// 2. Must be on Stairs Up (changed from Stairs Down)
 		Tile tile = dungeon.getTile(player.x, player.y);
-		/* // Disabled strict check for now, allow return anytime via UI button?
 		if (tile == null || tile.type != TileType.Stairs_Up) {
 			hud.showMessage("你需要站在上层入口处才能返回营地。");
 			return;
 		}
-		*/
 
 		// 3. No monsters in room?
 		// Simple check: visible range? or active monsters?
@@ -732,18 +730,6 @@ public class GameScreen extends GScreen {
 			int nextX = player.x + dx;
 			int nextY = player.y + dy;
 
-			// Check Chests
-			for (Chest chest : chests) {
-				if (chest.x == nextX && chest.y == nextY) {
-					hud.showChestDialog(chest, player);
-					chest.isOpen = true;
-					// Stop movement
-					dx = 0;
-					dy = 0;
-					return;
-				}
-			}
-
 			// Auto-select target monster if attacking
 			for (Monster m : monsters) {
 				if (m.hp > 0 && m.x == nextX && m.y == nextY) {
@@ -785,6 +771,16 @@ public class GameScreen extends GScreen {
 						enterDungeon(level);
 					});
 					handledInteract = true;
+				}
+			}
+			
+			// Check Chests (Interact)
+			for (Chest chest : chests) {
+				if (chest.x == player.x && chest.y == player.y) {
+					hud.showChestDialog(chest, player);
+					chest.isOpen = true;
+					handledInteract = true;
+					break;
 				}
 			}
 		}

@@ -6,6 +6,8 @@ import com.goldsprite.magicdungeon.world.Dungeon;
 import com.goldsprite.magicdungeon.systems.AudioSystem;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 public class Player extends Entity {
 	public float moveTimer;
@@ -14,6 +16,8 @@ public class Player extends Entity {
 	private float regenTimer = 0;
 	
 	public long coins = 0;
+	
+	public Set<String> discoveredItems = new HashSet<>();
 
 	// Stats
 	public PlayerStats stats;
@@ -217,6 +221,10 @@ public class Player extends Entity {
 	}
 
 	public boolean addItem(InventoryItem newItem) {
+		if (newItem != null && newItem.data != null) {
+			discoveredItems.add(newItem.data.name());
+		}
+
 		// 1. Try to stack if it's a potion
 		if (newItem.data.type == ItemType.POTION) {
 			// Iterate backwards to find stackable item
