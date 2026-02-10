@@ -9,7 +9,7 @@ import com.goldsprite.magicdungeon.screens.tests.TexturePreviewScreen;
 import java.util.Map;
 import com.goldsprite.magicdungeon.screens.tests.StarAssault;
 
-public class TestSelectionScreen extends BaseSelectionScreen {int k36;
+public class TestSelectionScreen extends BaseSelectionScreen {int k26;
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);
