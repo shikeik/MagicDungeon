@@ -121,6 +121,15 @@ public class InputManager {
         return (keys != null && !keys.isEmpty()) ? keys.get(0) : -1;
     }
 
+    public int getBoundButton(InputAction action) {
+        List<Integer> buttons = controllerMappings.get(action);
+        return (buttons != null && !buttons.isEmpty()) ? buttons.get(0) : -1;
+    }
+
+    public boolean hasConnectedController() {
+        return Controllers.getControllers().size > 0;
+    }
+
     private void loadMappings() {
         // Set defaults first to ensure all actions have bindings (especially new ones)
         setDefaultMappings();

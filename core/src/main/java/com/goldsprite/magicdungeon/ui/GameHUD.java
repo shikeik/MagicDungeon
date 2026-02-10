@@ -112,6 +112,7 @@ public class GameHUD {
 	private Texture whiteTexture;
 	private TextureRegionDrawable whiteDrawable;
 	private TextureRegionDrawable logBgDrawable;
+	private TextureRegionDrawable circleDrawable; // New for controller icons
 
 	private Player currentPlayer;
 	private Runnable saveListener;
@@ -311,25 +312,15 @@ public class GameHUD {
 					else if (newIndex == 6) newIndex = 7; // Armor -> Boots
 				}
 				else if (dx == 1) { // Right
-					if (newIndex == 1) newIndex = 2;
-					else if (newIndex == 2) newIndex = 3;
-					else if (newIndex == 3) {
-						// Acc3 -> Inventory
-						currentArea = FocusArea.INVENTORY;
-						currentInvIndex = 0;
-						updateFocus();
-						return;
-					}
+					if (newIndex == 0) newIndex = 1;      // Helm -> Acc1
+					else if (newIndex == 1) newIndex = 2; // Acc1 -> Acc2
+					else if (newIndex == 2) newIndex = 3; // Acc2 -> Acc3
+					else if (newIndex == 3) newIndex = 4; // Acc3 -> Main
 					else if (newIndex == 4) newIndex = 5; // Main -> Off
-					else if (newIndex == 5) {
-						// Off -> Inventory
-						currentArea = FocusArea.INVENTORY;
-						currentInvIndex = 0;
-						updateFocus();
-						return;
-					}
-					else if (newIndex == 0 || newIndex == 6 || newIndex == 7) {
-						// Center items -> Inventory
+					else if (newIndex == 5) newIndex = 6; // Off -> Armor
+					else if (newIndex == 6) newIndex = 7; // Armor -> Boots
+					else if (newIndex == 7) {
+						// Boots -> Inventory (Only last item exits)
 						currentArea = FocusArea.INVENTORY;
 						currentInvIndex = 0;
 						updateFocus();
@@ -423,7 +414,8 @@ public class GameHUD {
 			currentArea = FocusArea.INVENTORY;
 			currentInvIndex = 0;
 			currentEquipIndex = 0;
-			updateFocus();
+			// Delay focus update to ensure layout is ready for tooltip positioning
+			Gdx.app.postRunnable(this::updateFocus);
 			return this;
 		}
 	}
@@ -1571,6 +1563,17 @@ public class GameHUD {
 		Texture logTex = new Texture(logPm);
 		logBgDrawable = new TextureRegionDrawable(logTex);
 		logPm.dispose();
+
+		// 5. Circle Background (for Controller Buttons)
+		Pixmap circlePm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+		circlePm.setColor(Color.LIGHT_GRAY);
+		circlePm.fillCircle(16, 16, 16);
+		circlePm.setColor(0.2f, 0.2f, 0.2f, 1f);
+		circlePm.fillCircle(16, 16, 14); // Inner dark
+		Texture circleTex = new Texture(circlePm);
+		circleTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+		circleDrawable = new TextureRegionDrawable(circleTex);
+		circlePm.dispose();
 	}
 
 	private void createHelpWindow() {
@@ -1593,9 +1596,44 @@ public class GameHUD {
 		VisTable leftCol = new VisTable();
 		leftCol.top().left();
 		leftCol.add(new VisLabel("游戏指南")).center().padBottom(10).row();
-		VisLabel helpLabel = new VisLabel(getHelpText());
-		helpLabel.setWrap(true);
-		leftCol.add(helpLabel).width(400).left();
+
+		// Dynamic Controls Guide
+		boolean isController = InputManager.getInstance().hasConnectedController();
+		if (Gdx.app.getType() == ApplicationType.Android) {
+			// On Android, prefer touch/controller hints. 
+			// If controller is connected, show controller icons.
+			// If not, we might want to show specific touch hints, but here we fallback to controller-style icons 
+			// if we want to represent virtual buttons, or just text.
+			// For now, let's respect the controller flag. If no controller on Android, we use Keyboard defaults (which might be confusing)
+			// or we should show "Touch" instructions.
+			// However, user asked for "Handle icons" or "Keyboard icons".
+			// Let's assume if no controller on Android, we show simple text or default to PC keys as reference (Virtual Keyboard mimics keys).
+		}
+
+		VisTable keysTable = new VisTable();
+		keysTable.defaults().left().padBottom(8);
+
+		addHelpRow(keysTable, "移动", InputAction.MOVE_UP, isController);
+		addHelpRow(keysTable, "攻击", InputAction.ATTACK, isController);
+		addHelpRow(keysTable, "交互", InputAction.INTERACT, isController);
+		addHelpRow(keysTable, "技能", InputAction.SKILL, isController);
+		addHelpRow(keysTable, "背包", InputAction.BAG, isController);
+		addHelpRow(keysTable, "地图", InputAction.MAP, isController);
+		addHelpRow(keysTable, "暂停", InputAction.PAUSE, isController);
+		addHelpRow(keysTable, "切换区域", InputAction.TAB, isController);
+		addHelpRow(keysTable, "快捷栏", InputAction.QUICK_SLOT, isController);
+
+		leftCol.add(keysTable).left().padBottom(20).row();
+
+		VisLabel extraLabel = new VisLabel("【其他说明】\n" +
+				"拾取: 移动到物品上自动拾取\n" +
+				"宝箱: 撞击宝箱打开\n" +
+				"存档: F5 (PC) / 自动\n" +
+				"查看信息: 长按物品或点击怪物");
+		extraLabel.setWrap(true);
+		extraLabel.setFontScale(0.35f);
+		extraLabel.setColor(Color.LIGHT_GRAY);
+		leftCol.add(extraLabel).width(400).left();
 
 		// Right: Item Guide
 		VisTable rightCol = new VisTable();
@@ -1637,7 +1675,7 @@ public class GameHUD {
 		rightCol.add(itemGrid).top().left();
 
 		// Layout
-		content.add(leftCol).top().left().width(420);
+		content.add(leftCol).top().left().width(450).padRight(20);
 		content.add(new Separator("vertical")).growY().pad(10);
 		content.add(rightCol).top().left().growX();
 
@@ -1648,22 +1686,88 @@ public class GameHUD {
 		helpWindow.getContentTable().add(scroll).grow();
 	}
 
-	private String getHelpText() {
-		return "【基本操作】\n" +
-			"移动: WASD 或 方向键 (移动端: 左下角摇杆)\n" +
-			"攻击: 撞击怪物自动攻击\n" +
-			"交互: SPACE 空格键 (移动端: 交互按钮) - 下楼/上楼/进关卡\n" +
-			"技能: H 键 (移动端: 动作按钮) - 使用治疗术 (消耗魔法)\n" +
-			"\n" +
-			"【物品与装备】\n" +
-			"拾取: 移动到物品上自动拾取\n" +
-			"宝箱: 撞击宝箱打开战利品界面\n" +
-			"背包: 按 E 键或点击背包按钮打开，点击物品进行装备/卸下/使用\n" +
-			"\n" +
-			"【其他】\n" +
-			"存档: F5 或 点击保存按钮\n" +
-			"读档: F9 (仅限PC调试)\n" +
-			"查看信息: 点击怪物或长按物品查看详情\n";
+	private void addHelpRow(VisTable table, String actionName, InputAction action, boolean isController) {
+		table.add(new VisLabel(actionName)).left().width(80);
+
+		if (action == InputAction.MOVE_UP) {
+			if (isController) {
+				table.add(createKeyIcon("LS", true)).padRight(5);
+				table.add(new VisLabel("/")).padRight(5);
+				table.add(createKeyIcon("DPad", true)).left();
+			} else {
+				table.add(createKeyIcon("W", false)).padRight(2);
+				table.add(createKeyIcon("A", false)).padRight(2);
+				table.add(createKeyIcon("S", false)).padRight(2);
+				table.add(createKeyIcon("D", false)).padRight(5);
+				table.add(new VisLabel("或")).padRight(5);
+				table.add(createKeyIcon("↑↓←→", false)).left();
+			}
+		} else {
+			InputManager input = InputManager.getInstance();
+			if (isController) {
+				int btn = input.getBoundButton(action);
+				if (btn != -1) {
+					table.add(createKeyIcon(getButtonName(btn), true)).left();
+				} else {
+					table.add(new VisLabel("-")).left();
+				}
+			} else {
+				int key = input.getBoundKey(action);
+				if (key != -1) {
+					String keyName = Input.Keys.toString(key);
+					table.add(createKeyIcon(keyName, false)).left();
+				} else {
+					table.add(new VisLabel("-")).left();
+				}
+			}
+		}
+		table.row();
+	}
+
+	private Actor createKeyIcon(String text, boolean isController) {
+		VisTable t = new VisTable();
+		// Use circle for controller, box for keyboard
+		t.setBackground(isController ? circleDrawable : slotBgDrawable);
+
+		VisLabel l = new VisLabel(text);
+		l.setAlignment(Align.center);
+		
+		// Adaptive font scale
+		if (text.length() > 2) l.setFontScale(0.25f);
+		else l.setFontScale(0.35f);
+
+		if (isController) {
+			t.add(l).center().size(32, 32);
+		} else {
+			if (text.length() > 1) {
+				t.add(l).pad(5, 10, 5, 10);
+			} else {
+				t.add(l).center().size(32, 32);
+			}
+		}
+
+		return t;
+	}
+
+	private String getButtonName(int code) {
+		// Standard LibGDX Controller Mappings (Xbox-like)
+		switch(code) {
+			case 0: return "A";
+			case 1: return "B";
+			case 2: return "X";
+			case 3: return "Y";
+			case 4: return "LB";
+			case 5: return "RB";
+			case 6: return "Back";
+			case 7: return "Start";
+			case 8: return "L3";
+			case 9: return "R3";
+			case 10: return "Up";
+			case 11: return "Down";
+			case 12: return "Left";
+			case 13: return "Right";
+			default: return String.valueOf(code);
+		}
 	}
 
 	private void showHelp() {
