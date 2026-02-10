@@ -190,11 +190,27 @@ public class GameHUD {
 		}
 	}
 
+	// 抽象接口：可聚焦的 UI 元素
+	interface FocusableUI {
+		void setFocused(boolean focused);
+		void simulateClick();
+		// 用于计算导航位置 (简单起见，使用 Actor 坐标，或者 Grid 坐标)
+		// 这里我们简化处理，InventoryDialog 维护两个列表
+	}
+
 	private class InventoryDialog extends BaseDialog {
-		// List to track slots for navigation
-		List<InventorySlot> slotActors = new ArrayList<>();
-		int currentSelection = 0;
-		int itemsPerRow = 8; // Match the grid layout
+		// Navigation State
+		enum FocusArea { EQUIPMENT, INVENTORY }
+		FocusArea currentArea = FocusArea.INVENTORY;
+		
+		// Slot Lists
+		List<InventorySlot> inventorySlots = new ArrayList<>();
+		List<EquipmentSlot> equipmentSlots = new ArrayList<>();
+		
+		int currentInvIndex = 0;
+		int currentEquipIndex = 0;
+		
+		int invItemsPerRow = 8; 
 
 		public InventoryDialog() {
 			super("背包");
@@ -255,65 +271,138 @@ public class GameHUD {
 			getContentTable().add(mainTable).grow();
 		}
 
+		private void navigate(int dx, int dy) {
+			if (currentArea == FocusArea.INVENTORY) {
+				if (dx == 1) currentInvIndex++;
+				if (dx == -1) {
+					if (currentInvIndex % invItemsPerRow == 0) {
+						// Left edge -> Switch to Equipment
+						currentArea = FocusArea.EQUIPMENT;
+						updateFocus();
+						return;
+					}
+					currentInvIndex--;
+				}
+				if (dy == 1) currentInvIndex -= invItemsPerRow; // Up
+				if (dy == -1) currentInvIndex += invItemsPerRow; // Down
+				
+				// Clamp Inventory
+				if (currentInvIndex < 0) currentInvIndex = 0;
+				if (inventorySlots.size() > 0) {
+					if (currentInvIndex >= inventorySlots.size()) currentInvIndex = inventorySlots.size() - 1;
+				} else {
+					currentInvIndex = 0;
+				}
+				
+			} else {
+				// Equipment Navigation (Manual Logic based on layout)
+				int newIndex = currentEquipIndex;
+				
+				if (dy == 1) { // Up
+					if (newIndex == 4 || newIndex == 5) newIndex = 1; // Main/Off -> Acc
+					else if (newIndex == 6) newIndex = 4; // Armor -> Main
+					else if (newIndex == 7) newIndex = 6; // Boots -> Armor
+					else if (newIndex >= 1 && newIndex <= 3) newIndex = 0; // Acc -> Helm
+				} 
+				else if (dy == -1) { // Down
+					if (newIndex == 0) newIndex = 1; // Helm -> Acc
+					else if (newIndex >= 1 && newIndex <= 3) newIndex = 4; // Acc -> Main
+					else if (newIndex == 4 || newIndex == 5) newIndex = 6; // Main/Off -> Armor
+					else if (newIndex == 6) newIndex = 7; // Armor -> Boots
+				}
+				else if (dx == 1) { // Right
+					if (newIndex == 1) newIndex = 2;
+					else if (newIndex == 2) newIndex = 3;
+					else if (newIndex == 3) {
+						// Acc3 -> Inventory
+						currentArea = FocusArea.INVENTORY;
+						currentInvIndex = 0;
+						updateFocus();
+						return;
+					}
+					else if (newIndex == 4) newIndex = 5; // Main -> Off
+					else if (newIndex == 5) {
+						// Off -> Inventory
+						currentArea = FocusArea.INVENTORY;
+						currentInvIndex = 0;
+						updateFocus();
+						return;
+					}
+					else if (newIndex == 0 || newIndex == 6 || newIndex == 7) {
+						// Center items -> Inventory
+						currentArea = FocusArea.INVENTORY;
+						currentInvIndex = 0;
+						updateFocus();
+						return;
+					}
+				}
+				else if (dx == -1) { // Left
+					if (newIndex == 3) newIndex = 2;
+					else if (newIndex == 2) newIndex = 1;
+					else if (newIndex == 5) newIndex = 4;
+				}
+				
+				currentEquipIndex = newIndex;
+				// Clamp just in case
+				if (equipmentSlots.size() > 0) {
+					if (currentEquipIndex < 0) currentEquipIndex = 0;
+					if (currentEquipIndex >= equipmentSlots.size()) currentEquipIndex = equipmentSlots.size() - 1;
+				} else {
+					currentEquipIndex = 0;
+				}
+			}
+			updateFocus();
+		}
+
 		@Override
 		public void act(float delta) {
 			super.act(delta);
 
 			// Handle Input Navigation
 			InputManager input = InputManager.getInstance();
-			boolean changed = false;
-
+			
 			if (input.isJustPressed(InputAction.UI_RIGHT)) {
-				currentSelection++;
-				changed = true;
+				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_RIGHT pressed");
+				navigate(1, 0);
 			}
 			if (input.isJustPressed(InputAction.UI_LEFT)) {
-				currentSelection--;
-				changed = true;
+				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_LEFT pressed");
+				navigate(-1, 0);
 			}
 			if (input.isJustPressed(InputAction.UI_UP)) {
-				currentSelection -= itemsPerRow;
-				changed = true;
+				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_UP pressed");
+				navigate(0, 1);
 			}
 			if (input.isJustPressed(InputAction.UI_DOWN)) {
-				currentSelection += itemsPerRow;
-				changed = true;
-			}
-
-			if (changed) {
-				// Clamp
-				if (currentSelection < 0) currentSelection = 0;
-				if (currentSelection >= slotActors.size()) currentSelection = slotActors.size() - 1;
-				updateFocus();
+				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_DOWN pressed");
+				navigate(0, -1);
 			}
 
 			// Confirm Action
 			if (input.isJustPressed(InputAction.UI_CONFIRM)) {
-				if (currentSelection >= 0 && currentSelection < slotActors.size()) {
-					slotActors.get(currentSelection).simulateClick();
+				if (currentArea == FocusArea.INVENTORY) {
+					if (currentInvIndex >= 0 && currentInvIndex < inventorySlots.size()) {
+						inventorySlots.get(currentInvIndex).simulateClick();
+					}
+				} else {
+					if (currentEquipIndex >= 0 && currentEquipIndex < equipmentSlots.size()) {
+						equipmentSlots.get(currentEquipIndex).simulateClick();
+					}
 				}
 			}
 
-			// BAG key logic is handled in GameScreen now to prevent "instant toggle" (open then immediately close in act)
-			// Or we can add a small delay/flag.
-			// But better: let GameScreen handle the "Toggle" logic, and here we only handle "Close" via ESC.
-			// However, user expects 'E' to also close it.
-			// The issue is: GameScreen detects 'E' -> calls toggleInventory() -> calls inventoryDialog.show()
-			// Then in the SAME frame, inventoryDialog.act() detects 'E' -> calls hide().
-			// Result: It opens and closes instantly.
-			// Fix: We should consume the event or check if it's the same frame?
-			// Easier fix: Check InputManager, but InputManager justPressed persists for the frame.
-			// We can ignore BAG key here if it was just used to open it?
-			// Actually, if we use a state machine or "isOpen" flag in HUD, we can handle it better.
-			// For now, let's remove BAG key closing from here, and let GameScreen handle the toggle.
-			// GameScreen logic: if (justPressed(BAG)) hud.toggleInventory();
-			// HUD.toggleInventory: if open -> close; else -> open.
-			// This works perfectly if this dialog DOES NOT handle BAG key.
+			// Cancel / Close
+			if (input.isJustPressed(InputAction.UI_CANCEL)) {
+				hide();
+			}
 		}
 
 		public void updateFocus() {
-			for (int i = 0; i < slotActors.size(); i++) {
-				slotActors.get(i).setFocused(i == currentSelection);
+			for (int i = 0; i < inventorySlots.size(); i++) {
+				inventorySlots.get(i).setFocused(currentArea == FocusArea.INVENTORY && i == currentInvIndex);
+			}
+			for (int i = 0; i < equipmentSlots.size(); i++) {
+				equipmentSlots.get(i).setFocused(currentArea == FocusArea.EQUIPMENT && i == currentEquipIndex);
 			}
 		}
 
@@ -321,13 +410,15 @@ public class GameHUD {
 		public VisDialog show(Stage stage) {
 			super.show(stage);
 			// Reset selection on open
-			currentSelection = 0;
+			currentArea = FocusArea.INVENTORY;
+			currentInvIndex = 0;
+			currentEquipIndex = 0;
 			updateFocus();
 			return this;
 		}
 	}
 
-	private class InventorySlot extends VisTable {
+	private class InventorySlot extends VisTable implements FocusableUI {
 		private Chest chestContext;
 		private ChestDialog dialogContext;
 		private boolean isChestItem;
@@ -536,6 +627,12 @@ public class GameHUD {
 		public void setFocused(boolean focused) {
 			if (focusBorder != null) {
 				focusBorder.setVisible(focused);
+				if (focused) {
+					// com.goldsprite.gdengine.log.Debug.log("Slot focused: " + this);
+					focusBorder.setColor(1f, 1f, 0f, 0.8f); // More visible yellow
+				}
+			} else {
+				// com.goldsprite.gdengine.log.Debug.log("Slot focusBorder is null!");
 			}
 		}
 
@@ -552,7 +649,10 @@ public class GameHUD {
 		}
 	}
 
-	private class EquipmentSlot extends VisTable {
+	private class EquipmentSlot extends VisTable implements FocusableUI {
+		private VisImage focusBorder;
+		private ClickListener clickListener;
+
 		public EquipmentSlot(InventoryItem item, String placeholder, Player player, ItemType slotType, int slotIndex, DragAndDrop dragAndDrop) {
 			setBackground(slotBgDrawable);
 
@@ -579,8 +679,10 @@ public class GameHUD {
 					ActorGestureListener listener = new ActorGestureListener() {
 						@Override
 						public void tap(InputEvent event, float x, float y, int count, int button) {
-							// No action on tap for now, or maybe show info
 							hideAndroidTooltip();
+							// Android tap acts as click (Unequip)
+							player.equip(item, slotIndex);
+							updateInventory(player);
 						}
 						@Override
 						public boolean longPress(Actor actor, float x, float y) {
@@ -601,13 +703,23 @@ public class GameHUD {
 				}
 
 				// Click to Unequip (Standard click behavior)
-				addListener(new ClickListener() {
+				this.clickListener = new ClickListener() {
 					@Override
 					public void clicked(InputEvent event, float x, float y) {
 						player.equip(item, slotIndex);
 						updateInventory(player);
 					}
-				});
+				};
+				addListener(clickListener);
+			}
+
+			// Focus Border
+			if (whiteDrawable != null) {
+				focusBorder = new VisImage(whiteDrawable);
+				focusBorder.setColor(1f, 1f, 0f, 0.4f); // Semi-transparent yellow
+				focusBorder.setTouchable(Touchable.disabled);
+				focusBorder.setVisible(false);
+				stack.add(focusBorder);
 			}
 
 			add(stack).size(64, 64);
@@ -648,6 +760,26 @@ public class GameHUD {
 						getActor().setColor(Color.WHITE);
 					}
 				});
+			}
+		}
+
+		@Override
+		public void setFocused(boolean focused) {
+			if (focusBorder != null) {
+				focusBorder.setVisible(focused);
+				if (focused) focusBorder.setColor(1f, 1f, 0f, 0.8f);
+			}
+		}
+
+		@Override
+		public void simulateClick() {
+			if (clickListener != null) {
+				InputEvent event = new InputEvent();
+				event.setType(InputEvent.Type.touchDown);
+				event.setButton(Input.Buttons.LEFT);
+				event.setStageX(getX());
+				event.setStageY(getY());
+				clickListener.clicked(event, 0, 0);
 			}
 		}
 	}
@@ -1681,6 +1813,11 @@ public class GameHUD {
 	public void updateInventory(Player player) {
 		if (player == null) return;
 
+		if (inventoryDialog != null) {
+			inventoryDialog.inventorySlots.clear();
+			inventoryDialog.equipmentSlots.clear();
+		}
+
 		// 1. Update Equipment Panel (Left Column)
 		if (equipmentTable != null) {
 			equipmentTable.clear();
@@ -1693,30 +1830,44 @@ public class GameHUD {
 			//      [Boots]
 
 			// Top: Helmet
-			equipmentTable.add(new EquipmentSlot(player.equipment.helmet, "头盔", player, ItemType.HELMET, -1, dragAndDrop)).colspan(3).padBottom(5).row();
+			EquipmentSlot helmSlot = new EquipmentSlot(player.equipment.helmet, "头盔", player, ItemType.HELMET, -1, dragAndDrop);
+			equipmentTable.add(helmSlot).colspan(3).padBottom(5).row();
+			if (inventoryDialog != null) inventoryDialog.equipmentSlots.add(helmSlot);
 
 			// Accessories (Moved to below Helmet)
 			VisTable accTable = new VisTable();
 			for(int i=0; i<3; i++) {
 				InventoryItem item = (player.equipment.accessories != null && i < player.equipment.accessories.length) ? player.equipment.accessories[i] : null;
-				accTable.add(new EquipmentSlot(item, "饰品", player, ItemType.ACCESSORY, i, dragAndDrop)).pad(2);
+				EquipmentSlot accSlot = new EquipmentSlot(item, "饰品", player, ItemType.ACCESSORY, i, dragAndDrop);
+				accTable.add(accSlot).pad(2);
+				if (inventoryDialog != null) inventoryDialog.equipmentSlots.add(accSlot);
 			}
 			equipmentTable.add(accTable).colspan(3).padBottom(5).row();
 
 			// Middle: Main, Avatar, Off
-			equipmentTable.add(new EquipmentSlot(player.equipment.mainHand, "主手", player, ItemType.MAIN_HAND, -1, dragAndDrop)).padRight(10);
+			EquipmentSlot mainSlot = new EquipmentSlot(player.equipment.mainHand, "主手", player, ItemType.MAIN_HAND, -1, dragAndDrop);
+			equipmentTable.add(mainSlot).padRight(10);
+			if (inventoryDialog != null) inventoryDialog.equipmentSlots.add(mainSlot);
+
 			if (avatarWidget != null) {
 				equipmentTable.add(avatarWidget).size(128, 128); // Avatar
 			} else {
 				equipmentTable.add().size(128, 128);
 			}
-			equipmentTable.add(new EquipmentSlot(player.equipment.offHand, "副手", player, ItemType.OFF_HAND, -1, dragAndDrop)).padLeft(10).row();
+			
+			EquipmentSlot offSlot = new EquipmentSlot(player.equipment.offHand, "副手", player, ItemType.OFF_HAND, -1, dragAndDrop);
+			equipmentTable.add(offSlot).padLeft(10).row();
+			if (inventoryDialog != null) inventoryDialog.equipmentSlots.add(offSlot);
 
 			// Bottom: Armor
-			equipmentTable.add(new EquipmentSlot(player.equipment.armor, "铠甲", player, ItemType.ARMOR, -1, dragAndDrop)).colspan(3).padTop(5).row();
+			EquipmentSlot armorSlot = new EquipmentSlot(player.equipment.armor, "铠甲", player, ItemType.ARMOR, -1, dragAndDrop);
+			equipmentTable.add(armorSlot).colspan(3).padTop(5).row();
+			if (inventoryDialog != null) inventoryDialog.equipmentSlots.add(armorSlot);
 
 			// Feet: Boots
-			equipmentTable.add(new EquipmentSlot(player.equipment.boots, "鞋子", player, ItemType.BOOTS, -1, dragAndDrop)).colspan(3).padTop(5).row();
+			EquipmentSlot bootsSlot = new EquipmentSlot(player.equipment.boots, "鞋子", player, ItemType.BOOTS, -1, dragAndDrop);
+			equipmentTable.add(bootsSlot).colspan(3).padTop(5).row();
+			if (inventoryDialog != null) inventoryDialog.equipmentSlots.add(bootsSlot);
 		}
 
 		// 2. Update Stats
@@ -1790,7 +1941,7 @@ public class GameHUD {
 
 		// 4. Update Inventory List (Right Column)
 		inventoryList.clear();
-		if (inventoryDialog != null) inventoryDialog.slotActors.clear();
+		// if (inventoryDialog != null) inventoryDialog.slotActors.clear();
 
 		// Collect display items (ALL items, even equipped ones)
 		List<InventoryItem> displayItems = new ArrayList<>();
@@ -1805,7 +1956,7 @@ public class GameHUD {
 			InventoryItem item = (i < displayItems.size()) ? displayItems.get(i) : null;
 			InventorySlot slot = new InventorySlot(item, player, dragAndDrop);
 			inventoryList.add(slot).size(64, 64).pad(5);
-			if (inventoryDialog != null) inventoryDialog.slotActors.add(slot);
+			if (inventoryDialog != null) inventoryDialog.inventorySlots.add(slot);
 			if ((i + 1) % itemsPerRow == 0) inventoryList.row();
 		}
 
@@ -1878,6 +2029,15 @@ public class GameHUD {
 		private Player player;
 		private VisTable chestItemsTable;
 		private VisTable playerItemsTable;
+		
+		// Navigation
+		enum FocusArea { CHEST, INVENTORY }
+		FocusArea currentArea = FocusArea.CHEST;
+		List<InventorySlot> chestSlots = new ArrayList<>();
+		List<InventorySlot> inventorySlots = new ArrayList<>();
+		int currentChestIndex = 0;
+		int currentInvIndex = 0;
+		final int itemsPerRow = 8;
 
 		public ChestDialog(Chest chest, Player player) {
 			super("宝箱");
@@ -1925,15 +2085,18 @@ public class GameHUD {
 		}
 
 		public void updateContent() {
+			chestSlots.clear();
+			inventorySlots.clear();
+
 			// Chest Items
 			chestItemsTable.clear();
-			int itemsPerRow = 8;
 			int maxChestSlots = 16; // 16格两排容量
 
 			for (int i = 0; i < maxChestSlots; i++) {
 				InventoryItem item = (i < chest.items.size()) ? chest.items.get(i) : null;
 				InventorySlot slot = new InventorySlot(item, player, dragAndDrop, chest, this, true);
 				chestItemsTable.add(slot).size(64, 64).pad(5);
+				chestSlots.add(slot);
 				if ((i + 1) % itemsPerRow == 0) chestItemsTable.row();
 			}
 
@@ -1945,8 +2108,110 @@ public class GameHUD {
 				InventoryItem item = (i < player.inventory.size()) ? player.inventory.get(i) : null;
 				InventorySlot slot = new InventorySlot(item, player, dragAndDrop, chest, this, false);
 				playerItemsTable.add(slot).size(64, 64).pad(5);
+				inventorySlots.add(slot);
 				if ((i + 1) % itemsPerRow == 0) playerItemsTable.row();
 			}
+			
+			updateFocus();
+		}
+		
+		private void navigate(int dx, int dy) {
+			if (currentArea == FocusArea.CHEST) {
+				if (dx == 1) {
+					currentChestIndex++;
+					if (currentChestIndex % itemsPerRow == 0) {
+						// Switch to Inventory
+						currentChestIndex--; 
+						currentArea = FocusArea.INVENTORY;
+						currentInvIndex = 0; // Start at top-left
+					}
+				} else if (dx == -1) {
+					currentChestIndex--;
+				}
+				if (dy == 1) currentChestIndex -= itemsPerRow;
+				if (dy == -1) currentChestIndex += itemsPerRow;
+				
+				// Clamp Chest
+				if (currentChestIndex < 0) currentChestIndex = 0;
+				if (chestSlots.size() > 0) {
+					if (currentChestIndex >= chestSlots.size()) currentChestIndex = chestSlots.size() - 1;
+				} else {
+					currentChestIndex = 0;
+				}
+				
+			} else { // INVENTORY
+				if (dx == -1) {
+					if (currentInvIndex % itemsPerRow == 0) {
+						// Switch to Chest
+						currentArea = FocusArea.CHEST;
+						// Try to match row? Or just end of chest?
+						// Chest is small, just go to last valid or 0.
+						currentChestIndex = Math.min(currentInvIndex, chestSlots.size() - 1);
+						if (currentChestIndex < 0) currentChestIndex = 0;
+					} else {
+						currentInvIndex--;
+					}
+				} else if (dx == 1) {
+					currentInvIndex++;
+				}
+				if (dy == 1) currentInvIndex -= itemsPerRow;
+				if (dy == -1) currentInvIndex += itemsPerRow;
+				
+				// Clamp Inventory
+				if (currentInvIndex < 0) currentInvIndex = 0;
+				if (inventorySlots.size() > 0) {
+					if (currentInvIndex >= inventorySlots.size()) currentInvIndex = inventorySlots.size() - 1;
+				} else {
+					currentInvIndex = 0;
+				}
+			}
+			updateFocus();
+		}
+
+		@Override
+		public void act(float delta) {
+			super.act(delta);
+			InputManager input = InputManager.getInstance();
+			
+			if (input.isJustPressed(InputAction.UI_RIGHT)) navigate(1, 0);
+			if (input.isJustPressed(InputAction.UI_LEFT)) navigate(-1, 0);
+			if (input.isJustPressed(InputAction.UI_UP)) navigate(0, 1);
+			if (input.isJustPressed(InputAction.UI_DOWN)) navigate(0, -1);
+			
+			if (input.isJustPressed(InputAction.UI_CONFIRM)) {
+				if (currentArea == FocusArea.CHEST) {
+					 if (currentChestIndex >= 0 && currentChestIndex < chestSlots.size()) {
+						chestSlots.get(currentChestIndex).simulateClick();
+					}
+				} else {
+					if (currentInvIndex >= 0 && currentInvIndex < inventorySlots.size()) {
+						inventorySlots.get(currentInvIndex).simulateClick();
+					}
+				}
+			}
+			
+			if (input.isJustPressed(InputAction.UI_CANCEL)) {
+				remove();
+			}
+		}
+		
+		public void updateFocus() {
+			for (int i = 0; i < chestSlots.size(); i++) {
+				chestSlots.get(i).setFocused(currentArea == FocusArea.CHEST && i == currentChestIndex);
+			}
+			for (int i = 0; i < inventorySlots.size(); i++) {
+				inventorySlots.get(i).setFocused(currentArea == FocusArea.INVENTORY && i == currentInvIndex);
+			}
+		}
+		
+		@Override
+		public VisDialog show(Stage stage) {
+			super.show(stage);
+			currentArea = FocusArea.CHEST;
+			currentChestIndex = 0;
+			currentInvIndex = 0;
+			updateFocus();
+			return this;
 		}
 	}
 

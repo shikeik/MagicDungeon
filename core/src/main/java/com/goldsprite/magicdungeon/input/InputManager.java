@@ -122,6 +122,9 @@ public class InputManager {
     }
 
     private void loadMappings() {
+        // Set defaults first to ensure all actions have bindings (especially new ones)
+        setDefaultMappings();
+
         // Priority: Local > Assets/Options > Assets/Data
         FileHandle file = Gdx.files.local(INPUTACTIONS_FILE);
 
@@ -131,7 +134,6 @@ public class InputManager {
 
 		if (!file.exists()) {
 			Debug.logT("InputManager", "No config found at options/input.json, using defaults.");
-			setDefaultMappings();
 			return;
 		}
 
