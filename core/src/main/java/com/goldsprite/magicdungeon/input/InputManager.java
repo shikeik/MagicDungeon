@@ -7,6 +7,7 @@ import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.Debug;
 
 import java.util.ArrayList;
@@ -53,8 +54,79 @@ public class InputManager {
         loadMappings();
     }
 
+    public void rebindKeyboard(InputAction action, int key) {
+        // Clear existing binding for this action to avoid duplicates or keep single key per action?
+        // User request: "mapping to same InputAction" implies 1 action -> N keys.
+        // But for rebind UI, usually we replace the primary key.
+        // Let's replace the first key or clear all and add new one for simplicity in UI.
+        
+        List<Integer> keys = keyboardMappings.get(action);
+        if (keys == null) {
+            keys = new ArrayList<>();
+            keyboardMappings.put(action, keys);
+        }
+        keys.clear(); // Simple mode: 1 key per action for custom binding
+        keys.add(key);
+    }
+    
+    public void rebindController(InputAction action, int buttonCode) {
+        List<Integer> buttons = controllerMappings.get(action);
+        if (buttons == null) {
+            buttons = new ArrayList<>();
+            controllerMappings.put(action, buttons);
+        }
+        buttons.clear();
+        buttons.add(buttonCode);
+    }
+
+    public void saveMappings() {
+        Json json = new Json();
+        json.setOutputType(JsonWriter.OutputType.json);
+        
+        JsonValue root = new JsonValue(JsonValue.ValueType.object);
+        
+        for (InputAction action : InputAction.values()) {
+            JsonValue entry = new JsonValue(JsonValue.ValueType.object);
+            
+            // Keyboard
+            List<Integer> keys = keyboardMappings.get(action);
+            if (keys != null && !keys.isEmpty()) {
+                JsonValue kArray = new JsonValue(JsonValue.ValueType.array);
+                for (int k : keys) kArray.addChild(new JsonValue(k));
+                entry.addChild("keyboard", kArray);
+            }
+            
+            // Controller
+            List<Integer> buttons = controllerMappings.get(action);
+            if (buttons != null && !buttons.isEmpty()) {
+                JsonValue cArray = new JsonValue(JsonValue.ValueType.array);
+                for (int b : buttons) cArray.addChild(new JsonValue(b));
+                entry.addChild("controller", cArray);
+            }
+            
+            root.addChild(action.name(), entry);
+        }
+        
+        // Save to local storage (user preferences/config)
+        // Note: 'options/input.json' in local storage
+        FileHandle file = Gdx.files.local("options/input.json");
+        file.writeString(json.prettyPrint(root), false);
+        Debug.log("InputManager", "Mappings saved to " + file.path());
+    }
+
+    public int getBoundKey(InputAction action) {
+        List<Integer> keys = keyboardMappings.get(action);
+        return (keys != null && !keys.isEmpty()) ? keys.get(0) : -1;
+    }
+
     private void loadMappings() {
-        FileHandle file = Gdx.files.internal("options/input.json");
+        // Priority: Local > Assets/Options > Assets/Data
+        FileHandle file = Gdx.files.local("options/input.json");
+        
+        if (!file.exists()) {
+            file = Gdx.files.internal("options/input.json");
+        }
+        
         if (!file.exists()) {
             Debug.log("InputManager", "Config not found at options/input.json, checking data/input_mapping.json...");
             file = Gdx.files.internal("data/input_mapping.json");

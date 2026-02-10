@@ -15,6 +15,7 @@ import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.core.renderer.TitleParallaxRenderer;
+import com.goldsprite.magicdungeon.core.ui.SettingsWindow;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.utils.Constants;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -62,37 +63,23 @@ public class MainMenuScreen extends GScreen {
 		titleLabel = new VisLabel("MAGIC DUNGEON");
 		titleLabel.setFontScale(1.5f);
 		titleLabel.setColor(Color.CYAN);
-		// Position will be set in updateLayout
 		
-		// Add simple pulse action to title
 		titleLabel.addAction(Actions.forever(
 			Actions.sequence(
 				Actions.scaleTo(1.1f, 1.1f, 1f),
 				Actions.scaleTo(1f, 1f, 1f)
 			)
 		));
-		// Set origin for scaling
 		titleLabel.setOrigin(Align.center);
 		stage.addActor(titleLabel);
 
-		// 2. Menu Group (Container for buttons)
-		// Clear previous group if exists
+		// 2. Menu Group
 		if (menuGroup != null) menuGroup.remove();
 		menuGroup = new Group();
 		stage.addActor(menuGroup);
-		// menuGroup.debug(); 
 
 		// Seed Input Area
  		VisTable seedTable = new VisTable();
-		
-		// Relative positioning within the group
-		// Let's assume (0,0) of menuGroup is the vertical center of the screen
-		// We build upwards and downwards from 0? Or just list them.
-		
-		// We can calculate offsets based on "center" being 0.
-		// Total height estimation:
-		// Seed (50) + gap (70) + NewGame (60) + gap (70) + [Continue] + Exit (60)
-		// Approx 300-400 height.
 		
 		float targetX = 50; // X offset from left
 		float currentY = 50; // Start from top-ish relative to center
@@ -102,7 +89,6 @@ public class MainMenuScreen extends GScreen {
  		seedTable.setSize(220, 50); 
  		seedTable.setPosition(targetX, currentY);
 
- 		// Re-layout seed table to ensure alignment
  		seedTable.clearChildren();
  		seedTable.left(); 
  		seedTable.add(new VisLabel("Seed: ")).width(50).padRight(5); 
@@ -141,6 +127,15 @@ public class MainMenuScreen extends GScreen {
 			});
 			currentY -= gap;
 		}
+		
+		// [New] Settings Button
+		createMenuButton("Settings", targetX, currentY, 0.25f, new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				openSettings();
+			}
+		});
+		currentY -= gap;
 
 		createMenuButton("Exit", targetX, currentY, 0.3f, new ClickListener() {
 			@Override
@@ -169,11 +164,17 @@ public class MainMenuScreen extends GScreen {
 		}
 
 		if (menuGroup != null) {
-			// Center the group vertically on the screen
-			// The group's (0,0) will be at (0, h/2)
-			// Items inside are positioned relative to this center
 			menuGroup.setPosition(0, h / 2);
 		}
+	}
+	
+	private void openSettings() {
+		if (stage.getRoot().findActor("SettingsWindow") != null) return;
+		
+		SettingsWindow win = new SettingsWindow();
+		win.setName("SettingsWindow");
+		stage.addActor(win);
+		win.fadeIn();
 	}
 
 	private void createMenuButton(String text, float targetX, float targetY, float delay, ClickListener listener) {
@@ -181,19 +182,14 @@ public class MainMenuScreen extends GScreen {
 		btn.addListener(listener);
 		btn.setSize(220, 60);
 		btn.setPosition(targetX, targetY);
-
-		// Add to menuGroup instead of stage
 		menuGroup.addActor(btn);
-
-		// Animation
 		btn.addAction(createEntranceAction(delay));
 	}
 
 	private com.badlogic.gdx.scenes.scene2d.Action createEntranceAction(float delay) {
-		// Initial state: Offscreen left and transparent
 		return Actions.sequence(
 			Actions.alpha(0),
-			Actions.moveBy(-300, 0), // Move to start pos (relative to final)
+			Actions.moveBy(-300, 0),
 			Actions.delay(delay),
 			Actions.parallel(
 				Actions.fadeIn(0.5f),
@@ -212,8 +208,6 @@ public class MainMenuScreen extends GScreen {
 
 		GameScreen gameScreen = new GameScreen(seed);
 		getScreenManager().setCurScreen(gameScreen);
-		// We don't dispose here immediately if we want transition, but GScreen usually handles it.
-		// GScreen manager usually disposes old screen.
 	}
 
 	private void continueGame() {
@@ -225,17 +219,8 @@ public class MainMenuScreen extends GScreen {
 	@Override
 	public void show() {
 		super.show();
-		// Animations are triggered by actions added in buildUI/createMenuButton
-		// But if we return to this screen, we might need to reset them?
-		// Since we rebuild UI in create(), and create() is called once...
-		// Actually GScreen.init() calls create().
-		// If we reuse the screen instance, we need to reset actions.
-		// Current GdxLauncher creates new instance every time?
-		// No, ScreenManager caches screens.
-		// So we should probably rebuild UI or reset actions in show().
-
-		stage.clear(); // Clear old actors
-		buildUI();     // Rebuild to restart animations
+		stage.clear(); 
+		buildUI();     
 	}
 
 	@Override
@@ -243,19 +228,13 @@ public class MainMenuScreen extends GScreen {
 		ScreenUtils.clear(0, 0, 0, 1);
 
 		float scl = 1f;
-		// 1. Draw Background
-		// Use UI Viewport size for renderer to match screen
-		
 		bloomRender.captureStart(batch);
-		
 		batch.setProjectionMatrix(getUICamera().combined);
 		renderer.render(batch, delta, getUIViewport().getWorldWidth()*scl, getUIViewport().getWorldHeight()*scl);
-		
 		bloomRender.captureEnd();
 		bloomRender.process();
 		bloomRender.render(batch);
 		
-		// 2. Draw UI
 		stage.act(delta);
 		stage.draw();
 	}
@@ -263,9 +242,7 @@ public class MainMenuScreen extends GScreen {
 	@Override
 	public void resize(int width, int height) {
 		super.resize(width, height);
-		// Update layout positions after viewport update
 		updateLayout();
-		
 		bloomRender.resize((int)getViewSize().x, (int)getViewSize().y);
 	}
 

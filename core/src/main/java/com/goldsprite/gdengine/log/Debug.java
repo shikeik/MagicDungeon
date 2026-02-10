@@ -10,7 +10,6 @@ import com.goldsprite.magicdungeon.BuildConfig;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -25,8 +24,13 @@ public class Debug {
 		"Default Y",
 		"拦截 N",
 
+		//GDEngine
+		"ToastUI Y",
+		"ZipDownLoader Y",
+
 		//MagicDungeon
 		"VirtualKeyboard Y",
+		"Settings Y",
 
 		// Test
 		"TEST Y",
