@@ -95,7 +95,7 @@ public class MainMenuScreen extends GScreen {
 		// Approx 300-400 height.
 		
 		float targetX = 50; // X offset from left
-		float currentY = 150; // Start from top-ish relative to center
+		float currentY = 50; // Start from top-ish relative to center
  		float gap = 70;
 
  		// Seed Group
