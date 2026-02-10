@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -52,6 +53,11 @@ public class VirtualKeyboard {
         this.activity = activity;
         this.parentView = parentView;
         this.gameView = gameView;
+
+        // 尝试获取初始屏幕尺寸
+        DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+        this.screenWidth = dm.widthPixels;
+        this.screenHeight = dm.heightPixels;
         
         initKeyMap();
         // UI 初始化需要在主线程进行，但通常构造函数也是在主线程调用的
@@ -152,13 +158,23 @@ public class VirtualKeyboard {
 
         // 初始位置设置 (延时一帧确保宽高已计算)
         floatingToggleBtn.post(() -> {
+            // 再次确保尺寸正确（有时候 onCreate 时获取的可能不准）
+            if (screenWidth == 0 || screenHeight == 0) {
+                DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+                screenWidth = dm.widthPixels;
+                screenHeight = dm.heightPixels;
+            }
+
             if (screenHeight > 0) {
-                floatingToggleBtn.setY(screenHeight / 2f - floatingToggleBtn.getHeight() / 2f);
+                // 修改 Y 轴位置为上方 1/4
+                floatingToggleBtn.setY(screenHeight / 4f - floatingToggleBtn.getHeight() / 2f);
                 dockFloatingButton(floatingToggleBtn);
             }
+            // 确保键盘布局也被刷新，因为现在有了尺寸
+            refreshKeyboardLayout();
         });
         
-        // 初始布局刷新
+        // 初始布局刷新 (虽然 post 里面也会刷，但这里先刷一次以防万一)
         refreshKeyboardLayout();
     }
 
@@ -184,6 +200,19 @@ public class VirtualKeyboard {
 
     public void setKeyboardVisibility(boolean visible) {
         isKeyboardVisible = visible;
+        
+        // 如果要显示键盘，检查一下是否需要重新布局（防止尺寸未初始化）
+        if (visible) {
+             if (keyboardContainer != null && keyboardContainer.getChildCount() == 0) {
+                 if (screenWidth == 0 || screenHeight == 0) {
+                    DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+                    screenWidth = dm.widthPixels;
+                    screenHeight = dm.heightPixels;
+                 }
+                 refreshKeyboardLayout();
+             }
+        }
+
         if (keyboardContainer != null) {
             keyboardContainer.setVisibility(visible ? View.VISIBLE : View.GONE);
         }
