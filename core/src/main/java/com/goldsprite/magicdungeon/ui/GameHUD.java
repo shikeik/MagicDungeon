@@ -1620,17 +1620,8 @@ public class GameHUD {
 		leftCol.add(new VisLabel("游戏指南")).center().padBottom(10).row();
 
 		// Dynamic Controls Guide
-		boolean isController = InputManager.getInstance().hasConnectedController();
-		if (Gdx.app.getType() == ApplicationType.Android) {
-			// On Android, prefer touch/controller hints. 
-			// If controller is connected, show controller icons.
-			// If not, we might want to show specific touch hints, but here we fallback to controller-style icons 
-			// if we want to represent virtual buttons, or just text.
-			// For now, let's respect the controller flag. If no controller on Android, we use Keyboard defaults (which might be confusing)
-			// or we should show "Touch" instructions.
-			// However, user asked for "Handle icons" or "Keyboard icons".
-			// Let's assume if no controller on Android, we show simple text or default to PC keys as reference (Virtual Keyboard mimics keys).
-		}
+		// On Android, we treat it as having a controller (Virtual Controller)
+		boolean isController = InputManager.getInstance().hasConnectedController() || Gdx.app.getType() == ApplicationType.Android;
 
 		VisTable keysTable = new VisTable();
 		keysTable.defaults().left().padBottom(8);
@@ -1647,11 +1638,21 @@ public class GameHUD {
 
 		leftCol.add(keysTable).left().padBottom(20).row();
 
-		VisLabel extraLabel = new VisLabel("【其他说明】\n" +
+		VisLabel extraLabel = new VisLabel("【基本操作】\n" +
+				"移动: WASD 或 方向键 (移动端: 左下角摇杆)\n" +
+				"攻击: 撞击怪物自动攻击\n" +
+				"交互: SPACE 空格键 (移动端: 交互按钮) - 下楼/上楼/进关卡\n" +
+				"技能: H 键 (移动端: 动作按钮) - 使用治疗术 (消耗魔法)\n" +
+				"\n" +
+				"【物品与装备】\n" +
 				"拾取: 移动到物品上自动拾取\n" +
-				"宝箱: 撞击宝箱打开\n" +
-				"存档: F5 (PC) / 自动\n" +
-				"查看信息: 长按物品或点击怪物");
+				"宝箱: 撞击宝箱打开战利品界面\n" +
+				"背包: 按 E 键或点击背包按钮打开，点击物品进行装备/卸下/使用\n" +
+				"\n" +
+				"【其他】\n" +
+				"存档: F5 或 点击保存按钮\n" +
+				"读档: F9 (仅限PC调试)\n" +
+				"查看信息: 点击怪物或长按物品查看详情");
 		extraLabel.setWrap(true);
 		extraLabel.setFontScale(0.35f);
 		extraLabel.setColor(Color.LIGHT_GRAY);
@@ -2160,7 +2161,16 @@ public class GameHUD {
 			if ((i + 1) % itemsPerRow == 0) inventoryList.row();
 		}
 
-		if (inventoryDialog != null) inventoryDialog.updateFocus();
+		if (inventoryDialog != null) {
+			// Only update focus if dialog is actually visible
+			if (inventoryDialog.getParent() != null) {
+				inventoryDialog.updateFocus();
+			} else {
+				// If not visible, just ensure no residual tooltips from previous states
+				// Although setFocused shouldn't be called if not in updateFocus...
+				// But let's be safe.
+			}
+		}
 	}
 
 	private void handleChestTransaction(InventoryItem item, boolean isChestItem, ChestDialog dialog, Chest chest, Player player) {
