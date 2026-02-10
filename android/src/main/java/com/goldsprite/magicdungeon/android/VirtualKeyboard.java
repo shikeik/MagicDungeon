@@ -48,6 +48,14 @@ public class VirtualKeyboard {
     
     private boolean isKeyboardVisible = false;
     private int screenWidth, screenHeight;
+    
+    // 输入模式枚举
+    public enum InputMode {
+        FULL_KEYBOARD,
+        GAMEPAD // 预留
+    }
+    
+    private InputMode currentMode = InputMode.FULL_KEYBOARD;
 
     public VirtualKeyboard(Activity activity, RelativeLayout parentView, View gameView) {
         this.activity = activity;
@@ -212,6 +220,8 @@ public class VirtualKeyboard {
                  refreshKeyboardLayout();
              }
         }
+        
+        updateGameViewLayout(visible);
 
         if (keyboardContainer != null) {
             keyboardContainer.setVisibility(visible ? View.VISIBLE : View.GONE);
@@ -225,6 +235,46 @@ public class VirtualKeyboard {
         }
     }
     
+    /**
+     * 根据当前模式和键盘可见性动态调整 gameView 的 LayoutParams
+     * 从而实现挤占视图的效果
+     */
+    private void updateGameViewLayout(boolean visible) {
+        if (gameView == null || screenWidth == 0 || screenHeight == 0) return;
+
+        // 假设 gameView 的父容器是 FrameLayout，这也是 AndroidGdxLauncher 中的情况
+        if (!(gameView.getLayoutParams() instanceof FrameLayout.LayoutParams)) {
+            return;
+        }
+
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) gameView.getLayoutParams();
+        
+        // 重置所有边距
+        params.bottomMargin = 0;
+        params.leftMargin = 0;
+        params.rightMargin = 0;
+        params.topMargin = 0;
+        // 确保 Gravity 是顶部对齐，这样底部留出的空间才是给键盘的
+        params.gravity = Gravity.TOP | Gravity.LEFT;
+
+        if (visible) {
+            if (currentMode == InputMode.FULL_KEYBOARD) {
+                // 全键盘模式：底部挤占
+                boolean isLandscape = screenWidth > screenHeight;
+                float ratio = isLandscape ? HEIGHT_RATIO_LANDSCAPE : HEIGHT_RATIO_PORTRAIT;
+                int keyboardHeight = (int) (screenHeight * ratio);
+                params.bottomMargin = keyboardHeight;
+            } else if (currentMode == InputMode.GAMEPAD) {
+                // 手柄模式（预留）：两侧挤占
+                // int gamepadWidth = ...;
+                // params.leftMargin = gamepadWidth;
+                // params.rightMargin = gamepadWidth;
+            }
+        }
+
+        gameView.setLayoutParams(params);
+    }
+    
     public boolean isVisible() {
         return isKeyboardVisible;
     }
@@ -236,6 +286,11 @@ public class VirtualKeyboard {
         this.screenWidth = width;
         this.screenHeight = height;
         refreshKeyboardLayout();
+        
+        // 屏幕旋转后，键盘高度可能变化，需要更新 gameView 的挤压布局
+        if (isKeyboardVisible) {
+            updateGameViewLayout(true);
+        }
     }
 
     private void refreshKeyboardLayout() {
