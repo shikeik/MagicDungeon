@@ -1708,6 +1708,23 @@ public class GameHUD {
 		stage.draw();
 	}
 
+	public void resize(int width, int height) {
+		stage.getViewport().update(width, height, true);
+		
+		if (Gdx.app.getType() == ApplicationType.Android) {
+			// 更新 Android 控件位置
+			float screenW = stage.getWidth();
+			// float screenH = stage.getHeight(); // 也可以根据高度调整
+			
+			if (attackBtn != null) {
+				attackBtn.setPosition(screenW - 140, 40);
+			}
+			if (interactBtn != null) {
+				interactBtn.setPosition(screenW - 140 - 100, 20);
+			}
+		}
+	}
+
 	public void dispose() {
 		stage.dispose();
 		if (slotBgTexture != null) slotBgTexture.dispose();

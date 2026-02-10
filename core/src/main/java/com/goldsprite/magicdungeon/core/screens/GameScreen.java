@@ -1145,6 +1145,14 @@ public class GameScreen extends GScreen {
 	}
 
 	@Override
+	public void resize(int width, int height) {
+		super.resize(width, height);
+		if (hud != null) {
+			hud.resize(width, height);
+		}
+	}
+
+	@Override
 	public void show() {
 		super.show();
 		// Resume BGM when screen is shown (if not game over)

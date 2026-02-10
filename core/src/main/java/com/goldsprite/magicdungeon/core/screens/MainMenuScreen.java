@@ -3,7 +3,7 @@ package com.goldsprite.magicdungeon.core.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
-import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
@@ -31,7 +31,8 @@ public class MainMenuScreen extends GScreen {
 	private Stage stage;
 
 	// UI Elements for animation
-	private Table mainTable;
+	private VisLabel titleLabel;
+	private Group menuGroup;
 	private VisTextField seedField;
 
 	@Override
@@ -58,14 +59,11 @@ public class MainMenuScreen extends GScreen {
 
 	private void buildUI() {
 		// 1. Title Label (Centered)
-		VisLabel titleLabel = new VisLabel("MAGIC DUNGEON");
+		titleLabel = new VisLabel("MAGIC DUNGEON");
 		titleLabel.setFontScale(1.5f);
 		titleLabel.setColor(Color.CYAN);
-		// Position title at top center
-		titleLabel.setPosition(
-			(getUIViewport().getWorldWidth() - titleLabel.getPrefWidth()) / 2,
-			getUIViewport().getWorldHeight() - 100
-		);
+		// Position will be set in updateLayout
+		
 		// Add simple pulse action to title
 		titleLabel.addAction(Actions.forever(
 			Actions.sequence(
@@ -77,73 +75,74 @@ public class MainMenuScreen extends GScreen {
 		titleLabel.setOrigin(Align.center);
 		stage.addActor(titleLabel);
 
-		// 2. Main Menu Container (Left Side)
-		mainTable = new VisTable();
-		mainTable.setSize(300, 400); // Fixed width column
-		// Initial Position: Off-screen Left, Vertically Centered
-		float targetX = 50;
-		float startX = -350;
-		float centerY = (getUIViewport().getWorldHeight() - mainTable.getHeight()) / 2;
-
-		mainTable.setPosition(startX, centerY);
-		// mainTable.debug(); // For debug
-
-		stage.addActor(mainTable);
+		// 2. Menu Group (Container for buttons)
+		// Clear previous group if exists
+		if (menuGroup != null) menuGroup.remove();
+		menuGroup = new Group();
+		stage.addActor(menuGroup);
+		// menuGroup.debug(); 
 
 		// Seed Input Area
  		VisTable seedTable = new VisTable();
- 		// Content is added later during layout
- 		// Just initialize here
-
-		float startY = centerY + 150;
+		
+		// Relative positioning within the group
+		// Let's assume (0,0) of menuGroup is the vertical center of the screen
+		// We build upwards and downwards from 0? Or just list them.
+		
+		// We can calculate offsets based on "center" being 0.
+		// Total height estimation:
+		// Seed (50) + gap (70) + NewGame (60) + gap (70) + [Continue] + Exit (60)
+		// Approx 300-400 height.
+		
+		float targetX = 50; // X offset from left
+		float currentY = 150; // Start from top-ish relative to center
  		float gap = 70;
 
  		// Seed Group
- 		// Ensure width matches buttons (220)
- 		seedTable.setSize(220, 50); // Set explicit size
- 		seedTable.setPosition(targetX, startY);
+ 		seedTable.setSize(220, 50); 
+ 		seedTable.setPosition(targetX, currentY);
 
  		// Re-layout seed table to ensure alignment
  		seedTable.clearChildren();
- 		seedTable.left(); // Align left content
- 		seedTable.add(new VisLabel("Seed: ")).width(50).padRight(5); // Fixed width label
+ 		seedTable.left(); 
+ 		seedTable.add(new VisLabel("Seed: ")).width(50).padRight(5); 
  		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
 	 	seedField.setAlignment(Align.center);
- 		seedTable.add(seedField).expandX().fillX().padRight(5); // Field takes remaining space
- 		VisTextButton randomSeedBtn = new VisTextButton("R"); // Smaller text "R" for Roll/Random to save space or icon
+ 		seedTable.add(seedField).expandX().fillX().padRight(5); 
+ 		VisTextButton randomSeedBtn = new VisTextButton("R"); 
  		randomSeedBtn.addListener(new ClickListener() {
  			@Override
  			public void clicked(InputEvent event, float x, float y) {
  				seedField.setText(String.valueOf(MathUtils.random(1000000)));
  			}
  		});
- 		seedTable.add(randomSeedBtn).width(30); // Fixed width button
+ 		seedTable.add(randomSeedBtn).width(30); 
 
- 		stage.addActor(seedTable);
+ 		menuGroup.addActor(seedTable);
 
- 		startY -= gap;
+ 		currentY -= gap;
 
 		// Buttons
-		createMenuButton("New Game", targetX, startY, 0.1f, new ClickListener() {
+		createMenuButton("New Game", targetX, currentY, 0.1f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				startGame();
 			}
 		});
 
-		startY -= gap;
+		currentY -= gap;
 
 		if (SaveManager.hasSave()) {
-			createMenuButton("Continue", targetX, startY, 0.2f, new ClickListener() {
+			createMenuButton("Continue", targetX, currentY, 0.2f, new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
 					continueGame();
 				}
 			});
-			startY -= gap;
+			currentY -= gap;
 		}
 
-		createMenuButton("Exit", targetX, startY, 0.3f, new ClickListener() {
+		createMenuButton("Exit", targetX, currentY, 0.3f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				Gdx.app.exit();
@@ -152,6 +151,29 @@ public class MainMenuScreen extends GScreen {
 
 		// Seed table animation
 		seedTable.addAction(createEntranceAction(0f));
+		
+		// Initial Layout
+		updateLayout();
+	}
+
+	private void updateLayout() {
+		if (stage == null) return;
+		float w = getUIViewport().getWorldWidth();
+		float h = getUIViewport().getWorldHeight();
+
+		if (titleLabel != null) {
+			titleLabel.setPosition(
+				(w - titleLabel.getPrefWidth()) / 2,
+				h - 100
+			);
+		}
+
+		if (menuGroup != null) {
+			// Center the group vertically on the screen
+			// The group's (0,0) will be at (0, h/2)
+			// Items inside are positioned relative to this center
+			menuGroup.setPosition(0, h / 2);
+		}
 	}
 
 	private void createMenuButton(String text, float targetX, float targetY, float delay, ClickListener listener) {
@@ -160,8 +182,8 @@ public class MainMenuScreen extends GScreen {
 		btn.setSize(220, 60);
 		btn.setPosition(targetX, targetY);
 
-		// Add to stage
-		stage.addActor(btn);
+		// Add to menuGroup instead of stage
+		menuGroup.addActor(btn);
 
 		// Animation
 		btn.addAction(createEntranceAction(delay));
@@ -183,7 +205,9 @@ public class MainMenuScreen extends GScreen {
 	private void addMenuButton(String text, ClickListener listener) {
 		VisTextButton btn = new VisTextButton(text);
 		btn.addListener(listener);
-		mainTable.add(btn).width(220).height(60).padBottom(20).row();
+		// 原 mainTable 不存在，改为直接添加到 menuGroup 中，并设置尺寸与位置
+		btn.setSize(220, 60);
+		menuGroup.addActor(btn);
 	}
 
 	private void startGame() {
@@ -247,10 +271,9 @@ public class MainMenuScreen extends GScreen {
 	@Override
 	public void resize(int width, int height) {
 		super.resize(width, height);
-		// Ensure table stays centered vertically on resize
-		if(mainTable != null) {
-			mainTable.setY((getUIViewport().getWorldHeight() - mainTable.getHeight()) / 2);
-		}
+		// Update layout positions after viewport update
+		updateLayout();
+		
 		bloomRender.resize((int)getViewSize().x, (int)getViewSize().y);
 	}
 

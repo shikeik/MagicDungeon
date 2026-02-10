@@ -273,6 +273,7 @@ public class VirtualKeyboard {
         }
 
         gameView.setLayoutParams(params);
+        gameView.requestLayout(); // 强制请求重新布局，确保触发 surfaceChanged
     }
     
     public boolean isVisible() {
