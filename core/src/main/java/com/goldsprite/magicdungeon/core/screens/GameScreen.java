@@ -40,8 +40,11 @@ import com.goldsprite.magicdungeon.core.ItemState;
 import com.goldsprite.magicdungeon.core.LevelState;
 import com.goldsprite.magicdungeon.core.MonsterState;
 
-import com.badlogic.gdx.graphics.Color; // Ensure Color is imported
-import com.goldsprite.magicdungeon.entities.ItemQuality; // Ensure ItemQuality is imported
+import com.goldsprite.magicdungeon.input.InputManager;
+import com.goldsprite.magicdungeon.input.InputAction;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Vector3;
+import com.goldsprite.magicdungeon.ui.ItemRenderer;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -587,31 +590,32 @@ public class GameScreen extends GScreen {
 	}
 
 	private void handleInput(float delta) {
+        InputManager input = InputManager.getInstance();
+
 		// Toggle Pause
-		if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+		if (input.isJustPressed(InputAction.PAUSE)) {
 			isPaused = !isPaused;
 			hud.setPaused(isPaused);
 			// Optional: Pause audio or other systems
 		}
 
 		// Toggle Inventory (Always allowed)
-		// Modified: Changed to E key as requested
-		if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+		if (input.isJustPressed(InputAction.BAG)) {
 			hud.toggleInventory();
 		}
 
 		// Save Game
-		if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+		if (input.isJustPressed(InputAction.SAVE)) {
 			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
 			hud.showMessage("游戏已保存!");
 		}
 
-		// Load Game
+		// Load Game (F9 - Default keyboard only for now, not mapped in JSON yet, adding fallback)
 		if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
 			loadGame();
 		}
 
-		// Regenerate map (Reset)
+		// Regenerate map (Reset) - R (Keyboard only for now)
 		if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
 			dungeon.generate();
 			player.x = dungeon.startPos.x;
@@ -629,7 +633,7 @@ public class GameScreen extends GScreen {
 		// Mouse Click Selection
 		if (Gdx.input.justTouched()) {
 			// Convert screen coordinates to world coordinates
-			com.badlogic.gdx.math.Vector3 touchPos = new com.badlogic.gdx.math.Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+			Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
 			worldCamera.unproject(touchPos);
 
 			float wx = touchPos.x;
@@ -706,13 +710,15 @@ public class GameScreen extends GScreen {
 			return;
 		}
 
+        InputManager input = InputManager.getInstance();
+
 		// Game Input Handling (WASD)
 		int dx = 0;
 		int dy = 0;
-		if (Gdx.input.isKeyPressed(Input.Keys.A)) dx = -1;
-		if (Gdx.input.isKeyPressed(Input.Keys.D)) dx = 1;
-		if (Gdx.input.isKeyPressed(Input.Keys.W)) dy = 1;
-		if (Gdx.input.isKeyPressed(Input.Keys.S)) dy = -1;
+		if (input.isPressed(InputAction.MOVE_LEFT)) dx = -1;
+		if (input.isPressed(InputAction.MOVE_RIGHT)) dx = 1;
+		if (input.isPressed(InputAction.MOVE_UP)) dy = 1;
+		if (input.isPressed(InputAction.MOVE_DOWN)) dy = -1;
 
 		// Android Touchpad Support
 		Vector2 pad = hud.getMovementDirection();
@@ -742,11 +748,11 @@ public class GameScreen extends GScreen {
 		}
 
 		// Interact / Next Level - Space (Changed from E)
-		boolean isSpacePressed = Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+		boolean isInteractPressed = input.isJustPressed(InputAction.INTERACT);
 		boolean isInteractBtnJustPressed = hud.isInteractPressed() && !wasInteractPressed;
 		wasInteractPressed = hud.isInteractPressed();
 		
-		boolean interactTriggered = isSpacePressed || isInteractBtnJustPressed;
+		boolean interactTriggered = isInteractPressed || isInteractBtnJustPressed;
 		boolean handledInteract = false;
 
 		if (interactTriggered) {
@@ -786,7 +792,7 @@ public class GameScreen extends GScreen {
 		}
 
 		// Use Potion (Health) - H (Changed from SPACE)
-		boolean isSkillKeyPressed = Gdx.input.isKeyJustPressed(Input.Keys.H);
+		boolean isSkillKeyPressed = input.isJustPressed(InputAction.SKILL);
 		boolean isAttackBtnJustPressed = hud.isAttackPressed() && !wasAttackPressed;
 		wasAttackPressed = hud.isAttackPressed();
 
@@ -798,6 +804,12 @@ public class GameScreen extends GScreen {
 				hud.showMessage("法力不足!");
 			}
 		}
+        
+        // Map
+        if (input.isJustPressed(InputAction.MAP)) {
+            // Placeholder for Map
+            hud.showMessage("Map not implemented yet.");
+        }
 
 		// Update Player
 		player.update(delta, dungeon, dx, dy, monsters, audio);
@@ -959,7 +971,7 @@ public class GameScreen extends GScreen {
 		for (Item item : items) {
 			// Use unified ItemRenderer for map rendering
 			// Center the item slightly in the tile (size 24 vs tile 32)
-			com.goldsprite.magicdungeon.ui.ItemRenderer.drawItem(
+			ItemRenderer.drawItem(
 				batch,
 				item.item,
 				item.visualX + 4,

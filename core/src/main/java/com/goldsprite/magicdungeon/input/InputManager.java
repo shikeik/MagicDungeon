@@ -1,0 +1,180 @@
+package com.goldsprite.magicdungeon.input;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.Controllers;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonValue;
+import com.goldsprite.gdengine.log.Debug;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class InputManager {
+    private static InputManager instance;
+    private final Map<InputAction, List<Integer>> keyboardMappings = new HashMap<>();
+    private final Map<InputAction, List<Integer>> controllerMappings = new HashMap<>();
+
+    // LibGDX Controller Mappings (Standard / Xbox)
+    public static final int BUTTON_A = 0;
+    public static final int BUTTON_B = 1;
+    public static final int BUTTON_X = 2;
+    public static final int BUTTON_Y = 3;
+    public static final int BUTTON_LB = 4;
+    public static final int BUTTON_RB = 5;
+    public static final int BUTTON_BACK = 6;
+    public static final int BUTTON_START = 7;
+    public static final int BUTTON_L3 = 8;
+    public static final int BUTTON_R3 = 9;
+    public static final int BUTTON_DPAD_UP = 10; // May vary
+    public static final int BUTTON_DPAD_DOWN = 11;
+    public static final int BUTTON_DPAD_LEFT = 12;
+    public static final int BUTTON_DPAD_RIGHT = 13;
+    // Triggers are usually axes, but some mapping treat them as buttons if pressed deep enough
+    // For simplicity we might map triggers to buttons if the library supports it, or handle axes separately.
+    // Standard gdx-controllers usually maps axes 4 and 5 to triggers.
+    
+    private InputManager() {
+        loadMappings();
+    }
+
+    public static InputManager getInstance() {
+        if (instance == null) instance = new InputManager();
+        return instance;
+    }
+
+    public void reload() {
+        keyboardMappings.clear();
+        controllerMappings.clear();
+        loadMappings();
+    }
+
+    private void loadMappings() {
+        FileHandle file = Gdx.files.internal("data/input_mapping.json");
+        if (!file.exists()) {
+            Debug.log("InputManager", "Config not found, using defaults.");
+            setDefaultMappings();
+            return;
+        }
+        
+        try {
+            JsonValue root = new Json().fromJson(null, file);
+            for (JsonValue entry : root) {
+                try {
+                    InputAction action = InputAction.valueOf(entry.name());
+                    
+                    // Keyboard
+                    if (entry.has("keyboard")) {
+                        List<Integer> keys = new ArrayList<>();
+                        for (int key : entry.get("keyboard").asIntArray()) {
+                            keys.add(key);
+                        }
+                        keyboardMappings.put(action, keys);
+                    }
+                    
+                    // Controller
+                    if (entry.has("controller")) {
+                        List<Integer> buttons = new ArrayList<>();
+                        for (int btn : entry.get("controller").asIntArray()) {
+                            buttons.add(btn);
+                        }
+                        controllerMappings.put(action, buttons);
+                    }
+                } catch (IllegalArgumentException e) {
+                    Debug.log("InputManager", "Unknown action in config: " + entry.name());
+                }
+            }
+            Debug.log("InputManager", "Mappings loaded.");
+        } catch (Exception e) {
+            Debug.log("InputManager", "Failed to load mappings: " + e.getMessage());
+            e.printStackTrace();
+            setDefaultMappings();
+        }
+    }
+
+    private void setDefaultMappings() {
+        // WASD / Arrow Keys
+        mapK(InputAction.MOVE_UP, Input.Keys.W, Input.Keys.UP);
+        mapK(InputAction.MOVE_DOWN, Input.Keys.S, Input.Keys.DOWN);
+        mapK(InputAction.MOVE_LEFT, Input.Keys.A, Input.Keys.LEFT);
+        mapK(InputAction.MOVE_RIGHT, Input.Keys.D, Input.Keys.RIGHT);
+        
+        mapK(InputAction.ATTACK, Input.Keys.J); // X
+        mapK(InputAction.INTERACT, Input.Keys.SPACE); // A
+        mapK(InputAction.SKILL, Input.Keys.H); // RT
+        mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.DEL); // B
+        
+        mapK(InputAction.MAP, Input.Keys.M); // Y
+        mapK(InputAction.BAG, Input.Keys.E); // RB
+        mapK(InputAction.PAUSE, Input.Keys.P); // Start
+        
+        mapK(InputAction.TAB, Input.Keys.TAB); // LT
+        mapK(InputAction.QUICK_SLOT, Input.Keys.Q); // LB
+        mapK(InputAction.SAVE, Input.Keys.F5); // Home
+
+        // Controller Defaults (Xbox)
+        mapC(InputAction.ATTACK, BUTTON_X);
+        mapC(InputAction.INTERACT, BUTTON_A);
+        mapC(InputAction.SKILL, BUTTON_RB); // Mapping Skill to RB for now (User said RT, but triggers are complex)
+        mapC(InputAction.BACK, BUTTON_B);
+        mapC(InputAction.MAP, BUTTON_Y);
+        mapC(InputAction.BAG, BUTTON_LB); // Mapping Bag to LB
+        mapC(InputAction.PAUSE, BUTTON_START);
+        mapC(InputAction.TAB, BUTTON_L3); // ?
+        mapC(InputAction.QUICK_SLOT, BUTTON_R3); // ?
+        
+        // D-Pad
+        mapC(InputAction.MOVE_UP, BUTTON_DPAD_UP);
+        mapC(InputAction.MOVE_DOWN, BUTTON_DPAD_DOWN);
+        mapC(InputAction.MOVE_LEFT, BUTTON_DPAD_LEFT);
+        mapC(InputAction.MOVE_RIGHT, BUTTON_DPAD_RIGHT);
+    }
+    
+    private void mapK(InputAction action, int... keys) {
+        List<Integer> list = keyboardMappings.computeIfAbsent(action, k -> new ArrayList<>());
+        for (int k : keys) list.add(k);
+    }
+
+    private void mapC(InputAction action, int... buttons) {
+        List<Integer> list = controllerMappings.computeIfAbsent(action, k -> new ArrayList<>());
+        for (int b : buttons) list.add(b);
+    }
+
+    public boolean isPressed(InputAction action) {
+        // Check Keyboard
+        List<Integer> keys = keyboardMappings.get(action);
+        if (keys != null) {
+            for (int key : keys) {
+                if (Gdx.input.isKeyPressed(key)) return true;
+            }
+        }
+        
+        // Check Controller
+        List<Integer> buttons = controllerMappings.get(action);
+        if (buttons != null && Controllers.getControllers().size > 0) {
+            Controller controller = Controllers.getControllers().first();
+            for (int btn : buttons) {
+                if (controller.getButton(btn)) return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public boolean isJustPressed(InputAction action) {
+        List<Integer> keys = keyboardMappings.get(action);
+        if (keys != null) {
+            for (int key : keys) {
+                if (Gdx.input.isKeyJustPressed(key)) return true;
+            }
+        }
+        
+        // Note: Controller "just pressed" usually requires polling state manually or using an adapter.
+        // For simplicity, we only check keyboard here unless we implement state tracking.
+        return false;
+    }
+}

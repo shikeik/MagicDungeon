@@ -19,6 +19,7 @@ dependencies {
 	api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 	api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
 	api "com.kotcrab.vis:vis-ui:$visUIVersion"
+    api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
 
     // [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
     api 'org.nanohttpd:nanohttpd:2.3.1'

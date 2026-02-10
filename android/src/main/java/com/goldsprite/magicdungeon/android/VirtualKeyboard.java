@@ -19,8 +19,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.badlogic.gdx.controllers.Controllers;
+import com.goldsprite.gdengine.log.Debug; // 使用项目 Log
 
 /**
  * 虚拟键盘管理类
@@ -36,6 +36,13 @@ public class VirtualKeyboard {
     private final float HEIGHT_RATIO_PORTRAIT = 0.35f;
     private final int padding = -16;
     
+    // Xbox Controller Key Codes (Standard Android Mapping)
+    // A=KEYCODE_BUTTON_A (96), B=KEYCODE_BUTTON_B (97), X=KEYCODE_BUTTON_X (99), Y=KEYCODE_BUTTON_Y (100)
+    // LB=KEYCODE_BUTTON_L1 (102), RB=KEYCODE_BUTTON_R1 (103)
+    // LT=KEYCODE_BUTTON_L2 (104), RT=KEYCODE_BUTTON_R2 (105)
+    // Select/Back=KEYCODE_BUTTON_SELECT (109), Start=KEYCODE_BUTTON_START (108)
+    // L3=KEYCODE_BUTTON_THUMBL (106), R3=KEYCODE_BUTTON_THUMBR (107)
+
     private final String[][] terminalLayout = {
         {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "Del"},
         {"Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"},
@@ -236,27 +243,25 @@ public class VirtualKeyboard {
         keyboardContainer.setClickable(false);
         keyboardContainer.setFocusable(false);
         
-        // Left Panel (30% width)
+        // Left Panel (Compressed Width: 25%)
         FrameLayout leftPanel = new FrameLayout(activity);
-        // leftPanel.setBackgroundColor(0xAA000000); // 去除背景色
         LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(
-            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
+            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.25f);
         leftPanel.setLayoutParams(leftParams);
         createLeftJoyCon(leftPanel);
         
-        // Middle Space (40% width) - Transparent and click-through
+        // Middle Space (Expanded Width: 50%) - Transparent and click-through
         View middleSpace = new View(activity);
         middleSpace.setClickable(false);
         middleSpace.setFocusable(false);
         LinearLayout.LayoutParams midParams = new LinearLayout.LayoutParams(
-            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.4f);
+            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.5f);
         middleSpace.setLayoutParams(midParams);
         
-        // Right Panel (30% width)
+        // Right Panel (Compressed Width: 25%)
         FrameLayout rightPanel = new FrameLayout(activity);
-        // rightPanel.setBackgroundColor(0xAA000000); // 去除背景色
         LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(
-            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
+            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.25f);
         rightPanel.setLayoutParams(rightParams);
         createRightJoyCon(rightPanel);
         
@@ -274,18 +279,18 @@ public class VirtualKeyboard {
         // Layout: Top=Stick, Bottom=D-Pad
         
         // LB/LT Buttons
-        Button lt = createRoundButton("LT", 12, () -> sendKey(KeyEvent.KEYCODE_TAB)); // Tab
+        Button lt = createRoundButton("LT", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_L2)); 
         FrameLayout.LayoutParams ltParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(30));
         ltParams.gravity = Gravity.TOP | Gravity.LEFT;
         ltParams.topMargin = dpToPx(5);
-        ltParams.leftMargin = dpToPx(10);
+        ltParams.leftMargin = dpToPx(5);
         panel.addView(lt, ltParams);
 
-        Button lb = createRoundButton("LB", 12, () -> sendKey(KeyEvent.KEYCODE_Q)); // Q
+        Button lb = createRoundButton("LB", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_L1)); 
         FrameLayout.LayoutParams lbParams = new FrameLayout.LayoutParams(dpToPx(50), dpToPx(30));
         lbParams.gravity = Gravity.TOP | Gravity.RIGHT;
         lbParams.topMargin = dpToPx(20);
-        lbParams.rightMargin = dpToPx(10);
+        lbParams.rightMargin = dpToPx(5);
         panel.addView(lb, lbParams);
 
         // Stick
@@ -303,27 +308,27 @@ public class VirtualKeyboard {
         panel.addView(dpad, dpadParams);
         
         // Select / Back
-        Button selectBtn = createRoundButton("Back", 10, () -> sendKey(KeyEvent.KEYCODE_DEL)); 
+        Button selectBtn = createRoundButton("Back", 10, () -> sendKey(KeyEvent.KEYCODE_BUTTON_SELECT)); 
         FrameLayout.LayoutParams selectParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(24));
         selectParams.gravity = Gravity.CENTER_VERTICAL | Gravity.RIGHT;
-        selectParams.rightMargin = dpToPx(10);
+        selectParams.rightMargin = dpToPx(5);
         panel.addView(selectBtn, selectParams);
     }
     
     private void createRightJoyCon(FrameLayout panel) {
         // RB/RT Buttons
-        Button rt = createRoundButton("RT", 12, () -> sendKey(KeyEvent.KEYCODE_H)); // H (Skill)
+        Button rt = createRoundButton("RT", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_R2)); 
         FrameLayout.LayoutParams rtParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(30));
         rtParams.gravity = Gravity.TOP | Gravity.RIGHT;
         rtParams.topMargin = dpToPx(5);
-        rtParams.rightMargin = dpToPx(10);
+        rtParams.rightMargin = dpToPx(5);
         panel.addView(rt, rtParams);
 
-        Button rb = createRoundButton("RB", 12, () -> sendKey(KeyEvent.KEYCODE_E)); // E (Interact)
+        Button rb = createRoundButton("RB", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_R1)); 
         FrameLayout.LayoutParams rbParams = new FrameLayout.LayoutParams(dpToPx(50), dpToPx(30));
         rbParams.gravity = Gravity.TOP | Gravity.LEFT;
         rbParams.topMargin = dpToPx(20);
-        rbParams.leftMargin = dpToPx(10);
+        rbParams.leftMargin = dpToPx(5);
         panel.addView(rb, rbParams);
 
         // ABXY Buttons (Xbox Layout)
@@ -341,14 +346,14 @@ public class VirtualKeyboard {
         panel.addView(stick, stickParams);
         
         // Start
-        Button startBtn = createRoundButton("Start", 10, () -> sendKey(KeyEvent.KEYCODE_P)); // P for Pause
+        Button startBtn = createRoundButton("Start", 10, () -> sendKey(KeyEvent.KEYCODE_BUTTON_START)); 
         FrameLayout.LayoutParams startParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(24));
         startParams.gravity = Gravity.CENTER_VERTICAL | Gravity.LEFT;
-        startParams.leftMargin = dpToPx(10);
+        startParams.leftMargin = dpToPx(5);
         panel.addView(startBtn, startParams);
         
         // Home Button
-        Button homeBtn = createRoundButton("⌂", 14, () -> sendKey(KeyEvent.KEYCODE_F5)); // F5 for Save
+        Button homeBtn = createRoundButton("⌂", 14, () -> sendKey(KeyEvent.KEYCODE_HOME)); 
         FrameLayout.LayoutParams homeParams = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28));
         homeParams.gravity = Gravity.BOTTOM | Gravity.RIGHT;
         homeParams.bottomMargin = dpToPx(8);
@@ -494,14 +499,14 @@ public class VirtualKeyboard {
         // Bottom: A
         // Left: X
 
-        // Y (Top) -> Map
-        Button btnY = createRoundButton("Y", 14, () -> sendKey(KeyEvent.KEYCODE_M)); 
-        // B (Right) -> Cancel/Back/Bag
-        Button btnB = createRoundButton("B", 14, () -> sendKey(KeyEvent.KEYCODE_ESCAPE));
-        // A (Bottom) -> Confirm/Attack
-        Button btnA = createRoundButton("A", 14, () -> sendKey(KeyEvent.KEYCODE_SPACE)); 
-        // X (Left) -> Skill
-        Button btnX = createRoundButton("X", 14, () -> sendKey(KeyEvent.KEYCODE_J)); 
+        // Y (Top)
+        Button btnY = createRoundButton("Y", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_Y)); 
+        // B (Right)
+        Button btnB = createRoundButton("B", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_B));
+        // A (Bottom)
+        Button btnA = createRoundButton("A", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_A)); 
+        // X (Left)
+        Button btnX = createRoundButton("X", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_X)); 
         
         // Layout Y (Top)
         RelativeLayout.LayoutParams yP = new RelativeLayout.LayoutParams(btnSize, btnSize);
@@ -544,11 +549,11 @@ public class VirtualKeyboard {
         btn.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 v.setPressed(true);
-                android.util.Log.d("VirtualKeyboard", "Button Down: " + text);
+                Debug.log("VirtualKeyboard", "Button Down: " + text);
                 action.run(); // Trigger action
             } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                 v.setPressed(false);
-                android.util.Log.d("VirtualKeyboard", "Button Up: " + text);
+                Debug.log("VirtualKeyboard", "Button Up: " + text);
             }
             return true;
         });
@@ -567,12 +572,12 @@ public class VirtualKeyboard {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 v.setPressed(true);
                 v.setAlpha(0.6f);
-                android.util.Log.d("VirtualKeyboard", "Key Down: " + text);
+                Debug.log("VirtualKeyboard", "Key Down: " + text);
                 activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
             } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                 v.setPressed(false);
                 v.setAlpha(1.0f);
-                android.util.Log.d("VirtualKeyboard", "Key Up: " + text);
+                Debug.log("VirtualKeyboard", "Key Up: " + text);
                 activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
             }
             return true;
@@ -581,7 +586,7 @@ public class VirtualKeyboard {
     }
     
     private void sendKey(int keyCode) {
-        android.util.Log.d("VirtualKeyboard", "sendKey: " + keyCode);
+        Debug.log("VirtualKeyboard", "sendKey: " + keyCode);
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }
@@ -589,7 +594,7 @@ public class VirtualKeyboard {
     private void sendKeyOnce(int keyCode) {
         // For joystick continuous hold, we might need state management
         // This is a simplified version
-        android.util.Log.d("VirtualKeyboard", "Joystick Key: " + keyCode);
+        Debug.log("VirtualKeyboard", "Joystick Key: " + keyCode);
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }

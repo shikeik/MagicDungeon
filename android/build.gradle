@@ -95,6 +95,7 @@ dependencies {
 	coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 
 	implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+    implementation "com.badlogicgames.gdx-controllers:gdx-controllers-android:$gdxControllersVersion"
 	implementation project(':examples')
 
 	// 1. Eclipse Java Compiler (负责把 .java 变成 .class)
