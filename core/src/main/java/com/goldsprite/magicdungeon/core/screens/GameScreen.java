@@ -611,12 +611,12 @@ public class GameScreen extends GScreen {
 		}
 
 		// Load Game (F9 - Default keyboard only for now, not mapped in JSON yet, adding fallback)
-		if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+		if (input.isJustPressed(InputAction.LOAD_GAME)) {
 			loadGame();
 		}
 
 		// Regenerate map (Reset) - R (Keyboard only for now)
-		if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+		if (input.isJustPressed(InputAction.RESET_MAP)) {
 			dungeon.generate();
 			player.x = dungeon.startPos.x;
 			player.y = dungeon.startPos.y;
@@ -710,25 +710,29 @@ public class GameScreen extends GScreen {
 			return;
 		}
 
-        InputManager input = InputManager.getInstance();
+		InputManager input = InputManager.getInstance();
 
 		// Game Input Handling (WASD)
 		int dx = 0;
 		int dy = 0;
-		if (input.isPressed(InputAction.MOVE_LEFT)) dx = -1;
-		if (input.isPressed(InputAction.MOVE_RIGHT)) dx = 1;
-		if (input.isPressed(InputAction.MOVE_UP)) dy = 1;
-		if (input.isPressed(InputAction.MOVE_DOWN)) dy = -1;
+		
+		// Only allow movement if NO modal UI is open
+		if (!hud.hasModalUI()) {
+			if (input.isPressed(InputAction.MOVE_LEFT)) dx = -1;
+			if (input.isPressed(InputAction.MOVE_RIGHT)) dx = 1;
+			if (input.isPressed(InputAction.MOVE_UP)) dy = 1;
+			if (input.isPressed(InputAction.MOVE_DOWN)) dy = -1;
 
-		// Android Touchpad Support
-		Vector2 pad = hud.getMovementDirection();
-		if (pad.len() > 0.3f) {
-			if (Math.abs(pad.x) > Math.abs(pad.y)) {
-				dx = pad.x > 0 ? 1 : -1;
-				dy = 0;
-			} else {
-				dy = pad.y > 0 ? 1 : -1;
-				dx = 0;
+			// Android Touchpad Support
+			Vector2 pad = hud.getMovementDirection();
+			if (pad.len() > 0.3f) {
+				if (Math.abs(pad.x) > Math.abs(pad.y)) {
+					dx = pad.x > 0 ? 1 : -1;
+					dy = 0;
+				} else {
+					dy = pad.y > 0 ? 1 : -1;
+					dx = 0;
+				}
 			}
 		}
 

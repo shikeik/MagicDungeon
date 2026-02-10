@@ -29,6 +29,8 @@ import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.SkewBar;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.entities.*;
+import com.goldsprite.magicdungeon.input.InputAction;
+import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
@@ -189,6 +191,11 @@ public class GameHUD {
 	}
 
 	private class InventoryDialog extends BaseDialog {
+		// List to track slots for navigation
+		List<InventorySlot> slotActors = new ArrayList<>();
+		int currentSelection = 0;
+		int itemsPerRow = 8; // Match the grid layout
+
 		public InventoryDialog() {
 			super("背包");
 			float width = Math.max(900, stage.getWidth() * 0.8f);
@@ -201,6 +208,8 @@ public class GameHUD {
 			VisTable mainTable = new VisTable();
 			mainTable.setFillParent(true);
 			mainTable.pad(20);
+
+			// ... (keep existing layout code) ...
 
 			// Split Pane Layout
 			// Left: Character (40%)
@@ -245,12 +254,91 @@ public class GameHUD {
 
 			getContentTable().add(mainTable).grow();
 		}
+
+		@Override
+		public void act(float delta) {
+			super.act(delta);
+
+			// Handle Input Navigation
+			InputManager input = InputManager.getInstance();
+			boolean changed = false;
+
+			if (input.isJustPressed(InputAction.UI_RIGHT)) {
+				currentSelection++;
+				changed = true;
+			}
+			if (input.isJustPressed(InputAction.UI_LEFT)) {
+				currentSelection--;
+				changed = true;
+			}
+			if (input.isJustPressed(InputAction.UI_UP)) {
+				currentSelection -= itemsPerRow;
+				changed = true;
+			}
+			if (input.isJustPressed(InputAction.UI_DOWN)) {
+				currentSelection += itemsPerRow;
+				changed = true;
+			}
+
+			if (changed) {
+				// Clamp
+				if (currentSelection < 0) currentSelection = 0;
+				if (currentSelection >= slotActors.size()) currentSelection = slotActors.size() - 1;
+				updateFocus();
+			}
+
+			// Confirm Action
+			if (input.isJustPressed(InputAction.UI_CONFIRM)) {
+				if (currentSelection >= 0 && currentSelection < slotActors.size()) {
+					slotActors.get(currentSelection).simulateClick();
+				}
+			}
+
+			// Cancel / Close
+			if (input.isJustPressed(InputAction.UI_CANCEL)) {
+				hide();
+			}
+			
+			// BAG key logic is handled in GameScreen now to prevent "instant toggle" (open then immediately close in act)
+			// Or we can add a small delay/flag. 
+			// But better: let GameScreen handle the "Toggle" logic, and here we only handle "Close" via ESC.
+			// However, user expects 'E' to also close it.
+			// The issue is: GameScreen detects 'E' -> calls toggleInventory() -> calls inventoryDialog.show()
+			// Then in the SAME frame, inventoryDialog.act() detects 'E' -> calls hide().
+			// Result: It opens and closes instantly.
+			// Fix: We should consume the event or check if it's the same frame?
+			// Easier fix: Check InputManager, but InputManager justPressed persists for the frame.
+			// We can ignore BAG key here if it was just used to open it?
+			// Actually, if we use a state machine or "isOpen" flag in HUD, we can handle it better.
+			// For now, let's remove BAG key closing from here, and let GameScreen handle the toggle.
+			// GameScreen logic: if (justPressed(BAG)) hud.toggleInventory();
+			// HUD.toggleInventory: if open -> close; else -> open.
+			// This works perfectly if this dialog DOES NOT handle BAG key.
+		}
+
+		public void updateFocus() {
+			for (int i = 0; i < slotActors.size(); i++) {
+				slotActors.get(i).setFocused(i == currentSelection);
+			}
+		}
+
+		@Override
+		public VisDialog show(Stage stage) {
+			super.show(stage);
+			// Reset selection on open
+			currentSelection = 0;
+			updateFocus();
+			return this;
+		}
 	}
 
 	private class InventorySlot extends VisTable {
 		private Chest chestContext;
 		private ChestDialog dialogContext;
 		private boolean isChestItem;
+
+		private VisImage focusBorder;
+		private ClickListener clickListener;
 
 		public InventorySlot(InventoryItem item, Player player, DragAndDrop dragAndDrop) {
 			this(item, player, dragAndDrop, null, null, false);
@@ -303,6 +391,15 @@ public class GameHUD {
 				}
 			}
 
+			// Focus Border
+			if (whiteDrawable != null) {
+				focusBorder = new VisImage(whiteDrawable);
+				focusBorder.setColor(1f, 1f, 0f, 0.4f); // Semi-transparent yellow
+				focusBorder.setTouchable(Touchable.disabled);
+				focusBorder.setVisible(false);
+				stack.add(focusBorder);
+			}
+
 			add(stack).size(64, 64);
 
 			if (Gdx.app.getType() == ApplicationType.Android) {
@@ -333,6 +430,14 @@ public class GameHUD {
 					};
 					listener.getGestureDetector().setLongPressSeconds(0.18f); // 缩短长按时间
 					addListener(listener);
+
+					// Store ref for simulation (simplified)
+					this.clickListener = new ClickListener() {
+						@Override
+						public void clicked(InputEvent event, float x, float y) {
+							listener.tap(event, x, y, 1, 0);
+						}
+					};
 				}
 			} else {
 				if (item != null) {
@@ -340,16 +445,18 @@ public class GameHUD {
 					new Tooltip.Builder(tooltipContent).target(this).build();
 
 					// PC Click Listener
-					addListener(new ClickListener() {
+					this.clickListener = new ClickListener() {
 						@Override
 						public void clicked(InputEvent event, float x, float y) {
 							if (chestContext != null) {
 								handleChestTransaction(item, isChestItem, dialogContext, chestContext, player);
 							} else {
 								// Original behavior
+								handleEquipAction(item, isEquipped, player);
 							}
 						}
-					});
+					};
+					addListener(clickListener);
 
 					// Add Right Click Listener BEFORE DragAndDrop to capture event
 					addListener(new InputListener() {
@@ -428,6 +535,24 @@ public class GameHUD {
 						}
 					}
 				});
+			}
+		}
+
+		public void setFocused(boolean focused) {
+			if (focusBorder != null) {
+				focusBorder.setVisible(focused);
+			}
+		}
+
+		public void simulateClick() {
+			if (clickListener != null) {
+				// Trigger the click logic manually
+				InputEvent event = new InputEvent();
+				event.setType(InputEvent.Type.touchDown);
+				event.setButton(Input.Buttons.LEFT);
+				event.setStageX(getX());
+				event.setStageY(getY());
+				clickListener.clicked(event, 0, 0);
 			}
 		}
 	}
@@ -1498,6 +1623,28 @@ public class GameHUD {
 		return false;
 	}
 
+	public boolean hasModalUI() {
+		return stage.getActors().contains(inventoryDialog, true) || 
+			   stage.getActors().contains(chestDialog, true) ||
+			   stage.getActors().contains(helpWindow, true);
+	}
+	
+	public boolean handleBackKey() {
+		if (stage.getActors().contains(inventoryDialog, true)) {
+			inventoryDialog.hide();
+			return true;
+		}
+		if (stage.getActors().contains(chestDialog, true)) {
+			chestDialog.hide();
+			return true;
+		}
+		if (stage.getActors().contains(helpWindow, true)) {
+			helpWindow.hide();
+			return true;
+		}
+		return false;
+	}
+
 	public void setSaveListener(Runnable saveListener) {
 		this.saveListener = saveListener;
 	}
@@ -1648,6 +1795,7 @@ public class GameHUD {
 
 		// 4. Update Inventory List (Right Column)
 		inventoryList.clear();
+		if (inventoryDialog != null) inventoryDialog.slotActors.clear();
 
 		// Collect display items (ALL items, even equipped ones)
 		List<InventoryItem> displayItems = new ArrayList<>();
@@ -1662,8 +1810,11 @@ public class GameHUD {
 			InventoryItem item = (i < displayItems.size()) ? displayItems.get(i) : null;
 			InventorySlot slot = new InventorySlot(item, player, dragAndDrop);
 			inventoryList.add(slot).size(64, 64).pad(5);
+			if (inventoryDialog != null) inventoryDialog.slotActors.add(slot);
 			if ((i + 1) % itemsPerRow == 0) inventoryList.row();
 		}
+
+		if (inventoryDialog != null) inventoryDialog.updateFocus();
 	}
 
 	private void handleChestTransaction(InventoryItem item, boolean isChestItem, ChestDialog dialog, Chest chest, Player player) {

@@ -189,6 +189,18 @@ public class InputManager {
         mapK(InputAction.TAB, Input.Keys.TAB, Input.Keys.BUTTON_L2); // LT
         mapK(InputAction.QUICK_SLOT, Input.Keys.Q, Input.Keys.BUTTON_L1); // LB
         mapK(InputAction.SAVE, Input.Keys.F5); // Home
+        
+        mapK(InputAction.LOAD_GAME, Input.Keys.F9);
+        mapK(InputAction.RESET_MAP, Input.Keys.R);
+        
+        // UI Navigation Defaults
+        // Re-use Move keys + Arrows for UI
+        mapK(InputAction.UI_UP, Input.Keys.W, Input.Keys.UP);
+        mapK(InputAction.UI_DOWN, Input.Keys.S, Input.Keys.DOWN);
+        mapK(InputAction.UI_LEFT, Input.Keys.A, Input.Keys.LEFT);
+        mapK(InputAction.UI_RIGHT, Input.Keys.D, Input.Keys.RIGHT);
+        mapK(InputAction.UI_CONFIRM, Input.Keys.ENTER, Input.Keys.SPACE, Input.Keys.J);
+        mapK(InputAction.UI_CANCEL, Input.Keys.ESCAPE, Input.Keys.BACKSPACE);
 
         // Controller Defaults (Xbox)
         mapC(InputAction.ATTACK, BUTTON_X);
@@ -200,6 +212,14 @@ public class InputManager {
         mapC(InputAction.PAUSE, BUTTON_START);
         mapC(InputAction.TAB, BUTTON_L3); // ?
         mapC(InputAction.QUICK_SLOT, BUTTON_R3); // ?
+        
+        // UI Navigation (Controller)
+        mapC(InputAction.UI_UP, BUTTON_DPAD_UP);
+        mapC(InputAction.UI_DOWN, BUTTON_DPAD_DOWN);
+        mapC(InputAction.UI_LEFT, BUTTON_DPAD_LEFT);
+        mapC(InputAction.UI_RIGHT, BUTTON_DPAD_RIGHT);
+        mapC(InputAction.UI_CONFIRM, BUTTON_A);
+        mapC(InputAction.UI_CANCEL, BUTTON_B);
 
         // D-Pad
         mapC(InputAction.MOVE_UP, BUTTON_DPAD_UP);

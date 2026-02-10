@@ -18,5 +18,17 @@ public enum InputAction {
     TAB,        // Tab / LT
     QUICK_SLOT, // Q / LB
     
-    SAVE        // F5 / Home
+    SAVE,       // F5 / Home
+    
+    // System Actions
+    LOAD_GAME,  // F9
+    RESET_MAP,  // R
+    
+    // UI Navigation Actions
+    UI_UP,
+    UI_DOWN,
+    UI_LEFT,
+    UI_RIGHT,
+    UI_CONFIRM, // Enter / Space
+    UI_CANCEL   // Esc
 }
