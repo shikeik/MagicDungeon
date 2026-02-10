@@ -238,7 +238,7 @@ public class VirtualKeyboard {
         
         // Left Panel (30% width)
         FrameLayout leftPanel = new FrameLayout(activity);
-        leftPanel.setBackgroundColor(0xAA000000); // 增加透明度，确保可见
+        // leftPanel.setBackgroundColor(0xAA000000); // 去除背景色
         LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
         leftPanel.setLayoutParams(leftParams);
@@ -254,7 +254,7 @@ public class VirtualKeyboard {
         
         // Right Panel (30% width)
         FrameLayout rightPanel = new FrameLayout(activity);
-        rightPanel.setBackgroundColor(0xAA000000);
+        // rightPanel.setBackgroundColor(0xAA000000); // 去除背景色
         LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
         rightPanel.setLayoutParams(rightParams);
@@ -272,11 +272,27 @@ public class VirtualKeyboard {
 
     private void createLeftJoyCon(FrameLayout panel) {
         // Layout: Top=Stick, Bottom=D-Pad
+        
+        // LB/LT Buttons
+        Button lt = createRoundButton("LT", 12, () -> sendKey(KeyEvent.KEYCODE_TAB)); // Tab
+        FrameLayout.LayoutParams ltParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(30));
+        ltParams.gravity = Gravity.TOP | Gravity.LEFT;
+        ltParams.topMargin = dpToPx(5);
+        ltParams.leftMargin = dpToPx(10);
+        panel.addView(lt, ltParams);
+
+        Button lb = createRoundButton("LB", 12, () -> sendKey(KeyEvent.KEYCODE_Q)); // Q
+        FrameLayout.LayoutParams lbParams = new FrameLayout.LayoutParams(dpToPx(50), dpToPx(30));
+        lbParams.gravity = Gravity.TOP | Gravity.RIGHT;
+        lbParams.topMargin = dpToPx(20);
+        lbParams.rightMargin = dpToPx(10);
+        panel.addView(lb, lbParams);
+
         // Stick
         View stick = createJoystick(true); // Left stick
         FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(dpToPx(70), dpToPx(70));
         stickParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        stickParams.topMargin = dpToPx(40);
+        stickParams.topMargin = dpToPx(60);
         panel.addView(stick, stickParams);
         
         // D-Pad (Simulated by 4 buttons)
@@ -286,39 +302,50 @@ public class VirtualKeyboard {
         dpadParams.bottomMargin = dpToPx(30);
         panel.addView(dpad, dpadParams);
         
-        // Minus Button
-        Button minusBtn = createRoundButton("-", 10, () -> sendKey(KeyEvent.KEYCODE_M)); // Map to M for Map?
-        FrameLayout.LayoutParams minusParams = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24));
-        minusParams.gravity = Gravity.TOP | Gravity.RIGHT;
-        minusParams.topMargin = dpToPx(16);
-        minusParams.rightMargin = dpToPx(8);
-        panel.addView(minusBtn, minusParams);
+        // Select / Back
+        Button selectBtn = createRoundButton("Back", 10, () -> sendKey(KeyEvent.KEYCODE_DEL)); 
+        FrameLayout.LayoutParams selectParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(24));
+        selectParams.gravity = Gravity.CENTER_VERTICAL | Gravity.RIGHT;
+        selectParams.rightMargin = dpToPx(10);
+        panel.addView(selectBtn, selectParams);
     }
     
     private void createRightJoyCon(FrameLayout panel) {
-        // Layout: Top=ABXY, Bottom=Stick(Decor/Mouse)
-        
-        // ABXY Buttons
+        // RB/RT Buttons
+        Button rt = createRoundButton("RT", 12, () -> sendKey(KeyEvent.KEYCODE_H)); // H (Skill)
+        FrameLayout.LayoutParams rtParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(30));
+        rtParams.gravity = Gravity.TOP | Gravity.RIGHT;
+        rtParams.topMargin = dpToPx(5);
+        rtParams.rightMargin = dpToPx(10);
+        panel.addView(rt, rtParams);
+
+        Button rb = createRoundButton("RB", 12, () -> sendKey(KeyEvent.KEYCODE_E)); // E (Interact)
+        FrameLayout.LayoutParams rbParams = new FrameLayout.LayoutParams(dpToPx(50), dpToPx(30));
+        rbParams.gravity = Gravity.TOP | Gravity.LEFT;
+        rbParams.topMargin = dpToPx(20);
+        rbParams.leftMargin = dpToPx(10);
+        panel.addView(rb, rbParams);
+
+        // ABXY Buttons (Xbox Layout)
         View abxy = createABXY();
         FrameLayout.LayoutParams abxyParams = new FrameLayout.LayoutParams(dpToPx(120), dpToPx(120));
         abxyParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        abxyParams.topMargin = dpToPx(30);
+        abxyParams.topMargin = dpToPx(60);
         panel.addView(abxy, abxyParams);
         
-        // Right Stick (Decor for now)
+        // Right Stick
         View stick = createJoystick(false); // Right stick
         FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(dpToPx(60), dpToPx(60));
         stickParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
         stickParams.bottomMargin = dpToPx(40);
         panel.addView(stick, stickParams);
         
-        // Plus Button
-        Button plusBtn = createRoundButton("+", 12, () -> sendKey(KeyEvent.KEYCODE_P)); // P for Pause
-        FrameLayout.LayoutParams plusParams = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24));
-        plusParams.gravity = Gravity.TOP | Gravity.LEFT;
-        plusParams.topMargin = dpToPx(16);
-        plusParams.leftMargin = dpToPx(8);
-        panel.addView(plusBtn, plusParams);
+        // Start
+        Button startBtn = createRoundButton("Start", 10, () -> sendKey(KeyEvent.KEYCODE_P)); // P for Pause
+        FrameLayout.LayoutParams startParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(24));
+        startParams.gravity = Gravity.CENTER_VERTICAL | Gravity.LEFT;
+        startParams.leftMargin = dpToPx(10);
+        panel.addView(startBtn, startParams);
         
         // Home Button
         Button homeBtn = createRoundButton("⌂", 14, () -> sendKey(KeyEvent.KEYCODE_F5)); // F5 for Save
@@ -358,58 +385,67 @@ public class VirtualKeyboard {
         knobParams.gravity = Gravity.CENTER;
         stickContainer.addView(stickKnob, knobParams);
         
-        if (isLeft) {
-             // Attach touch listener for movement
-             stickContainer.setOnTouchListener(new View.OnTouchListener() {
-                 private float centerX, centerY;
-                 private float maxRadius;
-                 
-                 @Override
-                 public boolean onTouch(View v, MotionEvent event) {
-                     if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                         centerX = v.getWidth() / 2f;
-                         centerY = v.getHeight() / 2f;
-                         maxRadius = v.getWidth() / 3f; // 限制移动范围
-                         stickKnob.setAlpha(0.7f);
-                     }
-                     
-                     if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_DOWN) {
-                         float dx = event.getX() - centerX;
-                         float dy = event.getY() - centerY;
-                         
-                         // 限制摇杆头移动范围
-                         float distance = (float) Math.sqrt(dx * dx + dy * dy);
-                         if (distance > maxRadius) {
-                             float ratio = maxRadius / distance;
-                             dx *= ratio;
-                             dy *= ratio;
-                         }
-                         
-                         stickKnob.setTranslationX(dx);
-                         stickKnob.setTranslationY(dy);
+        // Attach touch listener for movement (For both sticks now)
+        stickContainer.setOnTouchListener(new View.OnTouchListener() {
+            private float centerX, centerY;
+            private float maxRadius;
+            
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    centerX = v.getWidth() / 2f;
+                    centerY = v.getHeight() / 2f;
+                    maxRadius = v.getWidth() / 3f; // 限制移动范围
+                    stickKnob.setAlpha(0.7f);
+                }
+                
+                if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_DOWN) {
+                    float dx = event.getX() - centerX;
+                    float dy = event.getY() - centerY;
+                    
+                    // 限制摇杆头移动范围
+                    float distance = (float) Math.sqrt(dx * dx + dy * dy);
+                    if (distance > maxRadius) {
+                        float ratio = maxRadius / distance;
+                        dx *= ratio;
+                        dy *= ratio;
+                    }
+                    
+                    stickKnob.setTranslationX(dx);
+                    stickKnob.setTranslationY(dy);
 
-                         // 逻辑触发
-                         int threshold = dpToPx(8);
-                         // 重置 dx, dy 为原始偏移量用于判断方向，或者直接用限制后的
-                         // 这里简单起见，使用原始偏移量判断方向，灵敏度更高
-                         float rawDx = event.getX() - centerX;
-                         float rawDy = event.getY() - centerY;
-                         
-                         if (Math.abs(rawDx) > Math.abs(rawDy)) {
-                             if (rawDx > threshold) sendKeyOnce(KeyEvent.KEYCODE_D);
-                             else if (rawDx < -threshold) sendKeyOnce(KeyEvent.KEYCODE_A);
-                         } else {
-                             if (rawDy > threshold) sendKeyOnce(KeyEvent.KEYCODE_S);
-                             else if (rawDy < -threshold) sendKeyOnce(KeyEvent.KEYCODE_W);
-                         }
-                     } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                         stickKnob.animate().translationX(0).translationY(0).setDuration(100).start();
-                         stickKnob.setAlpha(1.0f);
-                     }
-                     return true;
-                 }
-             });
-        }
+                    // 逻辑触发
+                    int threshold = dpToPx(8);
+                    float rawDx = event.getX() - centerX;
+                    float rawDy = event.getY() - centerY;
+                    
+                    if (isLeft) {
+                        // Left Stick: WASD
+                        if (Math.abs(rawDx) > Math.abs(rawDy)) {
+                            if (rawDx > threshold) sendKeyOnce(KeyEvent.KEYCODE_D);
+                            else if (rawDx < -threshold) sendKeyOnce(KeyEvent.KEYCODE_A);
+                        } else {
+                            if (rawDy > threshold) sendKeyOnce(KeyEvent.KEYCODE_S);
+                            else if (rawDy < -threshold) sendKeyOnce(KeyEvent.KEYCODE_W);
+                        }
+                    } else {
+                        // Right Stick: Arrow Keys (Camera/Aim)
+                        if (Math.abs(rawDx) > Math.abs(rawDy)) {
+                            if (rawDx > threshold) sendKeyOnce(KeyEvent.KEYCODE_DPAD_RIGHT);
+                            else if (rawDx < -threshold) sendKeyOnce(KeyEvent.KEYCODE_DPAD_LEFT);
+                        } else {
+                            if (rawDy > threshold) sendKeyOnce(KeyEvent.KEYCODE_DPAD_DOWN);
+                            else if (rawDy < -threshold) sendKeyOnce(KeyEvent.KEYCODE_DPAD_UP);
+                        }
+                    }
+                } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                    stickKnob.animate().translationX(0).translationY(0).setDuration(100).start();
+                    stickKnob.setAlpha(1.0f);
+                }
+                return true;
+            }
+        });
+        
         return stickContainer;
     }
     
@@ -452,37 +488,43 @@ public class VirtualKeyboard {
         RelativeLayout abxy = new RelativeLayout(activity);
         int btnSize = dpToPx(35);
         
-        // X (Top) -> H (Skill/Heal)
-        Button btnX = createRoundButton("X", 14, () -> sendKey(KeyEvent.KEYCODE_H));
-        // B (Bottom) -> E (Bag/Cancel)
-        Button btnB = createRoundButton("B", 14, () -> sendKey(KeyEvent.KEYCODE_E));
-        // Y (Left) -> J (Attack/Dash?) - Let's use J for now or maybe Shift
-        Button btnY = createRoundButton("Y", 14, () -> sendKey(KeyEvent.KEYCODE_J)); 
-        // A (Right) -> SPACE (Interact)
-        Button btnA = createRoundButton("A", 14, () -> sendKey(KeyEvent.KEYCODE_SPACE));
+        // Xbox Layout:
+        // Top: Y
+        // Right: B
+        // Bottom: A
+        // Left: X
+
+        // Y (Top) -> Map
+        Button btnY = createRoundButton("Y", 14, () -> sendKey(KeyEvent.KEYCODE_M)); 
+        // B (Right) -> Cancel/Back/Bag
+        Button btnB = createRoundButton("B", 14, () -> sendKey(KeyEvent.KEYCODE_ESCAPE));
+        // A (Bottom) -> Confirm/Attack
+        Button btnA = createRoundButton("A", 14, () -> sendKey(KeyEvent.KEYCODE_SPACE)); 
+        // X (Left) -> Skill
+        Button btnX = createRoundButton("X", 14, () -> sendKey(KeyEvent.KEYCODE_J)); 
         
-        // Layout X (Top)
-        RelativeLayout.LayoutParams xP = new RelativeLayout.LayoutParams(btnSize, btnSize);
-        xP.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-        xP.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        abxy.addView(btnX, xP);
-        
-        // Layout B (Bottom)
-        RelativeLayout.LayoutParams bP = new RelativeLayout.LayoutParams(btnSize, btnSize);
-        bP.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        bP.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        abxy.addView(btnB, bP);
-        
-        // Layout Y (Left)
+        // Layout Y (Top)
         RelativeLayout.LayoutParams yP = new RelativeLayout.LayoutParams(btnSize, btnSize);
-        yP.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-        yP.addRule(RelativeLayout.CENTER_VERTICAL);
+        yP.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        yP.addRule(RelativeLayout.CENTER_HORIZONTAL);
         abxy.addView(btnY, yP);
         
-        // Layout A (Right)
+        // Layout B (Right)
+        RelativeLayout.LayoutParams bP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        bP.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+        bP.addRule(RelativeLayout.CENTER_VERTICAL);
+        abxy.addView(btnB, bP);
+        
+        // Layout X (Left)
+        RelativeLayout.LayoutParams xP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        xP.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+        xP.addRule(RelativeLayout.CENTER_VERTICAL);
+        abxy.addView(btnX, xP);
+        
+        // Layout A (Bottom)
         RelativeLayout.LayoutParams aP = new RelativeLayout.LayoutParams(btnSize, btnSize);
-        aP.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-        aP.addRule(RelativeLayout.CENTER_VERTICAL);
+        aP.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        aP.addRule(RelativeLayout.CENTER_HORIZONTAL);
         abxy.addView(btnA, aP);
         
         return abxy;
@@ -496,19 +538,16 @@ public class VirtualKeyboard {
         btn.setGravity(Gravity.CENTER);
         btn.setPadding(0, 0, 0, 0); // 移除内边距，确保文字居中
         
-        GradientDrawable shape = new GradientDrawable();
-        shape.setShape(GradientDrawable.OVAL);
-        shape.setColor(0xAA444444);
-        shape.setStroke(dpToPx(1), 0xFF888888);
-        btn.setBackground(shape);
+        // Use resource for style
+        btn.setBackgroundResource(R.drawable.gamepad_button_selector);
         
         btn.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                v.setAlpha(0.6f);
+                v.setPressed(true);
                 android.util.Log.d("VirtualKeyboard", "Button Down: " + text);
                 action.run(); // Trigger action
             } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                v.setAlpha(1.0f);
+                v.setPressed(false);
                 android.util.Log.d("VirtualKeyboard", "Button Up: " + text);
             }
             return true;
