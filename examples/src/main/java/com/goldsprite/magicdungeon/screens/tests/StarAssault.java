@@ -2,12 +2,12 @@ package com.goldsprite.magicdungeon.screens.tests;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -16,28 +16,24 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.kotcrab.vis.ui.VisUI;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.kotcrab.vis.ui.widget.VisTable;
-import com.goldsprite.gdengine.assets.ColorTextureUtils;
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.badlogic.gdx.scenes.scene2d.InputListener;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.InputAdapter;
-import com.kotcrab.vis.ui.VisUI;
-import com.badlogic.gdx.scenes.scene2d.ui.Value;
 
 /**
  * Star Assault 1:1 Port
@@ -212,6 +208,27 @@ public class StarAssault extends GScreen {
 			return bounds;
 		}
 	}
+	
+	// ========================================================================
+    // 1.5. Model: Spike (绿色尖刺)
+    // ========================================================================
+    public static class Spike {
+        public static final float SIZE = 1f;
+        Vector2 position = new Vector2();
+        Rectangle bounds = new Rectangle();
+
+        public Spike(Vector2 pos) {
+            this.position = pos;
+            this.bounds.setX(pos.x);
+            this.bounds.setY(pos.y);
+            this.bounds.width = SIZE;
+            this.bounds.height = SIZE;
+        }
+
+        // Getter
+        public Vector2 getPosition() { return position; }
+        public Rectangle getBounds() { return bounds; }
+    }
 
 	// ========================================================================
 	// 2. Model: Bob
@@ -295,6 +312,7 @@ public class StarAssault extends GScreen {
 		private int width;
 		private int height;
 		private Block[][] blocks;
+        private List<Spike> spikes = new ArrayList<Spike>();
 		private Vector2 spanPosition; // Bob 的出生点
 
 		public Level() {
@@ -363,14 +381,14 @@ public class StarAssault extends GScreen {
 		public void setSpanPosition(Vector2 spanPosition) {
 			this.spanPosition = spanPosition;
 		}
+
+        public List<Spike> getSpikes() { return spikes; }
+        public void setSpikes(List<Spike> spikes) { this.spikes = spikes; }
 	}
 
 	public static class LevelLoader {
 		// 修正：路径改为 bob/levels/
 		private static final String LEVEL_PREFIX = "bob/levels/level-";
-
-		private static final int BLOCK = 0x000000; // black
-		private static final int START_POS = 0x0000ff; // blue
 
 		public static Level loadLevel(int number) {
 			Level level = new Level();
@@ -378,50 +396,69 @@ public class StarAssault extends GScreen {
 			// 读取 PNG
 			String path = LEVEL_PREFIX + number + ".png";
 			if (!Gdx.files.internal(path).exists()) {
-				Gdx.app.error("LevelLoader", "Level file not found: " + path + ". Loading demo level instead.");
+				Debug.logErr("LevelLoader", "Level file not found: " + path + ". Loading demo level instead.");
 				level.loadDemoLevel();
 				return level;
 			}
 
 			Pixmap pixmap = new Pixmap(Gdx.files.internal(path));
+            level.setWidth(pixmap.getWidth());
+            level.setHeight(pixmap.getHeight());
 
-			level.setWidth(pixmap.getWidth());
-			level.setHeight(pixmap.getHeight());
+            Block[][] blocks = new Block[level.getWidth()][level.getHeight()];
+            // 新增：用来存尖刺的列表 (Spike 不需要二维数组，列表就行，因为数量少)
+            List<Spike> spikes = new ArrayList<Spike>(); 
 
-			Block[][] blocks = new Block[level.getWidth()][level.getHeight()];
+            // 初始化 blocks 数组
+            for (int col = 0; col < level.getWidth(); col++) {
+                for (int row = 0; row < level.getHeight(); row++) {
+                    blocks[col][row] = null;
+                }
+            }
 
-			for (int col = 0; col < level.getWidth(); col++) {
-				for (int row = 0; row < level.getHeight(); row++) {
-					blocks[col][row] = null;
-				}
-			}
+            // --- 核心修改：RGB 读取逻辑 ---
+            for (int row = 0; row < level.getHeight(); row++) {
+                for (int col = 0; col < level.getWidth(); col++) {
 
-			// 遍历像素生成实体
-			for (int row = 0; row < level.getHeight(); row++) {
-				for (int col = 0; col < level.getWidth(); col++) {
-					int rawPixel = pixmap.getPixel(col, row);
-					// 2. 提取 Alpha 通道 (低 8 位)
-					// 0 = 完全透明, 255 (0xff) = 完全不透明
-					int alpha = rawPixel & 0x000000ff;
-					int pixel = (rawPixel >>> 8) & 0xffffff;
-					
-					if(alpha == 0) continue; // 0 为空气
-					
-					// PNG 坐标 (0,0 在左上) -> World 坐标 (0,0 在左下)
-					int iRow = level.getHeight() - 1 - row;
+                    int pixel = pixmap.getPixel(col, row);
 
-					if (pixel == BLOCK) {
-						blocks[col][iRow] = new Block(new Vector2(col, iRow));
-					} else if (pixel == START_POS) {
-						level.setSpanPosition(new Vector2(col, iRow));
-					}
-				}
-			}
+                    // LibGDX 的 Pixmap 格式通常是 RGBA8888
+                    // 我们通过位运算提取 0-255 的值
+                    int r = (pixel >>> 24) & 0xff;
+                    int g = (pixel >>> 16) & 0xff;
+                    int b = (pixel >>> 8) & 0xff;
+                    int a = pixel & 0xff;
 
-			level.setBlocks(blocks);
-			pixmap.dispose(); // 记得释放
-			return level;
-		}
+                    // 坐标转换 (Y轴翻转)
+                    int iRow = level.getHeight() - 1 - row;
+
+                    // 1. 如果是透明的 (Alpha = 0)，跳过
+                    if (a == 0) continue;
+
+                    // 2. 根据 RGB 判断物体
+                    // 黑色 (0, 0, 0) -> 墙壁
+                    if (r == 0 && g == 0 && b == 0) {
+                        blocks[col][iRow] = new Block(new Vector2(col, iRow));
+                    }
+                    // 绿色 (0, 255, 0) -> 尖刺 (Star Guard 风格)
+                    else if (r == 0 && g == 255 && b == 0) {
+                        spikes.add(new Spike(new Vector2(col, iRow)));
+                    }
+                    // 蓝色 (0, 0, 255) -> 主角出生点
+                    else if (r == 0 && g == 0 && b == 255) {
+                        level.setSpanPosition(new Vector2(col, iRow));
+                    }
+
+                    // 你可以在这里加更多颜色：
+                    // else if (r == 255 && g == 0 && b == 0) -> 敌人 (红色)
+                }
+            }
+
+            level.setBlocks(blocks);
+            level.setSpikes(spikes); // 记得在 Level 类里加这个 setter
+            pixmap.dispose();
+            return level;
+        }
 	}
 
 	// ========================================================================
@@ -754,6 +791,7 @@ public class StarAssault extends GScreen {
 		private TextureRegion bobIdleLeft;
 		private TextureRegion bobIdleRight;
 		private TextureRegion blockTexture;
+		private TextureRegion spikeTexture;
 		private TextureRegion bobFrame;
 		private TextureRegion bobJumpLeft;
 		private TextureRegion bobFallLeft;
@@ -781,17 +819,18 @@ public class StarAssault extends GScreen {
 
 		private void loadTextures() {
 			// 修正：路径改为 bob/images/textures/textures.pack
-			TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("bob/images/textures/textures.pack"));
+			TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("bob/images_pack/game_atlas.atlas"));
 
-			bobIdleLeft = atlas.findRegion("bob-01");
+			bobIdleLeft = atlas.findRegion("bob_idle");
 			bobIdleRight = new TextureRegion(bobIdleLeft);
 			bobIdleRight.flip(true, false);
 
 			blockTexture = atlas.findRegion("block");
+            spikeTexture = atlas.findRegion("spike");
 
 			Array<TextureRegion> walkLeftFrames = new Array<TextureRegion>();
 			for (int i = 0; i < 5; i++) {
-				walkLeftFrames.add(atlas.findRegion("bob-0" + (i + 2)));
+				walkLeftFrames.add(atlas.findRegion("bob_run", i));
 			}
 			walkLeftAnimation = new Animation<TextureRegion>(RUNNING_FRAME_DURATION, walkLeftFrames);
 
@@ -803,20 +842,11 @@ public class StarAssault extends GScreen {
 			}
 			walkRightAnimation = new Animation<TextureRegion>(RUNNING_FRAME_DURATION, walkRightFrames);
 
-			bobJumpLeft = atlas.findRegion("bob-up"); // 原代码 bob-up，如果pack里是bob-06需要注意
-			// 根据 ProjectCode.txt 提供的 textures.txt: bob-06 (jump), bob-up/down 未定义?
-			// 原教程 textures.txt 定义了 bob-up 和 bob-down? 
-			// 假设 pack 文件里有 bob-up, bob-down。如果没有，请用 bob-05, bob-06 替代
-			if (bobJumpLeft == null)
-				bobJumpLeft = atlas.findRegion("bob-06"); // Fallback
-
+			bobJumpLeft = atlas.findRegion("bob_jump");
 			bobJumpRight = new TextureRegion(bobJumpLeft);
 			bobJumpRight.flip(true, false);
 
-			bobFallLeft = atlas.findRegion("bob-down");
-			if (bobFallLeft == null)
-				bobFallLeft = atlas.findRegion("bob-05"); // Fallback
-
+			bobFallLeft = atlas.findRegion("bob_fall");
 			bobFallRight = new TextureRegion(bobFallLeft);
 			bobFallRight.flip(true, false);
 		}
@@ -834,47 +864,14 @@ public class StarAssault extends GScreen {
 
 			spriteBatch.begin();
 			drawBlocks();
+            drawSpikes();
 			drawBob();
 			spriteBatch.end();
-
-			// --- 新增：绘制触摸区域 UI ---
-			if (Gdx.app.getType() == com.badlogic.gdx.Application.ApplicationType.Android) {
-				drawTouchUI();
-			}
-			// ---------------------------
 
 			if (debug) {
 				drawCollisionBlocks();
 				drawDebug();
 			}
-		}
-
-		// 3. 实现 drawTouchUI 方法
-		private void drawTouchUI() {
-			Gdx.gl.glEnable(GL20.GL_BLEND);
-			Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-			// 临时切换到屏幕坐标系
-			debugRenderer.setProjectionMatrix(viewport.getCamera().combined);
-
-			debugRenderer.begin(ShapeType.Filled);
-			debugRenderer.setColor(TOUCH_COLOR);
-
-			float w = viewport.getWorldWidth();
-			float h = viewport.getWorldWidth();
-
-			// 绘制左下角 (移动区) - 分割为左右两块
-			// 左移区域: 0 ~ 1/4 屏幕宽
-			debugRenderer.rect(0, 0, w / 5, h / 3);
-			// 右移区域: 1/4 ~ 1/2 屏幕宽
-			debugRenderer.rect(w / 5, 0, w / 5, h / 3);
-
-			// 绘制右下角 (跳跃区)
-			// 跳跃区域: 1/2 ~ 全屏宽
-			debugRenderer.rect(w / 3, 0, w / 3, h / 3);
-
-			debugRenderer.end();
-			Gdx.gl.glDisable(GL20.GL_BLEND);
 		}
 
 		private void drawBlocks() {
@@ -883,6 +880,14 @@ public class StarAssault extends GScreen {
 				spriteBatch.draw(blockTexture, block.getPosition().x, block.getPosition().y, Block.SIZE, Block.SIZE);
 			}
 		}
+
+        // 新增绘制方法
+        private void drawSpikes() {
+            // 简单起见，我们把尖刺全部画出来，暂不考虑剔除(Culling)
+            for (Spike spike : world.getLevel().getSpikes()) {
+                spriteBatch.draw(spikeTexture, spike.getPosition().x, spike.getPosition().y, Spike.SIZE, Spike.SIZE);
+            }
+        }
 
 		private void drawBob() {
 			Bob bob = world.getBob();

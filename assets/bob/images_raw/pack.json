@@ -1,0 +1,15 @@
+{
+    maxWidth: 2048,
+    maxHeight: 2048,
+    paddingX: 1,
+    paddingY: 1,
+    stripWhitespaceX: false,
+    stripWhitespaceY: false,
+    edgePadding: true,
+    filterMin: Nearest,
+    filterMag: Nearest, 
+    combineSubdirectories: true, // 是否将嵌套子目录打包为单张大图, 否则每个目录一张图
+    flattenPaths: true, // 是否省略前缀路径
+    fast: true, // 是否快速打包, 基本按排布顺序打包，否则按最小压缩空间打包
+    alias: true, 
+}

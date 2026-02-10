@@ -1,0 +1,76 @@
+
+game_atlas.png
+size: 32, 32
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+block
+  rotate: false
+  xy: 1, 19
+  size: 12, 12
+  orig: 12, 12
+  offset: 0, 0
+  index: -1
+bob_fall
+  rotate: false
+  xy: 14, 23
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: -1
+bob_idle
+  rotate: false
+  xy: 21, 23
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: -1
+bob_jump
+  rotate: false
+  xy: 11, 10
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: -1
+bob_run
+  rotate: false
+  xy: 11, 1
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: 0
+bob_run
+  rotate: false
+  xy: 18, 14
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: 1
+bob_run
+  rotate: false
+  xy: 25, 14
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: 2
+bob_run
+  rotate: false
+  xy: 18, 5
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: 3
+bob_run
+  rotate: false
+  xy: 25, 5
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: 4
+spike
+  rotate: false
+  xy: 1, 9
+  size: 9, 9
+  orig: 9, 9
+  offset: 0, 0
+  index: -1
