@@ -265,11 +265,18 @@ public class GameHUD {
 			rightCol.add(inventoryScrollPane).grow().pad(10).colspan(2);
 
 			// Add columns to main table
-			// Modified: Adjusted ratio to 30:70 to fit 8 columns in inventory
-			mainTable.add(leftCol).width(width * 0.3f).growY().padRight(10);
-			mainTable.add(rightCol).width(width * 0.7f).growY();
+			// Modified: Adjusted ratio to 30:70, accounting for padding (Total pad: 20*2 + 10 = 50)
+			float availableWidth = width - 50;
+			mainTable.add(leftCol).width(availableWidth * 0.3f).growY().padRight(10);
+			mainTable.add(rightCol).width(availableWidth * 0.7f).growY();
 
 			getContentTable().add(mainTable).grow();
+		}
+
+		@Override
+		public boolean remove() {
+			GameHUD.this.hideFocusTooltip();
+			return super.remove();
 		}
 
 		private void navigate(int dx, int dy) {
@@ -518,6 +525,12 @@ public class GameHUD {
 						}
 
 						@Override
+						public void pan(InputEvent event, float x, float y, float deltaX, float deltaY) {
+							super.pan(event, x, y, deltaX, deltaY);
+							hideFocusTooltip();
+						}
+
+						@Override
 						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
 							super.touchUp(event, x, y, pointer, button);
 							// 长按后松开，或者点击后松开，都尝试隐藏
@@ -710,10 +723,19 @@ public class GameHUD {
 							showContextMenu(item, true, player, pos.x, pos.y);
 							return true;
 						}
+
+						@Override
+						public void pan(InputEvent event, float x, float y, float deltaX, float deltaY) {
+							super.pan(event, x, y, deltaX, deltaY);
+							hideFocusTooltip();
+						}
+
 						@Override
 						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
 							super.touchUp(event, x, y, pointer, button);
 							// hideAndroidTooltip(); // Don't hide on touchUp if it's long press menu
+							// Context menu handles its own closing usually, but focus tooltip should be hidden
+							hideFocusTooltip();
 						}
 					};
 					listener.getGestureDetector().setLongPressSeconds(0.18f);
@@ -2254,12 +2276,20 @@ public class GameHUD {
 			playerScroll.setFadeScrollBars(false);
 			rightCol.add(playerScroll).grow();
 
-			mainTable.add(leftCol).width(width * 0.5f).growY().padRight(10);
-			mainTable.add(rightCol).width(width * 0.5f).growY();
+			// Layout 50:50
+			float availableWidth = width - 50; // 20*2 padding + 10 gap
+			mainTable.add(leftCol).width(availableWidth * 0.5f).growY().padRight(10);
+			mainTable.add(rightCol).width(availableWidth * 0.5f).growY();
 
 			getContentTable().add(mainTable).grow();
 
 			updateContent();
+		}
+
+		@Override
+		public boolean remove() {
+			GameHUD.this.hideFocusTooltip();
+			return super.remove();
 		}
 
 		public void updateContent() {
