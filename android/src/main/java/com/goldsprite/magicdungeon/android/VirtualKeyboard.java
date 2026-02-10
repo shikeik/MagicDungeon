@@ -459,15 +459,16 @@ public class VirtualKeyboard {
     }
 
     private void initGamepadUI() {
-        // 创建左右两个面板
+        // Create left and right panels
         keyboardContainer = new LinearLayout(activity);
         keyboardContainer.setOrientation(LinearLayout.HORIZONTAL);
         keyboardContainer.setVisibility(View.GONE);
         keyboardContainer.setWeightSum(1.0f);
 
-        // 允许穿透点击中间区域
+        // Allow touch-through for the container itself
         keyboardContainer.setClickable(false);
         keyboardContainer.setFocusable(false);
+        // keyboardContainer.setTouchscreenBlocksFocus(false); // Min SDK check might fail
 
 		float ratio = GAMEPAD_PANEL_RATIO, gdxRatio = 1 - ratio*2;
         // Left Panel (Compressed Width: 25%)
@@ -475,6 +476,9 @@ public class VirtualKeyboard {
         LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.MATCH_PARENT, ratio);
         leftPanel.setLayoutParams(leftParams);
+        // Ensure panel itself doesn't block touches unless a child handles it
+        leftPanel.setClickable(false);
+        leftPanel.setFocusable(false);
         createLeftJoyCon(leftPanel);
 
         // Middle Space (Expanded Width: 50%) - Transparent and click-through
@@ -490,6 +494,9 @@ public class VirtualKeyboard {
         LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.MATCH_PARENT, ratio);
         rightPanel.setLayoutParams(rightParams);
+        // Ensure panel itself doesn't block touches unless a child handles it
+        rightPanel.setClickable(false);
+        rightPanel.setFocusable(false);
         createRightJoyCon(rightPanel);
 
         keyboardContainer.addView(leftPanel);

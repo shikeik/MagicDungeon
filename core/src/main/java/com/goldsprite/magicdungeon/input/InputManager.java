@@ -201,8 +201,8 @@ public class InputManager {
         mapK(InputAction.UI_DOWN, Input.Keys.S, Input.Keys.DOWN);
         mapK(InputAction.UI_LEFT, Input.Keys.A, Input.Keys.LEFT);
         mapK(InputAction.UI_RIGHT, Input.Keys.D, Input.Keys.RIGHT);
-        mapK(InputAction.UI_CONFIRM, Input.Keys.ENTER, Input.Keys.SPACE, Input.Keys.J);
-        mapK(InputAction.UI_CANCEL, Input.Keys.ESCAPE, Input.Keys.BACKSPACE);
+        mapK(InputAction.UI_CONFIRM, Input.Keys.ENTER, Input.Keys.SPACE, Input.Keys.J, Input.Keys.BUTTON_A);
+        mapK(InputAction.UI_CANCEL, Input.Keys.ESCAPE, Input.Keys.BACKSPACE, Input.Keys.BUTTON_B);
 
         // Controller Defaults (Xbox)
         mapC(InputAction.ATTACK, BUTTON_X);

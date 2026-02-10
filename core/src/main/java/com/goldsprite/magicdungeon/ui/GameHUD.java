@@ -377,6 +377,16 @@ public class GameHUD {
 				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_DOWN pressed");
 				navigate(0, -1);
 			}
+			
+			// Tab Navigation (Switch Area)
+			if (input.isJustPressed(InputAction.TAB)) {
+				if (currentArea == FocusArea.INVENTORY) {
+					currentArea = FocusArea.EQUIPMENT;
+				} else {
+					currentArea = FocusArea.INVENTORY;
+				}
+				updateFocus();
+			}
 
 			// Confirm Action
 			if (input.isJustPressed(InputAction.UI_CONFIRM)) {
@@ -422,6 +432,8 @@ public class GameHUD {
 		private Chest chestContext;
 		private ChestDialog dialogContext;
 		private boolean isChestItem;
+		private InventoryItem item; // Stored reference
+		private boolean isEquipped; // Stored reference
 
 		private VisImage focusBorder;
 		private ClickListener clickListener;
@@ -431,11 +443,13 @@ public class GameHUD {
 		}
 
 		public InventorySlot(InventoryItem item, Player player, DragAndDrop dragAndDrop, Chest chest, ChestDialog dialog, boolean isChestItem) {
+			this.item = item;
 			this.chestContext = chest;
 			this.dialogContext = dialog;
 			this.isChestItem = isChestItem;
+			this.isEquipped = (item != null) && checkIsEquipped(player, item);
 
-			boolean isEquipped = (item != null) && checkIsEquipped(player, item);
+			boolean isEquipped = this.isEquipped; // Local for anonymous classes (redundant but keeps existing code working)
 
 			setTouchable(Touchable.enabled);
 
@@ -483,7 +497,7 @@ public class GameHUD {
 				focusBorder.setColor(1f, 1f, 0f, 0.4f); // Semi-transparent yellow
 				focusBorder.setTouchable(Touchable.disabled);
 				focusBorder.setVisible(false);
-				stack.add(focusBorder);
+				stack.addActorAt(1, focusBorder);
 			}
 
 			add(stack).size(64, 64);
@@ -498,12 +512,16 @@ public class GameHUD {
 							} else {
 								handleEquipAction(item, isEquipped, player);
 							}
-							hideAndroidTooltip(); // 确保点击时清除可能残留的 tooltip
+							hideFocusTooltip(); // 确保点击时清除可能残留的 tooltip
 						}
 
 						@Override
 						public boolean longPress(Actor actor, float x, float y) {
-							showAndroidTooltip(InventorySlot.this, item, isEquipped);
+							// showAndroidTooltip(InventorySlot.this, item, isEquipped);
+							if (chestContext == null) {
+								Vector2 pos = actor.localToStageCoordinates(new Vector2(x, y));
+								showContextMenu(item, isEquipped, player, pos.x, pos.y);
+							}
 							return true;
 						}
 
@@ -511,7 +529,7 @@ public class GameHUD {
 						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
 							super.touchUp(event, x, y, pointer, button);
 							// 长按后松开，或者点击后松开，都尝试隐藏
-							hideAndroidTooltip();
+							hideFocusTooltip();
 						}
 					};
 					listener.getGestureDetector().setLongPressSeconds(0.18f); // 缩短长按时间
@@ -629,10 +647,17 @@ public class GameHUD {
 				focusBorder.setVisible(focused);
 				if (focused) {
 					// com.goldsprite.gdengine.log.Debug.log("Slot focused: " + this);
-					focusBorder.setColor(1f, 1f, 0f, 0.8f); // More visible yellow
+					focusBorder.setColor(1f, 1f, 0f, 0.3f); // Lower alpha for background highlight
 				}
 			} else {
 				// com.goldsprite.gdengine.log.Debug.log("Slot focusBorder is null!");
+			}
+			
+			if (focused && item != null) {
+				showFocusTooltip(this, item, isEquipped);
+			} else if (focused) {
+				// Focused but empty slot -> hide tooltip
+				hideFocusTooltip();
 			}
 		}
 
@@ -652,8 +677,10 @@ public class GameHUD {
 	private class EquipmentSlot extends VisTable implements FocusableUI {
 		private VisImage focusBorder;
 		private ClickListener clickListener;
+		private InventoryItem item; // Store item reference
 
 		public EquipmentSlot(InventoryItem item, String placeholder, Player player, ItemType slotType, int slotIndex, DragAndDrop dragAndDrop) {
+			this.item = item;
 			setBackground(slotBgDrawable);
 
 			Stack stack = new Stack();
@@ -679,20 +706,22 @@ public class GameHUD {
 					ActorGestureListener listener = new ActorGestureListener() {
 						@Override
 						public void tap(InputEvent event, float x, float y, int count, int button) {
-							hideAndroidTooltip();
+							hideFocusTooltip();
 							// Android tap acts as click (Unequip)
 							player.equip(item, slotIndex);
 							updateInventory(player);
 						}
 						@Override
 						public boolean longPress(Actor actor, float x, float y) {
-							showAndroidTooltip(EquipmentSlot.this, item, true);
+							// showAndroidTooltip(EquipmentSlot.this, item, true);
+							Vector2 pos = actor.localToStageCoordinates(new Vector2(x, y));
+							showContextMenu(item, true, player, pos.x, pos.y);
 							return true;
 						}
 						@Override
 						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
 							super.touchUp(event, x, y, pointer, button);
-							hideAndroidTooltip();
+							// hideAndroidTooltip(); // Don't hide on touchUp if it's long press menu
 						}
 					};
 					listener.getGestureDetector().setLongPressSeconds(0.18f);
@@ -719,7 +748,7 @@ public class GameHUD {
 				focusBorder.setColor(1f, 1f, 0f, 0.4f); // Semi-transparent yellow
 				focusBorder.setTouchable(Touchable.disabled);
 				focusBorder.setVisible(false);
-				stack.add(focusBorder);
+				stack.addActorAt(1, focusBorder);
 			}
 
 			add(stack).size(64, 64);
@@ -767,7 +796,14 @@ public class GameHUD {
 		public void setFocused(boolean focused) {
 			if (focusBorder != null) {
 				focusBorder.setVisible(focused);
-				if (focused) focusBorder.setColor(1f, 1f, 0f, 0.8f);
+				if (focused) focusBorder.setColor(1f, 1f, 0f, 0.3f);
+			}
+			
+			// Show Tooltip on Focus
+			if (focused && item != null) {
+				showFocusTooltip(this, item, true);
+			} else if (focused) {
+				hideFocusTooltip();
 			}
 		}
 
@@ -893,6 +929,17 @@ public class GameHUD {
 	private void showContextMenu(InventoryItem item, boolean isEquipped, Player player, float x, float y) {
 			PopupMenu menu = new PopupMenu();
 
+			// Add Item Info Header (Android)
+			if (Gdx.app.getType() == ApplicationType.Android) {
+				VisTable infoTable = createItemTooltipTable(item, isEquipped);
+				// Scale down slightly if needed, or keep as is. Tooltip table width is about 200-300.
+				MenuItem headerItem = new MenuItem("");
+				headerItem.setTouchable(Touchable.disabled); // Info only
+				headerItem.add(infoTable).grow().pad(5).row();
+				menu.addItem(headerItem);
+				menu.addSeparator();
+			}
+
 			// Equip / Unequip / Use
 			if (item.data.type == ItemType.POTION || item.data.type == ItemType.ETC) {
 				MenuItem useItem = new MenuItem("使用", new ChangeListener() {
@@ -963,6 +1010,29 @@ public class GameHUD {
 			}
 
 			menu.showMenu(stage, x, y);
+			
+			// Android: Ensure menu is fully visible
+			if (Gdx.app.getType() == ApplicationType.Android) {
+				menu.pack();
+				float menuW = menu.getWidth();
+				float menuH = menu.getHeight();
+				
+				float newX = x;
+				float newY = y;
+				
+				if (newX + menuW > stage.getWidth()) newX = stage.getWidth() - menuW - 10;
+				if (newX < 0) newX = 10;
+				
+				if (newY - menuH < 0) {
+					// Show above if not enough space below (Wait, menu usually shows below cursor)
+					// VisUI PopupMenu shows at (x, y) with top-left corner usually? Or aligns?
+					// Standard PopupMenu behavior: tries to fit.
+					// Let's manually clamp just in case.
+					newY = menuH + 10;
+				}
+				
+				menu.setPosition(newX, newY);
+			}
 		}
 
 	private VisTable createItemTooltipTable(InventoryItem item, boolean isEquipped) {
@@ -1047,41 +1117,45 @@ public class GameHUD {
 		return borderTable;
 	}
 
-	private void showAndroidTooltip(Actor target, InventoryItem item, boolean isEquipped) {
-		// Remove existing tooltip if any
-		hideAndroidTooltip();
+	public void showFocusTooltip(Actor target, InventoryItem item, boolean isEquipped) {
+		hideFocusTooltip(); // Clear previous if any
 
+		// Reuse the Android tooltip logic but for focus (non-touchable)
 		VisTable tooltip = createItemTooltipTable(item, isEquipped);
-		// 不需要额外的背景，因为 createItemTooltipTable 已经创建了带边框的背景
-		tooltip.setTouchable(Touchable.disabled); // Don't block touches
-
+		tooltip.setTouchable(Touchable.disabled);
 		stage.addActor(tooltip);
 
-		// Position above the target
+		// Calculate Position: Right of target
 		Vector2 pos = target.localToStageCoordinates(new Vector2(0, 0));
-		float x = pos.x;
-		float y = pos.y + target.getHeight();
-
-		// Ensure within screen bounds
+		float x = pos.x + target.getWidth() + 10; // Right side
+		float y = pos.y + target.getHeight(); // Align top (y is bottom-left usually, so y+h is top)
+		
+		// If using align top-left for tooltip:
+		// Tooltip content builds downwards usually?
+		// Let's assume tooltip (0,0) is bottom-left.
+		// We want tooltip top-left to align with target top-right.
+		
 		tooltip.pack();
 		float w = tooltip.getWidth();
 		float h = tooltip.getHeight();
+		
+		y = pos.y + target.getHeight() - h; // Align tops
 
-		// Clamp X
-		if (x + w > stage.getWidth()) x = stage.getWidth() - w;
-		if (x < 0) x = 0;
-
-		// Clamp Y (if top of screen, show below)
-		if (y + h > stage.getHeight()) {
-			y = pos.y - h;
+		// Check Right Boundary
+		if (x + w > stage.getWidth()) {
+			// Flip to Left side
+			x = pos.x - w - 10;
 		}
 
-		tooltip.setPosition(x, y);
+		// Check Top/Bottom Boundary (Clamp Y)
+		if (y < 0) y = 0;
+		if (y + h > stage.getHeight()) y = stage.getHeight() - h;
 
+		tooltip.setPosition(x, y);
 		currentTooltip = tooltip;
 	}
 
-	private void hideAndroidTooltip() {
+	public void hideFocusTooltip() {
 		if (currentTooltip != null) {
 			currentTooltip.remove();
 			currentTooltip = null;
@@ -2177,6 +2251,16 @@ public class GameHUD {
 			if (input.isJustPressed(InputAction.UI_LEFT)) navigate(-1, 0);
 			if (input.isJustPressed(InputAction.UI_UP)) navigate(0, 1);
 			if (input.isJustPressed(InputAction.UI_DOWN)) navigate(0, -1);
+			
+			// Tab Navigation (Switch Area)
+			if (input.isJustPressed(InputAction.TAB)) {
+				if (currentArea == FocusArea.CHEST) {
+					currentArea = FocusArea.INVENTORY;
+				} else {
+					currentArea = FocusArea.CHEST;
+				}
+				updateFocus();
+			}
 			
 			if (input.isJustPressed(InputAction.UI_CONFIRM)) {
 				if (currentArea == FocusArea.CHEST) {
