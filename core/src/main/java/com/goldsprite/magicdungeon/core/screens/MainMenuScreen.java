@@ -7,7 +7,6 @@ import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ScreenUtils;
@@ -15,7 +14,7 @@ import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon.core.renderer.TitleParallaxRenderer;
-import com.goldsprite.magicdungeon.core.ui.SettingsWindow;
+import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.utils.Constants;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -35,6 +34,7 @@ public class MainMenuScreen extends GScreen {
 	private VisLabel titleLabel;
 	private Group menuGroup;
 	private VisTextField seedField;
+	private SettingsDialog settingsDialog;
 
 	@Override
 	protected void initViewport() {
@@ -55,6 +55,8 @@ public class MainMenuScreen extends GScreen {
 		stage = new Stage(getUIViewport());
 		getImp().addProcessor(stage);
 
+		settingsDialog = new SettingsDialog();
+
 		buildUI();
 	}
 
@@ -63,7 +65,7 @@ public class MainMenuScreen extends GScreen {
 		titleLabel = new VisLabel("MAGIC DUNGEON");
 		titleLabel.setFontScale(1.5f);
 		titleLabel.setColor(Color.CYAN);
-		
+
 		titleLabel.addAction(Actions.forever(
 			Actions.sequence(
 				Actions.scaleTo(1.1f, 1.1f, 1f),
@@ -80,29 +82,29 @@ public class MainMenuScreen extends GScreen {
 
 		// Seed Input Area
  		VisTable seedTable = new VisTable();
-		
+
 		float targetX = 50; // X offset from left
 		float currentY = 50; // Start from top-ish relative to center
  		float gap = 70;
 
  		// Seed Group
- 		seedTable.setSize(220, 50); 
+ 		seedTable.setSize(220, 50);
  		seedTable.setPosition(targetX, currentY);
 
  		seedTable.clearChildren();
- 		seedTable.left(); 
- 		seedTable.add(new VisLabel("Seed: ")).width(50).padRight(5); 
+ 		seedTable.left();
+ 		seedTable.add(new VisLabel("Seed: ")).width(50).padRight(5);
  		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
 	 	seedField.setAlignment(Align.center);
- 		seedTable.add(seedField).expandX().fillX().padRight(5); 
- 		VisTextButton randomSeedBtn = new VisTextButton("R"); 
+ 		seedTable.add(seedField).expandX().fillX().padRight(5);
+ 		VisTextButton randomSeedBtn = new VisTextButton("R");
  		randomSeedBtn.addListener(new ClickListener() {
  			@Override
  			public void clicked(InputEvent event, float x, float y) {
  				seedField.setText(String.valueOf(MathUtils.random(1000000)));
  			}
  		});
- 		seedTable.add(randomSeedBtn).width(30); 
+ 		seedTable.add(randomSeedBtn).width(30);
 
  		menuGroup.addActor(seedTable);
 
@@ -127,7 +129,7 @@ public class MainMenuScreen extends GScreen {
 			});
 			currentY -= gap;
 		}
-		
+
 		// [New] Settings Button
 		createMenuButton("Settings", targetX, currentY, 0.25f, new ClickListener() {
 			@Override
@@ -146,7 +148,7 @@ public class MainMenuScreen extends GScreen {
 
 		// Seed table animation
 		seedTable.addAction(createEntranceAction(0f));
-		
+
 		// Initial Layout
 		updateLayout();
 	}
@@ -167,14 +169,13 @@ public class MainMenuScreen extends GScreen {
 			menuGroup.setPosition(0, h / 2);
 		}
 	}
-	
+
 	private void openSettings() {
-		if (stage.getRoot().findActor("SettingsWindow") != null) return;
-		
-		SettingsWindow win = new SettingsWindow();
-		win.setName("SettingsWindow");
-		stage.addActor(win);
-		win.fadeIn();
+		if(stage.getActors().contains(settingsDialog, true)){
+			settingsDialog.remove();
+		}
+
+		settingsDialog.show(stage);
 	}
 
 	private void createMenuButton(String text, float targetX, float targetY, float delay, ClickListener listener) {
@@ -219,8 +220,8 @@ public class MainMenuScreen extends GScreen {
 	@Override
 	public void show() {
 		super.show();
-		stage.clear(); 
-		buildUI();     
+		stage.clear();
+		buildUI();
 	}
 
 	@Override
@@ -234,7 +235,7 @@ public class MainMenuScreen extends GScreen {
 		bloomRender.captureEnd();
 		bloomRender.process();
 		bloomRender.render(batch);
-		
+
 		stage.act(delta);
 		stage.draw();
 	}

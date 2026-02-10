@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 public class InputManager {
+	private static String INPUTACTIONS_FILE = "MagicDungeon/input_actions.json";
     private static InputManager instance;
     private final Map<InputAction, List<Integer>> keyboardMappings = new HashMap<>();
     private final Map<InputAction, List<Integer>> controllerMappings = new HashMap<>();
@@ -38,7 +39,7 @@ public class InputManager {
     // Triggers are usually axes, but some mapping treat them as buttons if pressed deep enough
     // For simplicity we might map triggers to buttons if the library supports it, or handle axes separately.
     // Standard gdx-controllers usually maps axes 4 and 5 to triggers.
-    
+
     private InputManager() {
         loadMappings();
     }
@@ -59,7 +60,7 @@ public class InputManager {
         // User request: "mapping to same InputAction" implies 1 action -> N keys.
         // But for rebind UI, usually we replace the primary key.
         // Let's replace the first key or clear all and add new one for simplicity in UI.
-        
+
         List<Integer> keys = keyboardMappings.get(action);
         if (keys == null) {
             keys = new ArrayList<>();
@@ -68,7 +69,7 @@ public class InputManager {
         keys.clear(); // Simple mode: 1 key per action for custom binding
         keys.add(key);
     }
-    
+
     public void rebindController(InputAction action, int buttonCode) {
         List<Integer> buttons = controllerMappings.get(action);
         if (buttons == null) {
@@ -82,12 +83,12 @@ public class InputManager {
     public void saveMappings() {
         Json json = new Json();
         json.setOutputType(JsonWriter.OutputType.json);
-        
+
         JsonValue root = new JsonValue(JsonValue.ValueType.object);
-        
+
         for (InputAction action : InputAction.values()) {
             JsonValue entry = new JsonValue(JsonValue.ValueType.object);
-            
+
             // Keyboard
             List<Integer> keys = keyboardMappings.get(action);
             if (keys != null && !keys.isEmpty()) {
@@ -95,7 +96,7 @@ public class InputManager {
                 for (int k : keys) kArray.addChild(new JsonValue(k));
                 entry.addChild("keyboard", kArray);
             }
-            
+
             // Controller
             List<Integer> buttons = controllerMappings.get(action);
             if (buttons != null && !buttons.isEmpty()) {
@@ -103,15 +104,16 @@ public class InputManager {
                 for (int b : buttons) cArray.addChild(new JsonValue(b));
                 entry.addChild("controller", cArray);
             }
-            
+
             root.addChild(action.name(), entry);
         }
-        
+
         // Save to local storage (user preferences/config)
         // Note: 'options/input.json' in local storage
-        FileHandle file = Gdx.files.local("options/input.json");
-        file.writeString(json.prettyPrint(root), false);
-        Debug.log("InputManager", "Mappings saved to " + file.path());
+        FileHandle file = Gdx.files.local(INPUTACTIONS_FILE);
+        file.parent().mkdirs();
+        file.writeString(root.prettyPrint(JsonWriter.OutputType.json, 80), false);
+        Debug.logT("InputManager", "Mappings saved to " + file.path());
     }
 
     public int getBoundKey(InputAction action) {
@@ -121,28 +123,24 @@ public class InputManager {
 
     private void loadMappings() {
         // Priority: Local > Assets/Options > Assets/Data
-        FileHandle file = Gdx.files.local("options/input.json");
-        
+        FileHandle file = Gdx.files.local(INPUTACTIONS_FILE);
+
         if (!file.exists()) {
             file = Gdx.files.internal("options/input.json");
         }
-        
-        if (!file.exists()) {
-            Debug.log("InputManager", "Config not found at options/input.json, checking data/input_mapping.json...");
-            file = Gdx.files.internal("data/input_mapping.json");
-            if (!file.exists()) {
-                Debug.log("InputManager", "No config found, using defaults.");
-                setDefaultMappings();
-                return;
-            }
-        }
-        
+
+		if (!file.exists()) {
+			Debug.logT("InputManager", "No config found at options/input.json, using defaults.");
+			setDefaultMappings();
+			return;
+		}
+
         try {
             JsonValue root = new Json().fromJson(null, file);
             for (JsonValue entry : root) {
                 try {
                     InputAction action = InputAction.valueOf(entry.name());
-                    
+
                     // Keyboard
                     if (entry.has("keyboard")) {
                         List<Integer> keys = new ArrayList<>();
@@ -151,7 +149,7 @@ public class InputManager {
                         }
                         keyboardMappings.put(action, keys);
                     }
-                    
+
                     // Controller
                     if (entry.has("controller")) {
                         List<Integer> buttons = new ArrayList<>();
@@ -161,12 +159,12 @@ public class InputManager {
                         controllerMappings.put(action, buttons);
                     }
                 } catch (IllegalArgumentException e) {
-                    Debug.log("InputManager", "Unknown action in config: " + entry.name());
+                    Debug.logT("InputManager", "Unknown action in config: " + entry.name());
                 }
             }
-            Debug.log("InputManager", "Mappings loaded.");
+            Debug.logT("InputManager", "Mappings loaded.");
         } catch (Exception e) {
-            Debug.log("InputManager", "Failed to load mappings: " + e.getMessage());
+            Debug.logT("InputManager", "Failed to load mappings: " + e.getMessage());
             e.printStackTrace();
             setDefaultMappings();
         }
@@ -178,16 +176,16 @@ public class InputManager {
         mapK(InputAction.MOVE_DOWN, Input.Keys.S, Input.Keys.DOWN);
         mapK(InputAction.MOVE_LEFT, Input.Keys.A, Input.Keys.LEFT);
         mapK(InputAction.MOVE_RIGHT, Input.Keys.D, Input.Keys.RIGHT);
-        
+
         mapK(InputAction.ATTACK, Input.Keys.J, Input.Keys.BUTTON_X); // X
         mapK(InputAction.INTERACT, Input.Keys.SPACE, Input.Keys.BUTTON_A); // A
         mapK(InputAction.SKILL, Input.Keys.H, Input.Keys.BUTTON_R2); // RT
         mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.DEL, Input.Keys.BUTTON_B); // B
-        
+
         mapK(InputAction.MAP, Input.Keys.M, Input.Keys.BUTTON_Y); // Y
         mapK(InputAction.BAG, Input.Keys.E, Input.Keys.BUTTON_R1); // RB
         mapK(InputAction.PAUSE, Input.Keys.P, Input.Keys.BUTTON_START); // Start
-        
+
         mapK(InputAction.TAB, Input.Keys.TAB, Input.Keys.BUTTON_L2); // LT
         mapK(InputAction.QUICK_SLOT, Input.Keys.Q, Input.Keys.BUTTON_L1); // LB
         mapK(InputAction.SAVE, Input.Keys.F5); // Home
@@ -202,14 +200,14 @@ public class InputManager {
         mapC(InputAction.PAUSE, BUTTON_START);
         mapC(InputAction.TAB, BUTTON_L3); // ?
         mapC(InputAction.QUICK_SLOT, BUTTON_R3); // ?
-        
+
         // D-Pad
         mapC(InputAction.MOVE_UP, BUTTON_DPAD_UP);
         mapC(InputAction.MOVE_DOWN, BUTTON_DPAD_DOWN);
         mapC(InputAction.MOVE_LEFT, BUTTON_DPAD_LEFT);
         mapC(InputAction.MOVE_RIGHT, BUTTON_DPAD_RIGHT);
     }
-    
+
     private void mapK(InputAction action, int... keys) {
         List<Integer> list = keyboardMappings.computeIfAbsent(action, k -> new ArrayList<>());
         for (int k : keys) list.add(k);
@@ -228,7 +226,7 @@ public class InputManager {
                 if (Gdx.input.isKeyPressed(key)) return true;
             }
         }
-        
+
         // Check Controller
         List<Integer> buttons = controllerMappings.get(action);
         if (buttons != null && Controllers.getControllers().size > 0) {
@@ -237,21 +235,21 @@ public class InputManager {
                 if (controller.getButton(btn)) return true;
             }
         }
-        
+
         return false;
     }
-    
+
     public boolean isJustPressed(InputAction action) {
         List<Integer> keys = keyboardMappings.get(action);
         if (keys != null) {
             for (int key : keys) {
                 if (Gdx.input.isKeyJustPressed(key)) {
-                    Debug.log("InputManager", "Action JustPressed: " + action + " (Key: " + Input.Keys.toString(key) + ")");
+                    Debug.logT("InputManager", "Action JustPressed: " + action + " (Key: " + Input.Keys.toString(key) + ")");
                     return true;
                 }
             }
         }
-        
+
         // Note: Controller "just pressed" usually requires polling state manually or using an adapter.
         // For simplicity, we only check keyboard here unless we implement state tracking.
         return false;

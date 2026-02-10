@@ -56,7 +56,7 @@ public class VisUIHelper {
 			// Label (VisLabel也是它)
 			skin.get(Label.LabelStyle.class).font = cnFont;
 
-			// [新增] 兼容 GlobalAssets 的 "small" 样式
+			// 兼容 GlobalAssets 的 "small" 样式
 			if (skin.has("small", Label.LabelStyle.class)) {
 				skin.get("small", Label.LabelStyle.class).font = smFont;
 			} else {
@@ -70,6 +70,7 @@ public class VisUIHelper {
 			skin.get(Window.WindowStyle.class).titleFont = smFont;
 			skin.get(SelectBox.SelectBoxStyle.class).font = smFont;
 			skin.get(List.ListStyle.class).font = smFont;
+			skin.get(VisCheckBox.VisCheckBoxStyle.class).font = smFont;
 
 			//VisScrollPane.ScrollPaneStyle 没有font
 

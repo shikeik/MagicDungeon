@@ -31,6 +31,7 @@ public class Debug {
 		//MagicDungeon
 		"VirtualKeyboard Y",
 		"Settings Y",
+		"InputManager Y",
 
 		// Test
 		"TEST Y",

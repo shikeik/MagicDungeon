@@ -132,7 +132,7 @@ public class VirtualKeyboard {
     }
 
     private void initFloatingButton() {
-        // --- 悬浮开关按钮 ---
+        // --- 悬浮开关按钮 (显示/隐藏) ---
         floatingToggleBtn = new Button(activity);
         floatingToggleBtn.setText("⌨");
         floatingToggleBtn.setTextColor(Color.CYAN);
@@ -228,6 +228,18 @@ public class VirtualKeyboard {
                 dockFloatingButton(floatingToggleBtn);
             }
         });
+    }
+
+    private Button createHideButton() {
+        Button hideBtn = createRoundButton("Hide", 10, -1); // -1 is dummy code
+        // Override touch listener for hide logic
+        hideBtn.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                setKeyboardVisibility(false);
+            }
+            return true;
+        });
+        return hideBtn;
     }
 
     private void initUI() {
@@ -380,6 +392,14 @@ public class VirtualKeyboard {
         homeParams.bottomMargin = dpToPx(8);
         homeParams.rightMargin = dpToPx(16);
         panel.addView(homeBtn, homeParams);
+        
+        // Hide Button (Explicit hide button as requested)
+        Button hideBtn = createHideButton();
+        hideBtn.setText("▼");
+        FrameLayout.LayoutParams hideParams = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28));
+        hideParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        hideParams.topMargin = dpToPx(5);
+        panel.addView(hideBtn, hideParams);
     }
 
     private View createJoystick(boolean isLeft) {
