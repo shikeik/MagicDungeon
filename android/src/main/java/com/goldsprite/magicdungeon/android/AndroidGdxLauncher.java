@@ -136,9 +136,11 @@ public class AndroidGdxLauncher extends AndroidApplication {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			if (virtualKeyboard != null && virtualKeyboard.isVisible()) {
-				virtualKeyboard.setKeyboardVisibility(false);
-			}
+			// if (virtualKeyboard != null && virtualKeyboard.isVisible()) {
+			// 	virtualKeyboard.setKeyboardVisibility(false);
+			// }
+
+			// 返回 true 拦截事件，阻止系统默认的 finish() 行为
 			return true;
 		}
 		return super.onKeyDown(keyCode, event);

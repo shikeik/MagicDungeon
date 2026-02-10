@@ -1,8 +1,6 @@
 package com.goldsprite.magicdungeon.android;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.util.DisplayMetrics;
@@ -16,6 +14,8 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
+import android.graphics.Rect;
 
 import com.goldsprite.gdengine.log.Debug; // 使用项目 Log
 
@@ -74,6 +74,14 @@ public class VirtualKeyboard {
 
     private GestureDetector gestureDetector; // 添加手势检测器
 
+    // 长按选择模式相关变量
+    private LinearLayout modeSelectionView;
+    private boolean isLongPressMode = false;
+    private int selectedModeIndex = -1;
+    private Runnable[] modeActions;
+    private View[] modeItemViews;
+    private Rect[] modeItemRects;
+
     public VirtualKeyboard(Activity activity, RelativeLayout parentView, View gameView) {
         this.activity = activity;
         this.parentView = parentView;
@@ -109,12 +117,188 @@ public class VirtualKeyboard {
         Debug.logT("VirtualKeyboard", "Screen: %d, MinPx: %d, Ratio: %.2f", screenWidth, minPx, GAMEPAD_PANEL_RATIO);
     }
 
+    private void initModeSelectionView() {
+        modeSelectionView = new LinearLayout(activity);
+        modeSelectionView.setOrientation(LinearLayout.VERTICAL);
+        // 背景: 半透明黑色圆角
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xEE222222);
+        bg.setCornerRadius(dpToPx(8));
+        bg.setStroke(dpToPx(1), 0xFF00EAFF);
+        modeSelectionView.setBackground(bg);
+        
+        modeSelectionView.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+        
+        modeActions = new Runnable[2];
+        modeItemViews = new View[2];
+        
+        // 选项 1: 全键盘
+        TextView item1 = createModeItem("⌨ 全键盘", InputMode.FULL_KEYBOARD);
+        modeItemViews[0] = item1;
+        modeActions[0] = () -> {
+            if (currentMode != InputMode.FULL_KEYBOARD) {
+                toggleInputMode(InputMode.FULL_KEYBOARD);
+                setKeyboardVisibility(true);
+                dockFloatingButton(floatingToggleBtn);
+            }
+        };
+        modeSelectionView.addView(item1);
+        
+        // 分割线
+        View divider = new View(activity);
+        divider.setBackgroundColor(0x55AAAAAA);
+        LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(1));
+        divParams.topMargin = dpToPx(2);
+        divParams.bottomMargin = dpToPx(2);
+        modeSelectionView.addView(divider, divParams);
+        
+        // 选项 2: 手柄
+        TextView item2 = createModeItem("🎮 手柄", InputMode.GAMEPAD);
+        modeItemViews[1] = item2;
+        modeActions[1] = () -> {
+            if (currentMode != InputMode.GAMEPAD) {
+                toggleInputMode(InputMode.GAMEPAD);
+                setKeyboardVisibility(true);
+                dockFloatingButton(floatingToggleBtn);
+            }
+        };
+        modeSelectionView.addView(item2);
+        
+        modeSelectionView.setVisibility(View.GONE);
+        parentView.addView(modeSelectionView);
+    }
+
+    private TextView createModeItem(String text, InputMode mode) {
+        TextView tv = new TextView(activity);
+        tv.setText(text);
+        tv.setTextColor(Color.LTGRAY);
+        tv.setTextSize(16);
+        tv.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+        tv.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
+        tv.setBackgroundColor(Color.TRANSPARENT);
+        tv.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return tv;
+    }
+
+    private void showModeSelectionView() {
+        if (modeSelectionView == null) {
+            initModeSelectionView();
+        }
+        
+        // 强制测量以获取尺寸
+        modeSelectionView.measure(View.MeasureSpec.makeMeasureSpec(screenWidth / 2, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int menuW = modeSelectionView.getMeasuredWidth();
+        int menuH = modeSelectionView.getMeasuredHeight();
+        
+        int btnW = floatingToggleBtn.getWidth();
+        int btnH = floatingToggleBtn.getHeight();
+        
+        float btnX = floatingToggleBtn.getX();
+        float btnY = floatingToggleBtn.getY();
+        
+        float x = btnX + (btnW - menuW) / 2f;
+        float y = btnY - menuH - dpToPx(10); // 上方
+        
+        if (y < 0) {
+            y = btnY + btnH + dpToPx(10);
+        }
+        
+        x = Math.max(dpToPx(10), Math.min(screenWidth - menuW - dpToPx(10), x));
+        
+        modeSelectionView.setX(x);
+        modeSelectionView.setY(y);
+        
+        modeSelectionView.setVisibility(View.VISIBLE);
+        modeSelectionView.setAlpha(0f);
+        modeSelectionView.animate().alpha(1f).setDuration(150).start();
+        
+        // 强制 Layout
+        modeSelectionView.layout((int)x, (int)y, (int)x + menuW, (int)y + menuH);
+    }
+    
+    private void hideModeSelectionView() {
+        if (modeSelectionView != null) {
+            modeSelectionView.animate().alpha(0f).setDuration(150).withEndAction(() -> {
+                modeSelectionView.setVisibility(View.GONE);
+            }).start();
+        }
+        selectedModeIndex = -1;
+        updateItemStyles();
+    }
+    
+    private void updateItemStyles() {
+        if (modeItemViews == null) return;
+        for (int i = 0; i < modeItemViews.length; i++) {
+            if (i == selectedModeIndex) {
+                modeItemViews[i].setBackgroundColor(0xFF00EAFF);
+                ((TextView)modeItemViews[i]).setTextColor(Color.BLACK);
+            } else {
+                modeItemViews[i].setBackgroundColor(Color.TRANSPARENT);
+                ((TextView)modeItemViews[i]).setTextColor(Color.LTGRAY);
+            }
+        }
+    }
+    
+    private void handleLongPressSelection(MotionEvent event) {
+        int action = event.getAction();
+        
+        if (action == MotionEvent.ACTION_MOVE || action == MotionEvent.ACTION_DOWN) {
+            float rawX = event.getRawX();
+            float rawY = event.getRawY();
+            
+            int[] parentLoc = new int[2];
+            parentView.getLocationOnScreen(parentLoc);
+            float relX = rawX - parentLoc[0];
+            float relY = rawY - parentLoc[1];
+            
+            float menuX = modeSelectionView.getX();
+            float menuY = modeSelectionView.getY();
+            
+            int newSelection = -1;
+            
+            if (relX >= menuX - dpToPx(20) && relX <= menuX + modeSelectionView.getWidth() + dpToPx(20) &&
+                relY >= menuY - dpToPx(20) && relY <= menuY + modeSelectionView.getHeight() + dpToPx(20)) {
+                
+                float localY = relY - menuY;
+                
+                for (int i = 0; i < modeItemViews.length; i++) {
+                     View item = modeItemViews[i];
+                     if (localY >= item.getTop() && localY <= item.getBottom()) {
+                         newSelection = i;
+                         break;
+                     }
+                }
+            }
+            
+            if (newSelection != selectedModeIndex) {
+                selectedModeIndex = newSelection;
+                updateItemStyles();
+            }
+            
+        } else if (action == MotionEvent.ACTION_UP) {
+            if (selectedModeIndex != -1) {
+                if (modeActions[selectedModeIndex] != null) {
+                    modeActions[selectedModeIndex].run();
+                }
+            }
+            hideModeSelectionView();
+            isLongPressMode = false;
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+            hideModeSelectionView();
+            isLongPressMode = false;
+        }
+    }
+
     private void initGestureDetector() {
         gestureDetector = new GestureDetector(activity, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public void onLongPress(MotionEvent e) {
-                // 长按触发模式选择
-                showModeSelectionDialog();
+                // 长按触发模式选择 (新逻辑: 不弹 Dialog，而是进入长按选择模式)
+                isLongPressMode = true;
+                showModeSelectionView();
+                // 震动反馈
+                floatingToggleBtn.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             }
 
             @Override
@@ -165,7 +349,15 @@ public class VirtualKeyboard {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 // 优先交给手势检测器处理 (点击、长按)
-                if (gestureDetector.onTouchEvent(event)) {
+                boolean gestureHandled = gestureDetector.onTouchEvent(event);
+
+                // 如果处于长按选择模式，拦截所有事件
+                if (isLongPressMode) {
+                    handleLongPressSelection(event);
+                    return true;
+                }
+                
+                if (gestureHandled) {
                     return true;
                 }
 
@@ -641,28 +833,6 @@ public class VirtualKeyboard {
         
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
-    }
-
-    private void showModeSelectionDialog() {
-        String[] modes = {"全键盘模式 (Full Keyboard)", "手柄模式 (Gamepad)"};
-        int checkedItem = currentMode == InputMode.FULL_KEYBOARD ? 0 : 1;
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-        builder.setTitle("选择输入模式");
-        builder.setSingleChoiceItems(modes, checkedItem, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                InputMode newMode = which == 0 ? InputMode.FULL_KEYBOARD : InputMode.GAMEPAD;
-                if (newMode != currentMode) {
-                    toggleInputMode(newMode);
-                    // 切换模式后自动打开键盘
-                    setKeyboardVisibility(true);
-                    dockFloatingButton(floatingToggleBtn);
-                }
-                dialog.dismiss();
-            }
-        });
-        builder.show();
     }
 
     private void toggleInputMode(InputMode newMode) {
