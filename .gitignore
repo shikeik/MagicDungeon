@@ -158,10 +158,12 @@ Thumbs.db
 ## You could also add that configuration to the text in nativeimage.gradle .
 ## You should delete or comment out the next line if you have configuration in a different resource-config.json .
 **/resource-config.json
+
+/outputs/MagicDungeon/
 /outputs/MagicDungeon*.exe
 /outputs/MagicDungeon*.apk
 /outputs/MagicDungeon*.jar
-outputs/MagicDungeon.exe4j
+/outputs/MagicDungeon.exe4j
 /outputs/error.log
 /outputs/shortcuts.json
 
@@ -178,7 +180,7 @@ outputs/MagicDungeon.exe4j
 #MagicDungeon/UserProjects/
 #MagicDungeon/engine_docs/
 #MagicDungeon/engine_config.json
-MagicDungeon/
+/MagicDungeon/
 /assets/engine.index
 /assets/engine/libs/
 /assets/assets.txt
