@@ -8,6 +8,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -59,6 +60,8 @@ public class VirtualKeyboard {
     
     private InputMode currentMode = InputMode.FULL_KEYBOARD;
 
+    private GestureDetector gestureDetector; // 添加手势检测器
+
     public VirtualKeyboard(Activity activity, RelativeLayout parentView, View gameView) {
         this.activity = activity;
         this.parentView = parentView;
@@ -70,9 +73,31 @@ public class VirtualKeyboard {
         this.screenHeight = dm.heightPixels;
         
         initKeyMap();
-        // UI 初始化需要在主线程进行，但通常构造函数也是在主线程调用的
-        // 为保险起见，如果不在主线程，可以 post 出去，但这里假设调用者会处理或就在主线程
+        initGestureDetector(); // 初始化手势检测
+        // UI 初始化需要在主线程进行
         initUI();
+    }
+
+    private void initGestureDetector() {
+        gestureDetector = new GestureDetector(activity, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public void onLongPress(MotionEvent e) {
+                // 长按触发模式选择
+                showModeSelectionDialog();
+            }
+
+            @Override
+            public boolean onSingleTapUp(MotionEvent e) {
+                // 点击触发显示/隐藏 (逻辑移到这里更准确)
+                setKeyboardVisibility(true);
+                dockFloatingButton(floatingToggleBtn);
+                return true;
+            }
+        });
+    }
+
+    private int dpToPx(float dp) {
+        return (int) (dp * activity.getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void initUI() {
@@ -87,16 +112,17 @@ public class VirtualKeyboard {
         floatingToggleBtn.setText("⌨");
         floatingToggleBtn.setTextColor(Color.CYAN);
         floatingToggleBtn.setTextSize(20);
-        floatingToggleBtn.setPadding(20, 20, 20, 20); // 给点内边距
+        int p = dpToPx(8);
+        floatingToggleBtn.setPadding(p, p, p, p); // 给点内边距
 
         GradientDrawable shape = new GradientDrawable();
         shape.setCornerRadius(100);
         shape.setColor(0x44000000);
-        shape.setStroke(2, 0xFF00EAFF);
+        shape.setStroke(dpToPx(1), 0xFF00EAFF);
         floatingToggleBtn.setBackground(shape);
 
         // [v19.5 修复] 使用 WRAP_CONTENT，这样文字长了会自动变大，不会被切
-        int btnSize = 120;
+        int btnSize = dpToPx(50);
         FrameLayout.LayoutParams btnParams = new FrameLayout.LayoutParams(btnSize, btnSize);
 
         // 初始位置不要用 Margin，直接设为 0，靠 setX/Y 移动
@@ -113,6 +139,11 @@ public class VirtualKeyboard {
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                // 优先交给手势检测器处理 (点击、长按)
+                if (gestureDetector.onTouchEvent(event)) {
+                    return true;
+                }
+
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         dX = v.getX() - event.getRawX();
@@ -145,23 +176,17 @@ public class VirtualKeyboard {
                     case MotionEvent.ACTION_UP:
                         v.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
 
-                        if (!isDrag) {
-                            setKeyboardVisibility(true);
-                            dockFloatingButton(v);
-                        } else {
-                            dockFloatingButton(v);
-                        }
+                        // 无论是否拖拽，抬起时都进行吸附
+                        // 注意：如果不是拖拽，onSingleTapUp 已经触发了点击逻辑
+                        dockFloatingButton(v);
                         return true;
                 }
                 return false;
             }
         });
         
-        // 长按弹出模式选择
-        floatingToggleBtn.setOnLongClickListener(v -> {
-            showModeSelectionDialog();
-            return true;
-        });
+        // 长按逻辑已移至 GestureDetector
+        // floatingToggleBtn.setOnLongClickListener... 已移除
 
         floatingToggleBtn.setAlpha(0.3f);
         parentView.addView(floatingToggleBtn);
@@ -248,24 +273,24 @@ public class VirtualKeyboard {
         // Layout: Top=Stick, Bottom=D-Pad
         // Stick
         View stick = createJoystick(true); // Left stick
-        FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(180, 180);
+        FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(dpToPx(70), dpToPx(70));
         stickParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        stickParams.topMargin = 100;
+        stickParams.topMargin = dpToPx(40);
         panel.addView(stick, stickParams);
         
         // D-Pad (Simulated by 4 buttons)
         View dpad = createDPad();
-        FrameLayout.LayoutParams dpadParams = new FrameLayout.LayoutParams(240, 240);
+        FrameLayout.LayoutParams dpadParams = new FrameLayout.LayoutParams(dpToPx(100), dpToPx(100));
         dpadParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        dpadParams.bottomMargin = 80;
+        dpadParams.bottomMargin = dpToPx(30);
         panel.addView(dpad, dpadParams);
         
         // Minus Button
         Button minusBtn = createRoundButton("-", 10, () -> sendKey(KeyEvent.KEYCODE_M)); // Map to M for Map?
-        FrameLayout.LayoutParams minusParams = new FrameLayout.LayoutParams(60, 60);
+        FrameLayout.LayoutParams minusParams = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24));
         minusParams.gravity = Gravity.TOP | Gravity.RIGHT;
-        minusParams.topMargin = 40;
-        minusParams.rightMargin = 20;
+        minusParams.topMargin = dpToPx(16);
+        minusParams.rightMargin = dpToPx(8);
         panel.addView(minusBtn, minusParams);
     }
     
@@ -274,32 +299,32 @@ public class VirtualKeyboard {
         
         // ABXY Buttons
         View abxy = createABXY();
-        FrameLayout.LayoutParams abxyParams = new FrameLayout.LayoutParams(300, 300);
+        FrameLayout.LayoutParams abxyParams = new FrameLayout.LayoutParams(dpToPx(120), dpToPx(120));
         abxyParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        abxyParams.topMargin = 80;
+        abxyParams.topMargin = dpToPx(30);
         panel.addView(abxy, abxyParams);
         
         // Right Stick (Decor for now)
         View stick = createJoystick(false); // Right stick
-        FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(150, 150);
+        FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(dpToPx(60), dpToPx(60));
         stickParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        stickParams.bottomMargin = 100;
+        stickParams.bottomMargin = dpToPx(40);
         panel.addView(stick, stickParams);
         
         // Plus Button
         Button plusBtn = createRoundButton("+", 12, () -> sendKey(KeyEvent.KEYCODE_P)); // P for Pause
-        FrameLayout.LayoutParams plusParams = new FrameLayout.LayoutParams(60, 60);
+        FrameLayout.LayoutParams plusParams = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24));
         plusParams.gravity = Gravity.TOP | Gravity.LEFT;
-        plusParams.topMargin = 40;
-        plusParams.leftMargin = 20;
+        plusParams.topMargin = dpToPx(16);
+        plusParams.leftMargin = dpToPx(8);
         panel.addView(plusBtn, plusParams);
         
         // Home Button
         Button homeBtn = createRoundButton("⌂", 14, () -> sendKey(KeyEvent.KEYCODE_F5)); // F5 for Save
-        FrameLayout.LayoutParams homeParams = new FrameLayout.LayoutParams(70, 70);
+        FrameLayout.LayoutParams homeParams = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28));
         homeParams.gravity = Gravity.BOTTOM | Gravity.RIGHT;
-        homeParams.bottomMargin = 20;
-        homeParams.rightMargin = 40;
+        homeParams.bottomMargin = dpToPx(8);
+        homeParams.rightMargin = dpToPx(16);
         panel.addView(homeBtn, homeParams);
     }
     
@@ -309,7 +334,7 @@ public class VirtualKeyboard {
         GradientDrawable shape = new GradientDrawable();
         shape.setShape(GradientDrawable.OVAL);
         shape.setColor(0x88333333);
-        shape.setStroke(2, 0xFF666666);
+        shape.setStroke(dpToPx(1), 0xFF666666);
         stickBase.setBackground(shape);
         
         if (isLeft) {
@@ -328,12 +353,13 @@ public class VirtualKeyboard {
                          float dx = event.getX() - centerX;
                          float dy = event.getY() - centerY;
                          // Simple 4-way direction logic
+                         int threshold = dpToPx(8);
                          if (Math.abs(dx) > Math.abs(dy)) {
-                             if (dx > 20) sendKeyOnce(KeyEvent.KEYCODE_D);
-                             else if (dx < -20) sendKeyOnce(KeyEvent.KEYCODE_A);
+                             if (dx > threshold) sendKeyOnce(KeyEvent.KEYCODE_D);
+                             else if (dx < -threshold) sendKeyOnce(KeyEvent.KEYCODE_A);
                          } else {
-                             if (dy > 20) sendKeyOnce(KeyEvent.KEYCODE_S);
-                             else if (dy < -20) sendKeyOnce(KeyEvent.KEYCODE_W);
+                             if (dy > threshold) sendKeyOnce(KeyEvent.KEYCODE_S);
+                             else if (dy < -threshold) sendKeyOnce(KeyEvent.KEYCODE_W);
                          }
                      }
                      return true;
@@ -347,7 +373,7 @@ public class VirtualKeyboard {
         // Cross layout container
         RelativeLayout dpad = new RelativeLayout(activity);
         
-        int btnSize = 70;
+        int btnSize = dpToPx(30);
         
         Button up = createArrowButton("▲", KeyEvent.KEYCODE_W); // Up
         Button down = createArrowButton("▼", KeyEvent.KEYCODE_S); // Down
@@ -380,7 +406,7 @@ public class VirtualKeyboard {
     
     private View createABXY() {
         RelativeLayout abxy = new RelativeLayout(activity);
-        int btnSize = 80;
+        int btnSize = dpToPx(35);
         
         // X (Top) -> H (Skill/Heal)
         Button btnX = createRoundButton("X", 14, () -> sendKey(KeyEvent.KEYCODE_H));
@@ -427,7 +453,7 @@ public class VirtualKeyboard {
         GradientDrawable shape = new GradientDrawable();
         shape.setShape(GradientDrawable.OVAL);
         shape.setColor(0xAA444444);
-        shape.setStroke(2, 0xFF888888);
+        shape.setStroke(dpToPx(1), 0xFF888888);
         btn.setBackground(shape);
         
         btn.setOnClickListener(v -> action.run());
@@ -619,6 +645,16 @@ public class VirtualKeyboard {
 
     private void refreshKeyboardLayout() {
         if (keyboardContainer == null || screenWidth == 0 || screenHeight == 0) return;
+
+        if (currentMode == InputMode.GAMEPAD) {
+            // 手柄模式下确保占满全屏，且不重置子View
+            ViewGroup.LayoutParams params = keyboardContainer.getLayoutParams();
+            if (params.height != ViewGroup.LayoutParams.MATCH_PARENT) {
+                params.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                keyboardContainer.setLayoutParams(params);
+            }
+            return;
+        }
 
         keyboardContainer.removeAllViews();
 
