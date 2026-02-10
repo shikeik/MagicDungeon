@@ -178,7 +178,7 @@ outputs/MagicDungeon.exe4j
 #MagicDungeon/UserProjects/
 #MagicDungeon/engine_docs/
 #MagicDungeon/engine_config.json
-/MagicDungeon/
+MagicDungeon/
 /assets/engine.index
 /assets/engine/libs/
 /assets/assets.txt
