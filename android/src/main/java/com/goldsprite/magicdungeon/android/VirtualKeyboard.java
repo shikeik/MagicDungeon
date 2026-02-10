@@ -1,6 +1,8 @@
 package com.goldsprite.magicdungeon.android;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -154,6 +156,12 @@ public class VirtualKeyboard {
                 return false;
             }
         });
+        
+        // 长按弹出模式选择
+        floatingToggleBtn.setOnLongClickListener(v -> {
+            showModeSelectionDialog();
+            return true;
+        });
 
         floatingToggleBtn.setAlpha(0.3f);
         parentView.addView(floatingToggleBtn);
@@ -204,7 +212,7 @@ public class VirtualKeyboard {
         
         // Left Panel (30% width)
         FrameLayout leftPanel = new FrameLayout(activity);
-        leftPanel.setBackgroundColor(0x66000000); // Semi-transparent black
+        leftPanel.setBackgroundColor(0xAA000000); // 增加透明度，确保可见
         LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
         leftPanel.setLayoutParams(leftParams);
@@ -220,7 +228,7 @@ public class VirtualKeyboard {
         
         // Right Panel (30% width)
         FrameLayout rightPanel = new FrameLayout(activity);
-        rightPanel.setBackgroundColor(0x66000000);
+        rightPanel.setBackgroundColor(0xAA000000);
         LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(
             0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
         rightPanel.setLayoutParams(rightParams);
@@ -234,21 +242,6 @@ public class VirtualKeyboard {
         RelativeLayout.LayoutParams kbParams = new RelativeLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
         parentView.addView(keyboardContainer, kbParams);
-        
-        // Add Mode Switch Button (Top Center of Right Panel or Floating?)
-        // Let's put it in the top-right corner of the screen via floating button logic or inside panel
-        // For now, let's add a small switch button in the right panel top corner
-        Button switchBtn = new Button(activity);
-        switchBtn.setText("Switch Mode");
-        switchBtn.setTextSize(10);
-        FrameLayout.LayoutParams swParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        swParams.gravity = Gravity.TOP | Gravity.RIGHT;
-        rightPanel.addView(switchBtn, swParams);
-        
-        switchBtn.setOnClickListener(v -> {
-            toggleInputMode();
-        });
     }
 
     private void createLeftJoyCon(FrameLayout panel) {
@@ -471,22 +464,45 @@ public class VirtualKeyboard {
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }
 
-    private void toggleInputMode() {
-        if (currentMode == InputMode.FULL_KEYBOARD) {
-            currentMode = InputMode.GAMEPAD;
-        } else {
-            currentMode = InputMode.FULL_KEYBOARD;
-        }
+    private void showModeSelectionDialog() {
+        String[] modes = {"全键盘模式 (Full Keyboard)", "手柄模式 (Gamepad)"};
+        int checkedItem = currentMode == InputMode.FULL_KEYBOARD ? 0 : 1;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("选择输入模式");
+        builder.setSingleChoiceItems(modes, checkedItem, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                InputMode newMode = which == 0 ? InputMode.FULL_KEYBOARD : InputMode.GAMEPAD;
+                if (newMode != currentMode) {
+                    currentMode = newMode;
+                    // Switch mode
+                    toggleInputMode(newMode);
+                }
+                dialog.dismiss();
+            }
+        });
+        builder.show();
+    }
+
+    private void toggleInputMode(InputMode newMode) {
+        currentMode = newMode;
         
         // Remove old UI
-        parentView.removeView(keyboardContainer);
-        keyboardContainer = null;
+        if (keyboardContainer != null) {
+            parentView.removeView(keyboardContainer);
+            keyboardContainer = null;
+        }
         
         // Re-init UI
         initUI();
         
         // Refresh visibility state
         setKeyboardVisibility(isKeyboardVisible);
+    }
+
+    private void toggleInputMode() {
+        toggleInputMode(currentMode == InputMode.FULL_KEYBOARD ? InputMode.GAMEPAD : InputMode.FULL_KEYBOARD);
     }
 
     private void dockFloatingButton(View v) {
