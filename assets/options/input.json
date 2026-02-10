@@ -1,0 +1,19 @@
+{
+  "MOVE_UP": { "keyboard": [19, 51], "controller": [10] },
+  "MOVE_DOWN": { "keyboard": [20, 47], "controller": [11] },
+  "MOVE_LEFT": { "keyboard": [21, 29], "controller": [12] },
+  "MOVE_RIGHT": { "keyboard": [22, 32], "controller": [13] },
+  
+  "ATTACK": { "keyboard": [38, 99], "controller": [2] },
+  "INTERACT": { "keyboard": [62, 96], "controller": [0] },
+  "SKILL": { "keyboard": [36, 105], "controller": [5] },
+  "BACK": { "keyboard": [111, 67, 97], "controller": [1] },
+  
+  "MAP": { "keyboard": [41, 100], "controller": [3] },
+  "BAG": { "keyboard": [33, 103], "controller": [4] },
+  "PAUSE": { "keyboard": [44, 108], "controller": [7] },
+  
+  "TAB": { "keyboard": [61, 104], "controller": [8] },
+  "QUICK_SLOT": { "keyboard": [45, 102], "controller": [9] },
+  "SAVE": { "keyboard": [244], "controller": [] }
+}

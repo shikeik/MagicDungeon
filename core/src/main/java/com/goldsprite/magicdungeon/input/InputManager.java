@@ -54,11 +54,15 @@ public class InputManager {
     }
 
     private void loadMappings() {
-        FileHandle file = Gdx.files.internal("data/input_mapping.json");
+        FileHandle file = Gdx.files.internal("options/input.json");
         if (!file.exists()) {
-            Debug.log("InputManager", "Config not found, using defaults.");
-            setDefaultMappings();
-            return;
+            Debug.log("InputManager", "Config not found at options/input.json, checking data/input_mapping.json...");
+            file = Gdx.files.internal("data/input_mapping.json");
+            if (!file.exists()) {
+                Debug.log("InputManager", "No config found, using defaults.");
+                setDefaultMappings();
+                return;
+            }
         }
         
         try {
@@ -103,17 +107,17 @@ public class InputManager {
         mapK(InputAction.MOVE_LEFT, Input.Keys.A, Input.Keys.LEFT);
         mapK(InputAction.MOVE_RIGHT, Input.Keys.D, Input.Keys.RIGHT);
         
-        mapK(InputAction.ATTACK, Input.Keys.J); // X
-        mapK(InputAction.INTERACT, Input.Keys.SPACE); // A
-        mapK(InputAction.SKILL, Input.Keys.H); // RT
-        mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.DEL); // B
+        mapK(InputAction.ATTACK, Input.Keys.J, Input.Keys.BUTTON_X); // X
+        mapK(InputAction.INTERACT, Input.Keys.SPACE, Input.Keys.BUTTON_A); // A
+        mapK(InputAction.SKILL, Input.Keys.H, Input.Keys.BUTTON_R2); // RT
+        mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.DEL, Input.Keys.BUTTON_B); // B
         
-        mapK(InputAction.MAP, Input.Keys.M); // Y
-        mapK(InputAction.BAG, Input.Keys.E); // RB
-        mapK(InputAction.PAUSE, Input.Keys.P); // Start
+        mapK(InputAction.MAP, Input.Keys.M, Input.Keys.BUTTON_Y); // Y
+        mapK(InputAction.BAG, Input.Keys.E, Input.Keys.BUTTON_R1); // RB
+        mapK(InputAction.PAUSE, Input.Keys.P, Input.Keys.BUTTON_START); // Start
         
-        mapK(InputAction.TAB, Input.Keys.TAB); // LT
-        mapK(InputAction.QUICK_SLOT, Input.Keys.Q); // LB
+        mapK(InputAction.TAB, Input.Keys.TAB, Input.Keys.BUTTON_L2); // LT
+        mapK(InputAction.QUICK_SLOT, Input.Keys.Q, Input.Keys.BUTTON_L1); // LB
         mapK(InputAction.SAVE, Input.Keys.F5); // Home
 
         // Controller Defaults (Xbox)
@@ -169,7 +173,10 @@ public class InputManager {
         List<Integer> keys = keyboardMappings.get(action);
         if (keys != null) {
             for (int key : keys) {
-                if (Gdx.input.isKeyJustPressed(key)) return true;
+                if (Gdx.input.isKeyJustPressed(key)) {
+                    Debug.log("InputManager", "Action JustPressed: " + action + " (Key: " + Input.Keys.toString(key) + ")");
+                    return true;
+                }
             }
         }
         
