@@ -74,7 +74,11 @@ public class VirtualKeyboard {
         
         initKeyMap();
         initGestureDetector(); // 初始化手势检测
-        // UI 初始化需要在主线程进行
+        
+        // 初始化悬浮按钮 (只创建一次)
+        initFloatingButton();
+        
+        // UI 初始化
         initUI();
     }
 
@@ -100,14 +104,8 @@ public class VirtualKeyboard {
         return (int) (dp * activity.getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    private void initUI() {
-        if (currentMode == InputMode.FULL_KEYBOARD) {
-            initFullKeyboardUI();
-        } else if (currentMode == InputMode.GAMEPAD) {
-            initGamepadUI();
-        }
-
-        // --- 悬浮开关按钮 (公共) ---
+    private void initFloatingButton() {
+        // --- 悬浮开关按钮 ---
         floatingToggleBtn = new Button(activity);
         floatingToggleBtn.setText("⌨");
         floatingToggleBtn.setTextColor(Color.CYAN);
@@ -185,9 +183,6 @@ public class VirtualKeyboard {
             }
         });
         
-        // 长按逻辑已移至 GestureDetector
-        // floatingToggleBtn.setOnLongClickListener... 已移除
-
         floatingToggleBtn.setAlpha(0.3f);
         parentView.addView(floatingToggleBtn);
 
@@ -205,11 +200,17 @@ public class VirtualKeyboard {
                 floatingToggleBtn.setY(screenHeight / 4f - floatingToggleBtn.getHeight() / 2f);
                 dockFloatingButton(floatingToggleBtn);
             }
-            // 确保键盘布局也被刷新，因为现在有了尺寸
-            refreshKeyboardLayout();
         });
+    }
+
+    private void initUI() {
+        if (currentMode == InputMode.FULL_KEYBOARD) {
+            initFullKeyboardUI();
+        } else if (currentMode == InputMode.GAMEPAD) {
+            initGamepadUI();
+        }
         
-        // 初始布局刷新 (虽然 post 里面也会刷，但这里先刷一次以防万一)
+        // 刷新布局
         refreshKeyboardLayout();
     }
 
@@ -329,44 +330,87 @@ public class VirtualKeyboard {
     }
     
     private View createJoystick(boolean isLeft) {
-        // Simple circle view for now, logic later
+        // 使用 FrameLayout 作为容器
+        FrameLayout stickContainer = new FrameLayout(activity);
+        
+        // 底座
         View stickBase = new View(activity);
-        GradientDrawable shape = new GradientDrawable();
-        shape.setShape(GradientDrawable.OVAL);
-        shape.setColor(0x88333333);
-        shape.setStroke(dpToPx(1), 0xFF666666);
-        stickBase.setBackground(shape);
+        GradientDrawable baseShape = new GradientDrawable();
+        baseShape.setShape(GradientDrawable.OVAL);
+        baseShape.setColor(0x88333333);
+        baseShape.setStroke(dpToPx(2), 0xFF666666);
+        stickBase.setBackground(baseShape);
+        
+        FrameLayout.LayoutParams baseParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        stickContainer.addView(stickBase, baseParams);
+        
+        // 摇杆头 (Knob)
+        View stickKnob = new View(activity);
+        GradientDrawable knobShape = new GradientDrawable();
+        knobShape.setShape(GradientDrawable.OVAL);
+        knobShape.setColor(0xAA888888); // 亮一点的灰色
+        knobShape.setStroke(dpToPx(1), 0xFFAAAAAA);
+        stickKnob.setBackground(knobShape);
+        
+        int knobSize = isLeft ? dpToPx(30) : dpToPx(25); // 左摇杆稍大
+        FrameLayout.LayoutParams knobParams = new FrameLayout.LayoutParams(knobSize, knobSize);
+        knobParams.gravity = Gravity.CENTER;
+        stickContainer.addView(stickKnob, knobParams);
         
         if (isLeft) {
              // Attach touch listener for movement
-             stickBase.setOnTouchListener(new View.OnTouchListener() {
+             stickContainer.setOnTouchListener(new View.OnTouchListener() {
                  private float centerX, centerY;
+                 private float maxRadius;
                  
                  @Override
                  public boolean onTouch(View v, MotionEvent event) {
                      if (event.getAction() == MotionEvent.ACTION_DOWN) {
                          centerX = v.getWidth() / 2f;
                          centerY = v.getHeight() / 2f;
+                         maxRadius = v.getWidth() / 3f; // 限制移动范围
+                         stickKnob.setAlpha(0.7f);
                      }
                      
                      if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_DOWN) {
                          float dx = event.getX() - centerX;
                          float dy = event.getY() - centerY;
-                         // Simple 4-way direction logic
-                         int threshold = dpToPx(8);
-                         if (Math.abs(dx) > Math.abs(dy)) {
-                             if (dx > threshold) sendKeyOnce(KeyEvent.KEYCODE_D);
-                             else if (dx < -threshold) sendKeyOnce(KeyEvent.KEYCODE_A);
-                         } else {
-                             if (dy > threshold) sendKeyOnce(KeyEvent.KEYCODE_S);
-                             else if (dy < -threshold) sendKeyOnce(KeyEvent.KEYCODE_W);
+                         
+                         // 限制摇杆头移动范围
+                         float distance = (float) Math.sqrt(dx * dx + dy * dy);
+                         if (distance > maxRadius) {
+                             float ratio = maxRadius / distance;
+                             dx *= ratio;
+                             dy *= ratio;
                          }
+                         
+                         stickKnob.setTranslationX(dx);
+                         stickKnob.setTranslationY(dy);
+
+                         // 逻辑触发
+                         int threshold = dpToPx(8);
+                         // 重置 dx, dy 为原始偏移量用于判断方向，或者直接用限制后的
+                         // 这里简单起见，使用原始偏移量判断方向，灵敏度更高
+                         float rawDx = event.getX() - centerX;
+                         float rawDy = event.getY() - centerY;
+                         
+                         if (Math.abs(rawDx) > Math.abs(rawDy)) {
+                             if (rawDx > threshold) sendKeyOnce(KeyEvent.KEYCODE_D);
+                             else if (rawDx < -threshold) sendKeyOnce(KeyEvent.KEYCODE_A);
+                         } else {
+                             if (rawDy > threshold) sendKeyOnce(KeyEvent.KEYCODE_S);
+                             else if (rawDy < -threshold) sendKeyOnce(KeyEvent.KEYCODE_W);
+                         }
+                     } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                         stickKnob.animate().translationX(0).translationY(0).setDuration(100).start();
+                         stickKnob.setAlpha(1.0f);
                      }
                      return true;
                  }
              });
         }
-        return stickBase;
+        return stickContainer;
     }
     
     private View createDPad() {
@@ -449,6 +493,8 @@ public class VirtualKeyboard {
         btn.setText(text);
         btn.setTextSize(textSize);
         btn.setTextColor(Color.WHITE);
+        btn.setGravity(Gravity.CENTER);
+        btn.setPadding(0, 0, 0, 0); // 移除内边距，确保文字居中
         
         GradientDrawable shape = new GradientDrawable();
         shape.setShape(GradientDrawable.OVAL);
@@ -456,7 +502,18 @@ public class VirtualKeyboard {
         shape.setStroke(dpToPx(1), 0xFF888888);
         btn.setBackground(shape);
         
-        btn.setOnClickListener(v -> action.run());
+        btn.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                v.setAlpha(0.6f);
+                android.util.Log.d("VirtualKeyboard", "Button Down: " + text);
+                action.run(); // Trigger action
+            } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                v.setAlpha(1.0f);
+                android.util.Log.d("VirtualKeyboard", "Button Up: " + text);
+            }
+            return true;
+        });
+        
         return btn;
     }
     
@@ -464,13 +521,19 @@ public class VirtualKeyboard {
         Button btn = new Button(activity);
         btn.setText(text);
         btn.setTextColor(Color.WHITE);
+        btn.setGravity(Gravity.CENTER);
+        btn.setPadding(0, 0, 0, 0);
         btn.setBackgroundColor(0xAA333333); // Simple square/rect
         btn.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 v.setPressed(true);
+                v.setAlpha(0.6f);
+                android.util.Log.d("VirtualKeyboard", "Key Down: " + text);
                 activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
             } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                 v.setPressed(false);
+                v.setAlpha(1.0f);
+                android.util.Log.d("VirtualKeyboard", "Key Up: " + text);
                 activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
             }
             return true;
@@ -479,6 +542,7 @@ public class VirtualKeyboard {
     }
     
     private void sendKey(int keyCode) {
+        android.util.Log.d("VirtualKeyboard", "sendKey: " + keyCode);
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }
@@ -486,6 +550,7 @@ public class VirtualKeyboard {
     private void sendKeyOnce(int keyCode) {
         // For joystick continuous hold, we might need state management
         // This is a simplified version
+        android.util.Log.d("VirtualKeyboard", "Joystick Key: " + keyCode);
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }
@@ -501,9 +566,10 @@ public class VirtualKeyboard {
             public void onClick(DialogInterface dialog, int which) {
                 InputMode newMode = which == 0 ? InputMode.FULL_KEYBOARD : InputMode.GAMEPAD;
                 if (newMode != currentMode) {
-                    currentMode = newMode;
-                    // Switch mode
                     toggleInputMode(newMode);
+                    // 切换模式后自动打开键盘
+                    setKeyboardVisibility(true);
+                    dockFloatingButton(floatingToggleBtn);
                 }
                 dialog.dismiss();
             }
@@ -524,7 +590,9 @@ public class VirtualKeyboard {
         initUI();
         
         // Refresh visibility state
-        setKeyboardVisibility(isKeyboardVisible);
+        if (isKeyboardVisible) {
+            setKeyboardVisibility(true);
+        }
     }
 
     private void toggleInputMode() {
