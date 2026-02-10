@@ -48,6 +48,9 @@ public class DebugConsole extends Group {
 	private float updateTimer = 0;
 	private final float REFRESH_RATE = 1/60f; // UI 刷新频率
 
+	// 控制状态
+	private boolean autoScroll = true; // 默认开启自动滚动
+
 	float resizeHandleHeight = 14;
 
 	private final TextureRegionDrawable backDrawable, back2Drawable, dragDrawable;
@@ -98,6 +101,34 @@ public class DebugConsole extends Group {
 		VisTextButton btnIntro = createTabBtn("INTRO", () -> showTab(introScroll));
 		VisTextButton btnLog = createTabBtn("LOG", () -> showTab(logScroll));
 		VisTextButton btnInfo = createTabBtn("INFO", () -> showTab(infoScroll));
+
+		// Auto Scroll Button
+		VisTextButton btnAutoScroll = new VisTextButton("AutoScroll: ON");
+		btnAutoScroll.setColor(Color.GREEN);
+		btnAutoScroll.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				autoScroll = !autoScroll;
+				if (autoScroll) {
+					btnAutoScroll.setText("AutoScroll: ON");
+					btnAutoScroll.setColor(Color.GREEN);
+				} else {
+					btnAutoScroll.setText("AutoScroll: OFF");
+					btnAutoScroll.setColor(Color.GRAY);
+				}
+			}
+		});
+
+		// Clear Button
+		VisTextButton btnClear = new VisTextButton("Clear");
+		btnClear.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				Debug.logMessages.clear();
+				logLabel.setText(""); // 立即清空文本
+			}
+		});
+
 		VisTextButton btnClose = new VisTextButton(" X ");
 		btnClose.setColor(Color.RED);
 		btnClose.addListener(new ClickListener() {
@@ -111,6 +142,8 @@ public class DebugConsole extends Group {
 		header.add(btnLog).width(80).padRight(5);
 		header.add(btnInfo).width(80).padRight(5);
 		header.add().expandX();
+		header.add(btnAutoScroll).padRight(10);
+		header.add(btnClear).padRight(10);
 		header.add(btnClose).width(50);
 		panel.add(header).growX().height(40).pad(5).row();
 
@@ -259,9 +292,13 @@ public class DebugConsole extends Group {
 			if (contentContainer.getActor() == logScroll) {
 				logLabel.setText(String.join("\n", Debug.getLogs()));
 
-//				if (logScroll.getScrollY() >= logScroll.getMaxY() - 50) {
-//					logScroll.layout(); logScroll.setScrollY(logScroll.getMaxY());
-//				}
+				if (autoScroll) {
+					// 只有在自动滚动开启时才执行
+					// 增加一个小的容差或强制到底
+					logScroll.layout();
+					logScroll.setScrollY(logScroll.getMaxY());
+					logScroll.setVelocityY(0);
+				}
 			} else if (contentContainer.getActor() == infoScroll) {
 				infoLabel.setText(Debug.getInfoString());
 			}

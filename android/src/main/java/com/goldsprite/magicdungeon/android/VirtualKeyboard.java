@@ -106,7 +106,7 @@ public class VirtualKeyboard {
         // 取 0.15 和 最小需求比例 中的较大值，确保按键不溢出
         this.GAMEPAD_PANEL_RATIO = Math.max(0.15f, minRatio);
 
-        Debug.log("VirtualKeyboard", "Screen: " + screenWidth + ", MinPx: " + minPx + ", Ratio: " + GAMEPAD_PANEL_RATIO);
+        Debug.logT("VirtualKeyboard", "Screen: %d, MinPx: %d, Ratio: %.2f", screenWidth, minPx, GAMEPAD_PANEL_RATIO);
     }
 
     private void initGestureDetector() {
@@ -300,14 +300,14 @@ public class VirtualKeyboard {
         // Layout: Top=Stick, Bottom=D-Pad
 
         // LB/LT Buttons
-        Button lt = createRoundButton("LT", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_L2));
+        Button lt = createRoundButton("LT", 12, KeyEvent.KEYCODE_BUTTON_L2);
         FrameLayout.LayoutParams ltParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(30));
         ltParams.gravity = Gravity.TOP | Gravity.LEFT;
         ltParams.topMargin = dpToPx(5);
         ltParams.leftMargin = dpToPx(5);
         panel.addView(lt, ltParams);
 
-        Button lb = createRoundButton("LB", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_L1));
+        Button lb = createRoundButton("LB", 12, KeyEvent.KEYCODE_BUTTON_L1);
         FrameLayout.LayoutParams lbParams = new FrameLayout.LayoutParams(dpToPx(50), dpToPx(30));
         lbParams.gravity = Gravity.TOP | Gravity.RIGHT;
         lbParams.topMargin = dpToPx(20);
@@ -329,7 +329,7 @@ public class VirtualKeyboard {
         panel.addView(dpad, dpadParams);
 
         // Select / Back
-        Button selectBtn = createRoundButton("Back", 10, () -> sendKey(KeyEvent.KEYCODE_BUTTON_SELECT));
+        Button selectBtn = createRoundButton("Back", 10, KeyEvent.KEYCODE_BUTTON_SELECT);
         FrameLayout.LayoutParams selectParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(24));
         selectParams.gravity = Gravity.CENTER_VERTICAL | Gravity.RIGHT;
         selectParams.rightMargin = dpToPx(5);
@@ -338,14 +338,14 @@ public class VirtualKeyboard {
 
     private void createRightJoyCon(FrameLayout panel) {
         // RB/RT Buttons
-        Button rt = createRoundButton("RT", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_R2));
+        Button rt = createRoundButton("RT", 12, KeyEvent.KEYCODE_BUTTON_R2);
         FrameLayout.LayoutParams rtParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(30));
         rtParams.gravity = Gravity.TOP | Gravity.RIGHT;
         rtParams.topMargin = dpToPx(5);
         rtParams.rightMargin = dpToPx(5);
         panel.addView(rt, rtParams);
 
-        Button rb = createRoundButton("RB", 12, () -> sendKey(KeyEvent.KEYCODE_BUTTON_R1));
+        Button rb = createRoundButton("RB", 12, KeyEvent.KEYCODE_BUTTON_R1);
         FrameLayout.LayoutParams rbParams = new FrameLayout.LayoutParams(dpToPx(50), dpToPx(30));
         rbParams.gravity = Gravity.TOP | Gravity.LEFT;
         rbParams.topMargin = dpToPx(20);
@@ -367,14 +367,14 @@ public class VirtualKeyboard {
         panel.addView(stick, stickParams);
 
         // Start
-        Button startBtn = createRoundButton("Start", 10, () -> sendKey(KeyEvent.KEYCODE_BUTTON_START));
+        Button startBtn = createRoundButton("Start", 10, KeyEvent.KEYCODE_BUTTON_START);
         FrameLayout.LayoutParams startParams = new FrameLayout.LayoutParams(dpToPx(40), dpToPx(24));
         startParams.gravity = Gravity.CENTER_VERTICAL | Gravity.LEFT;
         startParams.leftMargin = dpToPx(5);
         panel.addView(startBtn, startParams);
 
         // Home Button
-        Button homeBtn = createRoundButton("⌂", 14, () -> sendKey(KeyEvent.KEYCODE_HOME));
+        Button homeBtn = createRoundButton("⌂", 14, KeyEvent.KEYCODE_HOME);
         FrameLayout.LayoutParams homeParams = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28));
         homeParams.gravity = Gravity.BOTTOM | Gravity.RIGHT;
         homeParams.bottomMargin = dpToPx(8);
@@ -521,13 +521,13 @@ public class VirtualKeyboard {
         // Left: X
 
         // Y (Top)
-        Button btnY = createRoundButton("Y", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_Y));
+        Button btnY = createRoundButton("Y", 14, KeyEvent.KEYCODE_BUTTON_Y);
         // B (Right)
-        Button btnB = createRoundButton("B", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_B));
+        Button btnB = createRoundButton("B", 14, KeyEvent.KEYCODE_BUTTON_B);
         // A (Bottom)
-        Button btnA = createRoundButton("A", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_A));
+        Button btnA = createRoundButton("A", 14, KeyEvent.KEYCODE_BUTTON_A);
         // X (Left)
-        Button btnX = createRoundButton("X", 14, () -> sendKey(KeyEvent.KEYCODE_BUTTON_X));
+        Button btnX = createRoundButton("X", 14, KeyEvent.KEYCODE_BUTTON_X);
 
         // Layout Y (Top)
         RelativeLayout.LayoutParams yP = new RelativeLayout.LayoutParams(btnSize, btnSize);
@@ -556,7 +556,7 @@ public class VirtualKeyboard {
         return abxy;
     }
 
-    private Button createRoundButton(String text, int textSize, Runnable action) {
+    private Button createRoundButton(String text, int textSize, int keyCode) {
         Button btn = new Button(activity);
         btn.setText(text);
         btn.setTextSize(textSize);
@@ -570,11 +570,10 @@ public class VirtualKeyboard {
         btn.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 v.setPressed(true);
-                Debug.log("VirtualKeyboard", "Button Down: " + text);
-                action.run(); // Trigger action
+                sendKeyEvent(keyCode, true);
             } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                 v.setPressed(false);
-                Debug.log("VirtualKeyboard", "Button Up: " + text);
+                sendKeyEvent(keyCode, false);
             }
             return true;
         });
@@ -593,29 +592,33 @@ public class VirtualKeyboard {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 v.setPressed(true);
                 v.setAlpha(0.6f);
-                Debug.log("VirtualKeyboard", "Key Down: " + text);
-                activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
+                sendKeyEvent(keyCode, true);
             } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                 v.setPressed(false);
                 v.setAlpha(1.0f);
-                Debug.log("VirtualKeyboard", "Key Up: " + text);
-                activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+                sendKeyEvent(keyCode, false);
             }
             return true;
         });
         return btn;
     }
 
-    private void sendKey(int keyCode) {
-        Debug.log("VirtualKeyboard", "sendKey: " + keyCode);
-        activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-        activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+    private void sendKeyEvent(int keyCode, boolean isDown) {
+        String actionName = isDown ? "DOWN" : "UP";
+        String keyName = KeyEvent.keyCodeToString(keyCode);
+        Debug.logT("VirtualKeyboard", "Key: %s(%d) | Action: %s", keyName, keyCode, actionName);
+        
+        long time = System.currentTimeMillis();
+        int action = isDown ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP;
+        activity.dispatchKeyEvent(new KeyEvent(time, time, action, keyCode, 0));
     }
 
     private void sendKeyOnce(int keyCode) {
         // For joystick continuous hold, we might need state management
         // This is a simplified version
-        Debug.log("VirtualKeyboard", "Joystick Key: " + keyCode);
+        String keyName = KeyEvent.keyCodeToString(keyCode);
+        Debug.logT("VirtualKeyboard", "Joystick Key: %s(%d)", keyName, keyCode);
+        
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }
@@ -855,9 +858,7 @@ public class VirtualKeyboard {
 
         Integer code = keyMap.get(key);
         if (code != null) {
-            long time = System.currentTimeMillis();
-            int action = down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP;
-            activity.dispatchKeyEvent(new KeyEvent(time, time, action, code, 0));
+            sendKeyEvent(code, down);
         }
     }
 

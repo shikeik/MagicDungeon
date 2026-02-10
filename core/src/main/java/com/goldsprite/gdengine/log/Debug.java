@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Debug {
 	private static Debug instance;
@@ -24,33 +25,8 @@ public class Debug {
 		"Default Y",
 		"拦截 N",
 
-		// Engine
-		"Engine Y",
-		"Compiler Y",
-		"Script Y",
-		"Editor Y",
-		"GDProject-TEST Y",
-		"Hub Y",
-		"Runner Y",
-		"Asset Y",
-		"Config Y",
-		"AssetUtils Y",
-		"Exporter Y",
-		"AUTOMATION Y",
-		"Runner Y",
-		"Registry Y",
-		"System Y",
-		"SceneLoader Y",
-		"Project Y",
-		"Code Y",
-		"EditorPanel Y",
-		"WebBrowser Y",
-		"DocServer Y",
-		"ZipDownLoader Y",
-		"ToastUI Y",
-		"ProjectService Y",
-		"UserProject Y",
-		"Downloader Y",
+		//MagicDungeon
+		"VirtualKeyboard Y",
 
 		// Test
 		"TEST Y",
@@ -63,8 +39,8 @@ public class Debug {
 	private static final Logger logger = new Logger(LOG_TAG);
 
 	// 数据层 (构造时即可用)
-	public static List<String> logMessages = new ArrayList<>();
-	private static List<String> logInfos = new ArrayList<>();
+	public static List<String> logMessages = new CopyOnWriteArrayList<>();
+	private static List<String> logInfos = new CopyOnWriteArrayList<>();
 	public static boolean showDebugUI = true;
 	public static boolean shortcuts = true;
 	static int maxLogsCache = 100;
@@ -81,7 +57,6 @@ public class Debug {
 	// [修改] 构造函数只做最基础的数据准备，绝对不碰 UI
 	public Debug() {
 		instance = this;
-		// 移除 Stage 和 Console 的创建代码
 	}
 
 	public static Debug getInstance() {
