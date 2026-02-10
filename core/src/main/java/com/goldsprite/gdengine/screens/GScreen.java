@@ -58,6 +58,10 @@ public abstract class GScreen extends ScreenAdapter {
 		return PlatformImpl.defaultOrientation;
 	}
 
+	public boolean handleBackKey() {
+		return false; // 默认不处理，交由 ScreenManager 处理
+	}
+
 	public GScreen() {
 	}
 

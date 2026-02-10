@@ -579,6 +579,11 @@ public class GameScreen extends GScreen {
 
 
 	@Override
+	public boolean handleBackKey() {
+		return hud.handleBackKey();
+	}
+
+	@Override
 	public void render(float delta) {
 		handleInput(delta);
 

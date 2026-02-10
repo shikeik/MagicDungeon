@@ -294,13 +294,8 @@ public class GameHUD {
 				}
 			}
 
-			// Cancel / Close
-			if (input.isJustPressed(InputAction.UI_CANCEL)) {
-				hide();
-			}
-			
 			// BAG key logic is handled in GameScreen now to prevent "instant toggle" (open then immediately close in act)
-			// Or we can add a small delay/flag. 
+			// Or we can add a small delay/flag.
 			// But better: let GameScreen handle the "Toggle" logic, and here we only handle "Close" via ESC.
 			// However, user expects 'E' to also close it.
 			// The issue is: GameScreen detects 'E' -> calls toggleInventory() -> calls inventoryDialog.show()
@@ -1624,22 +1619,22 @@ public class GameHUD {
 	}
 
 	public boolean hasModalUI() {
-		return stage.getActors().contains(inventoryDialog, true) || 
+		return stage.getActors().contains(inventoryDialog, true) ||
 			   stage.getActors().contains(chestDialog, true) ||
 			   stage.getActors().contains(helpWindow, true);
 	}
-	
+
 	public boolean handleBackKey() {
 		if (stage.getActors().contains(inventoryDialog, true)) {
-			inventoryDialog.hide();
+			inventoryDialog.remove();
 			return true;
 		}
 		if (stage.getActors().contains(chestDialog, true)) {
-			chestDialog.hide();
+			inventoryDialog.remove();
 			return true;
 		}
 		if (stage.getActors().contains(helpWindow, true)) {
-			helpWindow.hide();
+			inventoryDialog.remove();
 			return true;
 		}
 		return false;

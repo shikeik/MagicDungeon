@@ -92,6 +92,14 @@ public class ScreenManager implements Disposable {
 
 				//从堆栈弹出并返回上个屏幕
 				if (keyCode == Input.Keys.BACK || keyCode == Input.Keys.ESCAPE) {
+					// 优先检查当前屏幕是否处理了 Back/Esc (例如关闭 UI 弹窗)
+					GScreen current = getCurScreen();
+					if (current != null) {
+						if (current.handleBackKey()) {
+							return true; // 已经被屏幕逻辑消费了（如关闭了背包）
+						}
+					}
+
 					if (!popLastScreen()) {
 						//如果已在最顶层则退出游戏
 						if (exitGame != null && !exitGame.isEmpty()) exitGame.forEach(r -> r.run());
