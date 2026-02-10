@@ -1,6 +1,5 @@
-package com.mygdx.game; // 你的包名，请根据项目实际情况修改
+package com.goldsprite.magicdungeon.screens.tests; // 你的包名，请根据项目实际情况修改
 
-import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
@@ -14,20 +13,18 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-
-import java.util.HashMap;
-import java.util.Map;
+import com.goldsprite.gdengine.screens.GScreen;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 
 /**
  * Star Assault 复刻版 - 单文件全功能版 (LibGDX 1.12.1)
  * 包含：核心物理、MVC结构、双端操作支持、内存纹理生成
  */
-public class StarAssault extends ApplicationAdapter {
+public class StarAssault extends GScreen {
 
     // --- 全局常量 ---
     public static final float CAMERA_WIDTH = 10f;  // 视口宽度（米）
@@ -42,7 +39,7 @@ public class StarAssault extends ApplicationAdapter {
     public void create() {
         // 1. 加载/生成资源
         Assets.load();
-
+        
         // 2. 初始化 MVC
         world = new World();
         controller = new WorldController(world);
@@ -50,10 +47,10 @@ public class StarAssault extends ApplicationAdapter {
     }
 
     @Override
-    public void render() {
+    public void render0(float delta) {
         // 更新逻辑 (使用 Gdx.graphics.getDeltaTime())
         controller.update(Gdx.graphics.getDeltaTime());
-
+        
         // 渲染画面
         renderer.render();
     }
@@ -133,7 +130,7 @@ public class StarAssault extends ApplicationAdapter {
             blocks.add(new Block(new Vector2(6, 3)));
             blocks.add(new Block(new Vector2(6, 4)));
             blocks.add(new Block(new Vector2(6, 5)));
-
+            
             blocks.add(new Block(new Vector2(0, 1)));
             blocks.add(new Block(new Vector2(0, 2)));
             blocks.add(new Block(new Vector2(0, 3)));
@@ -161,7 +158,7 @@ public class StarAssault extends ApplicationAdapter {
         // 触摸区域矩形 (归一化 0-1)
         private Rectangle touchLeft = new Rectangle(0, 0, 0.25f, 0.5f);
         private Rectangle touchRight = new Rectangle(0.25f, 0, 0.25f, 0.5f);
-
+        
         public WorldController(World world) {
             this.world = world;
             this.bob = world.bob;
@@ -169,14 +166,14 @@ public class StarAssault extends ApplicationAdapter {
 
         public void update(float delta) {
             processInput();
-
+            
             // 应用重力
             bob.acceleration.y = GRAVITY;
-
+            
             // 物理计算
             bob.acceleration.scl(delta);
             bob.velocity.add(bob.acceleration);
-
+            
             // 阻尼
             if (bob.state != Bob.State.JUMPING && !leftPressed && !rightPressed) {
                 bob.velocity.x *= DAMP;
@@ -188,7 +185,7 @@ public class StarAssault extends ApplicationAdapter {
 
             // 核心更新
             bob.update(delta);
-
+            
             // 碰撞检测 (先X后Y)
             bob.position.x += bob.velocity.x * delta;
             bob.bounds.x = bob.position.x;
@@ -219,7 +216,7 @@ public class StarAssault extends ApplicationAdapter {
                     float y = (float)Gdx.input.getY(i) / Gdx.graphics.getHeight();
                     // y坐标在 input 中通常是反的，但在归一化逻辑里我们只看区域
                     // 修正：Gdx input y是向下增长，我们用 1-y 翻转或者直接判断
-
+                    
                     // 简单粗暴的区域判断
                     if (x < 0.2f) leftPressed = true; // 屏幕左边20%区域
                     else if (x > 0.2f && x < 0.4f) rightPressed = true; // 20%-40%区域
@@ -293,9 +290,9 @@ public class StarAssault extends ApplicationAdapter {
             this.world = world;
             // 使用 FitViewport 保持比例
             cam = new OrthographicCamera();
-            viewport = new FitViewport(CAMERA_WIDTH, CAMERA_HEIGHT, cam);
+            viewport = new ExtendViewport(CAMERA_WIDTH, CAMERA_HEIGHT, cam);
             viewport.apply();
-
+            
             cam.position.set(CAMERA_WIDTH / 2f, CAMERA_HEIGHT / 2f, 0);
             batch = new SpriteBatch();
             debugRenderer = new ShapeRenderer();
@@ -304,7 +301,7 @@ public class StarAssault extends ApplicationAdapter {
         public void render() {
             cam.update();
             batch.setProjectionMatrix(cam.combined);
-
+            
             ScreenUtils.clear(0, 0, 0, 1);
 
             batch.begin();
@@ -339,13 +336,13 @@ public class StarAssault extends ApplicationAdapter {
             debugRenderer.setProjectionMatrix(batch.getProjectionMatrix().cpy().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
             Gdx.gl.glEnable(GL20.GL_BLEND);
             Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
+            
             debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
             debugRenderer.setColor(1, 1, 1, 0.1f); // 极淡的白色
-
+            
             float w = Gdx.graphics.getWidth();
             float h = Gdx.graphics.getHeight();
-
+            
             // 左按钮区域
             debugRenderer.rect(0, 0, w * 0.2f, h * 0.3f);
             // 右按钮区域
@@ -353,7 +350,7 @@ public class StarAssault extends ApplicationAdapter {
             // 跳跃提示
             debugRenderer.setColor(1, 1, 1, 0.05f);
             debugRenderer.rect(w * 0.6f, 0, w * 0.4f, h * 0.5f);
-
+            
             debugRenderer.end();
         }
 
@@ -398,7 +395,7 @@ public class StarAssault extends ApplicationAdapter {
             // --- 2. 画 Bob (绿色像素人) ---
             // 为了简单，我们手动画几个简易帧
             pixmap.setColor(Color.GREEN);
-
+            
             // Frame 1: Idle (xy: 51, 31, 24x28) - 站立
             drawBobFrame(pixmap, 51, 31, false);
 
@@ -437,14 +434,14 @@ public class StarAssault extends ApplicationAdapter {
 
         // 辅助方法：画一个简单的火柴人 Bob
         private static void drawBobFrame(Pixmap p, int x, int y, int w, int h) {
-			p.fillRectangle(x + 6, y, 12, 12); // 头
-			p.fillRectangle(x + 8, y + 12, 8, 10); // 身体
-			p.fillRectangle(x + 2, y + 12, 6, 6); // 左手
-			p.fillRectangle(x + 16, y + 12, 6, 6); // 右手
-			p.fillRectangle(x + 6, y + 22, 4, 6); // 左脚
-			p.fillRectangle(x + 14, y + 22, 4, 6); // 右脚
+             p.fillRectangle(x + 6, y, 12, 12); // 头
+             p.fillRectangle(x + 8, y + 12, 8, 10); // 身体
+             p.fillRectangle(x + 2, y + 12, 6, 6); // 左手
+             p.fillRectangle(x + 16, y + 12, 6, 6); // 右手
+             p.fillRectangle(x + 6, y + 22, 4, 6); // 左脚
+             p.fillRectangle(x + 14, y + 22, 4, 6); // 右脚
         }
-
+        
         // 简单画法封装
         private static void drawBobFrame(Pixmap p, int x, int y, boolean legUp) {
             // 坐标系在 Pixmap 里是左上角为0
