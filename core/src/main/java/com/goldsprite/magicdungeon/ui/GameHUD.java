@@ -95,6 +95,7 @@ public class GameHUD {
 	private ChestDialog chestDialog;
 
 	// Android Controls
+	// Deprecated
 	private Touchpad touchpad;
 	private VisTextButton attackBtn;
 	private VisTextButton interactBtn;
@@ -920,9 +921,7 @@ public class GameHUD {
 		createHelpWindow();
 
 		// --- Android Controls ---
-		if (Gdx.app.getType() == ApplicationType.Android) {
-			createAndroidControls();
-		}
+		// Moved to VirtualKeyboard system
 	}
 
 	private void createAndroidControls() {
@@ -1486,17 +1485,17 @@ public class GameHUD {
 		updateInventory(player);
 	}
 
+	// Deprecated Android Control Methods (Keep empty to avoid break changes if called externally)
 	public Vector2 getMovementDirection() {
-		if (touchpad == null) return new Vector2(0,0);
-		return new Vector2(touchpad.getKnobPercentX(), touchpad.getKnobPercentY());
+		return new Vector2(0,0);
 	}
 
 	public boolean isAttackPressed() {
-		return isAttackPressed;
+		return false;
 	}
 
 	public boolean isInteractPressed() {
-		return isInteractPressed;
+		return false;
 	}
 
 	public void setSaveListener(Runnable saveListener) {
@@ -1710,19 +1709,7 @@ public class GameHUD {
 
 	public void resize(int width, int height) {
 		stage.getViewport().update(width, height, true);
-		
-		if (Gdx.app.getType() == ApplicationType.Android) {
-			// 更新 Android 控件位置
-			float screenW = stage.getWidth();
-			// float screenH = stage.getHeight(); // 也可以根据高度调整
-			
-			if (attackBtn != null) {
-				attackBtn.setPosition(screenW - 140, 40);
-			}
-			if (interactBtn != null) {
-				interactBtn.setPosition(screenW - 140 - 100, 20);
-			}
-		}
+		// Android controls handled by VirtualKeyboard now
 	}
 
 	public void dispose() {

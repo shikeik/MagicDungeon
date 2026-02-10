@@ -202,14 +202,6 @@ public class MainMenuScreen extends GScreen {
 		);
 	}
 
-	private void addMenuButton(String text, ClickListener listener) {
-		VisTextButton btn = new VisTextButton(text);
-		btn.addListener(listener);
-		// 原 mainTable 不存在，改为直接添加到 menuGroup 中，并设置尺寸与位置
-		btn.setSize(220, 60);
-		menuGroup.addActor(btn);
-	}
-
 	private void startGame() {
 		long seed = 0;
 		try {

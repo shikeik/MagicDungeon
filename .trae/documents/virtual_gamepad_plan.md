@@ -1,0 +1,84 @@
+# 虚拟手柄模式开发案 (Switch 风格)
+
+## 1. 目标
+在现有的 `VirtualKeyboard` 基础上，增加 **虚拟手柄模式 (GAMEPAD)**。
+该模式将模拟 Nintendo Switch 手柄布局，提供双摇杆（左侧实际功能+右侧可选装饰或功能）和十字键、ABXY 按钮布局，并通过左右两侧挤占游戏视图的方式，确保 UI 不遮挡游戏画面中心。
+
+## 2. 布局设计 (Switch 风格)
+
+### 2.1 整体布局
+*   **左侧区域 (Left Panel)**: 宽度约 25%-30% 屏幕宽度。
+    *   **上方**: 左摇杆 (Left Stick) - 主要移动控制。
+    *   **下方**: 十字键 (D-Pad) - 辅助功能或备用移动。
+    *   **中间/角落**: `-` 号键 (Select/Back)。
+*   **右侧区域 (Right Panel)**: 宽度约 25%-30% 屏幕宽度。
+    *   **上方**: ABXY 按钮组 - 主要动作。
+    *   **下方**: 右摇杆 (Right Stick) - 可选（视游戏需求，MagicDungeon暂无视角控制需求，可作为装饰或映射为其他功能）。
+    *   **中间/角落**: `+` 号键 (Start/Pause) 和 `Home` 键。
+*   **中间区域**: 留空，显示被挤压后的游戏画面 (Game View)。
+*   **顶部/悬浮**: 保留现有的悬浮开关按钮，用于切换键盘显隐。增加“模式切换”按钮。
+
+### 2.2 控件细节与映射
+
+#### 左侧手柄 (Left Joy-Con)
+1.  **左摇杆 (Left Stick)**
+    *   **功能**: 模拟量移动 / 8方向移动。
+    *   **映射**: 转换为 WASD 或 D-Pad KeyEvents (`DPAD_UP/DOWN/LEFT/RIGHT`)。
+    *   **视觉**: 圆形底座 + 圆形摇杆帽。
+2.  **十字键 (Directional Buttons)**
+    *   *注: Switch 左手柄其实是四个独立按钮，但为了手感通常模拟为十字键布局。*
+    *   **功能**: 菜单选择 / 快捷物品栏 / 备用移动。
+    *   **映射**: 同摇杆，或映射到特定功能键 (如 `1, 2, 3, 4` 快捷栏)。
+3.  **`-` 键 (Minus)**
+    *   **功能**: 地图 / 状态。
+    *   **映射**: `M` 或 `TAB`。
+
+#### 右侧手柄 (Right Joy-Con)
+1.  **ABXY 按钮** (Switch 布局: 上X 下B 左Y 右A - **注意与 Xbox 布局不同**)
+    *   **A (右)**: 确认 / 交互。 -> 映射 `SPACE` (Interact/Next Level)。
+    *   **B (下)**: 取消 / 返回 / 攻击(习惯上B是跳跃/取消，但在动作游戏中常作攻击)。
+        *   *MagicDungeon*: 建议映射 `J` (攻击) 或 `E` (背包/取消)。
+        *   *修正*: 用户习惯 A 确认 B 取消。
+        *   **A (右)** -> `SPACE` (交互)。
+        *   **B (下)** -> `E` (背包/取消)。
+        *   **X (上)** -> `H` (使用药水/技能)。
+        *   **Y (左)** -> `F` (攻击/副技能) 或 映射为 `Shift` (冲刺?)。
+2.  **右摇杆 (Right Stick)**
+    *   **功能**: 暂无 (MagicDungeon 是 2D 固定视角)。
+    *   **处理**: 仅作为视觉装饰，或映射为鼠标移动（高级功能，暂不实现）。
+3.  **`+` 键 (Plus)**
+    *   **功能**: 暂停 / 菜单。
+    *   **映射**: `P` (Pause) 或 `ESC`。
+4.  **Home 键**
+    *   **功能**: 保存 / 主菜单。
+    *   **映射**: `F5` (Save)。
+
+### 2.3 视图挤压 (View Squeezing)
+*   **参数**:
+    *   `leftMargin`: 设置为左侧面板宽度 (e.g., 300px)。
+    *   `rightMargin`: 设置为右侧面板宽度 (e.g., 300px)。
+    *   `bottomMargin`: 0。
+    *   `topMargin`: 0。
+    *   `Gravity`: `CENTER_HORIZONTAL | CENTER_VERTICAL` (确保画面在中间)。
+
+## 3. 交互逻辑
+
+### 3.1 输入处理
+*   **多点触控**: 必须支持。
+*   **摇杆逻辑**:
+    *   监听 `ACTION_MOVE`。
+    *   计算偏移角度和距离。
+    *   根据角度触发对应的 D-Pad KeyEvent (Up/Down/Left/Right)。
+    *   支持死区 (Deadzone) 处理。
+
+### 3.2 模式切换
+*   在 `VirtualKeyboard` UI 中增加切换按钮。
+*   切换时清空 UI -> 重建 -> 更新 LayoutParams。
+
+## 4. 实施计划
+1.  **Step 1**: 清理 `GameHUD`，移除旧的 Android 控件。
+2.  **Step 2**: 在 `VirtualKeyboard` 中实现 `GamepadLayout` 类或方法。
+3.  **Step 3**: 实现摇杆控件 `VirtualJoystick` (自定义 View 或 组合 View)。
+4.  **Step 4**: 实现按钮控件 `VirtualButton`。
+5.  **Step 5**: 组装 Switch 风格布局。
+6.  **Step 6**: 调试按键映射和视图挤压效果。

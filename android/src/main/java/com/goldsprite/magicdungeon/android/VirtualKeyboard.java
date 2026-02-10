@@ -74,19 +74,13 @@ public class VirtualKeyboard {
     }
 
     private void initUI() {
-        // --- A. 键盘容器 ---
-        keyboardContainer = new LinearLayout(activity);
-        keyboardContainer.setOrientation(LinearLayout.VERTICAL);
-        // [回归] 不设背景色或透明
-        // keyboardContainer.setBackgroundColor(0x88000000);
-        keyboardContainer.setVisibility(View.GONE);
+        if (currentMode == InputMode.FULL_KEYBOARD) {
+            initFullKeyboardUI();
+        } else if (currentMode == InputMode.GAMEPAD) {
+            initGamepadUI();
+        }
 
-        RelativeLayout.LayoutParams kbParams = new RelativeLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0);
-        kbParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        parentView.addView(keyboardContainer, kbParams);
-
-        // --- B. 悬浮开关按钮 ---
+        // --- 悬浮开关按钮 (公共) ---
         floatingToggleBtn = new Button(activity);
         floatingToggleBtn.setText("⌨");
         floatingToggleBtn.setTextColor(Color.CYAN);
@@ -186,6 +180,315 @@ public class VirtualKeyboard {
         refreshKeyboardLayout();
     }
 
+    private void initFullKeyboardUI() {
+        keyboardContainer = new LinearLayout(activity);
+        keyboardContainer.setOrientation(LinearLayout.VERTICAL);
+        keyboardContainer.setVisibility(View.GONE);
+
+        RelativeLayout.LayoutParams kbParams = new RelativeLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0);
+        kbParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        parentView.addView(keyboardContainer, kbParams);
+    }
+    
+    private void initGamepadUI() {
+        // 创建左右两个面板
+        keyboardContainer = new LinearLayout(activity);
+        keyboardContainer.setOrientation(LinearLayout.HORIZONTAL);
+        keyboardContainer.setVisibility(View.GONE);
+        keyboardContainer.setWeightSum(1.0f);
+        
+        // 允许穿透点击中间区域
+        keyboardContainer.setClickable(false);
+        keyboardContainer.setFocusable(false);
+        
+        // Left Panel (30% width)
+        FrameLayout leftPanel = new FrameLayout(activity);
+        leftPanel.setBackgroundColor(0x66000000); // Semi-transparent black
+        LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
+        leftPanel.setLayoutParams(leftParams);
+        createLeftJoyCon(leftPanel);
+        
+        // Middle Space (40% width) - Transparent and click-through
+        View middleSpace = new View(activity);
+        middleSpace.setClickable(false);
+        middleSpace.setFocusable(false);
+        LinearLayout.LayoutParams midParams = new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.4f);
+        middleSpace.setLayoutParams(midParams);
+        
+        // Right Panel (30% width)
+        FrameLayout rightPanel = new FrameLayout(activity);
+        rightPanel.setBackgroundColor(0x66000000);
+        LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.MATCH_PARENT, 0.3f);
+        rightPanel.setLayoutParams(rightParams);
+        createRightJoyCon(rightPanel);
+        
+        keyboardContainer.addView(leftPanel);
+        keyboardContainer.addView(middleSpace);
+        keyboardContainer.addView(rightPanel);
+
+        // Fill Parent
+        RelativeLayout.LayoutParams kbParams = new RelativeLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        parentView.addView(keyboardContainer, kbParams);
+        
+        // Add Mode Switch Button (Top Center of Right Panel or Floating?)
+        // Let's put it in the top-right corner of the screen via floating button logic or inside panel
+        // For now, let's add a small switch button in the right panel top corner
+        Button switchBtn = new Button(activity);
+        switchBtn.setText("Switch Mode");
+        switchBtn.setTextSize(10);
+        FrameLayout.LayoutParams swParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        swParams.gravity = Gravity.TOP | Gravity.RIGHT;
+        rightPanel.addView(switchBtn, swParams);
+        
+        switchBtn.setOnClickListener(v -> {
+            toggleInputMode();
+        });
+    }
+
+    private void createLeftJoyCon(FrameLayout panel) {
+        // Layout: Top=Stick, Bottom=D-Pad
+        // Stick
+        View stick = createJoystick(true); // Left stick
+        FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(180, 180);
+        stickParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        stickParams.topMargin = 100;
+        panel.addView(stick, stickParams);
+        
+        // D-Pad (Simulated by 4 buttons)
+        View dpad = createDPad();
+        FrameLayout.LayoutParams dpadParams = new FrameLayout.LayoutParams(240, 240);
+        dpadParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        dpadParams.bottomMargin = 80;
+        panel.addView(dpad, dpadParams);
+        
+        // Minus Button
+        Button minusBtn = createRoundButton("-", 10, () -> sendKey(KeyEvent.KEYCODE_M)); // Map to M for Map?
+        FrameLayout.LayoutParams minusParams = new FrameLayout.LayoutParams(60, 60);
+        minusParams.gravity = Gravity.TOP | Gravity.RIGHT;
+        minusParams.topMargin = 40;
+        minusParams.rightMargin = 20;
+        panel.addView(minusBtn, minusParams);
+    }
+    
+    private void createRightJoyCon(FrameLayout panel) {
+        // Layout: Top=ABXY, Bottom=Stick(Decor/Mouse)
+        
+        // ABXY Buttons
+        View abxy = createABXY();
+        FrameLayout.LayoutParams abxyParams = new FrameLayout.LayoutParams(300, 300);
+        abxyParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        abxyParams.topMargin = 80;
+        panel.addView(abxy, abxyParams);
+        
+        // Right Stick (Decor for now)
+        View stick = createJoystick(false); // Right stick
+        FrameLayout.LayoutParams stickParams = new FrameLayout.LayoutParams(150, 150);
+        stickParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        stickParams.bottomMargin = 100;
+        panel.addView(stick, stickParams);
+        
+        // Plus Button
+        Button plusBtn = createRoundButton("+", 12, () -> sendKey(KeyEvent.KEYCODE_P)); // P for Pause
+        FrameLayout.LayoutParams plusParams = new FrameLayout.LayoutParams(60, 60);
+        plusParams.gravity = Gravity.TOP | Gravity.LEFT;
+        plusParams.topMargin = 40;
+        plusParams.leftMargin = 20;
+        panel.addView(plusBtn, plusParams);
+        
+        // Home Button
+        Button homeBtn = createRoundButton("⌂", 14, () -> sendKey(KeyEvent.KEYCODE_F5)); // F5 for Save
+        FrameLayout.LayoutParams homeParams = new FrameLayout.LayoutParams(70, 70);
+        homeParams.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+        homeParams.bottomMargin = 20;
+        homeParams.rightMargin = 40;
+        panel.addView(homeBtn, homeParams);
+    }
+    
+    private View createJoystick(boolean isLeft) {
+        // Simple circle view for now, logic later
+        View stickBase = new View(activity);
+        GradientDrawable shape = new GradientDrawable();
+        shape.setShape(GradientDrawable.OVAL);
+        shape.setColor(0x88333333);
+        shape.setStroke(2, 0xFF666666);
+        stickBase.setBackground(shape);
+        
+        if (isLeft) {
+             // Attach touch listener for movement
+             stickBase.setOnTouchListener(new View.OnTouchListener() {
+                 private float centerX, centerY;
+                 
+                 @Override
+                 public boolean onTouch(View v, MotionEvent event) {
+                     if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                         centerX = v.getWidth() / 2f;
+                         centerY = v.getHeight() / 2f;
+                     }
+                     
+                     if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_DOWN) {
+                         float dx = event.getX() - centerX;
+                         float dy = event.getY() - centerY;
+                         // Simple 4-way direction logic
+                         if (Math.abs(dx) > Math.abs(dy)) {
+                             if (dx > 20) sendKeyOnce(KeyEvent.KEYCODE_D);
+                             else if (dx < -20) sendKeyOnce(KeyEvent.KEYCODE_A);
+                         } else {
+                             if (dy > 20) sendKeyOnce(KeyEvent.KEYCODE_S);
+                             else if (dy < -20) sendKeyOnce(KeyEvent.KEYCODE_W);
+                         }
+                     }
+                     return true;
+                 }
+             });
+        }
+        return stickBase;
+    }
+    
+    private View createDPad() {
+        // Cross layout container
+        RelativeLayout dpad = new RelativeLayout(activity);
+        
+        int btnSize = 70;
+        
+        Button up = createArrowButton("▲", KeyEvent.KEYCODE_W); // Up
+        Button down = createArrowButton("▼", KeyEvent.KEYCODE_S); // Down
+        Button left = createArrowButton("◀", KeyEvent.KEYCODE_A); // Left
+        Button right = createArrowButton("▶", KeyEvent.KEYCODE_D); // Right
+        
+        // Positioning
+        RelativeLayout.LayoutParams upP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        upP.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        upP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        dpad.addView(up, upP);
+        
+        RelativeLayout.LayoutParams downP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        downP.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        downP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        dpad.addView(down, downP);
+        
+        RelativeLayout.LayoutParams leftP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        leftP.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+        leftP.addRule(RelativeLayout.CENTER_VERTICAL);
+        dpad.addView(left, leftP);
+        
+        RelativeLayout.LayoutParams rightP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        rightP.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+        rightP.addRule(RelativeLayout.CENTER_VERTICAL);
+        dpad.addView(right, rightP);
+        
+        return dpad;
+    }
+    
+    private View createABXY() {
+        RelativeLayout abxy = new RelativeLayout(activity);
+        int btnSize = 80;
+        
+        // X (Top) -> H (Skill/Heal)
+        Button btnX = createRoundButton("X", 14, () -> sendKey(KeyEvent.KEYCODE_H));
+        // B (Bottom) -> E (Bag/Cancel)
+        Button btnB = createRoundButton("B", 14, () -> sendKey(KeyEvent.KEYCODE_E));
+        // Y (Left) -> J (Attack/Dash?) - Let's use J for now or maybe Shift
+        Button btnY = createRoundButton("Y", 14, () -> sendKey(KeyEvent.KEYCODE_J)); 
+        // A (Right) -> SPACE (Interact)
+        Button btnA = createRoundButton("A", 14, () -> sendKey(KeyEvent.KEYCODE_SPACE));
+        
+        // Layout X (Top)
+        RelativeLayout.LayoutParams xP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        xP.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        xP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        abxy.addView(btnX, xP);
+        
+        // Layout B (Bottom)
+        RelativeLayout.LayoutParams bP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        bP.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        bP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        abxy.addView(btnB, bP);
+        
+        // Layout Y (Left)
+        RelativeLayout.LayoutParams yP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        yP.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+        yP.addRule(RelativeLayout.CENTER_VERTICAL);
+        abxy.addView(btnY, yP);
+        
+        // Layout A (Right)
+        RelativeLayout.LayoutParams aP = new RelativeLayout.LayoutParams(btnSize, btnSize);
+        aP.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+        aP.addRule(RelativeLayout.CENTER_VERTICAL);
+        abxy.addView(btnA, aP);
+        
+        return abxy;
+    }
+
+    private Button createRoundButton(String text, int textSize, Runnable action) {
+        Button btn = new Button(activity);
+        btn.setText(text);
+        btn.setTextSize(textSize);
+        btn.setTextColor(Color.WHITE);
+        
+        GradientDrawable shape = new GradientDrawable();
+        shape.setShape(GradientDrawable.OVAL);
+        shape.setColor(0xAA444444);
+        shape.setStroke(2, 0xFF888888);
+        btn.setBackground(shape);
+        
+        btn.setOnClickListener(v -> action.run());
+        return btn;
+    }
+    
+    private Button createArrowButton(String text, int keyCode) {
+        Button btn = new Button(activity);
+        btn.setText(text);
+        btn.setTextColor(Color.WHITE);
+        btn.setBackgroundColor(0xAA333333); // Simple square/rect
+        btn.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                v.setPressed(true);
+                activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
+            } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                v.setPressed(false);
+                activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+            }
+            return true;
+        });
+        return btn;
+    }
+    
+    private void sendKey(int keyCode) {
+        activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
+        activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+    }
+    
+    private void sendKeyOnce(int keyCode) {
+        // For joystick continuous hold, we might need state management
+        // This is a simplified version
+        activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
+        activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+    }
+
+    private void toggleInputMode() {
+        if (currentMode == InputMode.FULL_KEYBOARD) {
+            currentMode = InputMode.GAMEPAD;
+        } else {
+            currentMode = InputMode.FULL_KEYBOARD;
+        }
+        
+        // Remove old UI
+        parentView.removeView(keyboardContainer);
+        keyboardContainer = null;
+        
+        // Re-init UI
+        initUI();
+        
+        // Refresh visibility state
+        setKeyboardVisibility(isKeyboardVisible);
+    }
+
     private void dockFloatingButton(View v) {
         if (screenWidth == 0) return;
         
@@ -265,10 +568,14 @@ public class VirtualKeyboard {
                 int keyboardHeight = (int) (screenHeight * ratio);
                 params.bottomMargin = keyboardHeight;
             } else if (currentMode == InputMode.GAMEPAD) {
-                // 手柄模式（预留）：两侧挤占
-                // int gamepadWidth = ...;
-                // params.leftMargin = gamepadWidth;
-                // params.rightMargin = gamepadWidth;
+                // 手柄模式：两侧挤占 (左右各 30%)
+                int panelWidth = (int) (screenWidth * 0.3f);
+                params.leftMargin = panelWidth;
+                params.rightMargin = panelWidth;
+                // 为了让画面居中，我们需要确保 FrameLayout 的 Gravity 是 Center
+                // 或者通过 margin 挤压。由于是 FrameLayout，设置左右 margin 后，如果 width 是 MATCH_PARENT，
+                // 剩余空间就是中间区域。
+                // 注意：如果 gameView 也是 MATCH_PARENT，它会被压缩到中间。
             }
         }
 
