@@ -32,8 +32,8 @@ public class VirtualKeyboard {
     private final RelativeLayout parentView;
     private final View gameView; // 游戏视图，用于键盘隐藏时获取焦点
 
-    private final float HEIGHT_RATIO_LANDSCAPE = 0.45f;
-    private final float HEIGHT_RATIO_PORTRAIT = 0.35f;
+    private final float HEIGHT_RATIO_LANDSCAPE = 0.30f;
+    private final float HEIGHT_RATIO_PORTRAIT = 0.25f;
 
     // 基础比例 0.15，但会根据屏幕宽度自动调整以容纳按键
     private float GAMEPAD_PANEL_RATIO = 0.2f;
@@ -52,8 +52,8 @@ public class VirtualKeyboard {
         {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "Del"},
         {"Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"},
         {"Esc", "A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "Enter"},
-        {"Shift", "Z", "X", "C", "V", "B", "N", "M", ",", ".", "/", "↑"},
-        {"Ctrl", "Alt", "Sym", "Space", "←", "↓", "→", "Hide"}
+        {"Shift", "Z", "X", "C", "V", "B", "N", "M", ",", ".", "↑", "/"},
+        {"Ctrl", "Alt", "Sym", "Space", "←", "↓", "→"}
     };
 
     private final Map<String, Integer> keyMap = new HashMap<>();
@@ -126,12 +126,12 @@ public class VirtualKeyboard {
         bg.setCornerRadius(dpToPx(8));
         bg.setStroke(dpToPx(1), 0xFF00EAFF);
         modeSelectionView.setBackground(bg);
-        
+
         modeSelectionView.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
-        
+
         modeActions = new Runnable[2];
         modeItemViews = new View[2];
-        
+
         // 选项 1: 全键盘
         TextView item1 = createModeItem("⌨ 全键盘", InputMode.FULL_KEYBOARD);
         modeItemViews[0] = item1;
@@ -143,7 +143,7 @@ public class VirtualKeyboard {
             }
         };
         modeSelectionView.addView(item1);
-        
+
         // 分割线
         View divider = new View(activity);
         divider.setBackgroundColor(0x55AAAAAA);
@@ -151,7 +151,7 @@ public class VirtualKeyboard {
         divParams.topMargin = dpToPx(2);
         divParams.bottomMargin = dpToPx(2);
         modeSelectionView.addView(divider, divParams);
-        
+
         // 选项 2: 手柄
         TextView item2 = createModeItem("🎮 手柄", InputMode.GAMEPAD);
         modeItemViews[1] = item2;
@@ -163,7 +163,7 @@ public class VirtualKeyboard {
             }
         };
         modeSelectionView.addView(item2);
-        
+
         modeSelectionView.setVisibility(View.GONE);
         parentView.addView(modeSelectionView);
     }
@@ -184,39 +184,41 @@ public class VirtualKeyboard {
         if (modeSelectionView == null) {
             initModeSelectionView();
         }
-        
+
         // 强制测量以获取尺寸
-        modeSelectionView.measure(View.MeasureSpec.makeMeasureSpec(screenWidth / 2, View.MeasureSpec.AT_MOST),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-        int menuW = modeSelectionView.getMeasuredWidth();
+        modeSelectionView.measure(
+            // View.MeasureSpec.makeMeasureSpec(screenWidth / 2, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), 
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int menuW = modeSelectionView.getMeasuredWidth()/3;
         int menuH = modeSelectionView.getMeasuredHeight();
-        
+
         int btnW = floatingToggleBtn.getWidth();
         int btnH = floatingToggleBtn.getHeight();
-        
+
         float btnX = floatingToggleBtn.getX();
         float btnY = floatingToggleBtn.getY();
-        
+
         float x = btnX + (btnW - menuW) / 2f;
         float y = btnY - menuH - dpToPx(10); // 上方
-        
+
         if (y < 0) {
             y = btnY + btnH + dpToPx(10);
         }
-        
+
         x = Math.max(dpToPx(10), Math.min(screenWidth - menuW - dpToPx(10), x));
-        
+
         modeSelectionView.setX(x);
         modeSelectionView.setY(y);
-        
+
         modeSelectionView.setVisibility(View.VISIBLE);
         modeSelectionView.setAlpha(0f);
         modeSelectionView.animate().alpha(1f).setDuration(150).start();
-        
+
         // 强制 Layout
         modeSelectionView.layout((int)x, (int)y, (int)x + menuW, (int)y + menuH);
     }
-    
+
     private void hideModeSelectionView() {
         if (modeSelectionView != null) {
             modeSelectionView.animate().alpha(0f).setDuration(150).withEndAction(() -> {
@@ -226,7 +228,7 @@ public class VirtualKeyboard {
         selectedModeIndex = -1;
         updateItemStyles();
     }
-    
+
     private void updateItemStyles() {
         if (modeItemViews == null) return;
         for (int i = 0; i < modeItemViews.length; i++) {
@@ -239,29 +241,29 @@ public class VirtualKeyboard {
             }
         }
     }
-    
+
     private void handleLongPressSelection(MotionEvent event) {
         int action = event.getAction();
-        
+
         if (action == MotionEvent.ACTION_MOVE || action == MotionEvent.ACTION_DOWN) {
             float rawX = event.getRawX();
             float rawY = event.getRawY();
-            
+
             int[] parentLoc = new int[2];
             parentView.getLocationOnScreen(parentLoc);
             float relX = rawX - parentLoc[0];
             float relY = rawY - parentLoc[1];
-            
+
             float menuX = modeSelectionView.getX();
             float menuY = modeSelectionView.getY();
-            
+
             int newSelection = -1;
-            
+
             if (relX >= menuX - dpToPx(20) && relX <= menuX + modeSelectionView.getWidth() + dpToPx(20) &&
                 relY >= menuY - dpToPx(20) && relY <= menuY + modeSelectionView.getHeight() + dpToPx(20)) {
-                
+
                 float localY = relY - menuY;
-                
+
                 for (int i = 0; i < modeItemViews.length; i++) {
                      View item = modeItemViews[i];
                      if (localY >= item.getTop() && localY <= item.getBottom()) {
@@ -270,12 +272,12 @@ public class VirtualKeyboard {
                      }
                 }
             }
-            
+
             if (newSelection != selectedModeIndex) {
                 selectedModeIndex = newSelection;
                 updateItemStyles();
             }
-            
+
         } else if (action == MotionEvent.ACTION_UP) {
             if (selectedModeIndex != -1) {
                 if (modeActions[selectedModeIndex] != null) {
@@ -304,7 +306,7 @@ public class VirtualKeyboard {
             @Override
             public boolean onSingleTapUp(MotionEvent e) {
                 // 点击触发显示/隐藏 (逻辑移到这里更准确)
-                setKeyboardVisibility(true);
+                setKeyboardVisibility(!isKeyboardVisible);
                 dockFloatingButton(floatingToggleBtn);
                 return true;
             }
@@ -356,7 +358,7 @@ public class VirtualKeyboard {
                     handleLongPressSelection(event);
                     return true;
                 }
-                
+
                 if (gestureHandled) {
                     return true;
                 }
@@ -584,14 +586,8 @@ public class VirtualKeyboard {
         homeParams.bottomMargin = dpToPx(8);
         homeParams.rightMargin = dpToPx(16);
         panel.addView(homeBtn, homeParams);
-        
-        // Hide Button (Explicit hide button as requested)
-        Button hideBtn = createHideButton();
-        hideBtn.setText("▼");
-        FrameLayout.LayoutParams hideParams = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28));
-        hideParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        hideParams.topMargin = dpToPx(5);
-        panel.addView(hideBtn, hideParams);
+
+        // Hide Button removed
     }
 
     private View createJoystick(boolean isLeft) {
@@ -819,7 +815,7 @@ public class VirtualKeyboard {
         String actionName = isDown ? "DOWN" : "UP";
         String keyName = KeyEvent.keyCodeToString(keyCode);
         Debug.logT("VirtualKeyboard", "Key: %s(%d) | Action: %s", keyName, keyCode, actionName);
-        
+
         long time = System.currentTimeMillis();
         int action = isDown ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP;
         activity.dispatchKeyEvent(new KeyEvent(time, time, action, keyCode, 0));
@@ -830,7 +826,7 @@ public class VirtualKeyboard {
         // This is a simplified version
         String keyName = KeyEvent.keyCodeToString(keyCode);
         Debug.logT("VirtualKeyboard", "Joystick Key: %s(%d)", keyName, keyCode);
-        
+
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }
@@ -897,8 +893,10 @@ public class VirtualKeyboard {
         if (keyboardContainer != null) {
             keyboardContainer.setVisibility(visible ? View.VISIBLE : View.GONE);
         }
+
+        // 始终保持悬浮按钮显示
         if (floatingToggleBtn != null) {
-            floatingToggleBtn.setVisibility(visible ? View.GONE : View.VISIBLE);
+            floatingToggleBtn.setVisibility(View.VISIBLE);
         }
 
         if (!visible && gameView != null) {
@@ -1004,7 +1002,7 @@ public class VirtualKeyboard {
 
             for (String key : rowKeys) {
                 Button keyBtn = createKeyButton(key);
-                float weight = key.equals("Space") ? 3.0f : 1.0f;
+                float weight = key.equals("Space") ? 6.0f : 1.0f;
 
                 LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.MATCH_PARENT, weight);
