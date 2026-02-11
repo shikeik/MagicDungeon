@@ -32,12 +32,16 @@ public class VirtualKeyboard {
     private final RelativeLayout parentView;
     private final View gameView; // 游戏视图，用于键盘隐藏时获取焦点
 
+	// 全键盘高度: 横/竖屏
     private final float HEIGHT_RATIO_LANDSCAPE = 0.30f;
     private final float HEIGHT_RATIO_PORTRAIT = 0.25f;
 
-    // 基础比例 0.15，但会根据屏幕宽度自动调整以容纳按键
-    private float GAMEPAD_PANEL_RATIO = 0.2f;
-    private final int MIN_PANEL_WIDTH_DP = 140; // 面板最小宽度 (ABXY=120dp + margin)
+    // 模拟手柄: 基础比例 0.15，但会根据屏幕宽度自动调整以容纳按键
+    //private float GAMEPAD_PANEL_RATIO = 0.12f;
+    private float GAMEPAD_PANEL_RATIO = 0f;
+	//private float GAMEPAD_USED_SPACE = GAMEPAD_PANEL_RATIO*1.12f;
+	private float GAMEPAD_USED_SPACE = 0.16f;
+    private final int MIN_PANEL_WIDTH_DP = 0; // 面板最小宽度 (ABXY=120dp + margin)
 
     private final int padding = -16;
 
@@ -530,7 +534,7 @@ public class VirtualKeyboard {
         FrameLayout.LayoutParams lbParams = new FrameLayout.LayoutParams(dpToPx(50), dpToPx(30));
         lbParams.gravity = Gravity.TOP | Gravity.RIGHT;
         lbParams.topMargin = dpToPx(20);
-        lbParams.rightMargin = dpToPx(5);
+        lbParams.rightMargin = dpToPx(10);
         panel.addView(lb, lbParams);
 
         // Stick
@@ -951,7 +955,7 @@ public class VirtualKeyboard {
                 params.bottomMargin = keyboardHeight;
             } else if (currentMode == InputMode.GAMEPAD) {
                 // 手柄模式：两侧挤占
-                int panelWidth = (int) (screenWidth * (GAMEPAD_PANEL_RATIO*1.12f));
+                int panelWidth = (int) (screenWidth * GAMEPAD_USED_SPACE);
                 params.leftMargin = panelWidth;
                 params.rightMargin = panelWidth;
                 // 为了让画面居中，我们需要确保 FrameLayout 的 Gravity 是 Center
