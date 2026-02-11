@@ -22,6 +22,8 @@ import com.goldsprite.GdxLauncher;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
 
+import com.goldsprite.magicdungeon.input.InputManager; // Import InputManager
+
 public class AndroidGdxLauncher extends AndroidApplication {
 	private static AndroidGdxLauncher ctx;
 
@@ -114,7 +116,9 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		rootFrame.addView(overlayLayer, new FrameLayout.LayoutParams(
 			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-		virtualKeyboard = new VirtualKeyboard(this, overlayLayer, gameView);
+		virtualKeyboard = new VirtualKeyboard(this, overlayLayer, gameView, (mode) -> {
+			InputManager.getInstance().setVirtualGamepad(mode == VirtualKeyboard.InputMode.GAMEPAD);
+		});
 	}
 
 	private void setupViewportListener() {

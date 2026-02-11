@@ -82,10 +82,16 @@ public class VirtualKeyboard {
     private View[] modeItemViews;
     private Rect[] modeItemRects;
 
-    public VirtualKeyboard(Activity activity, RelativeLayout parentView, View gameView) {
+    public interface OnInputModeChangeListener {
+        void onModeChanged(InputMode mode);
+    }
+    private OnInputModeChangeListener modeChangeListener;
+
+    public VirtualKeyboard(Activity activity, RelativeLayout parentView, View gameView, OnInputModeChangeListener listener) {
         this.activity = activity;
         this.parentView = parentView;
         this.gameView = gameView;
+        this.modeChangeListener = listener;
 
         // 尝试获取初始屏幕尺寸
         DisplayMetrics dm = activity.getResources().getDisplayMetrics();
@@ -840,6 +846,9 @@ public class VirtualKeyboard {
 
     private void toggleInputMode(InputMode newMode) {
         currentMode = newMode;
+        if (modeChangeListener != null) {
+            modeChangeListener.onModeChanged(newMode);
+        }
 
         // Remove old UI
         if (keyboardContainer != null) {

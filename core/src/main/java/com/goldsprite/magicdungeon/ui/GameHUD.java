@@ -1599,13 +1599,21 @@ public class GameHUD {
 	}
 
 	private void createHelpWindow() {
-		helpWindow = new BaseDialog("帮助");
+		helpWindow = new BaseDialog("帮助") {
+			@Override
+			public void act(float delta) {
+				super.act(delta);
+				if (InputManager.getInstance().isJustPressed(InputAction.UI_CANCEL)) {
+					hide();
+				}
+			}
+		};
 		helpWindow.autoPack = false;
 		helpWindow.setSize(900, 600); // Increased size
 		helpWindow.setCenterOnAdd(true);
 		helpWindow.setMovable(true);
 		helpWindow.setResizable(false);
-		helpWindow.addCloseButton();
+		// BaseDialog already adds a close button
 	}
 
 	private void updateHelpWindowContent() {
@@ -1620,8 +1628,7 @@ public class GameHUD {
 		leftCol.add(new VisLabel("游戏指南")).center().padBottom(10).row();
 
 		// Dynamic Controls Guide
-		// On Android, we treat it as having a controller (Virtual Controller)
-		boolean isController = InputManager.getInstance().hasConnectedController() || Gdx.app.getType() == ApplicationType.Android;
+		boolean isController = InputManager.getInstance().isUsingController();
 
 		VisTable keysTable = new VisTable();
 		keysTable.defaults().left().padBottom(8);
@@ -1760,12 +1767,21 @@ public class GameHUD {
 		else l.setFontScale(0.35f);
 
 		if (isController) {
-			t.add(l).center().size(32, 32);
+			// Increase size for controller buttons (Start/Back might need more width, but circle implies equal w/h)
+			// Let's use 40x40 for standard, and maybe allow expansion for long text if we use a pill shape?
+			// For now, simple circle 40x40 should fit 2 chars (LB/RB). For Start/Back, we might need smaller font or oval.
+			// Let's try 40x40 base.
+			if (text.length() > 2) {
+				t.add(l).pad(5, 8, 5, 8); // Pill shape for Start/Back
+			} else {
+				t.add(l).center().size(40, 40);
+			}
 		} else {
 			if (text.length() > 1) {
 				t.add(l).pad(5, 10, 5, 10);
 			} else {
-				t.add(l).center().size(32, 32);
+				// Single char keyboard key
+				t.add(l).center().size(40, 40);
 			}
 		}
 
@@ -2216,6 +2232,10 @@ public class GameHUD {
 
 	public void resize(int width, int height) {
 		stage.getViewport().update(width, height, true);
+		// Recenter windows if they are open
+		if (helpWindow != null && helpWindow.getParent() != null) helpWindow.centerWindow();
+		if (inventoryDialog != null && inventoryDialog.getParent() != null) inventoryDialog.centerWindow();
+		if (chestDialog != null && chestDialog.getParent() != null) chestDialog.centerWindow();
 		// Android controls handled by VirtualKeyboard now
 	}
 

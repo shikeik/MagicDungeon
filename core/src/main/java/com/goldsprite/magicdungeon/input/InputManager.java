@@ -20,6 +20,7 @@ public class InputManager {
     private static InputManager instance;
     private final Map<InputAction, List<Integer>> keyboardMappings = new HashMap<>();
     private final Map<InputAction, List<Integer>> controllerMappings = new HashMap<>();
+    private boolean isVirtualGamepad = false;
 
     // LibGDX Controller Mappings (Standard / Xbox)
     public static final int BUTTON_A = 0;
@@ -128,6 +129,14 @@ public class InputManager {
 
     public boolean hasConnectedController() {
         return Controllers.getControllers().size > 0;
+    }
+
+    public void setVirtualGamepad(boolean active) {
+        this.isVirtualGamepad = active;
+    }
+
+    public boolean isUsingController() {
+        return hasConnectedController() || isVirtualGamepad;
     }
 
     private void loadMappings() {
