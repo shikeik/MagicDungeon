@@ -23,6 +23,9 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.gdengine.neonbatch.BloomRenderer;
+import com.badlogic.gdx.utils.Array;
+import com.goldsprite.magicdungeon.input.InputAction;
+import com.goldsprite.magicdungeon.input.InputManager;
 
 public class MainMenuScreen extends GScreen {
 	private NeonBatch batch;
@@ -35,6 +38,9 @@ public class MainMenuScreen extends GScreen {
 	private Group menuGroup;
 	private VisTextField seedField;
 	private SettingsDialog settingsDialog;
+	
+	private Array<VisTextButton> menuButtons = new Array<>();
+	private int focusedIndex = -1;
 
 	@Override
 	protected void initViewport() {
@@ -79,6 +85,9 @@ public class MainMenuScreen extends GScreen {
 		if (menuGroup != null) menuGroup.remove();
 		menuGroup = new Group();
 		stage.addActor(menuGroup);
+		
+		menuButtons.clear();
+		focusedIndex = -1;
 
 		// Seed Input Area
  		VisTable seedTable = new VisTable();
@@ -185,6 +194,8 @@ public class MainMenuScreen extends GScreen {
 		btn.setPosition(targetX, targetY);
 		menuGroup.addActor(btn);
 		btn.addAction(createEntranceAction(delay));
+		
+		menuButtons.add(btn);
 	}
 
 	private com.badlogic.gdx.scenes.scene2d.Action createEntranceAction(float delay) {
@@ -236,8 +247,58 @@ public class MainMenuScreen extends GScreen {
 		bloomRender.process();
 		bloomRender.render(batch);
 
+		handleFocusInput();
 		stage.act(delta);
 		stage.draw();
+	}
+
+	private void handleFocusInput() {
+		if (menuButtons.size == 0) return;
+
+		InputManager input = InputManager.getInstance();
+		boolean changed = false;
+
+		// UI_DOWN -> Next Button (index increases)
+		if (input.isJustPressed(InputAction.UI_DOWN)) {
+			focusedIndex++;
+			if (focusedIndex >= menuButtons.size) focusedIndex = 0;
+			changed = true;
+		} else if (input.isJustPressed(InputAction.UI_UP)) {
+			focusedIndex--;
+			if (focusedIndex < 0) focusedIndex = menuButtons.size - 1;
+			changed = true;
+		}
+
+		// Initial focus
+		if (focusedIndex == -1 && (changed || input.isUsingController())) {
+			focusedIndex = 0;
+			changed = true;
+		}
+
+		if (changed) {
+			for (int i = 0; i < menuButtons.size; i++) {
+				VisTextButton btn = menuButtons.get(i);
+				if (i == focusedIndex) {
+					btn.setColor(Color.YELLOW);
+				} else {
+					btn.setColor(Color.CYAN); // Default color was not set explicitly in createMenuButton, VisTextButton default is usually white but Title is Cyan. Let's use Cyan or White.
+					// createMenuButton uses default style. Default text color is usually white.
+					// Let's use White as default unselected.
+					btn.setColor(Color.WHITE);
+				}
+			}
+		}
+
+		if (input.isJustPressed(InputAction.UI_CONFIRM)) {
+			if (focusedIndex >= 0 && focusedIndex < menuButtons.size) {
+				VisTextButton btn = menuButtons.get(focusedIndex);
+				InputEvent event = new InputEvent();
+				event.setType(InputEvent.Type.touchDown);
+				btn.fire(event);
+				event.setType(InputEvent.Type.touchUp);
+				btn.fire(event);
+			}
+		}
 	}
 
 	@Override

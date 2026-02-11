@@ -11,6 +11,14 @@ import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.utils.Array;
+import com.kotcrab.vis.ui.Focusable;
+import com.goldsprite.magicdungeon.input.InputAction;
+import com.goldsprite.magicdungeon.input.InputManager;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import com.goldsprite.gdengine.screens.ScreenManager;
@@ -22,7 +30,10 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 	private final float cell_height = 80;
 	protected Stage stage;
 	protected VisTable rootTable;
-
+	
+	private Array<VisTextButton> selectionButtons = new Array<>();
+	private int focusedIndex = -1;
+	
 	public BaseSelectionScreen() {
 		super();
 		initScreenMapping(screenMapping);
@@ -70,6 +81,8 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		ButtonGroup<Button> btnGroup = new ButtonGroup<>();
 		btnGroup.setMaxCheckCount(1);
 		btnGroup.setUncheckLast(true);
+		
+		selectionButtons.clear();
 
 		for (String title : screenMapping.keySet()) {
 			Class<? extends GScreen> key = screenMapping.get(title);
@@ -87,6 +100,8 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 			cell.expandX().fillX();
 			cell.height(cell_height);
 			buttonTable.row();
+			
+			selectionButtons.add(button);
 
 			button.addListener(new ClickListener() {
 				@Override
@@ -100,8 +115,58 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 
 	@Override
 	public void render0(float delta) {
+		handleFocusInput();
 		stage.act(delta);
 		stage.draw();
+	}
+
+	private void handleFocusInput() {
+		if (selectionButtons.size == 0) return;
+
+		InputManager input = InputManager.getInstance();
+		boolean changed = false;
+
+		if (input.isJustPressed(InputAction.UI_DOWN)) {
+			focusedIndex++;
+			if (focusedIndex >= selectionButtons.size) focusedIndex = 0;
+			changed = true;
+		} else if (input.isJustPressed(InputAction.UI_UP)) {
+			focusedIndex--;
+			if (focusedIndex < 0) focusedIndex = selectionButtons.size - 1;
+			changed = true;
+		}
+
+		// Initial focus
+		if (focusedIndex == -1 && (changed || input.isUsingController())) {
+			focusedIndex = 0;
+			changed = true;
+		}
+
+		if (changed) {
+			updateFocusVisuals();
+		}
+
+		if (input.isJustPressed(InputAction.UI_CONFIRM)) {
+			if (focusedIndex >= 0 && focusedIndex < selectionButtons.size) {
+				VisTextButton btn = selectionButtons.get(focusedIndex);
+				InputEvent event = new InputEvent();
+				event.setType(InputEvent.Type.touchDown);
+				btn.fire(event);
+				event.setType(InputEvent.Type.touchUp);
+				btn.fire(event);
+			}
+		}
+	}
+
+	private void updateFocusVisuals() {
+		for (int i = 0; i < selectionButtons.size; i++) {
+			VisTextButton btn = selectionButtons.get(i);
+			if (i == focusedIndex) {
+				btn.setColor(Color.YELLOW);
+			} else {
+				btn.setColor(Color.WHITE);
+			}
+		}
 	}
 
 	/**

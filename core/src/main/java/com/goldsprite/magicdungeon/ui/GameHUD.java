@@ -50,6 +50,8 @@ import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
 
 import com.goldsprite.magicdungeon.utils.Constants;
 
+import com.badlogic.gdx.utils.Array;
+
 public class GameHUD {
 	public Stage stage;
 	private NeonBatch neonBatch;
@@ -95,6 +97,10 @@ public class GameHUD {
 	private VisTextButton helpBtn;
 	private BaseDialog helpWindow;
 	private ChestDialog chestDialog;
+	
+	private Array<VisTextButton> toolbarButtons = new Array<>();
+	private int toolbarFocusIndex = -1;
+	private boolean isToolbarFocused = false;
 
 	// Android Controls
 	// Deprecated
@@ -1498,6 +1504,8 @@ public class GameHUD {
 	}
 
 	private void createButtons(VisTable container) {
+		toolbarButtons.clear();
+
 		inventoryBtn = new VisTextButton("背包");
 		inventoryBtn.addListener(new InputListener() {
 			@Override
@@ -1507,6 +1515,7 @@ public class GameHUD {
 			}
 		});
 		container.add(inventoryBtn).pad(5);
+		toolbarButtons.add(inventoryBtn);
 
 		VisTextButton campBtn = new VisTextButton("回城");
 		campBtn.addListener(new InputListener() {
@@ -1517,6 +1526,7 @@ public class GameHUD {
 			}
 		});
 		container.add(campBtn).pad(5);
+		toolbarButtons.add(campBtn);
 
 		saveBtn = new VisTextButton("保存");
 		saveBtn.addListener(new InputListener() {
@@ -1527,6 +1537,7 @@ public class GameHUD {
 			}
 		});
 		container.add(saveBtn).pad(5);
+		toolbarButtons.add(saveBtn);
 
 		helpBtn = new VisTextButton("帮助");
 		helpBtn.addListener(new InputListener() {
@@ -1537,6 +1548,7 @@ public class GameHUD {
 			}
 		});
 		container.add(helpBtn).pad(5);
+		toolbarButtons.add(helpBtn);
 
 		VisTextButton pauseBtn = new VisTextButton("暂停");
 		pauseBtn.addListener(new InputListener() {
@@ -1548,6 +1560,7 @@ public class GameHUD {
 			}
 		});
 		container.add(pauseBtn).pad(5);
+		toolbarButtons.add(pauseBtn);
 	}
 
 	private void generateAssets() {
@@ -1598,22 +1611,30 @@ public class GameHUD {
 		circlePm.dispose();
 	}
 
+	private boolean lastIsController = false;
+
 	private void createHelpWindow() {
-		helpWindow = new BaseDialog("帮助") {
+		// BaseDialog 内部已经调用了 addCloseButton() 和 closeOnEscape()
+		// 我们不需要手动添加关闭按钮，也不需要手动检测 ESC，除非 BaseDialog 的实现有问题。
+		// 为了保险起见，我们添加一个 Listener 来处理 ESC，覆盖默认行为
+		helpWindow = new BaseDialog("帮助");
+		
+		helpWindow.addListener(new InputListener() {
 			@Override
-			public void act(float delta) {
-				super.act(delta);
-				if (InputManager.getInstance().isJustPressed(InputAction.UI_CANCEL)) {
-					hide();
+			public boolean keyDown(InputEvent event, int keycode) {
+				if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
+					helpWindow.hide();
+					return true;
 				}
+				return false;
 			}
-		};
+		});
+
 		helpWindow.autoPack = false;
 		helpWindow.setSize(900, 600); // Increased size
 		helpWindow.setCenterOnAdd(true);
 		helpWindow.setMovable(true);
 		helpWindow.setResizable(false);
-		// BaseDialog already adds a close button
 	}
 
 	private void updateHelpWindowContent() {
@@ -1763,25 +1784,25 @@ public class GameHUD {
 		l.setAlignment(Align.center);
 		
 		// Adaptive font scale
-		if (text.length() > 2) l.setFontScale(0.25f);
-		else l.setFontScale(0.35f);
+		if (text.length() > 2) l.setFontScale(0.3f);
+		else l.setFontScale(0.4f);
+
+		// Increase size for better visibility
+		float minSize = 50;
 
 		if (isController) {
-			// Increase size for controller buttons (Start/Back might need more width, but circle implies equal w/h)
-			// Let's use 40x40 for standard, and maybe allow expansion for long text if we use a pill shape?
-			// For now, simple circle 40x40 should fit 2 chars (LB/RB). For Start/Back, we might need smaller font or oval.
-			// Let's try 40x40 base.
+			// Controller icons (Circle/Pill)
 			if (text.length() > 2) {
-				t.add(l).pad(5, 8, 5, 8); // Pill shape for Start/Back
+				t.add(l).pad(10, 15, 10, 15).minSize(minSize, minSize);
 			} else {
-				t.add(l).center().size(40, 40);
+				t.add(l).center().size(minSize, minSize);
 			}
 		} else {
+			// Keyboard icons (Box)
 			if (text.length() > 1) {
-				t.add(l).pad(5, 10, 5, 10);
+				t.add(l).pad(10, 15, 10, 15).minSize(minSize, minSize);
 			} else {
-				// Single char keyboard key
-				t.add(l).center().size(40, 40);
+				t.add(l).center().size(minSize, minSize);
 			}
 		}
 
@@ -2226,7 +2247,82 @@ public class GameHUD {
 		return false;
 	}
 
+	private void handleToolbarInput() {
+		InputManager input = InputManager.getInstance();
+
+		// Toggle focus with TAB
+		if (input.isJustPressed(InputAction.TAB)) {
+			isToolbarFocused = !isToolbarFocused;
+			if (isToolbarFocused) {
+				if (toolbarFocusIndex == -1) toolbarFocusIndex = 0;
+			} else {
+				toolbarFocusIndex = -1;
+			}
+			updateToolbarVisuals();
+		}
+
+		if (isToolbarFocused) {
+			if (input.isJustPressed(InputAction.UI_RIGHT)) {
+				toolbarFocusIndex++;
+				if (toolbarFocusIndex >= toolbarButtons.size) toolbarFocusIndex = 0;
+				updateToolbarVisuals();
+			} else if (input.isJustPressed(InputAction.UI_LEFT)) {
+				toolbarFocusIndex--;
+				if (toolbarFocusIndex < 0) toolbarFocusIndex = toolbarButtons.size - 1;
+				updateToolbarVisuals();
+			} else if (input.isJustPressed(InputAction.UI_CONFIRM)) {
+				if (toolbarFocusIndex >= 0 && toolbarFocusIndex < toolbarButtons.size) {
+					VisTextButton btn = toolbarButtons.get(toolbarFocusIndex);
+					InputEvent event = new InputEvent();
+					event.setType(InputEvent.Type.touchDown);
+					btn.fire(event);
+					event.setType(InputEvent.Type.touchUp);
+					btn.fire(event);
+				}
+			} else if (input.isJustPressed(InputAction.UI_CANCEL)) {
+				isToolbarFocused = false;
+				toolbarFocusIndex = -1;
+				updateToolbarVisuals();
+			}
+		}
+	}
+
+	private void updateToolbarVisuals() {
+		for(int i=0; i<toolbarButtons.size; i++) {
+			VisTextButton btn = toolbarButtons.get(i);
+			if (i == toolbarFocusIndex && isToolbarFocused) {
+				btn.setColor(Color.YELLOW);
+			} else {
+				btn.setColor(Color.WHITE);
+			}
+		}
+	}
+
 	public void render() {
+		// --- Auto Refresh Logic ---
+		boolean currentIsController = InputManager.getInstance().isUsingController();
+		if (currentIsController != lastIsController) {
+			lastIsController = currentIsController;
+
+			// Refresh Help Window
+			if (helpWindow != null) {
+				updateHelpWindowContent();
+				if (helpWindow.isVisible()) {
+					helpWindow.centerWindow();
+				}
+			}
+
+			// Center other windows
+			if (inventoryDialog != null && inventoryDialog.isVisible()) {
+				inventoryDialog.centerWindow();
+			}
+			if (chestDialog != null && chestDialog.isVisible()) {
+				chestDialog.centerWindow();
+			}
+		}
+		
+		handleToolbarInput();
+
 		stage.draw();
 	}
 
