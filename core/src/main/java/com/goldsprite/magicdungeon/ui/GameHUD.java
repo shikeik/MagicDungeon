@@ -433,6 +433,7 @@ public class GameHUD {
 		}
 	}
 
+	Color fColor = new Color(0f, 1f, 0.9f, 0.5f);
 	private class InventorySlot extends VisTable implements FocusableUI {
 		private Chest chestContext;
 		private ChestDialog dialogContext;
@@ -499,7 +500,7 @@ public class GameHUD {
 			// Focus Border
 			if (whiteDrawable != null) {
 				focusBorder = new VisImage(whiteDrawable);
-				focusBorder.setColor(1f, 1f, 0f, 0.4f); // Semi-transparent yellow
+				focusBorder.setColor(fColor); // Semi-transparent yellow
 				focusBorder.setTouchable(Touchable.disabled);
 				focusBorder.setVisible(false);
 				stack.addActorAt(1, focusBorder);
@@ -658,7 +659,7 @@ public class GameHUD {
 				focusBorder.setVisible(focused);
 				if (focused) {
 					// com.goldsprite.gdengine.log.Debug.log("Slot focused: " + this);
-					focusBorder.setColor(1f, 1f, 0f, 0.3f); // Lower alpha for background highlight
+					focusBorder.setColor(fColor); // Lower alpha for background highlight
 				}
 			} else {
 				// com.goldsprite.gdengine.log.Debug.log("Slot focusBorder is null!");
@@ -765,7 +766,7 @@ public class GameHUD {
 			// Focus Border
 			if (whiteDrawable != null) {
 				focusBorder = new VisImage(whiteDrawable);
-				focusBorder.setColor(1f, 1f, 0f, 0.4f); // Semi-transparent yellow
+				focusBorder.setColor(fColor); // Semi-transparent yellow
 				focusBorder.setTouchable(Touchable.disabled);
 				focusBorder.setVisible(false);
 				stack.addActorAt(1, focusBorder);
@@ -816,7 +817,7 @@ public class GameHUD {
 		public void setFocused(boolean focused) {
 			if (focusBorder != null) {
 				focusBorder.setVisible(focused);
-				if (focused) focusBorder.setColor(1f, 1f, 0f, 0.3f);
+				if (focused) focusBorder.setColor(fColor);
 			}
 			
 			// Show Tooltip on Focus
