@@ -166,7 +166,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		for (int i = 0; i < selectionButtons.size; i++) {
 			VisTextButton btn = selectionButtons.get(i);
 			if (i == focusedIndex) {
-				btn.setColor(Color.YELLOW);
+				btn.setColor(new Color(0f, 0.8f, 1f, 1f));
 			} else {
 				btn.setColor(Color.WHITE);
 			}

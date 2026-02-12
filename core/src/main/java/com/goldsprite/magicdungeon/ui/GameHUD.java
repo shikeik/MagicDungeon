@@ -433,7 +433,7 @@ public class GameHUD {
 		}
 	}
 
-	Color fColor = new Color(0f, 1f, 0.9f, 0.5f);
+	Color fColor = new Color(0f, 0.8f, 1f, 1f);
 	private class InventorySlot extends VisTable implements FocusableUI {
 		private Chest chestContext;
 		private ChestDialog dialogContext;
