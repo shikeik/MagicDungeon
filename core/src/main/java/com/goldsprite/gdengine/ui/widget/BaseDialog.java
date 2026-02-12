@@ -5,10 +5,11 @@ import com.kotcrab.vis.ui.util.TableUtils;
 import com.kotcrab.vis.ui.widget.VisDialog;
 
 public class BaseDialog extends VisDialog {
-	public boolean autoPack = true;
+	public boolean autoPack = false;
 
 	public BaseDialog(String title) {
 		super(title);
+		getTitleLabel().setFontScale(0.5f); // 字体太大修正
 		setModal(true);
 		addCloseButton();
 		closeOnEscape();

@@ -7,7 +7,8 @@ gradle-app.setting
 build/
 #javadoc/ # 现在我们需要javadoc因为需要上传云端查看
 .idea/
-.shikeik/
+/.shikeik/
+/.lwjgl/
 
 
 ## Java:

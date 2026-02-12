@@ -27,6 +27,10 @@ public class SynthAudio {
 
 	private static final Queue<Voice> activeVoices = new ConcurrentLinkedQueue<>();
 
+	public static boolean isInitialized() {
+		return isInitialized;
+	}
+
 	public static void init() {
 		if (isInitialized) return;
 		try {

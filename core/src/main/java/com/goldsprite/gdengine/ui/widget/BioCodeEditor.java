@@ -88,9 +88,12 @@ public class BioCodeEditor extends VisTable {
 		pCursor.setColor(Color.YELLOW);
 		pCursor.fill();
 		customStyle.cursor = new TextureRegionDrawable(new Texture(pCursor));
+		pCursor.dispose(); // [Fix] Dispose Pixmap after creating Texture
 
 		// 选区：半透明蓝
-		customStyle.selection = new TextureRegionDrawable(new Texture(createColorPixmap(new Color(0, 0.5f, 1f, 0.4f))));
+		Pixmap pSelection = createColorPixmap(new Color(0, 0.5f, 1f, 0.4f));
+		customStyle.selection = new TextureRegionDrawable(new Texture(pSelection));
+		pSelection.dispose(); // [Fix] Dispose Pixmap
 
 		// --- 组件初始化 ---
 		textArea = new CodeTextArea("");

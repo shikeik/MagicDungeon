@@ -39,6 +39,10 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		initScreenMapping(screenMapping);
 	}
 
+	public Stage getStage() {
+		return stage;
+	}
+
 	@Override
 	public String getIntroduction() {
 		return "选择屏";

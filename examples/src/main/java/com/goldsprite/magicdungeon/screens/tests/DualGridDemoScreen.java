@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
@@ -31,9 +33,9 @@ public class DualGridDemoScreen extends GScreen {
 
     public enum TerrainType {
         AIR(null),
-        SAND("sprites/tilesets/sand_tiles.png"), 
-        DIRT("sprites/tilesets/dirt_tiles.png"), 
-        GRASS("sprites/tilesets/grass_tiles.png"), 
+        SAND("sprites/tilesets/sand_tiles.png"),
+        DIRT("sprites/tilesets/dirt_tiles.png"),
+        GRASS("sprites/tilesets/grass_tiles.png"),
 		;
 
         public final int id;
@@ -183,6 +185,13 @@ public class DualGridDemoScreen extends GScreen {
         dualRenderer = new DualGridRenderer();
         dualRenderer.load();
 
+        // [Fix] 预填充一些地形，避免初始全黑，让用户知道系统在工作
+        for (int x = 5; x <= 15; x++) {
+            for (int y = 3; y <= 10; y++) {
+                worldData.setTile(0, x, y, TerrainType.GRASS);
+            }
+        }
+
         uiStage = new Stage(uiViewport);
         setupUI();
 
@@ -237,7 +246,8 @@ public class DualGridDemoScreen extends GScreen {
         root.top().right();
 
         VisTable menu = new VisTable(true);
-        menu.setBackground("window-bg");
+//        menu.setBackground("window-bg");
+        menu.setBackground("window-ten");
         menu.add(new VisLabel("Dual-Grid Editor")).pad(10).row();
 
         // 地形选择 (画刷)
@@ -245,8 +255,13 @@ public class DualGridDemoScreen extends GScreen {
         ButtonGroup<VisTextButton> terrainGroup = new ButtonGroup<>();
         for (TerrainType type : TerrainType.values()) {
             VisTextButton btn = new VisTextButton(type.name(), "toggle");
-            if (type == TerrainType.GRASS) btn.setChecked(true);
-            btn.addListener(e -> { if(btn.isChecked()) selectedTerrain = type; return true; });
+            if (type == selectedTerrain) btn.setChecked(true);
+            btn.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    if(btn.isChecked()) selectedTerrain = type;
+                }
+            });
             terrainGroup.add(btn);
             menu.add(btn).fillX().row();
         }
@@ -258,17 +273,32 @@ public class DualGridDemoScreen extends GScreen {
             final int idx = i;
             VisTextButton btn = new VisTextButton("Layer " + i, "toggle");
             if (i == 0) btn.setChecked(true);
-            btn.addListener(e -> { if(btn.isChecked()) selectedLayer = idx; return true; });
+            btn.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    if(btn.isChecked()) selectedLayer = idx;
+                }
+            });
             layerGroup.add(btn);
             menu.add(btn).fillX().row();
         }
 
         VisCheckBox cbGrid = new VisCheckBox("Show Grid", true);
-        cbGrid.addListener(e -> { showGrid = cbGrid.isChecked(); return true; });
+        cbGrid.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showGrid = cbGrid.isChecked();
+            }
+        });
         menu.add(cbGrid).padTop(10).row();
 
         VisTextButton btnClear = new VisTextButton("Clear All");
-        btnClear.addListener(e -> { worldData.clearAll(); return true; });
+        btnClear.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                worldData.clearAll();
+            }
+        });
         menu.add(btnClear).fillX().padBottom(10);
 
         root.add(menu).pad(10);

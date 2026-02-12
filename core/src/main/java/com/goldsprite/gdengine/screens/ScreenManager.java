@@ -253,14 +253,16 @@ public class ScreenManager implements Disposable {
 		return launchScreen;
 	}
 
-	public void setLaunchScreen(Class<? extends GScreen> key) {
+	public ScreenManager setLaunchScreen(Class<? extends GScreen> key) {
 		setLaunchScreen(getScreen(key));
+		return this;
 	}
 
-	public void setLaunchScreen(GScreen screen) {
+	public ScreenManager setLaunchScreen(GScreen screen) {
 		launchScreen = screen;
 		if (!screen.isInitialized())
 			setCurScreen(launchScreen);
+		return this;
 	}
 
 	public void enableInput(InputMultiplexer screenImp) {

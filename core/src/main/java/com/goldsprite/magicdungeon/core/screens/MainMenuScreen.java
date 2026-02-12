@@ -279,12 +279,10 @@ public class MainMenuScreen extends GScreen {
 			for (int i = 0; i < menuButtons.size; i++) {
 				VisTextButton btn = menuButtons.get(i);
 				if (i == focusedIndex) {
-					btn.setColor(Color.YELLOW);
+					btn.setColor(Color.WHITE); // 保持原色，利用 focusBorder 高亮
+					stage.setKeyboardFocus(btn); // 触发 VisUI 的 focusBorder 渲染
 				} else {
-					btn.setColor(Color.CYAN); // Default color was not set explicitly in createMenuButton, VisTextButton default is usually white but Title is Cyan. Let's use Cyan or White.
-					// createMenuButton uses default style. Default text color is usually white.
-					// Let's use White as default unselected.
-					btn.setColor(Color.WHITE);
+					btn.setColor(Color.LIGHT_GRAY); // 未选中稍微压暗
 				}
 			}
 		}
