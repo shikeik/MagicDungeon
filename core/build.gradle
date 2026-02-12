@@ -20,6 +20,7 @@ dependencies {
 	api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
 	api "com.kotcrab.vis:vis-ui:$visUIVersion"
     api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
+    api "com.github.raeleus:TenPatch:5.2.3"
 
     // [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
     api 'org.nanohttpd:nanohttpd:2.3.1'
