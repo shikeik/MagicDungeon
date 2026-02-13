@@ -6,6 +6,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.MonsterType;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
+import com.goldsprite.magicdungeon.utils.TextureExporter;
 import com.goldsprite.magicdungeon.world.TileType;
 
 import java.util.HashMap;
@@ -42,7 +43,7 @@ public class TextureManager implements Disposable {
 		// 2. Generate Missing Textures (Fallback)
 		
 		// Tiles
-		checkAndGenerate(TileType.Wall.name(), () -> SpriteGenerator.createWall());
+		checkAndGenerate(TileType.Wall.name(), () -> SpriteGenerator.createDungeonWallTileset());
 		checkAndGenerate(TileType.Floor.name(), () -> SpriteGenerator.createFloor());
 		checkAndGenerate(TileType.Door.name(), () -> SpriteGenerator.createDoor());
 		checkAndGenerate(TileType.Stairs_Down.name(), () -> SpriteGenerator.createStairs(false));
@@ -93,6 +94,11 @@ public class TextureManager implements Disposable {
 		String lowerKey = key.toLowerCase();
 		if (!regionCache.containsKey(lowerKey)) {
 			Texture tex = producer.produce();
+			
+			// DEBUG: Export generated textures to disk for inspection
+			// This helps user to see what procedural textures look like
+			TextureExporter.exportToDisk(tex, lowerKey);
+			
 			managedTextures.add(tex);
 			regionCache.put(lowerKey, new TextureRegion(tex));
 		}

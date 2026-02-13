@@ -39,7 +39,20 @@ public class DualGridDungeonRenderer implements Disposable {
         TextureRegion[] grassBlob = loadBlobTexture("sprites/tilesets/grass_tiles.png");
         TextureRegion[] sandBlob = loadBlobTexture("sprites/tilesets/sand_tiles.png");
         TextureRegion[] dirtBlob = loadBlobTexture("sprites/tilesets/dirt_tiles.png");
-        TextureRegion[] brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
+        
+        // For dungeon bricks, prefer the generated one if file is missing or we want dynamic style
+        // But for now, let's check TextureManager for "WALL" which now uses createDungeonWallTileset
+        TextureRegion[] brickBlob = null;
+        if (com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall) != null) {
+             Texture tex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall).getTexture();
+             TextureRegion[][] split = TextureRegion.split(tex, 16, 16);
+             brickBlob = new TextureRegion[16];
+             for (int i = 0; i < 16; i++) {
+                 brickBlob[i] = split[i / 4][i % 4];
+             }
+        } else {
+             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
+        }
 
         // Layer 0: Dirt (Base layer)
         if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));

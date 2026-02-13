@@ -103,46 +103,107 @@ public class SpriteGenerator {
 
 	// --- Tile Generators ---
 
-	public static Texture createWall() {
-		Pixmap p = createPixmap();
+	public static Texture createDungeonWallTileset() {
+		// 4x4 tiles, 16px each -> 64x64 texture
+		Pixmap p = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+		p.setColor(0, 0, 0, 0);
+		p.fill();
+		
+		// Dual Grid Mask to Atlas Mapping (From DualGridDungeonRenderer)
+		int[] MASK_TO_ATLAS_X = { -1, 1, 0, 3, 0, 1, 2, 1, 3, 0, 3, 2, 1, 2, 3, 2 };
+		int[] MASK_TO_ATLAS_Y = { -1, 3, 0, 0, 2, 0, 3, 1, 3, 1, 2, 0, 2, 2, 1, 1 };
 
-		// Background (Mortar)
-		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#2a2a2a"));
+		// Wall Colors
+		Color topColor = Color.valueOf("#555555");
+		Color topHighlight = Color.valueOf("#666666");
+		Color faceColor = Color.valueOf("#3E3E3E"); // Darker for vertical face
+		Color faceShadow = Color.valueOf("#2E2E2E");
 
-		// Bricks
-		int rows = 4;
-		int cols = 4;
-		int brickH = TEX_SIZE / rows;
-		int brickW = TEX_SIZE / cols;
-		int gap = 4;
+		// Iterate through all 16 masks
+		for (int mask = 0; mask < 16; mask++) {
+			int atlasX = MASK_TO_ATLAS_X[mask];
+			int atlasY = MASK_TO_ATLAS_Y[mask];
+			
+			if (atlasX == -1 || atlasY == -1) continue;
 
-		Color brickColor = Color.valueOf("#555555");
-		Color highlight = Color.valueOf("#666666");
-		Color shadow = Color.valueOf("#444444");
+			// Target Tile Position in Pixmap
+			int tx = atlasX * 16;
+			int ty = atlasY * 16;
+			
+			// Decode Mask: TL, TR, BL, BR
+			// Mask bits: TL=8, TR=4, BL=2, BR=1
+			boolean tl = (mask & 8) != 0;
+			boolean tr = (mask & 4) != 0;
+			boolean bl = (mask & 2) != 0;
+			boolean br = (mask & 1) != 0;
 
-		for (int row = 0; row < rows; row++) {
-			int offset = (row % 2 == 0) ? 0 : brickW / 2;
-			for (int col = -1; col <= cols; col++) {
-				int x = col * brickW + offset + gap;
-				int y = row * brickH + gap;
-				int w = brickW - gap * 2;
-				int h = brickH - gap * 2;
-
-				// Main Brick
-				drawRect(p, x, y, w, h, brickColor);
-
-				// Bevel (Highlight Top/Left)
-				drawRect(p, x, y, w, 4, highlight);
-				drawRect(p, x, y, 4, h, highlight);
-
-				// Bevel (Shadow Bottom/Right)
-				drawRect(p, x, y + h - 4, w, 4, shadow);
-				drawRect(p, x + w - 4, y, 4, h, shadow);
+			// Draw Quadrants (8x8 each)
+			
+			// --- Top-Left Quadrant ---
+			if (tl) {
+				drawWallTop(p, tx, ty, 8, 8, topColor, topHighlight);
+			}
+			
+			// --- Top-Right Quadrant ---
+			if (tr) {
+				drawWallTop(p, tx + 8, ty, 8, 8, topColor, topHighlight);
+			}
+			
+			// --- Bottom-Left Quadrant ---
+			if (bl) {
+				// Wall Top (Front) obscures everything
+				drawWallTop(p, tx, ty + 8, 8, 8, topColor, topHighlight);
+			} else {
+				// No Wall here. Check if Wall above (TL) projects a face
+				if (tl) {
+					drawWallFace(p, tx, ty + 8, 8, 8, faceColor, faceShadow);
+				}
+			}
+			
+			// --- Bottom-Right Quadrant ---
+			if (br) {
+				drawWallTop(p, tx + 8, ty + 8, 8, 8, topColor, topHighlight);
+			} else {
+				// No Wall here. Check if Wall above (TR) projects a face
+				if (tr) {
+					drawWallFace(p, tx + 8, ty + 8, 8, 8, faceColor, faceShadow);
+				}
 			}
 		}
-
-		applyNoise(p, 0.1f);
+		
 		return toTexture(p);
+	}
+
+	private static void drawWallTop(Pixmap p, int x, int y, int w, int h, Color color, Color highlight) {
+		p.setColor(color);
+		p.fillRectangle(x, y, w, h);
+		// Bevel / Detail
+		p.setColor(highlight);
+		p.drawRectangle(x, y, w, h);
+		// Random noise/cracks
+		if (MathUtils.randomBoolean(0.1f)) {
+			p.setColor(Color.valueOf("#444444"));
+			p.drawPixel(x + MathUtils.random(w-1), y + MathUtils.random(h-1));
+		}
+	}
+
+	private static void drawWallFace(Pixmap p, int x, int y, int w, int h, Color color, Color shadow) {
+		p.setColor(color);
+		p.fillRectangle(x, y, w, h);
+		// Horizontal Brick Lines
+		p.setColor(shadow);
+		for(int i=0; i<h; i+=4) {
+			p.drawLine(x, y+i, x+w, y+i);
+		}
+		// Vertical Brick Lines (Staggered)
+		for(int i=0; i<h; i+=4) {
+			int offset = (i % 8 == 0) ? 0 : 4;
+			if (offset < w) p.drawPixel(x + offset, y + i + 2); // approximate vertical line pixel
+			if (offset + 4 < w) p.drawPixel(x + offset + 4, y + i + 2);
+		}
+		// Shadow at top (under the overhang of the wall top)
+		p.setColor(Color.BLACK);
+		p.drawLine(x, y, x+w, y);
 	}
 
 	public static Texture createFloor() {
