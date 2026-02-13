@@ -39,14 +39,18 @@ public class DualGridDungeonRenderer implements Disposable {
         TextureRegion[] grassBlob = loadBlobTexture("sprites/tilesets/grass_tiles.png");
         TextureRegion[] sandBlob = loadBlobTexture("sprites/tilesets/sand_tiles.png");
         TextureRegion[] dirtBlob = loadBlobTexture("sprites/tilesets/dirt_tiles.png");
+        TextureRegion[] brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
 
         // Layer 0: Dirt (Base layer)
         if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));
         
-        // Layer 1: Sand (Overlay on Dirt)
+        // Layer 1: Brick (Indoor/Dungeon Floor)
+        if (brickBlob != null) layers.add(new LayerConfig(brickBlob, "brick"));
+        
+        // Layer 2: Sand (Overlay)
         if (sandBlob != null) layers.add(new LayerConfig(sandBlob, "sand"));
         
-        // Layer 2: Grass (Top layer)
+        // Layer 3: Grass (Top layer)
         if (grassBlob != null) layers.add(new LayerConfig(grassBlob, "grass"));
     }
 
@@ -68,13 +72,20 @@ public class DualGridDungeonRenderer implements Disposable {
     }
 
     public void render(NeonBatch batch, Dungeon dungeon) {
-        // Layer 0: Dirt (Base) - Draw dirt everywhere there is a valid tile (including walls)
+        // Layer 0: Dirt (Base) - Draw dirt everywhere there is a valid tile
         renderLayer(batch, dungeon, "dirt", (t) -> t != null); 
         
-        // Layer 1: Sand
+        // Layer 1: Brick - Draw for indoor tiles (Floor, Wall, etc.)
+        renderLayer(batch, dungeon, "brick", (t) -> t != null && (
+            t.type == TileType.Floor || t.type == TileType.Wall || 
+            t.type == TileType.Door || t.type == TileType.Stairs_Up || 
+            t.type == TileType.Stairs_Down || t.type == TileType.Dungeon_Entrance
+        ));
+
+        // Layer 2: Sand
         renderLayer(batch, dungeon, "sand", (t) -> t != null && t.type == TileType.Sand);
         
-        // Layer 2: Grass
+        // Layer 3: Grass
         renderLayer(batch, dungeon, "grass", (t) -> t != null && t.type == TileType.Grass);
     }
 

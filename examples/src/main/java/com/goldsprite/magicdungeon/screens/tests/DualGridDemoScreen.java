@@ -11,8 +11,10 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
@@ -36,7 +38,8 @@ public class DualGridDemoScreen extends GScreen {
         SAND("sprites/tilesets/sand_tiles.png"),
         DIRT("sprites/tilesets/dirt_tiles.png"),
         GRASS("sprites/tilesets/grass_tiles.png"),
-		;
+        DUNGEON_BRICK("sprites/tilesets/dungeon_brick_tiles.png"),
+        ;
 
         public final int id;
         public final String texPath;
@@ -76,43 +79,43 @@ public class DualGridDemoScreen extends GScreen {
     }
 
     public static class DualGridRenderer {
-        private final TextureRegion[][] atlas = new TextureRegion[3][16];
-		private static final int[] MASK_TO_ATLAS_X = {
-			-1, // 0: 0000 (全空)
-			1, // 1: 0001 (只有BR) -> 外转角: 右下 (1,3)
-			0, // 2: 0010 (只有BL) -> 外转角: 左下 (0,0)
-			3, // 3: 0011 (BL+BR)  -> 底部边缘 (3,0)
-			0, // 4: 0100 (只有TR) -> 外转角: 右上 (0,2)
-			1, // 5: 0101 (TR+BR)  -> 右侧边缘 (1,0)
-			2, // 6: 0110 (TR+BL)  -> 对角线 (2,3)
-			1, // 7: 0111 (TR+BL+BR) -> 内转角: 左上 (3,1)
-			3, // 8: 1000 (只有TL) -> 外转角: 左上 (3,3)
-			0, // 9: 1001 (TL+BR)  -> 对角线 (0,1)
-			3, // 10: 1010 (TL+BL) -> 左侧边缘 (3,2)  <-- 【修复你图中的错误！】
-			2, // 11: 1011 (TL+BL+BR) -> 内转角: 右上 (2,2)
-			1, // 12: 1100 (TL+TR) -> 顶部边缘 (1,2)
-			2, // 13: 1101 (TL+TR+BR) -> 内转角: 左下 (2,0)
-			3, // 14: 1110 (TL+TR+BL) -> 内转角: 右下 (1,1)
-			2  // 15: 1111 (全满)  -> 中心块 (2,1)
-		};
-		private static final int[] MASK_TO_ATLAS_Y = {
-			-1, // 0
-			3, // 1
-			0, // 2
-			0, // 3
-			2, // 4
-			0, // 5
-			3, // 6
-			1, // 7
-			3, // 8
-			1, // 9
-			2, // 10
-			0, // 11
-			2, // 12
-			2, // 13
-			1, // 14
-			1  // 15
-		};
+        private final TextureRegion[][] atlas = new TextureRegion[TerrainType.values().length][16];
+        private static final int[] MASK_TO_ATLAS_X = {
+            -1, // 0: 0000 (全空)
+            1, // 1: 0001 (只有BR) -> 外转角: 右下 (1,3)
+            0, // 2: 0010 (只有BL) -> 外转角: 左下 (0,0)
+            3, // 3: 0011 (BL+BR)  -> 底部边缘 (3,0)
+            0, // 4: 0100 (只有TR) -> 外转角: 右上 (0,2)
+            1, // 5: 0101 (TR+BR)  -> 右侧边缘 (1,0)
+            2, // 6: 0110 (TR+BL)  -> 对角线 (2,3)
+            1, // 7: 0111 (TR+BL+BR) -> 内转角: 左上 (3,1)
+            3, // 8: 1000 (只有TL) -> 外转角: 左上 (3,3)
+            0, // 9: 1001 (TL+BR)  -> 对角线 (0,1)
+            3, // 10: 1010 (TL+BL) -> 左侧边缘 (3,2)
+            2, // 11: 1011 (TL+BL+BR) -> 内转角: 右上 (2,2)
+            1, // 12: 1100 (TL+TR) -> 顶部边缘 (1,2)
+            2, // 13: 1101 (TL+TR+BR) -> 内转角: 左下 (2,0)
+            3, // 14: 1110 (TL+TR+BL) -> 内转角: 右下 (1,1)
+            2  // 15: 1111 (全满)  -> 中心块 (2,1)
+        };
+        private static final int[] MASK_TO_ATLAS_Y = {
+            -1, // 0
+            3, // 1
+            0, // 2
+            0, // 3
+            2, // 4
+            0, // 5
+            3, // 6
+            1, // 7
+            3, // 8
+            1, // 9
+            2, // 10
+            0, // 11
+            2, // 12
+            2, // 13
+            1, // 14
+            1  // 15
+        };
 
         public void load() {
             for (TerrainType type : TerrainType.values()) {
@@ -123,6 +126,14 @@ public class DualGridDemoScreen extends GScreen {
                     atlas[type.id][i] = temp[i / 4][i % 4];
                 }
             }
+        }
+        
+        public TextureRegion getIcon(TerrainType type) {
+            if (type == TerrainType.AIR) return null;
+            // Return the tile at (2,2) (index 10) as requested
+            // Row 2 (0-indexed) is the 3rd row. Col 2 is 3rd col.
+            // Index = 2 * 4 + 2 = 10.
+            return atlas[type.id][10];
         }
 
         public void renderLayer(SpriteBatch batch, GridData grid, int layerIndex) {
@@ -156,7 +167,11 @@ public class DualGridDemoScreen extends GScreen {
         }
 
         public void dispose() {
-            for (int i = 0; i < 3; i++) if (atlas[i][0] != null) atlas[i][0].getTexture().dispose();
+            for (int i = 0; i < atlas.length; i++) {
+                if (atlas[i][0] != null && atlas[i][0].getTexture() != null) {
+                    atlas[i][0].getTexture().dispose();
+                }
+            }
         }
     }
 
@@ -196,22 +211,22 @@ public class DualGridDemoScreen extends GScreen {
         setupUI();
 
         imp = new InputMultiplexer(uiStage, new InputAdapter() {
-				@Override
-				public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-					handlePaint(screenX, screenY, true);
-					return true;
-				}
-				@Override
-				public boolean touchDragged(int screenX, int screenY, int pointer) {
-					handlePaint(screenX, screenY, false);
-					return true;
-				}
-				@Override
-				public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-					lastGx = -1; lastGy = -1;
-					return true;
-				}
-			});
+                @Override
+                public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                    handlePaint(screenX, screenY, true);
+                    return true;
+                }
+                @Override
+                public boolean touchDragged(int screenX, int screenY, int pointer) {
+                    handlePaint(screenX, screenY, false);
+                    return true;
+                }
+                @Override
+                public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                    lastGx = -1; lastGy = -1;
+                    return true;
+                }
+            });
     }
 
     private void handlePaint(int sx, int sy, boolean isNew) {
@@ -246,25 +261,66 @@ public class DualGridDemoScreen extends GScreen {
         root.top().right();
 
         VisTable menu = new VisTable(true);
-//        menu.setBackground("window-bg");
         menu.setBackground("window-ten");
         menu.add(new VisLabel("Dual-Grid Editor")).pad(10).row();
 
-        // 地形选择 (画刷)
-        menu.add(new VisLabel("--- Brush ---")).row();
-        ButtonGroup<VisTextButton> terrainGroup = new ButtonGroup<>();
+        // 地形选择 (网格布局)
+        menu.add(new VisLabel("--- Terrain ---")).row();
+        
+        VisTable gridTable = new VisTable();
+        ButtonGroup<Button> terrainGroup = new ButtonGroup<>();
+        int col = 0;
+        
         for (TerrainType type : TerrainType.values()) {
-            VisTextButton btn = new VisTextButton(type.name(), "toggle");
+            if (type == TerrainType.AIR) continue;
+            
+            // 创建自定义样式的按钮: 上图下文
+            // 使用 "toggle" 样式以便支持 checked 状态，如果 VisUI 默认皮肤没有 toggle 样式的 ImageTextButton，
+            // 我们可以手动从 TextButton 获取 toggle 样式属性或者直接使用 default 并设置 programmatically check
+            VisImageTextButton btn = new VisImageTextButton(type.name(), "default"); 
+            // 强制设置为 toggle 模式 (通过样式修改或 Style 继承)
+            // 注意：默认 VisImageTextButton 样式可能不包含 checked 状态的 drawable，但逻辑上支持
+            
+            TextureRegion icon = dualRenderer.getIcon(type);
+            if (icon != null) {
+                VisImageTextButton.VisImageTextButtonStyle style = new VisImageTextButton.VisImageTextButtonStyle(btn.getStyle());
+                style.imageUp = new TextureRegionDrawable(icon);
+                btn.setStyle(style);
+            }
+            
+            // 强制重组布局：Image row, Label row
+            btn.clearChildren();
+            btn.add(btn.getImage()).size(32).pad(5).row();
+            btn.add(btn.getLabel()).padBottom(5).row();
+            
             if (type == selectedTerrain) btn.setChecked(true);
+            
             btn.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     if(btn.isChecked()) selectedTerrain = type;
                 }
             });
+            
             terrainGroup.add(btn);
-            menu.add(btn).fillX().row();
+            gridTable.add(btn).size(80, 80).pad(4);
+            
+            col++;
+            if (col % 3 == 0) gridTable.row(); // 3列换行
         }
+        menu.add(gridTable).row();
+        
+        // 橡皮擦 (AIR)
+        VisTextButton btnEraser = new VisTextButton("Eraser (Air)", "toggle");
+        btnEraser.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if(btnEraser.isChecked()) selectedTerrain = TerrainType.AIR;
+            }
+        });
+        terrainGroup.add(btnEraser);
+        menu.add(btnEraser).fillX().padTop(5).row();
+
 
         // 层级选择
         menu.add(new VisLabel("--- Layer ---")).padTop(10).row();
