@@ -15,6 +15,8 @@ public class TextureExporter {
     public static void exportToDisk(final Texture texture, final String filename) {
         if (texture == null) return;
 
+		if(Gdx.files.local("MagicDungeon/TempTexes/"+ filename+".png").exists()) return; //存在则跳过
+
         // Use Gdx.app.postRunnable to ensure we are on the OpenGL thread
         Gdx.app.postRunnable(new Runnable() {
             @Override
@@ -39,11 +41,11 @@ public class TextureExporter {
                     // Usually batch.draw(tex, 0, 0) draws at bottom-left.
                     // But texture coordinates in FBO might be flipped when read back?
                     // Let's draw it normally first.
-                    
+
                     SpriteBatch batch = new SpriteBatch();
                     // Set projection matrix to match FBO size (0,0 bottom-left)
                     batch.getProjectionMatrix().setToOrtho2D(0, 0, w, h);
-                    
+
                     batch.begin();
                     // Draw texture flipping Y because FrameBuffer textures are often flipped in memory when read back?
                     // Actually, if we draw it normally (0,0), it appears at bottom-left.
@@ -60,12 +62,12 @@ public class TextureExporter {
 
                     // 6. End FBO
                     fbo.end();
-                    
+
                     // 7. Save
                     FileHandle dir = Gdx.files.local("MagicDungeon/TempTexes");
                     if (!dir.exists()) dir.mkdirs();
                     FileHandle file = dir.child(filename + ".png");
-                    
+
                     PixmapIO.writePNG(file, pixmap);
                     Gdx.app.log("TextureExporter", "Exported texture via FBO to: " + file.file().getAbsolutePath());
 
