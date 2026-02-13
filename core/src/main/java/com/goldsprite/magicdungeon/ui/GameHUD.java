@@ -124,6 +124,11 @@ public class GameHUD {
 	private Runnable saveListener;
 	private Runnable returnToCampListener;
 
+	public enum InputMode {
+		MOUSE,
+		KEYBOARD
+	}
+	private InputMode currentInputMode = InputMode.MOUSE;
 	private Actor currentTooltip;
 
 	private DragAndDrop dragAndDrop;
@@ -281,11 +286,13 @@ public class GameHUD {
 
 		@Override
 		public boolean remove() {
-			GameHUD.this.hideFocusTooltip();
+			GameHUD.this.hideTooltip();
 			return super.remove();
 		}
 
 		private void navigate(int dx, int dy) {
+            GameHUD.this.updateInputMode(InputMode.KEYBOARD);
+
 			if (currentArea == FocusArea.INVENTORY) {
 				if (dx == 1) currentInvIndex++;
 				if (dx == -1) {
@@ -358,9 +365,22 @@ public class GameHUD {
 			updateFocus();
 		}
 
+		public void clearFocus() {
+			for (int i = 0; i < inventorySlots.size(); i++) {
+				inventorySlots.get(i).setFocused(false);
+			}
+			for (int i = 0; i < equipmentSlots.size(); i++) {
+				equipmentSlots.get(i).setFocused(false);
+			}
+		}
+
 		@Override
 		public void act(float delta) {
 			super.act(delta);
+
+            if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
+                 GameHUD.this.updateInputMode(InputMode.MOUSE);
+            }
 
 			// Handle Input Navigation
 			InputManager input = InputManager.getInstance();
@@ -384,6 +404,7 @@ public class GameHUD {
 			
 			// Tab Navigation (Switch Area)
 			if (input.isJustPressed(InputAction.TAB)) {
+				GameHUD.this.updateInputMode(InputMode.KEYBOARD);
 				if (currentArea == FocusArea.INVENTORY) {
 					currentArea = FocusArea.EQUIPMENT;
 				} else {
@@ -518,7 +539,7 @@ public class GameHUD {
 							} else {
 								handleEquipAction(item, isEquipped, player);
 							}
-							hideFocusTooltip(); // 确保点击时清除可能残留的 tooltip
+							hideTooltip(); // 确保点击时清除可能残留的 tooltip
 						}
 
 						@Override
@@ -534,14 +555,14 @@ public class GameHUD {
 						@Override
 						public void pan(InputEvent event, float x, float y, float deltaX, float deltaY) {
 							super.pan(event, x, y, deltaX, deltaY);
-							hideFocusTooltip();
+							hideTooltip();
 						}
 
 						@Override
 						public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
 							super.touchUp(event, x, y, pointer, button);
 							// 长按后松开，或者点击后松开，都尝试隐藏
-							hideFocusTooltip();
+							hideTooltip();
 						}
 					};
 					listener.getGestureDetector().setLongPressSeconds(0.18f); // 缩短长按时间
@@ -557,13 +578,11 @@ public class GameHUD {
 				}
 			} else {
 				if (item != null) {
-					VisTable tooltipContent = createItemTooltipTable(item, isEquipped);
-					new Tooltip.Builder(tooltipContent).target(this).build();
-
 					// PC Click Listener
 					this.clickListener = new ClickListener() {
 						@Override
 						public void clicked(InputEvent event, float x, float y) {
+							hideTooltip(); // Added fix
 							if (chestContext != null) {
 								handleChestTransaction(item, isChestItem, dialogContext, chestContext, player);
 							} else {
@@ -573,6 +592,22 @@ public class GameHUD {
 						}
 					};
 					addListener(clickListener);
+
+                    // Mouse Hover Tooltip
+                    addListener(new InputListener() {
+                        @Override
+                        public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+                            if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                                showTooltip(InventorySlot.this, item);
+                            }
+                        }
+                        @Override
+                        public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+                             if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                                hideTooltip();
+                            }
+                        }
+                    });
 
 					// Add Right Click Listener BEFORE DragAndDrop to capture event
 					addListener(new InputListener() {
@@ -655,21 +690,20 @@ public class GameHUD {
 		}
 
 		public void setFocused(boolean focused) {
+			boolean actualFocus = focused && currentInputMode == InputMode.KEYBOARD;
+
 			if (focusBorder != null) {
-				focusBorder.setVisible(focused);
-				if (focused) {
-					// com.goldsprite.gdengine.log.Debug.log("Slot focused: " + this);
+				focusBorder.setVisible(actualFocus);
+				if (actualFocus) {
 					focusBorder.setColor(fColor); // Lower alpha for background highlight
 				}
-			} else {
-				// com.goldsprite.gdengine.log.Debug.log("Slot focusBorder is null!");
 			}
 			
-			if (focused && item != null) {
-				showFocusTooltip(this, item, isEquipped);
-			} else if (focused) {
+			if (actualFocus && item != null) {
+				showTooltip(this, item);
+			} else if (actualFocus) {
 				// Focused but empty slot -> hide tooltip
-				hideFocusTooltip();
+				hideTooltip();
 			}
 		}
 
@@ -718,7 +752,7 @@ public class GameHUD {
 					ActorGestureListener listener = new ActorGestureListener() {
 						@Override
 						public void tap(InputEvent event, float x, float y, int count, int button) {
-							hideFocusTooltip();
+							hideTooltip();
 							// Android tap acts as click (Unequip)
 							player.equip(item, slotIndex);
 							updateInventory(player);
@@ -734,7 +768,7 @@ public class GameHUD {
 						@Override
 						public void pan(InputEvent event, float x, float y, float deltaX, float deltaY) {
 							super.pan(event, x, y, deltaX, deltaY);
-							hideFocusTooltip();
+							hideTooltip();
 						}
 
 						@Override
@@ -742,20 +776,34 @@ public class GameHUD {
 							super.touchUp(event, x, y, pointer, button);
 							// hideAndroidTooltip(); // Don't hide on touchUp if it's long press menu
 							// Context menu handles its own closing usually, but focus tooltip should be hidden
-							hideFocusTooltip();
+							hideTooltip();
 						}
 					};
 					listener.getGestureDetector().setLongPressSeconds(0.18f);
 					addListener(listener);
 				} else {
-					VisTable tooltipContent = createItemTooltipTable(item, true);
-					new Tooltip.Builder(tooltipContent).target(this).build();
+                    // Mouse Hover Tooltip
+                    addListener(new InputListener() {
+                        @Override
+                        public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+                            if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                                showTooltip(EquipmentSlot.this, item);
+                            }
+                        }
+                        @Override
+                        public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+                             if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                                hideTooltip();
+                            }
+                        }
+                    });
 				}
 
 				// Click to Unequip (Standard click behavior)
 				this.clickListener = new ClickListener() {
 					@Override
 					public void clicked(InputEvent event, float x, float y) {
+						hideTooltip(); // Added fix
 						player.equip(item, slotIndex);
 						updateInventory(player);
 					}
@@ -815,16 +863,18 @@ public class GameHUD {
 
 		@Override
 		public void setFocused(boolean focused) {
+            boolean actualFocus = focused && currentInputMode == InputMode.KEYBOARD;
+
 			if (focusBorder != null) {
-				focusBorder.setVisible(focused);
-				if (focused) focusBorder.setColor(fColor);
+				focusBorder.setVisible(actualFocus);
+				if (actualFocus) focusBorder.setColor(fColor);
 			}
 			
 			// Show Tooltip on Focus
-			if (focused && item != null) {
-				showFocusTooltip(this, item, true);
-			} else if (focused) {
-				hideFocusTooltip();
+			if (actualFocus && item != null) {
+				showTooltip(this, item);
+			} else if (actualFocus) {
+				hideTooltip();
 			}
 		}
 
@@ -935,7 +985,7 @@ public class GameHUD {
 					manaLabel.setText(player.stats.mana + "/" + player.stats.maxMana);
 				}
 			} else {
-				// showMessage("没有可用的物品!");
+				// showMessage("没有可用的物品");
 			}
 		}
 	}
@@ -974,23 +1024,23 @@ public class GameHUD {
 				// Potion Quick Slot
 				if (item.data.type == ItemType.POTION) {
 					// Add Quick Slot Options
-					MenuItem quickSlot1 = new MenuItem("设为快捷栏 1 (HP)", new ChangeListener() {
+					MenuItem quickSlot1 = new MenuItem("设为快捷键1 (HP)", new ChangeListener() {
 						@Override
 						public void changed(ChangeEvent event, Actor actor) {
 							if (hpQuickSlot != null) {
 								hpQuickSlot.setTargetItem(item.data);
-								showMessage("快捷栏 1 已设置为: " + item.data.name);
+								showMessage("快捷键1 已设置为: " + item.data.name);
 							}
 						}
 					});
 					menu.addItem(quickSlot1);
 
-					MenuItem quickSlot2 = new MenuItem("设为快捷栏 2 (MP)", new ChangeListener() {
+					MenuItem quickSlot2 = new MenuItem("设为快捷键2 (MP)", new ChangeListener() {
 						@Override
 						public void changed(ChangeEvent event, Actor actor) {
 							if (mpQuickSlot != null) {
 								mpQuickSlot.setTargetItem(item.data);
-								showMessage("快捷栏 2 已设置为: " + item.data.name);
+								showMessage("快捷键2 已设置为: " + item.data.name);
 							}
 						}
 					});
@@ -1069,7 +1119,7 @@ public class GameHUD {
 		content.pad(10);
 		borderTable.add(content).grow().pad(2); // pad(2) 是为了露出背景的边框
 
-		// === 布局重构：左右分栏 ===
+		// === 布局重构：左右分布 ===
 		// 主容器：水平布局
 		VisTable mainContainer = new VisTable();
 		content.add(mainContainer).growX().row();
@@ -1123,63 +1173,92 @@ public class GameHUD {
 			if (item.manaRegen > 0) rightCol.add(new VisLabel(mpRegenLabel + item.manaRegen)).left().padBottom(2).row();
 		}
 
-		// 6. 状态 (已装备)
+		// 6. 状态(已装备)
 		if (isEquipped) {
 			VisLabel status = new VisLabel("已装备");
 			status.setColor(Color.YELLOW);
 			rightCol.add(status).left().padTop(8).row();
 		}
 
-		// 7. 价值 (最底部)
-		VisLabel valueLabel = new VisLabel("价值: " + item.getValue() + " 硬币");
+		// 7. 价值(最底部)
+		VisLabel valueLabel = new VisLabel("价值 " + item.getValue() + " 硬币");
 		valueLabel.setColor(Color.GOLD);
 		// 字体大小与其他一致，不进行缩放
 		rightCol.add(valueLabel).left().padTop(5).row();
 		return borderTable;
 	}
 
-	public void showFocusTooltip(Actor target, InventoryItem item, boolean isEquipped) {
-		hideFocusTooltip(); // Clear previous if any
+	public void showTooltip(Actor target, InventoryItem item) {
+		hideTooltip(); // Clear previous if any
+		if (item == null) return;
 
-		// Reuse the Android tooltip logic but for focus (non-touchable)
+		boolean isEquipped = checkIsEquipped(currentPlayer, item);
 		VisTable tooltip = createItemTooltipTable(item, isEquipped);
 		tooltip.setTouchable(Touchable.disabled);
 		stage.addActor(tooltip);
 
-		// Calculate Position: Right of target
-		Vector2 pos = target.localToStageCoordinates(new Vector2(0, 0));
-		float x = pos.x + target.getWidth() + 10; // Right side
-		float y = pos.y + target.getHeight(); // Align top (y is bottom-left usually, so y+h is top)
-		
-		// If using align top-left for tooltip:
-		// Tooltip content builds downwards usually?
-		// Let's assume tooltip (0,0) is bottom-left.
-		// We want tooltip top-left to align with target top-right.
-		
 		tooltip.pack();
-		float w = tooltip.getWidth();
-		float h = tooltip.getHeight();
-		
-		y = pos.y + target.getHeight() - h; // Align tops
+		float x = 0;
+		float y = 0;
 
-		// Check Right Boundary
-		if (x + w > stage.getWidth()) {
-			// Flip to Left side
-			x = pos.x - w - 10;
+		if (currentInputMode == InputMode.KEYBOARD) {
+			// Keyboard: Fixed position next to target
+			Vector2 pos = target.localToStageCoordinates(new Vector2(0, 0));
+			x = pos.x + target.getWidth() + 10; // Right side
+			y = pos.y + target.getHeight() - tooltip.getHeight(); // Align tops
+
+			// Check Right Boundary
+			if (x + tooltip.getWidth() > stage.getWidth()) {
+				// Flip to Left side
+				x = pos.x - tooltip.getWidth() - 10;
+			}
+		} else {
+			// Mouse: Follow mouse
+			x = Gdx.input.getX() + 15;
+			y = stage.getHeight() - Gdx.input.getY() - tooltip.getHeight() - 15;
+			
+			// Simple boundary check
+			if (x + tooltip.getWidth() > stage.getWidth()) {
+				x = stage.getWidth() - tooltip.getWidth() - 10;
+			}
 		}
 
 		// Check Top/Bottom Boundary (Clamp Y)
 		if (y < 0) y = 0;
-		if (y + h > stage.getHeight()) y = stage.getHeight() - h;
+		if (y + tooltip.getHeight() > stage.getHeight()) y = stage.getHeight() - tooltip.getHeight();
 
 		tooltip.setPosition(x, y);
 		currentTooltip = tooltip;
 	}
 
-	public void hideFocusTooltip() {
+	public void hideTooltip() {
 		if (currentTooltip != null) {
 			currentTooltip.remove();
 			currentTooltip = null;
+		}
+	}
+
+	public void updateInputMode(InputMode newMode) {
+		if (currentInputMode == newMode) return;
+		currentInputMode = newMode;
+		
+		if (newMode == InputMode.KEYBOARD) {
+			Gdx.input.setCursorCatched(true);
+			if (inventoryDialog != null && inventoryDialog.getParent() != null) {
+				inventoryDialog.updateFocus();
+			}
+			if (chestDialog != null && chestDialog.getParent() != null) {
+				chestDialog.updateFocus();
+			}
+		} else {
+			Gdx.input.setCursorCatched(false);
+			if (inventoryDialog != null) {
+				inventoryDialog.clearFocus();
+			}
+			if (chestDialog != null) {
+				chestDialog.clearFocus();
+			}
+			hideTooltip();
 		}
 	}
 
@@ -1230,7 +1309,7 @@ public class GameHUD {
 		// Since root is table based, we can put it in the next row, left aligned.
 		VisTable logContainer = new VisTable();
 		logContainer.setBackground(logBgDrawable);
-		msgLabel = new VisLabel("欢迎来到地下城!", "small");
+		msgLabel = new VisLabel("欢迎来到地下城", "small");
 		msgLabel.setFontScale(0.8f);
 		msgLabel.setWrap(true);
 		msgLabel.setAlignment(Align.topLeft);
@@ -1616,8 +1695,8 @@ public class GameHUD {
 
 	private void createHelpWindow() {
 		// BaseDialog 内部已经调用了 addCloseButton() 和 closeOnEscape()
-		// 我们不需要手动添加关闭按钮，也不需要手动检测 ESC，除非 BaseDialog 的实现有问题。
-		// 为了保险起见，我们添加一个 Listener 来处理 ESC，覆盖默认行为
+		// 我们不需要手动添加关闭按钮，也不需要手动检查 ESC，除非 BaseDialog 的实现有问题。
+		// 为了保险起见，我们添加一个 Listener 来处理 ESC，覆盖默认行为。
 		helpWindow = new BaseDialog("帮助");
 		
 		helpWindow.addListener(new InputListener() {
@@ -1663,15 +1742,15 @@ public class GameHUD {
 		addHelpRow(keysTable, "地图", InputAction.MAP, isController);
 		addHelpRow(keysTable, "暂停", InputAction.PAUSE, isController);
 		addHelpRow(keysTable, "切换区域", InputAction.TAB, isController);
-		addHelpRow(keysTable, "快捷栏", InputAction.QUICK_SLOT, isController);
+		addHelpRow(keysTable, "快捷键", InputAction.QUICK_SLOT, isController);
 
 		leftCol.add(keysTable).left().padBottom(20).row();
 
 		VisLabel extraLabel = new VisLabel("【基本操作】\n" +
-				"移动: WASD 或 方向键 (移动端: 左下角摇杆)\n" +
+				"移动: WASD 或 方向键 (移动或 左下角摇杆)\n" +
 				"攻击: 撞击怪物自动攻击\n" +
-				"交互: SPACE 空格键 (移动端: 交互按钮) - 下楼/上楼/进关卡\n" +
-				"技能: H 键 (移动端: 动作按钮) - 使用治疗术 (消耗魔法)\n" +
+				"交互: SPACE 空格键 (移动端 交互按钮) - 下楼/上楼/进关卡\n" +
+				"技能: H 键 (移动端 动作按钮) - 使用治疗药 (消耗魔法)\n" +
 				"\n" +
 				"【物品与装备】\n" +
 				"拾取: 移动到物品上自动拾取\n" +
@@ -1679,7 +1758,7 @@ public class GameHUD {
 				"背包: 按 E 键或点击背包按钮打开，点击物品进行装备/卸下/使用\n" +
 				"\n" +
 				"【其他】\n" +
-				"存档: F5 或 点击保存按钮\n" +
+				"存档: F5 或点击保存按钮\n" +
 				"读档: F9 (仅限PC调试)\n" +
 				"查看信息: 点击怪物或长按物品查看详情");
 		extraLabel.setWrap(true);
@@ -2050,6 +2129,7 @@ public class GameHUD {
 	}
 
 	public void updateInventory(Player player) {
+		hideTooltip(); // Added fix for orphan tooltips
 		if (player == null) return;
 
 		if (inventoryDialog != null) {
@@ -2249,10 +2329,13 @@ public class GameHUD {
 	}
 
 	private void handleToolbarInput() {
+		if (hasModalUI()) return;
+
 		InputManager input = InputManager.getInstance();
 
 		// Toggle focus with TAB
 		if (input.isJustPressed(InputAction.TAB)) {
+			updateInputMode(InputMode.KEYBOARD);
 			isToolbarFocused = !isToolbarFocused;
 			if (isToolbarFocused) {
 				if (toolbarFocusIndex == -1) toolbarFocusIndex = 0;
@@ -2415,7 +2498,7 @@ public class GameHUD {
 
 		@Override
 		public boolean remove() {
-			GameHUD.this.hideFocusTooltip();
+			GameHUD.this.hideTooltip();
 			return super.remove();
 		}
 
@@ -2426,7 +2509,6 @@ public class GameHUD {
 			// Chest Items
 			chestItemsTable.clear();
 			int maxChestSlots = 16; // 16格两排容量
-
 			for (int i = 0; i < maxChestSlots; i++) {
 				InventoryItem item = (i < chest.items.size()) ? chest.items.get(i) : null;
 				InventorySlot slot = new InventorySlot(item, player, dragAndDrop, chest, this, true);
@@ -2435,12 +2517,12 @@ public class GameHUD {
 				if ((i + 1) % itemsPerRow == 0) chestItemsTable.row();
 			}
 
-			// Player Items
+			// Player Inventory
 			playerItemsTable.clear();
 			int maxInvSlots = Constants.MAX_INVENTORY_SLOTS;
-
+			List<InventoryItem> invItems = player.inventory;
 			for (int i = 0; i < maxInvSlots; i++) {
-				InventoryItem item = (i < player.inventory.size()) ? player.inventory.get(i) : null;
+				InventoryItem item = (i < invItems.size()) ? invItems.get(i) : null;
 				InventorySlot slot = new InventorySlot(item, player, dragAndDrop, chest, this, false);
 				playerItemsTable.add(slot).size(64, 64).pad(5);
 				inventorySlots.add(slot);
@@ -2451,22 +2533,15 @@ public class GameHUD {
 		}
 		
 		private void navigate(int dx, int dy) {
+            GameHUD.this.updateInputMode(InputMode.KEYBOARD);
+
 			if (currentArea == FocusArea.CHEST) {
-				if (dx == 1) {
-					currentChestIndex++;
-					if (currentChestIndex % itemsPerRow == 0) {
-						// Switch to Inventory
-						currentChestIndex--; 
-						currentArea = FocusArea.INVENTORY;
-						currentInvIndex = 0; // Start at top-left
-					}
-				} else if (dx == -1) {
-					currentChestIndex--;
-				}
+				if (dx == 1) currentChestIndex++;
+				if (dx == -1) currentChestIndex--;
 				if (dy == 1) currentChestIndex -= itemsPerRow;
 				if (dy == -1) currentChestIndex += itemsPerRow;
 				
-				// Clamp Chest
+				// Clamp
 				if (currentChestIndex < 0) currentChestIndex = 0;
 				if (chestSlots.size() > 0) {
 					if (currentChestIndex >= chestSlots.size()) currentChestIndex = chestSlots.size() - 1;
@@ -2474,25 +2549,16 @@ public class GameHUD {
 					currentChestIndex = 0;
 				}
 				
-			} else { // INVENTORY
-				if (dx == -1) {
-					if (currentInvIndex % itemsPerRow == 0) {
-						// Switch to Chest
-						currentArea = FocusArea.CHEST;
-						// Try to match row? Or just end of chest?
-						// Chest is small, just go to last valid or 0.
-						currentChestIndex = Math.min(currentInvIndex, chestSlots.size() - 1);
-						if (currentChestIndex < 0) currentChestIndex = 0;
-					} else {
-						currentInvIndex--;
-					}
-				} else if (dx == 1) {
-					currentInvIndex++;
-				}
+				// Switch to Inventory if moving Right from right edge? Or Tab?
+				// Let's use Tab to switch context usually, but maybe simple right/left
+				// If on right edge of Chest, move to Inventory?
+				// Simple: Tab switches area
+			} else {
+				if (dx == 1) currentInvIndex++;
+				if (dx == -1) currentInvIndex--;
 				if (dy == 1) currentInvIndex -= itemsPerRow;
 				if (dy == -1) currentInvIndex += itemsPerRow;
 				
-				// Clamp Inventory
 				if (currentInvIndex < 0) currentInvIndex = 0;
 				if (inventorySlots.size() > 0) {
 					if (currentInvIndex >= inventorySlots.size()) currentInvIndex = inventorySlots.size() - 1;
@@ -2503,9 +2569,28 @@ public class GameHUD {
 			updateFocus();
 		}
 
+		public void updateFocus() {
+			for (int i = 0; i < chestSlots.size(); i++) {
+				chestSlots.get(i).setFocused(currentArea == FocusArea.CHEST && i == currentChestIndex);
+			}
+			for (int i = 0; i < inventorySlots.size(); i++) {
+				inventorySlots.get(i).setFocused(currentArea == FocusArea.INVENTORY && i == currentInvIndex);
+			}
+		}
+
+		public void clearFocus() {
+			for (InventorySlot slot : chestSlots) slot.setFocused(false);
+			for (InventorySlot slot : inventorySlots) slot.setFocused(false);
+		}
+
 		@Override
 		public void act(float delta) {
 			super.act(delta);
+			
+			if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
+                 GameHUD.this.updateInputMode(InputMode.MOUSE);
+            }
+
 			InputManager input = InputManager.getInstance();
 			
 			if (input.isJustPressed(InputAction.UI_RIGHT)) navigate(1, 0);
@@ -2513,39 +2598,23 @@ public class GameHUD {
 			if (input.isJustPressed(InputAction.UI_UP)) navigate(0, 1);
 			if (input.isJustPressed(InputAction.UI_DOWN)) navigate(0, -1);
 			
-			// Tab Navigation (Switch Area)
 			if (input.isJustPressed(InputAction.TAB)) {
-				if (currentArea == FocusArea.CHEST) {
-					currentArea = FocusArea.INVENTORY;
-				} else {
-					currentArea = FocusArea.CHEST;
-				}
+				GameHUD.this.updateInputMode(InputMode.KEYBOARD);
+				if (currentArea == FocusArea.CHEST) currentArea = FocusArea.INVENTORY;
+				else currentArea = FocusArea.CHEST;
 				updateFocus();
 			}
 			
 			if (input.isJustPressed(InputAction.UI_CONFIRM)) {
 				if (currentArea == FocusArea.CHEST) {
-					 if (currentChestIndex >= 0 && currentChestIndex < chestSlots.size()) {
-						chestSlots.get(currentChestIndex).simulateClick();
-					}
+					if (currentChestIndex < chestSlots.size()) chestSlots.get(currentChestIndex).simulateClick();
 				} else {
-					if (currentInvIndex >= 0 && currentInvIndex < inventorySlots.size()) {
-						inventorySlots.get(currentInvIndex).simulateClick();
-					}
+					if (currentInvIndex < inventorySlots.size()) inventorySlots.get(currentInvIndex).simulateClick();
 				}
 			}
 			
 			if (input.isJustPressed(InputAction.UI_CANCEL)) {
-				remove();
-			}
-		}
-		
-		public void updateFocus() {
-			for (int i = 0; i < chestSlots.size(); i++) {
-				chestSlots.get(i).setFocused(currentArea == FocusArea.CHEST && i == currentChestIndex);
-			}
-			for (int i = 0; i < inventorySlots.size(); i++) {
-				inventorySlots.get(i).setFocused(currentArea == FocusArea.INVENTORY && i == currentInvIndex);
+				hide();
 			}
 		}
 		
@@ -2555,22 +2624,25 @@ public class GameHUD {
 			currentArea = FocusArea.CHEST;
 			currentChestIndex = 0;
 			currentInvIndex = 0;
-			updateFocus();
+			Gdx.app.postRunnable(this::updateFocus);
 			return this;
 		}
 	}
 
 	private void unequipItem(Player player, InventoryItem item) {
-		if (player.equipment.mainHand == item) player.equipment.mainHand = null;
-		else if (player.equipment.offHand == item) player.equipment.offHand = null;
-		else if (player.equipment.helmet == item) player.equipment.helmet = null;
-		else if (player.equipment.armor == item) player.equipment.armor = null;
-		else if (player.equipment.boots == item) player.equipment.boots = null;
-		else {
-			for(int i=0; i<player.equipment.accessories.length; i++) {
-				if (player.equipment.accessories[i] == item) {
-					player.equipment.accessories[i] = null;
-					break;
+		// Helper to unequip if item is equipped
+		if (checkIsEquipped(player, item)) {
+			// Find which slot
+			if (player.equipment.mainHand != null && player.equipment.mainHand.id.equals(item.id)) player.equipment.mainHand = null;
+			else if (player.equipment.offHand != null && player.equipment.offHand.id.equals(item.id)) player.equipment.offHand = null;
+			else if (player.equipment.helmet != null && player.equipment.helmet.id.equals(item.id)) player.equipment.helmet = null;
+			else if (player.equipment.armor != null && player.equipment.armor.id.equals(item.id)) player.equipment.armor = null;
+			else if (player.equipment.boots != null && player.equipment.boots.id.equals(item.id)) player.equipment.boots = null;
+			else if (player.equipment.accessories != null) {
+				for (int i = 0; i < player.equipment.accessories.length; i++) {
+					if (player.equipment.accessories[i] != null && player.equipment.accessories[i].id.equals(item.id)) {
+						player.equipment.accessories[i] = null;
+					}
 				}
 			}
 		}
