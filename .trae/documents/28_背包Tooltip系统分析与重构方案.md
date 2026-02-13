@@ -1,93 +1,99 @@
-# 背包 Tooltip 系统分析与重构方案
+# 背包 Tooltip 系统分析与重构方案 (v2)
 
-## 1. 现状分析
+## 1. 现状分析 (Updated)
 
-经过对 `GameHUD.java` 及相关代码的深入分析，当前背包系统中的物品信息展示（Tooltip）存在三种不同的实现方式，导致了视觉上的冗余和交互体验的不一致。
+当前背包系统存在三种物品信息展示方式（键盘焦点旁、鼠标悬浮、左下角操作反馈），导致视觉冗余和体验割裂。特别是在混合操作时（如鼠标悬浮在键盘选中的格子上），会出现两个 Tooltip 重叠的情况。
 
-### 1.1 三种现存的展示机制
+## 2. 核心需求变更
 
-1.  **键盘焦点 Tooltip (Focus Tooltip)**
-    *   **触发条件**: 使用键盘（WASD/方向键）或手柄在背包/装备栏中移动光标，使格子获得焦点 (`setFocused(true)`) 时触发。
-    *   **位置**: 动态计算，通常显示在目标格子的**右侧**。如果右侧空间不足，则翻转到左侧。
-    *   **实现**: `GameHUD.showFocusTooltip(Actor target, InventoryItem item, ...)`。
-    *   **代码位置**: `InventorySlot.setFocused` 和 `EquipmentSlot.setFocused` 中调用。
+根据最新讨论，重构方案不再采用“固定面板”，而是**统一的跟随式 Tooltip**，并引入**输入模式切换**机制。
 
-2.  **鼠标悬浮 Tooltip (Mouse Hover Tooltip)**
-    *   **触发条件**: 鼠标指针悬浮在物品格子上时触发。
-    *   **位置**: 跟随鼠标指针或显示在鼠标附近（LibGDX VisUI 默认行为）。
-    *   **实现**: 使用 VisUI 的标准 `Tooltip` 组件。
-    *   **代码位置**: `InventorySlot` 和 `EquipmentSlot` 的构造函数中 `new Tooltip.Builder(...)`。
+### 2.1 核心目标
+1.  **单一数据源与显示实例**：全局同一时间只能显示一个 Tooltip。
+2.  **输入模式互斥**：
+    *   **键盘/手柄模式 (Keyboard Mode)**: 触发导航时进入。**隐藏鼠标光标**。Tooltip 显示在焦点格子旁边。
+    *   **鼠标模式 (Mouse Mode)**: 检测到鼠标移动时进入。**显示鼠标光标**，并**取消键盘焦点**。Tooltip 跟随鼠标悬浮显示。
 
-3.  **操作反馈提示 (Action Feedback)**
-    *   **触发条件**: 执行装备、卸下、使用物品等操作时触发。
-    *   **位置**: 屏幕**左下角**（系统日志区域 `msgLabel`），用户可能感知为“中下固定位置”。
-    *   **实现**: `GameHUD.showMessage(String msg)`。
-    *   **内容**: 简单的文本提示，如“装备 铁剑”、“使用 红色药水”。
+## 3. 技术实现方案
 
-### 1.2 存在的问题
+### 3.1 统一 Tooltip 管理器 (`TooltipManager`)
 
-*   **视觉冲突与冗余**: 当用户使用鼠标悬浮在一个被键盘选中的格子上时，**Focus Tooltip** 和 **Mouse Hover Tooltip** 会同时出现。由于它们显示的内容几乎相同（都是物品详情），这造成了严重的视觉杂乱。
-*   **位置不统一**: 信息的展示位置取决于输入方式（键盘 vs 鼠标），导致用户视线需要在不同区域跳跃，体验不连贯。
-*   **代码逻辑分散**: Tooltip 的创建和管理分散在 `InventorySlot`、`EquipmentSlot` 和 `GameHUD` 中，维护成本高。
+不再依赖 VisUI 自带的 `Tooltip` 类（它是基于 Listener 自动管理的，难以控制互斥），而是手动管理一个全局的 `TooltipTable`。
 
-## 2. 解决方案：统一固定详情面板 (Fixed Detail Panel)
+*   **位置**: `GameHUD` 类中。
+*   **成员**:
+    *   `VisTable currentTooltip`: 当前显示的 Tooltip 实例。
+    *   `InputMode currentInputMode`: 枚举 `MOUSE`, `KEYBOARD`。
+*   **方法**:
+    *   `showTooltip(Actor target, InventoryItem item)`: 根据当前模式计算位置并显示。
+    *   `hideTooltip()`: 移除当前 Tooltip。
 
-为了彻底解决上述问题，建议废弃所有弹出的 Tooltip，转而采用**固定区域显示物品详情**的方案。这也是许多经典 RPG 游戏（如《暗黑破坏神》、《星露谷物语》的主机版）的标准设计。
+### 3.2 输入模式切换逻辑
 
-### 2.1 核心设计理念
+我们需要在 `GameHUD` 或 `InputManager` 中监听输入事件来切换状态。
 
-*   **单一数据源**: 无论通过鼠标悬浮还是键盘选择，信息的展示终端只有一个。
-*   **固定位置**: 在背包 UI 中开辟一块专用区域（Detail Panel），用于展示当前选中物品的详细信息。
-*   **即时响应**: 焦点改变或鼠标划过时，立即更新面板内容。
+#### A. 进入键盘模式 (Keyboard Mode)
+*   **触发条件**: 
+    *   检测到 `InputAction.UI_UP/DOWN/LEFT/RIGHT` 或 `TAB` 等导航按键。
+*   **执行动作**:
+    1.  `currentInputMode = KEYBOARD`。
+    2.  **隐藏鼠标**: `Gdx.input.setCursorCatched(true)` (或将光标移出屏幕/设置透明图标)。
+    3.  **恢复焦点**: 如果之前有选中的格子，重新高亮它；或者默认选中第一个。
+    4.  **显示 Tooltip**: 立即在当前焦点格子旁显示 Tooltip。
 
-### 2.2 UI 布局改造
+#### B. 进入鼠标模式 (Mouse Mode)
+*   **触发条件**: 
+    *   检测到 `mouseMoved` 或 `touchDown` 事件。
+*   **执行动作**:
+    1.  `currentInputMode = MOUSE`。
+    2.  **显示鼠标**: `Gdx.input.setCursorCatched(false)`。
+    3.  **取消焦点**: 调用 `inventoryDialog.clearFocus()`，移除所有格子的焦点高亮边框。
+    4.  **Tooltip 更新**: 
+        *   隐藏原本的焦点 Tooltip。
+        *   如果鼠标此刻正悬停在某个格子上（通过 `hit` 检测或 `InputListener`），显示该格子的 Tooltip。
 
-建议调整 `InventoryDialog` 的布局，在现有两栏布局的基础上进行优化：
+### 3.3 UI 组件改造
 
-*   **当前布局**:
-    *   左栏 (30%): 装备槽 (Equipment) + 属性 (Stats)
-    *   右栏 (70%): 物品列表 (Inventory List)
+#### `InventorySlot` & `EquipmentSlot`
+1.  **移除 VisUI Tooltip**: 删除构造函数中的 `new Tooltip.Builder(...)`。
+2.  **添加鼠标监听**:
+    ```java
+    addListener(new InputListener() {
+        public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+            if (currentInputMode == MOUSE) {
+                gameHUD.showTooltip(thisSlot, item);
+            }
+        }
+        public void exit(...) {
+            gameHUD.hideTooltip();
+        }
+    });
+    ```
+3.  **修改焦点逻辑**:
+    *   `setFocused(boolean focused)`: 仅当 `focused == true` 且 `currentInputMode == KEYBOARD` 时，才显示焦点边框和 Tooltip。
 
-*   **建议布局**:
-    *   将 **属性 (Stats)** 移动到更紧凑的位置，或者与装备栏整合。
-    *   在 **底部** 或 **右侧** 新增一个 **详情面板 (Detail Panel)**。
-    *   或者，将右栏一分为二：上方为物品列表，下方为详情面板。
+#### `InventoryDialog`
+1.  **增加 `clearFocus()`**: 遍历所有 Slot，调用 `setFocused(false)`。
+2.  **输入监听**: 在 `act` 方法或全局 `InputProcessor` 中，加入对鼠标移动的检测，触发模式切换。
 
-### 2.3 交互逻辑重构
+### 3.4 边界情况处理
+*   **点击操作**: 无论是鼠标点击还是键盘确认，执行装备/使用逻辑后，应刷新 Tooltip 内容（因为物品可能变了或消失了）。
+*   **窗口关闭**: 关闭背包时，Tooltip 必须强制隐藏。
 
-1.  **移除旧机制**:
-    *   删除 `InventorySlot` 和 `EquipmentSlot` 中的 `new Tooltip.Builder(...)` 代码。
-    *   删除 `GameHUD` 中的 `showFocusTooltip`、`hideFocusTooltip` 方法及其调用。
+## 4. 实施步骤 (Task List)
 
-2.  **引入新机制**:
-    *   在 `GameHUD` 或 `InventoryDialog` 中创建一个 `updateDetailPanel(InventoryItem item)` 方法。
-    *   **键盘交互**: 在 `setFocused(true)` 时，调用 `updateDetailPanel(this.item)`。
-    *   **鼠标交互**: 给每个 Slot 添加 `InputListener`，监听 `enter` (鼠标进入) 事件。当鼠标进入时，调用 `updateDetailPanel(this.item)` 并可选地将该 Slot 设置为焦点（实现鼠标与键盘焦点的同步）。
-
-### 2.4 预期效果
-
-*   **整洁**: 界面上不再有飘忽不定的浮窗，所有信息井然有序。
-*   **统一**: 无论使用手柄、键盘还是鼠标，查看物品详情的体验完全一致。
-*   **高效**: 玩家可以快速浏览背包，视线只需固定在详情面板区域，无需跟随光标移动。
-
-## 3. 具体实施步骤 (Task List)
-
-1.  **备份代码**: 确保当前工作区代码已提交或备份。
-2.  **清理旧代码**:
-    *   注释掉或删除 `GameHUD.java` 中关于 `Focus Tooltip` 的逻辑。
-    *   注释掉或删除 Slot 类中关于 `VisUI Tooltip` 的逻辑。
-3.  **UI 布局调整**:
-    *   修改 `InventoryDialog` 的构造函数。
-    *   创建一个新的 `VisTable` 作为 `detailPanel`。
-    *   将其放置在合适的布局位置（推荐：右侧物品列表下方，固定高度）。
-4.  **实现详情渲染**:
-    *   将原有的 `createItemTooltipTable` 方法逻辑迁移到 `updateDetailPanel` 中，用于填充 `detailPanel`。
-5.  **绑定事件**:
-    *   修改 `InventorySlot` 和 `EquipmentSlot`，在 `setFocused` 和鼠标 `enter` 事件中触发面板更新。
-6.  **验证**:
-    *   测试键盘导航，确认详情面板随光标更新。
-    *   测试鼠标悬浮，确认详情面板随鼠标更新。
-    *   确认无残留的弹出框。
+1.  **GameHUD 改造**:
+    *   添加 `InputMode` 枚举与状态变量。
+    *   实现 `updateInputMode(InputMode newMode)` 方法，处理光标显隐和焦点清除。
+    *   重构 `showTooltip` 方法，支持两种定位模式（Target右侧 vs 鼠标跟随）。
+2.  **输入监听接入**:
+    *   在 `GameHUD.act()` 或 `InputManager` 中添加鼠标移动检测逻辑。
+3.  **Slot 类清理**:
+    *   移除旧的 `Tooltip` 代码。
+    *   添加新的鼠标 `enter/exit` 监听，对接 `GameHUD` 的 Tooltip 方法。
+4.  **InventoryDialog 适配**:
+    *   实现 `clearFocus()`。
+    *   在键盘导航逻辑中，强制切换回 `KEYBOARD` 模式。
 
 ---
-*本文档由 AI 助手生成，用于指导 MagicDungeon 项目背包系统的 UI 重构。*
+*本文档由 AI 助手生成，用于指导 MagicDungeon 项目背包系统的 UI 重构 (v2)。*

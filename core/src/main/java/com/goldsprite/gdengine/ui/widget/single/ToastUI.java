@@ -1,4 +1,4 @@
-package com.goldsprite.gdengine.ui.widget;
+package com.goldsprite.gdengine.ui.widget.single;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;

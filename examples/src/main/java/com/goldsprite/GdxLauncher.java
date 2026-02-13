@@ -12,8 +12,8 @@ import com.goldsprite.gdengine.audio.SynthAudio;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.gdengine.ui.widget.ToastUI;
-import com.goldsprite.gdengine.ui.dialog.GlobalDialog;
+import com.goldsprite.gdengine.ui.widget.single.ToastUI;
+import com.goldsprite.gdengine.ui.widget.single.DialogUI;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.gdengine.web.DocServer;
 import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
@@ -49,7 +49,7 @@ public class GdxLauncher extends Game {
 		debug.initUI();
 		toastStage = new Stage(new ScreenViewport());
 		toastStage.addActor(ToastUI.inst());
-		toastStage.addActor(GlobalDialog.getInstance());
+		toastStage.addActor(DialogUI.getInstance());
 
 		ScreenManager sm = new ScreenManager()
 			.addScreen(new ExampleSelectScreen())

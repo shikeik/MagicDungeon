@@ -2,7 +2,7 @@ package com.goldsprite.magicdungeon.testing;
 
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.testing.AutoTestManager;
-import com.goldsprite.gdengine.ui.dialog.GlobalDialog;
+import com.goldsprite.gdengine.ui.widget.single.DialogUI;
 import com.goldsprite.magicdungeon.screens.TestSelectionScreen;
 import com.goldsprite.magicdungeon.screens.tests.VisUIDemoScreen;
 
@@ -53,7 +53,7 @@ public class GameAutoTests {
             atm.logPass("所有自动测试流程已执行完毕。");
 
             // 尝试显示全局弹窗
-            GlobalDialog.show("测试完成", "所有 UI 场景自动切换测试已通过！");
+            DialogUI.show("测试完成", "所有 UI 场景自动切换测试已通过！");
 
             AutoTestManager.ENABLED = false;
         });

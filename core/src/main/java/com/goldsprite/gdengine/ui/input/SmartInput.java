@@ -7,7 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
-import com.goldsprite.gdengine.ui.widget.ToastUI; // 现在引用的是 Core 里的 ToastUI
+import com.goldsprite.gdengine.ui.widget.single.ToastUI; // 现在引用的是 Core 里的 ToastUI
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
