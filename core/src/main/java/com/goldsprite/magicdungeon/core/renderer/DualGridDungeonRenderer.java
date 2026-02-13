@@ -45,13 +45,19 @@ public class DualGridDungeonRenderer implements Disposable {
         TextureRegion[] brickBlob = null;
         if (com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall) != null) {
              Texture tex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall).getTexture();
-             TextureRegion[][] split = TextureRegion.split(tex, 16, 16);
+             int size = tex.getWidth() / 4;
+             TextureRegion[][] split = TextureRegion.split(tex, size, size);
              brickBlob = new TextureRegion[16];
              for (int i = 0; i < 16; i++) {
                  brickBlob[i] = split[i / 4][i % 4];
              }
         } else {
-             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
+             // Try to load 32x version first, then fallback to normal
+             if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles_32x.png").exists()) {
+                 brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
+             } else {
+                 brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
+             }
         }
 
         // Layer 0: Dirt (Base layer)
@@ -76,7 +82,8 @@ public class DualGridDungeonRenderer implements Disposable {
         Texture tex = new Texture(Gdx.files.internal(path));
         textures.put(path, tex);
         
-        TextureRegion[][] split = TextureRegion.split(tex, 16, 16);
+        int size = tex.getWidth() / 4;
+        TextureRegion[][] split = TextureRegion.split(tex, size, size);
         TextureRegion[] flat = new TextureRegion[16];
         for (int i = 0; i < 16; i++) {
             flat[i] = split[i / 4][i % 4];

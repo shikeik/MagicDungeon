@@ -38,18 +38,21 @@ public class DualGridDemoScreen extends GScreen {
     }
 
     public enum TerrainType {
-        AIR(null),
-        SAND("sprites/tilesets/sand_tiles.png"),
-        DIRT("sprites/tilesets/dirt_tiles.png"),
-        GRASS("sprites/tilesets/grass_tiles.png"),
-        DUNGEON_BRICK("sprites/tilesets/dungeon_brick_tiles.png"),
+        AIR(null, 0),
+        SAND("sprites/tilesets/sand_tiles.png", 16),
+        DIRT("sprites/tilesets/dirt_tiles.png", 16),
+        GRASS("sprites/tilesets/grass_tiles.png", 16),
+        DUNGEON_BRICK("sprites/tilesets/dungeon_brick_tiles_32x.png", 32),
         ;
 
         public final int id;
         public final String texPath;
-        TerrainType(String texPath) {
+        public final int sourceSize;
+
+        TerrainType(String texPath, int sourceSize) {
             this.id = ordinal()-1;
             this.texPath = texPath;
+            this.sourceSize = sourceSize;
         }
     }
 
@@ -145,7 +148,7 @@ public class DualGridDemoScreen extends GScreen {
             for (TerrainType type : TerrainType.values()) {
                 if (type == TerrainType.AIR) continue;
                 Texture tex = new Texture(Gdx.files.internal(type.texPath));
-                TextureRegion[][] temp = TextureRegion.split(tex, 16, 16);
+                TextureRegion[][] temp = TextureRegion.split(tex, type.sourceSize, type.sourceSize);
                 for (int i = 0; i < 16; i++) {
                     atlas[type.id][i] = temp[i / 4][i % 4];
                 }
