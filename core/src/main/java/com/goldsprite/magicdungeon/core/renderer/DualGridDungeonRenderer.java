@@ -30,6 +30,8 @@ public class DualGridDungeonRenderer implements Disposable {
     private List<LayerConfig> layers = new ArrayList<>();
     private Map<String, Texture> textures = new HashMap<>();
     private TextureRegion[] dungeonFloors;
+    private TextureRegion torchTex;
+    private TextureRegion windowTex;
 
     public DualGridDungeonRenderer() {
         loadResources();
@@ -44,7 +46,13 @@ public class DualGridDungeonRenderer implements Disposable {
         // For dungeon bricks, prefer the generated one if file is missing or we want dynamic style
         // But for now, let's check TextureManager for "WALL" which now uses createDungeonWallTileset
         TextureRegion[] brickBlob = null;
-        if (com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall) != null) {
+        
+        // Priority 1: 32x High Res File
+        if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles_32x.png").exists()) {
+             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
+        } 
+        // Priority 2: TextureManager (Generated)
+        else if (com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall) != null) {
              Texture tex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall).getTexture();
              int size = tex.getWidth() / 4;
              TextureRegion[][] split = TextureRegion.split(tex, size, size);
@@ -52,33 +60,36 @@ public class DualGridDungeonRenderer implements Disposable {
              for (int i = 0; i < 16; i++) {
                  brickBlob[i] = split[i / 4][i % 4];
              }
-        } else {
-             // Try to load 32x version first, then fallback to normal
-             if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles_32x.png").exists()) {
-                 brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
-             } else {
-                 brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
-             }
+        } 
+        // Priority 3: 16x Old File
+        else {
+             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
         }
 
-        // Load Dungeon Floor Variations (floor_0.png to floor_5.png)
-        dungeonFloors = new TextureRegion[6];
-        for (int i = 0; i < 6; i++) {
-            String path = "sprites/tilesets/floor_" + i + ".png";
-            if (Gdx.files.internal(path).exists()) {
-                Texture tex = new Texture(Gdx.files.internal(path));
-                textures.put(path, tex);
-                dungeonFloors[i] = new TextureRegion(tex);
-            } else {
-                // Fallback to floor_0 or TextureManager's floor if missing
-                if (i > 0 && dungeonFloors[0] != null) {
-                    dungeonFloors[i] = dungeonFloors[0];
-                } else {
-                    // Last resort fallback
-                    TextureRegion tr = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Floor);
-                    if (tr != null) dungeonFloors[i] = tr;
+        // Load Dungeon Floor Variations (floor-Sheet.png, 7 variations horizontal)
+        dungeonFloors = new TextureRegion[7];
+        String floorSheetPath = "sprites/tilesets/floor-Sheet.png";
+        
+        if (Gdx.files.internal(floorSheetPath).exists()) {
+            Texture tex = new Texture(Gdx.files.internal(floorSheetPath));
+            textures.put(floorSheetPath, tex);
+            // Assuming the sheet is horizontal strip with 7 frames
+            // Calculate frame width (Total Width / 7)
+            int frameWidth = tex.getWidth() / 7;
+            int frameHeight = tex.getHeight();
+            
+            TextureRegion[][] split = TextureRegion.split(tex, frameWidth, frameHeight);
+            if (split.length > 0 && split[0].length >= 7) {
+                for (int i = 0; i < 7; i++) {
+                    dungeonFloors[i] = split[0][i];
                 }
             }
+        } else {
+             // Fallback to TextureManager's floor if missing
+             TextureRegion tr = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Floor);
+             if (tr != null) {
+                 for(int i=0; i<7; i++) dungeonFloors[i] = tr;
+             }
         }
 
         // Layer 0: Dirt (Base layer)
@@ -92,6 +103,18 @@ public class DualGridDungeonRenderer implements Disposable {
         
         // Layer 3: Grass (Top layer)
         if (grassBlob != null) layers.add(new LayerConfig(grassBlob, "grass"));
+
+        // Load Decor (Torch, Window)
+        if (Gdx.files.internal("sprites/tilesets/torch.png").exists()) {
+            Texture tex = new Texture(Gdx.files.internal("sprites/tilesets/torch.png"));
+            textures.put("sprites/tilesets/torch.png", tex);
+            torchTex = new TextureRegion(tex);
+        }
+        if (Gdx.files.internal("sprites/tilesets/wall_window.png").exists()) {
+            Texture tex = new Texture(Gdx.files.internal("sprites/tilesets/wall_window.png"));
+            textures.put("sprites/tilesets/wall_window.png", tex);
+            windowTex = new TextureRegion(tex);
+        }
     }
 
     private TextureRegion[] loadBlobTexture(String path) {
@@ -167,6 +190,21 @@ public class DualGridDungeonRenderer implements Disposable {
             renderLayer(batch, dungeon, "brick", (t) -> t != null && (
                 t.type == TileType.Wall || t.type == TileType.Torch || t.type == TileType.Window
             ));
+
+            // 3. 渲染墙壁装饰 (火把, 窗户)
+            // 这些装饰物是叠加在双网格墙壁之上的
+            for (int x = 0; x < dungeon.width; x++) {
+                for (int y = 0; y < dungeon.height; y++) {
+                    Tile t = dungeon.getTile(x, y);
+                    if (t == null) continue;
+                    
+                    if (t.type == TileType.Torch && torchTex != null) {
+                        batch.draw(torchTex, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    } else if (t.type == TileType.Window && windowTex != null) {
+                        batch.draw(windowTex, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
         }
     }
 

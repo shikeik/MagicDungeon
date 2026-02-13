@@ -970,10 +970,11 @@ public class GameScreen extends GScreen {
 					// Draw Objects that are NOT handled by Dual Grid (Terrain)
 					TileType t = tile.type;
 					// 注意：Wall 已经被 DualGrid 接管，这里不再绘制单图块 Wall
+					// Torch 和 Window 现在也由 DualGridDungeonRenderer 负责渲染，以使用新纹理
 					if (t == TileType.Door || t == TileType.Stairs_Up || 
 						t == TileType.Stairs_Down || t == TileType.Dungeon_Entrance || 
 						t == TileType.Tree || t == TileType.StonePath ||
-						t == TileType.Pillar || t == TileType.Torch || t == TileType.Window) {
+						t == TileType.Pillar) {
 						
 						TextureRegion texture = TextureManager.getInstance().getTile(t);
 						if (texture != null) {
