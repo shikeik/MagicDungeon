@@ -10,6 +10,7 @@ public class Tile {
 		this.type = type;
 		this.visible = false;
 		this.discovered = false;
-		this.walkable = (type != TileType.Wall);
+		// Walkable logic
+		this.walkable = (type != TileType.Wall && type != TileType.Pillar && type != TileType.Torch && type != TileType.Window);
 	}
 }

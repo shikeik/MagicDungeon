@@ -99,8 +99,11 @@ public class DualGridDungeonRenderer implements Disposable {
             
             // 注意：这里的逻辑是，如果 Tile 是 Wall，则该位置是实心块 (1)，否则是空 (0)
             // 这样双网格算法会计算出墙壁的边缘和平滑过渡
+            // 我们将 Torch 和 Window 也视为墙壁，以便它们下面也有墙体渲染
             
-            renderLayer(batch, dungeon, "brick", (t) -> t != null && t.type == TileType.Wall);
+            renderLayer(batch, dungeon, "brick", (t) -> t != null && (
+                t.type == TileType.Wall || t.type == TileType.Torch || t.type == TileType.Window
+            ));
         }
     }
 

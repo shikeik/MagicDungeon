@@ -10,5 +10,8 @@ public enum TileType {
 	Grass,
 	Sand,
 	StonePath,
-	Dungeon_Entrance
+	Dungeon_Entrance,
+	Pillar,
+	Torch,
+	Window
 }

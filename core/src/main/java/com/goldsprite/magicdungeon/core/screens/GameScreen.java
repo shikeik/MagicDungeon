@@ -991,7 +991,8 @@ public class GameScreen extends GScreen {
 					// 注意：Wall 已经被 DualGrid 接管，这里不再绘制单图块 Wall
 					if (t == TileType.Door || t == TileType.Stairs_Up || 
 						t == TileType.Stairs_Down || t == TileType.Dungeon_Entrance || 
-						t == TileType.Tree || t == TileType.StonePath) {
+						t == TileType.Tree || t == TileType.StonePath ||
+						t == TileType.Pillar || t == TileType.Torch || t == TileType.Window) {
 						
 						TextureRegion texture = TextureManager.getInstance().getTile(t);
 						if (texture != null) {

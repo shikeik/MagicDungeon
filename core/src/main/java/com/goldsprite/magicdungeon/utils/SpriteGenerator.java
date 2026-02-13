@@ -148,35 +148,125 @@ public class SpriteGenerator {
 	public static Texture createFloor() {
 		Pixmap p = createPixmap();
 
-		// Base Stone - Darker
-		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#222222"));
+		// Base Stone Color (Warm Grey)
+		Color baseColor = Color.valueOf("#3E3E3E");
+		Color darkColor = Color.valueOf("#2E2E2E");
+		Color highlightColor = Color.valueOf("#4E4E4E");
+		
+		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, darkColor);
 
-		// Big tiles pattern (2x2)
-		int size = TEX_SIZE / 2;
-		p.setColor(Color.valueOf("#2a2a2a"));
-		p.drawRectangle(0, 0, size, size);
-		p.drawRectangle(size, size, size, size);
-		p.drawRectangle(size, 0, size, size);
-		p.drawRectangle(0, size, size, size);
+		// Large Stone Slabs (irregular grid)
+		int rows = 2;
+		int cols = 2;
+		int slabW = TEX_SIZE / cols;
+		int slabH = TEX_SIZE / rows;
+		int gap = 4;
 
-		// Noise/Gravel
-		p.setColor(Color.valueOf("#333333"));
-		for (int i = 0; i < 200; i++) {
-			int x = MathUtils.random(TEX_SIZE);
-			int y = MathUtils.random(TEX_SIZE);
-			int r = MathUtils.random(1, 3);
-			p.fillCircle(x, y, r);
+		for (int r = 0; r < rows; r++) {
+			for (int c = 0; c < cols; c++) {
+				int x = c * slabW + gap;
+				int y = r * slabH + gap;
+				int w = slabW - gap * 2;
+				int h = slabH - gap * 2;
+
+				// Variation
+				float shade = 0.9f + MathUtils.random(0.2f);
+				Color slabColor = new Color(baseColor).mul(shade, shade, shade, 1f);
+
+				drawRect(p, x, y, w, h, slabColor);
+				
+				// Bevel Highlight (Top/Left)
+				drawRect(p, x, y, w, 4, highlightColor);
+				drawRect(p, x, y, 4, h, highlightColor);
+				
+				// Cracks
+				if (MathUtils.randomBoolean(0.3f)) {
+					int cx = x + MathUtils.random(w);
+					int cy = y + MathUtils.random(h);
+					int len = MathUtils.random(10, 30);
+					drawLine(p, cx, cy, cx + len, cy + len, 2, darkColor);
+				}
+			}
 		}
 
-		// Cracks
-		p.setColor(Color.valueOf("#111111"));
-		for (int i=0; i<5; i++) {
-			 int x1 = MathUtils.random(TEX_SIZE);
-			 int y1 = MathUtils.random(TEX_SIZE);
-			 int x2 = x1 + MathUtils.random(-30, 30);
-			 int y2 = y1 + MathUtils.random(-30, 30);
-			 p.drawLine(x1, y1, x2, y2);
-		}
+		applyNoise(p, 0.05f);
+		return toTexture(p);
+	}
+
+	public static Texture createPillar() {
+		Pixmap p = createPixmap();
+		
+		// Transparent Background
+		
+		// Pillar Dimensions
+		int w = 64; // relatively thin
+		int h = 180;
+		int x = (TEX_SIZE - w) / 2;
+		int y = (TEX_SIZE - h) / 2;
+
+		Color stoneColor = Color.valueOf("#555555");
+		Color highlight = Color.valueOf("#777777");
+		Color shadow = Color.valueOf("#333333");
+
+		// Base
+		drawRect(p, x - 10, y + h - 20, w + 20, 20, shadow);
+		drawRect(p, x - 5, y + h - 25, w + 10, 5, highlight);
+
+		// Shaft (Cylinder shading)
+		// Left side dark, center light, right side mid
+		drawRect(p, x, y + 20, w/3, h - 40, shadow);
+		drawRect(p, x + w/3, y + 20, w/3, h - 40, stoneColor);
+		drawRect(p, x + 2*w/3, y + 20, w/3, h - 40, shadow);
+		
+		// Capital (Top)
+		drawRect(p, x - 10, y, w + 20, 20, highlight);
+		drawRect(p, x - 5, y + 20, w + 10, 5, shadow);
+
+		// Cracks / Moss
+		applyNoise(p, 0.1f);
+		
+		return toTexture(p);
+	}
+
+	public static Texture createTorch() {
+		Pixmap p = createPixmap();
+		
+		// Torch Holder (Wood/Metal)
+		int w = 20;
+		int h = 60;
+		int x = (TEX_SIZE - w) / 2;
+		int y = (TEX_SIZE - h) / 2 + 20;
+
+		drawRect(p, x, y, w, h, Color.valueOf("#4A3B2A")); // Wood
+		drawRect(p, x-5, y, w+10, 10, Color.GRAY); // Metal ring top
+		
+		// Fire
+		int fx = TEX_SIZE / 2;
+		int fy = y - 20;
+		drawGradientCircle(p, fx, fy, 25, Color.YELLOW, Color.ORANGE);
+		drawGradientCircle(p, fx, fy - 10, 15, Color.WHITE, Color.YELLOW);
+
+		return toTexture(p);
+	}
+
+	public static Texture createWindow() {
+		Pixmap p = createPixmap();
+		
+		// Frame
+		int w = 80;
+		int h = 100;
+		int x = (TEX_SIZE - w) / 2;
+		int y = (TEX_SIZE - h) / 2;
+		
+		Color frameColor = Color.valueOf("#333333");
+		drawRect(p, x, y, w, h, frameColor);
+		
+		// Bars
+		drawRect(p, x + w/3, y, 4, h, Color.BLACK);
+		drawRect(p, x + 2*w/3, y, 4, h, Color.BLACK);
+		
+		// Background (Dark Blue/Black)
+		drawRect(p, x+4, y+4, w-8, h-8, Color.valueOf("#111122"));
 
 		return toTexture(p);
 	}
