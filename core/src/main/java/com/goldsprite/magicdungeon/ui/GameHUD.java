@@ -1231,7 +1231,7 @@ public class GameHUD {
 		VisTable logContainer = new VisTable();
 		logContainer.setBackground(logBgDrawable);
 		msgLabel = new VisLabel("欢迎来到地下城!", "small");
-		msgLabel.setFontScale(0.3f);
+		msgLabel.setFontScale(0.8f);
 		msgLabel.setWrap(true);
 		msgLabel.setAlignment(Align.topLeft);
 		logContainer.add(msgLabel).width(500).pad(10).top().left();
@@ -2021,7 +2021,7 @@ public class GameHUD {
 
 	public void showLevelSelection(int maxDepth, Consumer<Integer> onSelect) {
 		BaseDialog dialog = new BaseDialog("选择层数");
-		dialog.addCloseButton();
+		dialog.autoPack = true; // Ensure dialog is packed to fit content
 
 		VisTable content = new VisTable();
 		content.top().left();

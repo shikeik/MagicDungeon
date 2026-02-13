@@ -76,6 +76,10 @@ public class VisUIHelper {
 			mainSkin.addRegions(shimmerAtlas);
 			mainSkin.load(Gdx.files.internal("ui_skins/shimmer-ui/shimmer-ui.json"));
 
+			 // 暂时加载默认, 因为shimmer还没做好
+			mainSkin.addRegions(new TextureAtlas("ui_skins/visui/x1/uiskin.atlas"));
+			mainSkin.load(Gdx.files.internal("ui_skins/visui/x1/uiskin.json"));
+
 			// 映射 VisUI 样式 (因为 Shimmer 是标准皮肤)
 			mapStandardStylesToVisStyles(mainSkin);
 
