@@ -121,7 +121,67 @@ public class MapGenerator {
             }
 		}
 
+		// Decorate
+		decorate(map, rooms, rng);
+
 		return new GenResult(map, start);
+	}
+	
+	private void decorate(Tile[][] map, List<Room> rooms, RandomXS128 rng) {
+		// 1. Place Torches and Windows on North Walls
+		for (int y = 1; y < height; y++) {
+			for (int x = 1; x < width - 1; x++) {
+				if (map[y][x].type == TileType.Wall) {
+					// Check if below is floor (North Wall of a room/corridor)
+					if (map[y-1][x].type == TileType.Floor) {
+						// Random chance
+						float roll = rng.nextFloat();
+						if (roll < 0.15f) { // 15% Torch
+							map[y][x].type = TileType.Torch;
+						} else if (roll > 0.90f) { // 10% Window
+							map[y][x].type = TileType.Window;
+						}
+					}
+				}
+			}
+		}
+		
+		// 2. Place Pillars in Rooms
+		for (Room room : rooms) {
+			if (room.w >= 6 && room.h >= 6) {
+				// Place pillars near corners (inset by 2)
+				int px1 = room.x + 2;
+				int py1 = room.y + 2;
+				int px2 = room.x + room.w - 3;
+				int py2 = room.y + room.h - 3;
+				
+				// Top-Left
+				if (isValidPillarSpot(map, px1, py2)) {
+					map[py2][px1].type = TileType.Pillar;
+					map[py2][px1].walkable = false;
+				}
+				// Top-Right
+				if (isValidPillarSpot(map, px2, py2)) {
+					map[py2][px2].type = TileType.Pillar;
+					map[py2][px2].walkable = false;
+				}
+				// Bottom-Left
+				if (isValidPillarSpot(map, px1, py1)) {
+					map[py1][px1].type = TileType.Pillar;
+					map[py1][px1].walkable = false;
+				}
+				// Bottom-Right
+				if (isValidPillarSpot(map, px2, py1)) {
+					map[py1][px2].type = TileType.Pillar;
+					map[py1][px2].walkable = false;
+				}
+			}
+		}
+	}
+	
+	private boolean isValidPillarSpot(Tile[][] map, int x, int y) {
+		if (x < 0 || x >= width || y < 0 || y >= height) return false;
+		return map[y][x].type == TileType.Floor;
 	}
 
 	private void createRoom(Tile[][] map, Room room) {

@@ -39,7 +39,20 @@ public class DualGridDungeonRenderer implements Disposable {
         TextureRegion[] grassBlob = loadBlobTexture("sprites/tilesets/grass_tiles.png");
         TextureRegion[] sandBlob = loadBlobTexture("sprites/tilesets/sand_tiles.png");
         TextureRegion[] dirtBlob = loadBlobTexture("sprites/tilesets/dirt_tiles.png");
-        TextureRegion[] brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
+        
+        // For dungeon bricks, prefer the generated one if file is missing or we want dynamic style
+        // But for now, let's check TextureManager for "WALL" which now uses createDungeonWallTileset
+        TextureRegion[] brickBlob = null;
+        if (com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall) != null) {
+             Texture tex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall).getTexture();
+             TextureRegion[][] split = TextureRegion.split(tex, 16, 16);
+             brickBlob = new TextureRegion[16];
+             for (int i = 0; i < 16; i++) {
+                 brickBlob[i] = split[i / 4][i % 4];
+             }
+        } else {
+             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
+        }
 
         // Layer 0: Dirt (Base layer)
         if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));
@@ -99,8 +112,11 @@ public class DualGridDungeonRenderer implements Disposable {
             
             // 注意：这里的逻辑是，如果 Tile 是 Wall，则该位置是实心块 (1)，否则是空 (0)
             // 这样双网格算法会计算出墙壁的边缘和平滑过渡
+            // 我们将 Torch 和 Window 也视为墙壁，以便它们下面也有墙体渲染
             
-            renderLayer(batch, dungeon, "brick", (t) -> t != null && t.type == TileType.Wall);
+            renderLayer(batch, dungeon, "brick", (t) -> t != null && (
+                t.type == TileType.Wall || t.type == TileType.Torch || t.type == TileType.Window
+            ));
         }
     }
 
