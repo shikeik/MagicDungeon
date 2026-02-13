@@ -29,6 +29,7 @@ public class DualGridDungeonRenderer implements Disposable {
 
     private List<LayerConfig> layers = new ArrayList<>();
     private Map<String, Texture> textures = new HashMap<>();
+    private TextureRegion[] dungeonFloors;
 
     public DualGridDungeonRenderer() {
         loadResources();
@@ -58,6 +59,26 @@ public class DualGridDungeonRenderer implements Disposable {
              } else {
                  brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
              }
+        }
+
+        // Load Dungeon Floor Variations (floor_0.png to floor_5.png)
+        dungeonFloors = new TextureRegion[6];
+        for (int i = 0; i < 6; i++) {
+            String path = "sprites/tilesets/floor_" + i + ".png";
+            if (Gdx.files.internal(path).exists()) {
+                Texture tex = new Texture(Gdx.files.internal(path));
+                textures.put(path, tex);
+                dungeonFloors[i] = new TextureRegion(tex);
+            } else {
+                // Fallback to floor_0 or TextureManager's floor if missing
+                if (i > 0 && dungeonFloors[0] != null) {
+                    dungeonFloors[i] = dungeonFloors[0];
+                } else {
+                    // Last resort fallback
+                    TextureRegion tr = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Floor);
+                    if (tr != null) dungeonFloors[i] = tr;
+                }
+            }
         }
 
         // Layer 0: Dirt (Base layer)
@@ -114,7 +135,29 @@ public class DualGridDungeonRenderer implements Disposable {
             
         } else {
             // === 地牢模式 (Level > 0) ===
-            // 双网格渲染器现在主要用于渲染地牢墙壁 (dungeon_brick)
+            
+            // 1. 渲染地板 (Floor) - 支持随机变种
+            // 使用确定的哈希算法确保同一位置总是显示相同的地板变种
+            for (int x = 0; x < dungeon.width; x++) {
+                for (int y = 0; y < dungeon.height; y++) {
+                    Tile t = dungeon.getTile(x, y);
+                    if (t != null) {
+                        // 只要不是 null，就绘制地板背景（或者是只在可行走区域绘制？通常地牢是铺满的）
+                        // 这里我们假设所有有效 Tile 下面都有地板
+                        if (dungeonFloors != null && dungeonFloors.length > 0) {
+                            int variantIndex = Math.abs((x * 73856093 ^ y * 19349663) % dungeonFloors.length);
+                            TextureRegion floorTex = dungeonFloors[variantIndex];
+                            if (floorTex != null) {
+                                float drawX = x * TILE_SIZE;
+                                float drawY = y * TILE_SIZE;
+                                batch.draw(floorTex, drawX, drawY, TILE_SIZE, TILE_SIZE);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. 双网格渲染器现在主要用于渲染地牢墙壁 (dungeon_brick)
             // 我们只在有 Wall 的地方渲染 "brick" 层，这样墙壁会有双网格边缘效果
             
             // 注意：这里的逻辑是，如果 Tile 是 Wall，则该位置是实心块 (1)，否则是空 (0)

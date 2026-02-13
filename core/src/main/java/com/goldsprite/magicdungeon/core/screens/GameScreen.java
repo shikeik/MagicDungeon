@@ -959,26 +959,7 @@ public class GameScreen extends GScreen {
 		int endY = dungeon.height;
 
 		// Render Map Terrain (Dual Grid)
-		// 1. 底层：使用 TextureManager.getTile(TileType.Floor) 铺满整个地图区域
-		//    对于地牢层级(>0)，我们使用旧地板纹理铺底。
-		if (dungeon.level > 0) {
-			TextureRegion floorTex = TextureManager.getInstance().getTile(TileType.Floor);
-			if (floorTex != null) {
-				for (int y = startY; y < endY; y++) {
-					for (int x = startX; x < endX; x++) {
-						Tile tile = dungeon.getTile(x, y);
-						if (tile != null) {
-							// 只要不是空区域，都铺上地板，作为背景层
-							// 这样墙体(双网格)和地板(旧纹理)可以共存
-							batch.draw(floorTex, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
-						}
-					}
-				}
-			}
-		}
-
-		// 2. 上层：使用 DualGridDungeonRenderer 渲染双网格墙体
-		//    Renderer 内部会自动将 Wall 转换为 DUNGEON_BRICK 进行双网格计算
+		// 使用 DualGridDungeonRenderer 渲染地形（地板和双网格墙体）
 		dungeonRenderer.render(batch, dungeon);
 
 		// Render Objects (Walls, Doors, Stairs, etc.)
