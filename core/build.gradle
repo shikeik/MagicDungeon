@@ -19,11 +19,15 @@ dependencies {
 	api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 	api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
 	api "com.kotcrab.vis:vis-ui:$visUIVersion"
-    api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
-    api "com.github.raeleus:TenPatch:5.2.3"
+	api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
+//	api "com.github.raeleus:TenPatch:5.2.3"
+	// core/build.gradle
+	api ("com.github.raeleus:TenPatch:5.2.3") {
+		exclude group: 'org.lwjgl' // 排除掉所有 lwjgl 相关的库
+	}
 
-    // [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
-    api 'org.nanohttpd:nanohttpd:2.3.1'
+	// [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
+	api 'org.nanohttpd:nanohttpd:2.3.1'
 }
 
 publishing {

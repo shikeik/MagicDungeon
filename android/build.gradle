@@ -26,6 +26,7 @@ android {
 		resources {
 			excludes += ['META-INF/robovm/ios/robovm.xml', 'META-INF/DEPENDENCIES.txt', 'META-INF/DEPENDENCIES',
 									 'META-INF/dependencies.txt', '**/*.gwt.xml']
+			excludes += ['**/*.dll', '**/*.dll.sha1', '**/jemalloc32.dll.sha1', '**/jemalloc.dll.sha1', '**/jemalloc64.dll.sha1']
 			pickFirsts += ['META-INF/LICENSE.txt', 'META-INF/LICENSE', 'META-INF/license.txt', 'META-INF/LGPL2.1',
 										 'META-INF/NOTICE.txt', 'META-INF/NOTICE', 'META-INF/notice.txt']
 		}
