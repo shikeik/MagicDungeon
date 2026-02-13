@@ -45,9 +45,11 @@ import com.goldsprite.magicdungeon.input.InputAction;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector3;
 import com.goldsprite.magicdungeon.ui.ItemRenderer;
+import com.goldsprite.magicdungeon.core.renderer.DualGridDungeonRenderer;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
+	private DualGridDungeonRenderer dungeonRenderer;
 	private Player player;
 	private List<Monster> monsters;
 	private List<Item> items;
@@ -106,6 +108,7 @@ public class GameScreen extends GScreen {
 	@Override
 	public void create() {
 		batch = new NeonBatch();
+		dungeonRenderer = new DualGridDungeonRenderer();
 
 		System.out.println("GameScreen Constructor Started");
 		this.dungeon = new Dungeon(50, 50, seed);
@@ -955,22 +958,24 @@ public class GameScreen extends GScreen {
 		int endX = dungeon.width;
 		int endY = dungeon.height;
 
-		// Render Map
+		// Render Map Terrain (Dual Grid)
+		dungeonRenderer.render(batch, dungeon);
+
+		// Render Objects (Walls, Doors, Stairs, etc.)
 		for (int y = startY; y < endY; y++) {
 			for (int x = startX; x < endX; x++) {
 				Tile tile = dungeon.getTile(x, y);
 				if (tile != null) {
-					// Fix: Draw Floor under transparent tiles (Stairs, Door) to show background properly
-					if (tile.type == TileType.Stairs_Down || tile.type == TileType.Stairs_Up || tile.type == TileType.Door) {
-						TextureRegion floorTex = TextureManager.getInstance().getTile(TileType.Floor);
-						if (floorTex != null) {
-							batch.draw(floorTex, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
+					// Draw Objects that are NOT handled by Dual Grid (Terrain)
+					TileType t = tile.type;
+					if (t == TileType.Wall || t == TileType.Door || t == TileType.Stairs_Up || 
+						t == TileType.Stairs_Down || t == TileType.Dungeon_Entrance || 
+						t == TileType.Tree || t == TileType.StonePath) {
+						
+						TextureRegion texture = TextureManager.getInstance().getTile(t);
+						if (texture != null) {
+							batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
 						}
-					}
-
-					TextureRegion texture = TextureManager.getInstance().getTile(tile.type);
-					if (texture != null) {
-						batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
 					}
 				}
 			}
