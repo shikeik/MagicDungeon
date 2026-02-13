@@ -72,21 +72,36 @@ public class DualGridDungeonRenderer implements Disposable {
     }
 
     public void render(NeonBatch batch, Dungeon dungeon) {
-        // Layer 0: Dirt (Base) - Draw dirt everywhere there is a valid tile
-        renderLayer(batch, dungeon, "dirt", (t) -> t != null); 
-        
-        // Layer 1: Brick - Draw for indoor tiles (Floor, Wall, etc.)
-        renderLayer(batch, dungeon, "brick", (t) -> t != null && (
-            t.type == TileType.Floor || t.type == TileType.Wall || 
-            t.type == TileType.Door || t.type == TileType.Stairs_Up || 
-            t.type == TileType.Stairs_Down || t.type == TileType.Dungeon_Entrance
-        ));
-
-        // Layer 2: Sand
-        renderLayer(batch, dungeon, "sand", (t) -> t != null && t.type == TileType.Sand);
-        
-        // Layer 3: Grass
-        renderLayer(batch, dungeon, "grass", (t) -> t != null && t.type == TileType.Grass);
+        if (dungeon.level == 0) {
+            // === 营地模式 (Level 0) ===
+            // 恢复完整的自然地形渲染逻辑
+            
+            // Layer 0: Dirt (Base) - Draw dirt everywhere there is a valid tile
+            renderLayer(batch, dungeon, "dirt", (t) -> t != null); 
+            
+            // Layer 1: Brick - Draw for indoor tiles (Floor, Wall, etc.) if any in camp
+            renderLayer(batch, dungeon, "brick", (t) -> t != null && (
+                t.type == TileType.Floor || t.type == TileType.Wall || 
+                t.type == TileType.Door || t.type == TileType.Stairs_Up || 
+                t.type == TileType.Stairs_Down || t.type == TileType.Dungeon_Entrance
+            ));
+    
+            // Layer 2: Sand
+            renderLayer(batch, dungeon, "sand", (t) -> t != null && t.type == TileType.Sand);
+            
+            // Layer 3: Grass
+            renderLayer(batch, dungeon, "grass", (t) -> t != null && t.type == TileType.Grass);
+            
+        } else {
+            // === 地牢模式 (Level > 0) ===
+            // 双网格渲染器现在主要用于渲染地牢墙壁 (dungeon_brick)
+            // 我们只在有 Wall 的地方渲染 "brick" 层，这样墙壁会有双网格边缘效果
+            
+            // 注意：这里的逻辑是，如果 Tile 是 Wall，则该位置是实心块 (1)，否则是空 (0)
+            // 这样双网格算法会计算出墙壁的边缘和平滑过渡
+            
+            renderLayer(batch, dungeon, "brick", (t) -> t != null && t.type == TileType.Wall);
+        }
     }
 
     private interface TilePredicate {
