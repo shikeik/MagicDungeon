@@ -1,4 +1,4 @@
-# MagicDungeon V0.7.8_beta
+# MagicDungeon V0.8.8_beta
 - 始于2025.12.27
 
 ## 介绍:
