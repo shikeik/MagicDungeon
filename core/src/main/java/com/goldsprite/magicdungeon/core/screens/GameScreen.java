@@ -628,7 +628,7 @@ public class GameScreen extends GScreen {
 	public void render(float delta) {
 		handleInput(delta);
 
-		if (!isPaused) {
+		if (!isPaused && !getScreenManager().isTransitioning()) {
 			updateLogic(delta);
 		}
 
@@ -636,6 +636,8 @@ public class GameScreen extends GScreen {
 	}
 
 	private void handleInput(float delta) {
+		if (getScreenManager().isTransitioning()) return;
+
         InputManager input = InputManager.getInstance();
 
 		// Toggle Pause
@@ -810,21 +812,21 @@ public class GameScreen extends GScreen {
 			if (tile != null) {
 				if (tile.type == TileType.Stairs_Down) {
 					// Go deeper
-					enterDungeon(dungeon.level + 1);
+					getScreenManager().playTransition(() -> enterDungeon(dungeon.level + 1));
 					handledInteract = true;
 				} else if (tile.type == TileType.Stairs_Up) {
 					// Go back up
 					if (dungeon.level > 1) {
-						enterDungeon(dungeon.level - 1);
+						getScreenManager().playTransition(() -> enterDungeon(dungeon.level - 1));
 					} else {
 						// Level 1 -> Camp
-						enterCamp(true);
+						getScreenManager().playTransition(() -> enterCamp(true));
 					}
 					handledInteract = true;
 				} else if (tile.type == TileType.Dungeon_Entrance) {
 					// Show Level Selection
 					hud.showLevelSelection(maxDepth, (level) -> {
-						enterDungeon(level);
+						getScreenManager().playTransition(() -> enterDungeon(level));
 					});
 					handledInteract = true;
 				}
@@ -922,20 +924,22 @@ public class GameScreen extends GScreen {
 			@Override
 			public void run() {
 				// Restart (Respawn at Camp with reset progress)
-				isGameOver = false;
-				if (audio != null) audio.playBGM();
-
-				// Reset Player
-				player = new Player(0, 0);
-
-				// Reset World History
-				visitedLevels.clear();
-				maxDepth = 1;
-
-				// Enter Camp
-				enterCamp(false);
-
-				hud.showMessage("你已复活。一切归零。");
+				getScreenManager().playTransition(() -> {
+					isGameOver = false;
+					if (audio != null) audio.playBGM();
+	
+					// Reset Player
+					player = new Player(0, 0);
+	
+					// Reset World History
+					visitedLevels.clear();
+					maxDepth = 1;
+	
+					// Enter Camp
+					enterCamp(false);
+	
+					hud.showMessage("你已复活。一切归零。");
+				});
 			}
 		}, new Runnable() {
 			@Override
@@ -944,7 +948,9 @@ public class GameScreen extends GScreen {
 				Gdx.app.postRunnable(new Runnable() {
 					@Override
 					public void run() {
-						getScreenManager().setCurScreen(new MainMenuScreen());
+						getScreenManager().playTransition(() -> {
+							getScreenManager().setCurScreen(new MainMenuScreen());
+						});
 					}
 				});
 			}

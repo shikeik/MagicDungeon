@@ -1,6 +1,10 @@
 package com.goldsprite.gdengine.screens;
 
 import com.badlogic.gdx.*;
+import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
@@ -22,6 +26,8 @@ import java.util.function.Supplier;
  * * * 首先需要已添加目标屏幕，然后在屏幕内部使用getScreenManager().setCurScreen(TargetScreen.class)
  * * 返回上次屏幕:
  * * * 在屏幕历史堆栈有屏幕时getScreenManager().popLastScreen()来返回上个屏幕
+ * * 转场效果:
+ * * * 使用 playTransition(Runnable onMiddle) 来执行带黑屏过渡的操作
  */
 public class ScreenManager implements Disposable {
 
@@ -30,6 +36,13 @@ public class ScreenManager implements Disposable {
 		Portrait, // 竖屏
 		Landscape // 横屏
 		}
+	
+	// 转场状态
+	private enum TransitionState {
+		NONE,
+		FADE_OUT, // 透明 -> 黑
+		FADE_IN   // 黑 -> 透明
+	}
 
 	// 2. 定义回调接口 (底层不依赖 Android/Lwjgl)
 	public static Consumer<Orientation> orientationChanger;
@@ -50,6 +63,14 @@ public class ScreenManager implements Disposable {
 	private boolean popping;//用于标记是否为弹出历史屏幕状态
 	private Viewport viewport;//统一视口
 
+	// 转场相关变量
+	private TransitionState transitionState = TransitionState.NONE;
+	private float transitionDuration = 0.5f;
+	private float transitionTime = 0f;
+	private Runnable onTransitionMiddle;
+	private Runnable onTransitionEnd;
+	private ShapeRenderer shapeRenderer;
+
 	public ScreenManager() {
 		this(new InputMultiplexer());
 	}
@@ -67,6 +88,9 @@ public class ScreenManager implements Disposable {
 		//关键 这里需要手动update才能触发worldWidth/Height初始化赋值，之后GScreen才能拿到视口数据
 		viewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 		initInputHandler(imp);
+		
+		// 初始化转场渲染器
+		shapeRenderer = new ShapeRenderer();
 	}
 
 
@@ -121,14 +145,40 @@ public class ScreenManager implements Disposable {
 	}
 
 	/**
+	 * 开始一个转场效果 (淡入淡出)
+	 * @param onMiddle 当屏幕完全变黑时执行的操作 (通常用于切换屏幕或重置关卡)
+	 */
+	public void playTransition(Runnable onMiddle) {
+		playTransition(onMiddle, null);
+	}
+
+	/**
+	 * 开始一个转场效果 (淡入淡出)
+	 * @param onMiddle 当屏幕完全变黑时执行的操作
+	 * @param onEnd 当转场完全结束时执行的操作
+	 */
+	public void playTransition(Runnable onMiddle, Runnable onEnd) {
+		if (transitionState != TransitionState.NONE) return; // 已经在转场中
+
+		this.transitionState = TransitionState.FADE_OUT;
+		this.transitionTime = 0f;
+		this.onTransitionMiddle = onMiddle;
+		this.onTransitionEnd = onEnd;
+	}
+	
+	public boolean isTransitioning() {
+		return transitionState != TransitionState.NONE;
+	}
+	
+	/**
 	 * 渲染(已初始化的)当前屏幕
 	 */
 	public void render() {
         // 全局输入更新
         if (inputUpdater != null) inputUpdater.run();
         
-        // 全局返回键逻辑
-        if (backKeyTrigger != null && backKeyTrigger.get()) {
+        // 全局返回键逻辑 (转场期间禁用)
+        if (transitionState == TransitionState.NONE && backKeyTrigger != null && backKeyTrigger.get()) {
             GScreen current = getCurScreen();
             boolean consumed = false;
             if (current != null) {
@@ -147,6 +197,61 @@ public class ScreenManager implements Disposable {
 		float delta = Gdx.graphics.getDeltaTime();
 		curScreen.getUIViewport().apply();
 		curScreen.render(delta);
+		
+		// 渲染转场效果
+		renderTransition(delta);
+	}
+
+	private void renderTransition(float delta) {
+		if (transitionState == TransitionState.NONE) return;
+
+		transitionTime += delta;
+		float alpha = 0f;
+
+		if (transitionState == TransitionState.FADE_OUT) {
+			alpha = Math.min(1f, transitionTime / transitionDuration);
+			if (transitionTime >= transitionDuration) {
+				// Fade Out 完成，执行中间操作
+				if (onTransitionMiddle != null) {
+					onTransitionMiddle.run();
+					onTransitionMiddle = null; // 确保只执行一次
+				}
+				// 切换到 Fade In
+				transitionState = TransitionState.FADE_IN;
+				transitionTime = 0f;
+				alpha = 1f; // 保持全黑一帧
+			}
+		} else if (transitionState == TransitionState.FADE_IN) {
+			alpha = 1f - Math.min(1f, transitionTime / transitionDuration);
+			if (transitionTime >= transitionDuration) {
+				// Fade In 完成
+				transitionState = TransitionState.NONE;
+				if (onTransitionEnd != null) {
+					onTransitionEnd.run();
+					onTransitionEnd = null;
+				}
+				alpha = 0f;
+			}
+		}
+
+		if (alpha > 0) {
+			Gdx.gl.glEnable(GL20.GL_BLEND);
+			Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+			
+			Camera cam = curScreen.getUIViewport().getCamera();
+			shapeRenderer.setProjectionMatrix(cam.combined);
+			shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+			shapeRenderer.setColor(0, 0, 0, alpha);
+			
+			// 绘制一个覆盖相机的巨大矩形，确保覆盖全屏（包括可能的黑边区域，如果视口设置允许）
+			// 但通常我们只需要覆盖视口区域。为了保险，画大一点。
+			float w = curScreen.getUIViewport().getWorldWidth();
+			float h = curScreen.getUIViewport().getWorldHeight();
+			shapeRenderer.rect(cam.position.x - w, cam.position.y - h, w * 2, h * 2);
+			
+			shapeRenderer.end();
+			Gdx.gl.glDisable(GL20.GL_BLEND);
+		}
 	}
 
 	/**
@@ -154,6 +259,7 @@ public class ScreenManager implements Disposable {
 	 */
 	@Override
 	public void dispose() {
+		if (shapeRenderer != null) shapeRenderer.dispose();
 		for (GScreen screen : screens.values()) {
 			if (screen.isInitialized())
 				screen.dispose();

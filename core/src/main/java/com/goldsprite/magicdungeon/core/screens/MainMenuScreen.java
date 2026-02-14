@@ -232,14 +232,19 @@ public class MainMenuScreen extends GScreen {
 			seed = seedField.getText().hashCode();
 		}
 
-		GameScreen gameScreen = new GameScreen(seed);
-		getScreenManager().setCurScreen(gameScreen);
+		final long finalSeed = seed;
+		getScreenManager().playTransition(() -> {
+			GameScreen gameScreen = new GameScreen(finalSeed);
+			getScreenManager().setCurScreen(gameScreen);
+		});
 	}
 
 	private void continueGame() {
-		GameScreen gameScreen = new GameScreen();
-		getScreenManager().setCurScreen(gameScreen);
-		gameScreen.loadGame();
+		getScreenManager().playTransition(() -> {
+			GameScreen gameScreen = new GameScreen();
+			getScreenManager().setCurScreen(gameScreen);
+			gameScreen.loadGame();
+		});
 	}
 
 	@Override

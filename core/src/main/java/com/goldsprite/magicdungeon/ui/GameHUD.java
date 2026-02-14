@@ -28,6 +28,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.SkewBar;
 import com.goldsprite.magicdungeon.assets.TextureManager;
+import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import com.goldsprite.magicdungeon.entities.*;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
@@ -1177,8 +1178,8 @@ public class GameHUD {
 
 	private InventoryItem getEquippedItemForComparison(InventoryItem item) {
 		if (currentPlayer == null || currentPlayer.equipment == null) return null;
-		if (checkIsEquipped(currentPlayer, item)) return null; 
-		
+		if (checkIsEquipped(currentPlayer, item)) return null;
+
 		switch (item.data.type) {
 			case MAIN_HAND: return currentPlayer.equipment.mainHand;
 			case OFF_HAND: return currentPlayer.equipment.offHand;
@@ -1205,31 +1206,31 @@ public class GameHUD {
 
 		if (equipped != null && equipped != item) {
 			VisTable container = new VisTable();
-			
+
 			// Equipped (Left)
 			VisTable equippedTable = createItemTooltipTable(equipped, true);
 			// Add "(Equipped)" label to the bottom of the tooltip
 			equippedTable.row();
 			equippedTable.add(new VisLabel("【已装备】", Color.YELLOW)).pad(2);
-			
+
 			container.add(equippedTable).top().padRight(10);
-			
+
 			// New Item (Right)
 			VisTable newTable = createItemTooltipTable(item, false);
 			container.add(newTable).top();
-			
+
 			tooltipActor = container;
 		} else {
 			boolean isEquipped = checkIsEquipped(currentPlayer, item);
 			tooltipActor = createItemTooltipTable(item, isEquipped);
 		}
-		
+
 		tooltipActor.setTouchable(Touchable.disabled);
 		stage.addActor(tooltipActor);
 
 		if (tooltipActor instanceof Layout) ((Layout)tooltipActor).pack();
 		currentTooltip = tooltipActor;
-		
+
 		float x = 0;
 		float y = 0;
 
@@ -1244,11 +1245,11 @@ public class GameHUD {
 				// Flip to Left side
 				x = pos.x - tooltipActor.getWidth() - 10;
 			}
-			
+
 			// Clamp Y
 			if (y < 0) y = 0;
 			if (y + tooltipActor.getHeight() > stage.getHeight()) y = stage.getHeight() - tooltipActor.getHeight();
-			
+
 			tooltipActor.setPosition(x, y);
 		} else {
 			// Mouse: Follow mouse
@@ -1258,29 +1259,29 @@ public class GameHUD {
 
     private void updateTooltipPosition() {
         if (currentTooltip == null) return;
-        
+
         // [Refactor] Use GScreen's built-in coordinate conversion
         float x = Gdx.input.getX();
         float y = Gdx.input.getY();
-		
+
 		// Fallback (Should not happen in normal game loop)
 		Vector2 mousePos = stage.screenToStageCoordinates(new Vector2(x, y));
 		x = mousePos.x;
 		y = mousePos.y;
-        
+
         x += 15;
         y -= currentTooltip.getHeight(); // Align Top to Mouse (Y is up in Stage)
-        
+
         // Check Right Boundary
         if (x + currentTooltip.getWidth() > stage.getWidth()) {
             x = stage.getWidth() - currentTooltip.getWidth() - 10;
         }
-        
+
         // Check Bottom Boundary (Flip to top if not enough space below)
         if (y < 10) {
             y = y + currentTooltip.getHeight() + 15; // Move above cursor
         }
-        
+
         // Check Top Boundary
         if (y + currentTooltip.getHeight() > stage.getHeight()) {
              y = stage.getHeight() - currentTooltip.getHeight() - 10;
@@ -2139,7 +2140,7 @@ public class GameHUD {
 		// 如果暂停菜单尚未实现，至少拦截 Escape 防止意外退出 (或者让它退出，取决于设计)
 		// 根据用户反馈 "习惯性 Escape... 直接返回了上一屏幕"，这里应该拦截
 		// 我们可以显示一个暂停菜单，或者 Toast 提示 "再按一次退出" (需额外状态)
-		
+
 		// 暂时先显示暂停菜单 (如果存在) 或拦截
 		if (pauseWindow == null) {
 			createPauseWindow();
@@ -2149,7 +2150,7 @@ public class GameHUD {
 			return true;
 		}
 
-		return false; // 只有当暂停菜单已经在显示时 (被上面循环捕获关闭)，才返回 false? 
+		return false; // 只有当暂停菜单已经在显示时 (被上面循环捕获关闭)，才返回 false?
 		// 不，如果暂停菜单在显示，上面的循环会捕获并关闭它 (VisWindow)，返回 true。
 		// 所以这里只有当没有窗口时才会执行。
 		// 意味着：按 Esc -> 打开暂停菜单。再按 Esc -> 关闭暂停菜单。
@@ -2160,10 +2161,10 @@ public class GameHUD {
 	private void createPauseWindow() {
 		pauseWindow = new BaseDialog("暂停");
 		pauseWindow.setModal(true);
-		
+
 		VisTable content = new VisTable();
 		content.pad(20);
-		
+
 		VisTextButton btnResume = new VisTextButton("继续游戏");
 		btnResume.addListener(new ClickListener() {
 			@Override
@@ -2171,7 +2172,7 @@ public class GameHUD {
 				pauseWindow.fadeOut();
 			}
 		});
-		
+
 		VisTextButton btnSettings = new VisTextButton("设置");
 		btnSettings.addListener(new ClickListener() {
 			@Override
@@ -2185,21 +2186,15 @@ public class GameHUD {
 		btnExit.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				if (returnToCampListener != null) {
-					// 这里的逻辑可能需要调整，returnToCamp 是回城。
-					// 如果要退出到标题画面，应该调用 ScreenManager
-					ScreenManager.getInstance().setCurScreen(com.goldsprite.magicdungeon.core.screens.MainMenuScreen.class);
-				} else {
-					// Fallback
-					ScreenManager.getInstance().popLastScreen();
-				}
+				// Fallback
+				ScreenManager.getInstance().playTransition(() -> ScreenManager.getInstance().popLastScreen());
 			}
 		});
 
 		content.add(btnResume).width(150).padBottom(10).row();
 		content.add(btnSettings).width(150).padBottom(10).row();
 		content.add(btnExit).width(150).row();
-		
+
 		pauseWindow.add(content);
 		pauseWindow.pack();
 		pauseWindow.centerWindow();
@@ -2504,7 +2499,7 @@ public class GameHUD {
 			lastInputMode = currentMode;
 			onInputModeChanged(currentMode);
 		}
-        
+
         // Tooltip follow mouse
         if (currentTooltip != null && currentMode == InputManager.InputMode.MOUSE) {
             updateTooltipPosition();
@@ -2519,7 +2514,7 @@ public class GameHUD {
 		if (newMode == InputManager.InputMode.KEYBOARD) {
 			if (inventoryDialog != null && inventoryDialog.getParent() != null) {
 				inventoryDialog.updateFocus();
-				
+
 				// Ensure focus if none (Fix for controller stuck without focus)
 				if (inventoryDialog.currentArea == InventoryDialog.FocusArea.INVENTORY && inventoryDialog.currentInvIndex < 0) {
 					 inventoryDialog.currentInvIndex = 0;
@@ -2546,7 +2541,7 @@ public class GameHUD {
 				helpWindow.centerWindow();
 			}
 		}
-		
+
 		// Center other windows
 		if (inventoryDialog != null && inventoryDialog.isVisible()) {
 			inventoryDialog.centerWindow();
