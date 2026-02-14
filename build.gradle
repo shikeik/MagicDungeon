@@ -82,9 +82,12 @@ eclipse.project.name = 'MagicDungeon' + '-parent'
 //apply from: 'gradle/changelog-generator.gradle'
 //
 //// [新增] 引入本地文档预览任务
-//apply from: 'gradle/docs-preview.gradle'
-//
-//apply from: 'gradle/publish-docs.gradle'
+apply from: 'gradle/docs-preview.gradle'
+
+// [新增] 引入版本管理任务
+apply from: 'gradle/versioning.gradle'
+
+apply from: 'gradle/publish-docs.gradle'
 //apply from: 'gradle/publish-template.gradle'
 //
 //apply from: "gradle/publish-executables.gradle"
