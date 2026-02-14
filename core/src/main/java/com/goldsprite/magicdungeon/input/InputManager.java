@@ -1,5 +1,6 @@
 package com.goldsprite.magicdungeon.input;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.controllers.Controller;
@@ -26,6 +27,13 @@ public class InputManager {
     private final Map<InputAction, List<Integer>> controllerMappings = new HashMap<>();
     private boolean isVirtualGamepad = false;
     
+    // Global Input Mode State
+    public enum InputMode {
+        MOUSE,
+        KEYBOARD // Includes Controller
+    }
+    private InputMode currentInputMode = InputMode.MOUSE;
+    
     // State Tracking
     private final Set<Integer> currentButtons = new HashSet<>();
     private final Set<Integer> previousButtons = new HashSet<>();
@@ -34,38 +42,40 @@ public class InputManager {
     private final ControllerListener debugListener = new ControllerAdapter() {
         @Override
         public void connected(Controller controller) {
-            Debug.logT("InputManager", "Controller connected: " + getFriendlyName(controller));
+            Debug.logT("InputManager", "Controller connected: " + controller.getName());
         }
 
         @Override
         public void disconnected(Controller controller) {
-            Debug.logT("InputManager", "Controller disconnected: " + getFriendlyName(controller));
+            Debug.logT("InputManager", "Controller disconnected: " + controller.getName());
         }
 
         @Override
         public boolean buttonDown(Controller controller, int buttonCode) {
+            setInputMode(InputMode.KEYBOARD);
             String btnName = getButtonName(buttonCode);
-            Debug.logT("InputManager", "Controller Button Down: " + buttonCode + " [" + btnName + "] (" + getFriendlyName(controller) + ")");
+            Debug.logT("InputManager", "Controller Button Down: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
             return false;
         }
 
         @Override
         public boolean buttonUp(Controller controller, int buttonCode) {
             String btnName = getButtonName(buttonCode);
-            Debug.logT("InputManager", "Controller Button Up: " + buttonCode + " [" + btnName + "] (" + getFriendlyName(controller) + ")");
+            Debug.logT("InputManager", "Controller Button Up: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
             return false;
         }
 
         @Override
         public boolean axisMoved(Controller controller, int axisCode, float value) {
             if (Math.abs(value) > 0.3f) { // Only log significant movements to avoid spam
-                Debug.logT("InputManager", "Controller Axis Moved: " + axisCode + " = " + value + " (" + getFriendlyName(controller) + ")");
+                setInputMode(InputMode.KEYBOARD);
+                Debug.logT("InputManager", "Controller Axis Moved: " + axisCode + " = " + value + " (" + controller.getName() + ")");
             }
             return false;
         }
     };
 
-    // LibGDX Controller Mappings (Corrected for your Switch Pro Controller)
+    // LibGDX Controller Mappings (Standard / Xbox)
     public static final int BUTTON_A = 0;
     public static final int BUTTON_B = 1;
     public static final int BUTTON_X = 2;
@@ -77,11 +87,28 @@ public class InputManager {
     public static final int BUTTON_L3 = 8;
     public static final int BUTTON_R3 = 9;
     
-    // D-Pad Mappings (Based on user test: Up=11, Down=12, Left=13, Right=14)
-    public static final int BUTTON_DPAD_UP = 11;
-    public static final int BUTTON_DPAD_DOWN = 12;
-    public static final int BUTTON_DPAD_LEFT = 13;
-    public static final int BUTTON_DPAD_RIGHT = 14;
+    // D-Pad Mappings
+    public static int BUTTON_DPAD_UP = 10;
+    public static int BUTTON_DPAD_DOWN = 11;
+    public static int BUTTON_DPAD_LEFT = 12;
+    public static int BUTTON_DPAD_RIGHT = 13;
+
+    // Switch Pro Controller / Generic D-Pad (User reported)
+    public static final int SWITCH_DPAD_UP = 11;
+    public static final int SWITCH_DPAD_DOWN = 12;
+    public static final int SWITCH_DPAD_LEFT = 13;
+    public static final int SWITCH_DPAD_RIGHT = 14;
+    
+    // Android Mappings (Standard HID)
+    // A=96, B=97, X=99, Y=100, L1=102, R1=103
+    // DPAD: Up=19, Down=20, Left=21, Right=22
+    // But GDX Controller button codes might be different from KeyCodes.
+    // Usually on Android GDX Controller maps to raw KeyCodes or HID codes.
+    // Let's assume standard Android codes if user reports 20/21.
+    public static final int ANDROID_DPAD_UP = 19;
+    public static final int ANDROID_DPAD_DOWN = 20;
+    public static final int ANDROID_DPAD_LEFT = 21;
+    public static final int ANDROID_DPAD_RIGHT = 22;
     
     // Virtual Button IDs for Axis Simulation
     public static final int VIRTUAL_AXIS_START = 200;
@@ -94,22 +121,36 @@ public class InputManager {
     public static final int AXIS_X = 0; // Left Stick X
     public static final int AXIS_Y = 1; // Left Stick Y
     
-    // Switch Pro Controller D-Pad (Likely layout based on logs)
-    // User reported: Up=11, Down=12, Left=13, Right=14 (Sequence assumed)
-    // Note: Standard SDL mapping might differ, but this matches user feedback
-    public static final int SWITCH_DPAD_UP = 11;
-    public static final int SWITCH_DPAD_DOWN = 12;
-    public static final int SWITCH_DPAD_LEFT = 13;
-    public static final int SWITCH_DPAD_RIGHT = 14;
-    
     private static final float DEADZONE = 0.3f;
 
     private InputManager() {
+        // Platform specific defaults
+        applyPlatformDefaults();
+        
         loadMappings();
         Controllers.addListener(debugListener);
         Debug.logT("InputManager", "Initialized. Current controllers: " + Controllers.getControllers().size);
         for(Controller c : Controllers.getControllers()) {
-             Debug.logT("InputManager", " - " + getFriendlyName(c) + " [" + c.getUniqueId() + "]");
+             Debug.logT("InputManager", " - " + c.getName() + " [" + c.getUniqueId() + "]");
+        }
+    }
+    
+    private void applyPlatformDefaults() {
+        if (Gdx.app.getType() == Application.ApplicationType.Android) {
+            BUTTON_DPAD_UP = ANDROID_DPAD_UP;
+            BUTTON_DPAD_DOWN = ANDROID_DPAD_DOWN;
+            BUTTON_DPAD_LEFT = ANDROID_DPAD_LEFT;
+            BUTTON_DPAD_RIGHT = ANDROID_DPAD_RIGHT;
+            Debug.logT("InputManager", "Applied Android specific D-Pad mappings.");
+        } else {
+            // Desktop Defaults (Xbox style or based on user feedback)
+            // User confirmed: Up=11, Down=12, Left=13, Right=14 for their Switch Pro
+            // Standard Xbox: 10, 11, 12, 13
+            // We stick to the ones that worked for user last time
+            BUTTON_DPAD_UP = 11;
+            BUTTON_DPAD_DOWN = 12;
+            BUTTON_DPAD_LEFT = 13;
+            BUTTON_DPAD_RIGHT = 14;
         }
     }
 
@@ -119,6 +160,25 @@ public class InputManager {
         if (name.contains("sony") || name.contains("wireless controller")) return "PlayStation Controller"; // DS4 usually "Wireless Controller"
         if (name.contains("nintendo") || name.contains("switch")) return "Switch Pro Controller";
         return c.getName();
+    }
+
+    public void setInputMode(InputMode mode) {
+        if (currentInputMode == mode) return;
+        currentInputMode = mode;
+        
+        if (mode == InputMode.KEYBOARD) {
+            // Lock cursor
+            Gdx.input.setCursorCatched(true);
+            Debug.logT("InputManager", "InputMode -> KEYBOARD (Cursor Locked)");
+        } else {
+            // Unlock cursor
+            Gdx.input.setCursorCatched(false);
+            Debug.logT("InputManager", "InputMode -> MOUSE (Cursor Unlocked)");
+        }
+    }
+    
+    public InputMode getInputMode() {
+        return currentInputMode;
     }
 
     public static InputManager getInstance() {
@@ -134,6 +194,12 @@ public class InputManager {
         previousButtons.clear();
         previousButtons.addAll(currentButtons);
         currentButtons.clear();
+
+        // Check Mouse Movement to switch back to MOUSE mode
+        // Only if significant movement to avoid jitter
+        if (Math.abs(Gdx.input.getDeltaX()) > 2 || Math.abs(Gdx.input.getDeltaY()) > 2 || Gdx.input.isTouched()) {
+             setInputMode(InputMode.MOUSE);
+        }
         
         if (Controllers.getControllers().size == 0) return;
         
@@ -386,15 +452,12 @@ public class InputManager {
         if(code == BUTTON_START) return "START";
         if(code == BUTTON_L3) return "L3";
         if(code == BUTTON_R3) return "R3";
-        if(code == BUTTON_DPAD_UP) return "DPAD_UP";
-        if(code == BUTTON_DPAD_DOWN) return "DPAD_DOWN";
-        if(code == BUTTON_DPAD_LEFT) return "DPAD_LEFT";
-        if(code == BUTTON_DPAD_RIGHT) return "DPAD_RIGHT";
         
-        if(code == SWITCH_DPAD_UP) return "SWITCH_UP";
-        if(code == SWITCH_DPAD_DOWN) return "SWITCH_DOWN";
-        if(code == SWITCH_DPAD_LEFT) return "SWITCH_LEFT";
-        if(code == SWITCH_DPAD_RIGHT) return "SWITCH_RIGHT";
+        // Use dynamic values
+        if(code == BUTTON_DPAD_UP) return "DPAD_UP (" + code + ")";
+        if(code == BUTTON_DPAD_DOWN) return "DPAD_DOWN (" + code + ")";
+        if(code == BUTTON_DPAD_LEFT) return "DPAD_LEFT (" + code + ")";
+        if(code == BUTTON_DPAD_RIGHT) return "DPAD_RIGHT (" + code + ")";
         
         return "Unknown";
     }
@@ -414,7 +477,10 @@ public class InputManager {
         List<Integer> keys = keyboardMappings.get(action);
         if (keys != null) {
             for (int key : keys) {
-                if (Gdx.input.isKeyPressed(key)) return true;
+                if (Gdx.input.isKeyPressed(key)) {
+                    setInputMode(InputMode.KEYBOARD);
+                    return true;
+                }
             }
         }
 
@@ -422,7 +488,10 @@ public class InputManager {
         List<Integer> buttons = controllerMappings.get(action);
         if (buttons != null) {
             for (int btn : buttons) {
-                if (currentButtons.contains(btn)) return true;
+                if (currentButtons.contains(btn)) {
+                    setInputMode(InputMode.KEYBOARD);
+                    return true;
+                }
             }
         }
 
@@ -435,6 +504,7 @@ public class InputManager {
         if (keys != null) {
             for (int key : keys) {
                 if (Gdx.input.isKeyJustPressed(key)) {
+                    setInputMode(InputMode.KEYBOARD);
                     Debug.logT("InputManager", "Action JustPressed: " + action + " (Key: " + Input.Keys.toString(key) + ")");
                     return true;
                 }
@@ -446,6 +516,7 @@ public class InputManager {
         if (buttons != null) {
             for (int btn : buttons) {
                 if (currentButtons.contains(btn) && !previousButtons.contains(btn)) {
+                    setInputMode(InputMode.KEYBOARD);
                     Debug.logT("InputManager", "Action JustPressed: " + action + " (Btn: " + btn + ")");
                     return true;
                 }

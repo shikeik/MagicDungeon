@@ -141,7 +141,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		}
 
 		// Initial focus
-		if (focusedIndex == -1 && (changed || input.isUsingController())) {
+		if (focusedIndex == -1 && (changed || input.getInputMode() == InputManager.InputMode.KEYBOARD)) {
 			focusedIndex = 0;
 			changed = true;
 		}

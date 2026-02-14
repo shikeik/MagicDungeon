@@ -124,11 +124,6 @@ public class GameHUD {
 	private Runnable saveListener;
 	private Runnable returnToCampListener;
 
-	public enum InputMode {
-		MOUSE,
-		KEYBOARD
-	}
-	private InputMode currentInputMode = InputMode.MOUSE;
 	private Actor currentTooltip;
 
 	private DragAndDrop dragAndDrop;
@@ -291,8 +286,6 @@ public class GameHUD {
 		}
 
 		private void navigate(int dx, int dy) {
-            GameHUD.this.updateInputMode(InputMode.KEYBOARD);
-
 			if (currentArea == FocusArea.INVENTORY) {
 				if (dx == 1) currentInvIndex++;
 				if (dx == -1) {
@@ -382,25 +375,20 @@ public class GameHUD {
 			InputManager input = InputManager.getInstance();
 
 			if (input.isJustPressed(InputAction.UI_RIGHT)) {
-				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_RIGHT pressed");
 				navigate(1, 0);
 			}
 			if (input.isJustPressed(InputAction.UI_LEFT)) {
-				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_LEFT pressed");
 				navigate(-1, 0);
 			}
 			if (input.isJustPressed(InputAction.UI_UP)) {
-				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_UP pressed");
 				navigate(0, 1);
 			}
 			if (input.isJustPressed(InputAction.UI_DOWN)) {
-				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_DOWN pressed");
 				navigate(0, -1);
 			}
 
 			// Tab Navigation (Switch Area)
 			if (input.isJustPressed(InputAction.TAB)) {
-				GameHUD.this.updateInputMode(InputMode.KEYBOARD);
 				if (currentArea == FocusArea.INVENTORY) {
 					currentArea = FocusArea.EQUIPMENT;
 				} else {
@@ -593,13 +581,13 @@ public class GameHUD {
                     addListener(new InputListener() {
                         @Override
                         public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-                            if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                            if (pointer == -1 && InputManager.getInstance().getInputMode() == InputManager.InputMode.MOUSE) {
                                 showTooltip(InventorySlot.this, item);
                             }
                         }
                         @Override
                         public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-                             if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                             if (pointer == -1 && InputManager.getInstance().getInputMode() == InputManager.InputMode.MOUSE) {
                                 hideTooltip();
                             }
                         }
@@ -686,7 +674,7 @@ public class GameHUD {
 		}
 
 		public void setFocused(boolean focused) {
-			boolean actualFocus = focused && currentInputMode == InputMode.KEYBOARD;
+			boolean actualFocus = focused && InputManager.getInstance().getInputMode() == InputManager.InputMode.KEYBOARD;
 
 			if (focusBorder != null) {
 				focusBorder.setVisible(actualFocus);
@@ -782,13 +770,13 @@ public class GameHUD {
                     addListener(new InputListener() {
                         @Override
                         public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-                            if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                            if (pointer == -1 && InputManager.getInstance().getInputMode() == InputManager.InputMode.MOUSE) {
                                 showTooltip(EquipmentSlot.this, item);
                             }
                         }
                         @Override
                         public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-                             if (pointer == -1 && currentInputMode == InputMode.MOUSE) {
+                             if (pointer == -1 && InputManager.getInstance().getInputMode() == InputManager.InputMode.MOUSE) {
                                 hideTooltip();
                             }
                         }
@@ -859,7 +847,7 @@ public class GameHUD {
 
 		@Override
 		public void setFocused(boolean focused) {
-            boolean actualFocus = focused && currentInputMode == InputMode.KEYBOARD;
+            boolean actualFocus = focused && InputManager.getInstance().getInputMode() == InputManager.InputMode.KEYBOARD;
 
 			if (focusBorder != null) {
 				focusBorder.setVisible(actualFocus);
@@ -1197,7 +1185,7 @@ public class GameHUD {
 		float x = 0;
 		float y = 0;
 
-		if (currentInputMode == InputMode.KEYBOARD) {
+		if (InputManager.getInstance().getInputMode() == InputManager.InputMode.KEYBOARD) {
 			// Keyboard: Fixed position next to target
 			Vector2 pos = target.localToStageCoordinates(new Vector2(0, 0));
 			x = pos.x + target.getWidth() + 10; // Right side
@@ -1231,30 +1219,6 @@ public class GameHUD {
 		if (currentTooltip != null) {
 			currentTooltip.remove();
 			currentTooltip = null;
-		}
-	}
-
-	public void updateInputMode(InputMode newMode) {
-		if (currentInputMode == newMode) return;
-		currentInputMode = newMode;
-
-		if (newMode == InputMode.KEYBOARD) {
-			Gdx.input.setCursorCatched(true);
-			if (inventoryDialog != null && inventoryDialog.getParent() != null) {
-				inventoryDialog.updateFocus();
-			}
-			if (chestDialog != null && chestDialog.getParent() != null) {
-				chestDialog.updateFocus();
-			}
-		} else {
-			Gdx.input.setCursorCatched(false);
-			if (inventoryDialog != null) {
-				inventoryDialog.clearFocus();
-			}
-			if (chestDialog != null) {
-				chestDialog.clearFocus();
-			}
-			hideTooltip();
 		}
 	}
 
@@ -1687,7 +1651,7 @@ public class GameHUD {
 		circlePm.dispose();
 	}
 
-	private boolean lastIsController = false;
+	private InputManager.InputMode lastInputMode = InputManager.InputMode.MOUSE;
 
 	private void createHelpWindow() {
 		// BaseDialog 内部已经调用了 addCloseButton() 和 closeOnEscape()
@@ -2331,7 +2295,6 @@ public class GameHUD {
 
 		// Toggle focus with TAB
 		if (input.isJustPressed(InputAction.TAB)) {
-			updateInputMode(InputMode.KEYBOARD);
 			isToolbarFocused = !isToolbarFocused;
 			if (isToolbarFocused) {
 				if (toolbarFocusIndex == -1) toolbarFocusIndex = 0;
@@ -2379,36 +2342,51 @@ public class GameHUD {
 	}
 
 	public void render() {
-        // Check for Mouse Movement to unlock cursor globally
-        if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
-             updateInputMode(InputMode.MOUSE);
-        }
-
-		// --- Auto Refresh Logic ---
-		boolean currentIsController = InputManager.getInstance().isUsingController();
-		if (currentIsController != lastIsController) {
-			lastIsController = currentIsController;
-
-			// Refresh Help Window
-			if (helpWindow != null) {
-				updateHelpWindowContent();
-				if (helpWindow.isVisible()) {
-					helpWindow.centerWindow();
-				}
-			}
-
-			// Center other windows
-			if (inventoryDialog != null && inventoryDialog.isVisible()) {
-				inventoryDialog.centerWindow();
-			}
-			if (chestDialog != null && chestDialog.isVisible()) {
-				chestDialog.centerWindow();
-			}
+		// Sync with Global InputMode
+		InputManager.InputMode currentMode = InputManager.getInstance().getInputMode();
+		if (currentMode != lastInputMode) {
+			lastInputMode = currentMode;
+			onInputModeChanged(currentMode);
 		}
 
 		handleToolbarInput();
 
 		stage.draw();
+	}
+
+	private void onInputModeChanged(InputManager.InputMode newMode) {
+		if (newMode == InputManager.InputMode.KEYBOARD) {
+			if (inventoryDialog != null && inventoryDialog.getParent() != null) {
+				inventoryDialog.updateFocus();
+			}
+			if (chestDialog != null && chestDialog.getParent() != null) {
+				chestDialog.updateFocus();
+			}
+		} else {
+			if (inventoryDialog != null) {
+				inventoryDialog.clearFocus();
+			}
+			if (chestDialog != null) {
+				chestDialog.clearFocus();
+			}
+			hideTooltip();
+		}
+
+		// Refresh Help Window content if needed
+		if (helpWindow != null) {
+			updateHelpWindowContent();
+			if (helpWindow.isVisible()) {
+				helpWindow.centerWindow();
+			}
+		}
+		
+		// Center other windows
+		if (inventoryDialog != null && inventoryDialog.isVisible()) {
+			inventoryDialog.centerWindow();
+		}
+		if (chestDialog != null && chestDialog.isVisible()) {
+			chestDialog.centerWindow();
+		}
 	}
 
 	public void resize(int width, int height) {
@@ -2534,8 +2512,6 @@ public class GameHUD {
 		}
 
 		private void navigate(int dx, int dy) {
-            GameHUD.this.updateInputMode(InputMode.KEYBOARD);
-
 			if (currentArea == FocusArea.CHEST) {
 				if (dx == 1) currentChestIndex++;
 				if (dx == -1) currentChestIndex--;
@@ -2588,10 +2564,6 @@ public class GameHUD {
 		public void act(float delta) {
 			super.act(delta);
 
-			if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
-                 GameHUD.this.updateInputMode(InputMode.MOUSE);
-            }
-
 			InputManager input = InputManager.getInstance();
 
 			if (input.isJustPressed(InputAction.UI_RIGHT)) navigate(1, 0);
@@ -2600,7 +2572,6 @@ public class GameHUD {
 			if (input.isJustPressed(InputAction.UI_DOWN)) navigate(0, -1);
 
 			if (input.isJustPressed(InputAction.TAB)) {
-				GameHUD.this.updateInputMode(InputMode.KEYBOARD);
 				if (currentArea == FocusArea.CHEST) currentArea = FocusArea.INVENTORY;
 				else currentArea = FocusArea.CHEST;
 				updateFocus();
