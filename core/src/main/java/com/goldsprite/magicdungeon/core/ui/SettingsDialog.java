@@ -308,7 +308,7 @@ public class SettingsDialog extends BaseDialog {
             } else {
                 int btn = inputManager.getBoundButton(action);
                 String name = inputManager.getButtonName(btn);
-                if(btn >= InputManager.VIRTUAL_AXIS_START) name = "Axis";
+//                if(btn >= InputManager.VIRTUAL_AXIS_START) name = "Axis";
                 targetBtn.setText(name);
             }
 		}
