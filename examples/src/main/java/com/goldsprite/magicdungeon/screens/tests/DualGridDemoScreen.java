@@ -42,7 +42,7 @@ public class DualGridDemoScreen extends GScreen {
         SAND("sprites/tilesets/sand_tiles.png", 16),
         DIRT("sprites/tilesets/dirt_tiles.png", 16),
         GRASS("sprites/tilesets/grass_tiles.png", 16),
-        DUNGEON_BRICK("sprites/tilesets/dungeon_brick_tiles.png", 16),
+        DUNGEON_BRICK("sprites/tilesets/dungeon_brick_tiles_32x.png", 32),
         ;
 
         public final int id;
@@ -322,7 +322,7 @@ public class DualGridDemoScreen extends GScreen {
         root.top().right();
 
         VisTable menu = new VisTable(true);
-        menu.setBackground("window-ten");
+        menu.setBackground("window");
 
         // 创建一个内部容器来存放内容
         VisTable contentTable = new VisTable();

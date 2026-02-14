@@ -25,6 +25,8 @@ dependencies {
 	api ("com.github.raeleus:TenPatch:5.2.3") {
 		exclude group: 'org.lwjgl' // 排除掉所有 lwjgl 相关的库
 	}
+	
+	api "com.esotericsoftware.spine:spine-libgdx:$spineVersion"
 
 	// [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
 	api 'org.nanohttpd:nanohttpd:2.3.1'
