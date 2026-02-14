@@ -38,6 +38,9 @@ public class InputManager {
     // State Tracking
     private final Set<Integer> currentButtons = new HashSet<>();
     private final Set<Integer> previousButtons = new HashSet<>();
+    
+    // Input Blocking
+    private boolean inputBlocked = false;
 
     // Startup delay to prevent initial controller drift/noise from locking cursor
     private float startupTimer = 0f;
@@ -217,6 +220,14 @@ public class InputManager {
 
     public InputMode getInputMode() {
         return currentInputMode;
+    }
+    
+    public void setInputBlocked(boolean blocked) {
+        this.inputBlocked = blocked;
+        if (blocked) {
+            currentButtons.clear();
+            previousButtons.clear();
+        }
     }
 
     public static InputManager getInstance() {
@@ -635,6 +646,8 @@ public class InputManager {
     }
 
     public boolean isPressed(InputAction action) {
+        if (inputBlocked) return false;
+
         // Check Keyboard
         List<Integer> keys = keyboardMappings.get(action);
         if (keys != null) {
@@ -661,6 +674,8 @@ public class InputManager {
     }
 
     public boolean isJustPressed(InputAction action) {
+        if (inputBlocked) return false;
+
         // Check Keyboard
         List<Integer> keys = keyboardMappings.get(action);
         if (keys != null) {

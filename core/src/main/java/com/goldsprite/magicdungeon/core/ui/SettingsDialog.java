@@ -15,11 +15,6 @@ import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.controllers.ControllerAdapter;
 import com.badlogic.gdx.controllers.ControllerListener;
 import com.badlogic.gdx.controllers.Controllers;
-import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.utils.Json;
-import com.badlogic.gdx.utils.JsonValue;
-import com.badlogic.gdx.utils.JsonWriter;
-import com.goldsprite.gdengine.log.Debug;
 import com.kotcrab.vis.ui.widget.*;
 
 public class SettingsDialog extends BaseDialog {
@@ -208,6 +203,7 @@ public class SettingsDialog extends BaseDialog {
 	}
 
 	private void startRebinding(InputAction action, VisTextButton btn, boolean isKeyboard) {
+		InputManager.getInstance().setInputBlocked(true);
 		btn.setText("按任意键...");
 		RebindDialog dialog = new RebindDialog(action, btn, isKeyboard);
 		getStage().addActor(dialog);
@@ -327,6 +323,7 @@ public class SettingsDialog extends BaseDialog {
 
         @Override
         public boolean remove() {
+            inputManager.setInputBlocked(false);
             if(!isKeyboard) {
                 Controllers.removeListener(controllerListener);
             }
