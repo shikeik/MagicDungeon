@@ -47,8 +47,17 @@ public class MainMenuScreen extends GScreen {
 	protected void initViewport() {
 		this.viewSizeShort = Constants.VIEWPORT_HEIGHT;
 		this.viewSizeLong = Constants.VIEWPORT_WIDTH;
-		this.uiViewportScale = PlatformImpl.isDesktopUser() ? 0.6f : 1.0f;
+		this.uiViewportScale = PlatformImpl.isDesktopUser() ? 1.0f : 1.0f;
 		super.initViewport();
+	}
+
+	@Override
+	public boolean handleBackKey() {
+		if (settingsDialog != null && settingsDialog.hasParent()) {
+			settingsDialog.fadeOut();
+			return true;
+		}
+		return false;
 	}
 
 	@Override

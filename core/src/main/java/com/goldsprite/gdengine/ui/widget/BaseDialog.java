@@ -12,7 +12,7 @@ public class BaseDialog extends VisDialog {
 		getTitleLabel().setFontScale(0.95f); // 字体太大修正
 		setModal(true);
 		addCloseButton();
-		closeOnEscape();
+		// closeOnEscape(); // 移除自动关闭，交由 ScreenManager.handleBackKey 统一处理，防止 Escape 同时触发关闭窗口和退出屏幕
 		TableUtils.setSpacingDefaults(this);
 	}
 

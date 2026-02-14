@@ -2112,20 +2112,99 @@ public class GameHUD {
 	}
 
 	public boolean handleBackKey() {
-		if (stage.getActors().contains(inventoryDialog, true)) {
-			inventoryDialog.remove();
+		// 1. 优先检查并关闭顶层窗口 (倒序遍历)
+		for (int i = stage.getActors().size - 1; i >= 0; i--) {
+			Actor actor = stage.getActors().get(i);
+			if (!actor.isVisible()) continue;
+
+			// 忽略 GameOver 窗口 (必须通过按钮操作)
+			if (actor instanceof GameOverWindow) {
+				return true; // 拦截 Escape，防止退出屏幕
+			}
+
+			// 关闭 PopupMenu
+			if (actor instanceof PopupMenu) {
+				((PopupMenu) actor).remove();
+				return true;
+			}
+
+			// 关闭通用窗口 (Inventory, Chest, Help, Settings, LevelSelection 等)
+			if (actor instanceof VisWindow) {
+				((VisWindow) actor).fadeOut();
+				return true;
+			}
+		}
+
+		// 2. 如果没有窗口可关闭，尝试打开暂停菜单
+		// 如果暂停菜单尚未实现，至少拦截 Escape 防止意外退出 (或者让它退出，取决于设计)
+		// 根据用户反馈 "习惯性 Escape... 直接返回了上一屏幕"，这里应该拦截
+		// 我们可以显示一个暂停菜单，或者 Toast 提示 "再按一次退出" (需额外状态)
+		
+		// 暂时先显示暂停菜单 (如果存在) 或拦截
+		if (pauseWindow == null) {
+			createPauseWindow();
+		}
+		if (!pauseWindow.hasParent()) {
+			pauseWindow.show(stage);
 			return true;
 		}
-		if (stage.getActors().contains(chestDialog, true)) {
-			inventoryDialog.remove();
-			return true;
-		}
-		if (stage.getActors().contains(helpWindow, true)) {
-			inventoryDialog.remove();
-			return true;
-		}
-		return false;
+
+		return false; // 只有当暂停菜单已经在显示时 (被上面循环捕获关闭)，才返回 false? 
+		// 不，如果暂停菜单在显示，上面的循环会捕获并关闭它 (VisWindow)，返回 true。
+		// 所以这里只有当没有窗口时才会执行。
+		// 意味着：按 Esc -> 打开暂停菜单。再按 Esc -> 关闭暂停菜单。
 	}
+
+	private BaseDialog pauseWindow;
+
+	private void createPauseWindow() {
+		pauseWindow = new BaseDialog("暂停");
+		pauseWindow.setModal(true);
+		
+		VisTable content = new VisTable();
+		content.pad(20);
+		
+		VisTextButton btnResume = new VisTextButton("继续游戏");
+		btnResume.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				pauseWindow.fadeOut();
+			}
+		});
+		
+		VisTextButton btnSettings = new VisTextButton("设置");
+		btnSettings.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				new com.goldsprite.magicdungeon.core.ui.SettingsDialog().show(stage);
+				// pauseWindow.fadeOut(); // 可选：关闭暂停菜单，或者保持在 Settings 下面
+			}
+		});
+
+		VisTextButton btnExit = new VisTextButton("退出至标题");
+		btnExit.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				if (returnToCampListener != null) {
+					// 这里的逻辑可能需要调整，returnToCamp 是回城。
+					// 如果要退出到标题画面，应该调用 ScreenManager
+					ScreenManager.getInstance().setCurScreen(com.goldsprite.magicdungeon.core.screens.MainMenuScreen.class);
+				} else {
+					// Fallback
+					ScreenManager.getInstance().popLastScreen();
+				}
+			}
+		});
+
+		content.add(btnResume).width(150).padBottom(10).row();
+		content.add(btnSettings).width(150).padBottom(10).row();
+		content.add(btnExit).width(150).row();
+		
+		pauseWindow.add(content);
+		pauseWindow.pack();
+		pauseWindow.centerWindow();
+	}
+
 
 	public void setSaveListener(Runnable saveListener) {
 		this.saveListener = saveListener;
