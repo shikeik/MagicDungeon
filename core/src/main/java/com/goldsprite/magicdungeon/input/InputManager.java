@@ -38,6 +38,10 @@ public class InputManager {
     private final Set<Integer> currentButtons = new HashSet<>();
     private final Set<Integer> previousButtons = new HashSet<>();
     
+    // Startup delay to prevent initial controller drift/noise from locking cursor
+    private float startupTimer = 0f;
+    private static final float STARTUP_DELAY = 0.5f;
+    
     // Debug Listener
     private final ControllerListener debugListener = new ControllerAdapter() {
         @Override
@@ -52,6 +56,7 @@ public class InputManager {
 
         @Override
         public boolean buttonDown(Controller controller, int buttonCode) {
+            if (startupTimer < STARTUP_DELAY) return false;
             setInputMode(InputMode.KEYBOARD);
             String btnName = getButtonName(buttonCode);
             Debug.logT("InputManager", "Controller Button Down: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
@@ -67,7 +72,8 @@ public class InputManager {
 
         @Override
         public boolean axisMoved(Controller controller, int axisCode, float value) {
-            if (Math.abs(value) > 0.3f) { // Only log significant movements to avoid spam
+            if (startupTimer < STARTUP_DELAY) return false;
+            if (Math.abs(value) > 0.5f) { // Increased threshold for mode switching (was 0.3f)
                 setInputMode(InputMode.KEYBOARD);
                 Debug.logT("InputManager", "Controller Axis Moved: " + axisCode + " = " + value + " (" + controller.getName() + ")");
             }
@@ -190,6 +196,11 @@ public class InputManager {
      * Must be called once per frame, preferably at start of render()
      */
     public void update() {
+        // Update startup timer
+        if (startupTimer < STARTUP_DELAY) {
+            startupTimer += Gdx.graphics.getDeltaTime();
+        }
+
         // Cycle states
         previousButtons.clear();
         previousButtons.addAll(currentButtons);
@@ -202,6 +213,7 @@ public class InputManager {
         }
         
         if (Controllers.getControllers().size == 0) return;
+        if (startupTimer < STARTUP_DELAY) return; // Ignore controller input during startup
         
         Controller controller = Controllers.getControllers().first();
         

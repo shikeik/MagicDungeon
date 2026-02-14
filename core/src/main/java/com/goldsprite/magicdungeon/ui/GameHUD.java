@@ -44,6 +44,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
+import com.badlogic.gdx.scenes.scene2d.utils.Layout;
 
 import java.util.function.Predicate;
 import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
@@ -1172,16 +1173,61 @@ public class GameHUD {
 		return borderTable;
 	}
 
+	private InventoryItem getEquippedItemForComparison(InventoryItem item) {
+		if (currentPlayer == null || currentPlayer.equipment == null) return null;
+		if (checkIsEquipped(currentPlayer, item)) return null; 
+		
+		switch (item.data.type) {
+			case MAIN_HAND: return currentPlayer.equipment.mainHand;
+			case OFF_HAND: return currentPlayer.equipment.offHand;
+			case HELMET: return currentPlayer.equipment.helmet;
+			case ARMOR: return currentPlayer.equipment.armor;
+			case BOOTS: return currentPlayer.equipment.boots;
+			case ACCESSORY:
+				if (currentPlayer.equipment.accessories != null) {
+					for (InventoryItem acc : currentPlayer.equipment.accessories) {
+						if (acc != null) return acc;
+					}
+				}
+				return null;
+			default: return null;
+		}
+	}
+
 	public void showTooltip(Actor target, InventoryItem item) {
 		hideTooltip(); // Clear previous if any
 		if (item == null) return;
 
-		boolean isEquipped = checkIsEquipped(currentPlayer, item);
-		VisTable tooltip = createItemTooltipTable(item, isEquipped);
-		tooltip.setTouchable(Touchable.disabled);
-		stage.addActor(tooltip);
+		InventoryItem equipped = getEquippedItemForComparison(item);
+		Actor tooltipActor;
 
-		tooltip.pack();
+		if (equipped != null && equipped != item) {
+			VisTable container = new VisTable();
+			
+			// Equipped (Left)
+			VisTable equippedTable = createItemTooltipTable(equipped, true);
+			// Add "(Equipped)" label to the bottom of the tooltip
+			equippedTable.row();
+			equippedTable.add(new VisLabel("【已装备】", Color.YELLOW)).pad(2);
+			
+			container.add(equippedTable).top().padRight(10);
+			
+			// New Item (Right)
+			VisTable newTable = createItemTooltipTable(item, false);
+			container.add(newTable).top();
+			
+			tooltipActor = container;
+		} else {
+			boolean isEquipped = checkIsEquipped(currentPlayer, item);
+			tooltipActor = createItemTooltipTable(item, isEquipped);
+		}
+		
+		tooltipActor.setTouchable(Touchable.disabled);
+		stage.addActor(tooltipActor);
+
+		if (tooltipActor instanceof Layout) ((Layout)tooltipActor).pack();
+		currentTooltip = tooltipActor;
+		
 		float x = 0;
 		float y = 0;
 
@@ -1189,31 +1235,51 @@ public class GameHUD {
 			// Keyboard: Fixed position next to target
 			Vector2 pos = target.localToStageCoordinates(new Vector2(0, 0));
 			x = pos.x + target.getWidth() + 10; // Right side
-			y = pos.y + target.getHeight() - tooltip.getHeight(); // Align tops
+			y = pos.y + target.getHeight() - tooltipActor.getHeight(); // Align tops
 
 			// Check Right Boundary
-			if (x + tooltip.getWidth() > stage.getWidth()) {
+			if (x + tooltipActor.getWidth() > stage.getWidth()) {
 				// Flip to Left side
-				x = pos.x - tooltip.getWidth() - 10;
+				x = pos.x - tooltipActor.getWidth() - 10;
 			}
+			
+			// Clamp Y
+			if (y < 0) y = 0;
+			if (y + tooltipActor.getHeight() > stage.getHeight()) y = stage.getHeight() - tooltipActor.getHeight();
+			
+			tooltipActor.setPosition(x, y);
 		} else {
 			// Mouse: Follow mouse
-			x = Gdx.input.getX() + 15;
-			y = stage.getHeight() - Gdx.input.getY() - tooltip.getHeight() - 15;
-
-			// Simple boundary check
-			if (x + tooltip.getWidth() > stage.getWidth()) {
-				x = stage.getWidth() - tooltip.getWidth() - 10;
-			}
+			updateTooltipPosition();
 		}
-
-		// Check Top/Bottom Boundary (Clamp Y)
-		if (y < 0) y = 0;
-		if (y + tooltip.getHeight() > stage.getHeight()) y = stage.getHeight() - tooltip.getHeight();
-
-		tooltip.setPosition(x, y);
-		currentTooltip = tooltip;
 	}
+
+    private void updateTooltipPosition() {
+        if (currentTooltip == null) return;
+        
+        float mouseX = Gdx.input.getX();
+        float mouseY = stage.getHeight() - Gdx.input.getY(); // Stage coords
+        
+        float x = mouseX + 15;
+        float y = mouseY - currentTooltip.getHeight(); // Align Top to Mouse
+        
+        // Check Right Boundary
+        if (x + currentTooltip.getWidth() > stage.getWidth()) {
+            x = stage.getWidth() - currentTooltip.getWidth() - 10;
+        }
+        
+        // Check Bottom Boundary (Flip to top if not enough space below)
+        if (y < 10) {
+            y = mouseY + 15;
+        }
+        
+        // Check Top Boundary
+        if (y + currentTooltip.getHeight() > stage.getHeight()) {
+             y = stage.getHeight() - currentTooltip.getHeight() - 10;
+        }
+
+        currentTooltip.setPosition(x, y);
+    }
 
 	public void hideTooltip() {
 		if (currentTooltip != null) {
@@ -2348,6 +2414,11 @@ public class GameHUD {
 			lastInputMode = currentMode;
 			onInputModeChanged(currentMode);
 		}
+        
+        // Tooltip follow mouse
+        if (currentTooltip != null && currentMode == InputManager.InputMode.MOUSE) {
+            updateTooltipPosition();
+        }
 
 		handleToolbarInput();
 
@@ -2358,6 +2429,12 @@ public class GameHUD {
 		if (newMode == InputManager.InputMode.KEYBOARD) {
 			if (inventoryDialog != null && inventoryDialog.getParent() != null) {
 				inventoryDialog.updateFocus();
+				
+				// Ensure focus if none (Fix for controller stuck without focus)
+				if (inventoryDialog.currentArea == InventoryDialog.FocusArea.INVENTORY && inventoryDialog.currentInvIndex < 0) {
+					 inventoryDialog.currentInvIndex = 0;
+					 inventoryDialog.updateFocus();
+				}
 			}
 			if (chestDialog != null && chestDialog.getParent() != null) {
 				chestDialog.updateFocus();
