@@ -237,6 +237,7 @@ public class MainMenuScreen extends GScreen {
 
 	@Override
 	public void render(float delta) {
+        InputManager.getInstance().update();
 		ScreenUtils.clear(0, 0, 0, 1);
 
 		float scl = 1f;
