@@ -19,3 +19,10 @@ git push origin --delete 0.1.0
 ```
 git fetch origin --prune --prune-tags
 ```
+
+
+## trae
+清理 Java 工作区 (如果使用的是 Java 扩展)：
+
+- 按下 Ctrl + Shift + P 。
+- 输入 Java: Clean Java Language Server Workspace 并执行。这将强制清除缓存并重新构建索引。

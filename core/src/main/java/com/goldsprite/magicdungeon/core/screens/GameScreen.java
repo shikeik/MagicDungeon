@@ -166,7 +166,7 @@ public class GameScreen extends GScreen {
 
 		// Scene2D HUD
 		// 传递 uiViewport 给 HUD
-		hud = new GameHUD(getUIViewport());
+		hud = new GameHUD(this);
 
 		// Set save listener for HUD save button
 		hud.setSaveListener(() -> {

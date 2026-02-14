@@ -6,6 +6,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.controllers.ControllerAdapter;
 import com.badlogic.gdx.controllers.ControllerListener;
+import com.badlogic.gdx.controllers.ControllerMapping;
 import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
@@ -81,7 +82,25 @@ public class InputManager {
         }
     };
 
-    // LibGDX Controller Mappings (Standard / Xbox)
+    // Virtual Logical Buttons (Mapped dynamically to physical buttons via ControllerMapping)
+    // We use high IDs to distinguish from raw physical codes (0-255)
+    public static final int V_BUTTON_A = 2000;
+    public static final int V_BUTTON_B = 2001;
+    public static final int V_BUTTON_X = 2002;
+    public static final int V_BUTTON_Y = 2003;
+    public static final int V_BUTTON_LB = 2004;
+    public static final int V_BUTTON_RB = 2005;
+    public static final int V_BUTTON_BACK = 2006;
+    public static final int V_BUTTON_START = 2007;
+    public static final int V_BUTTON_L3 = 2008;
+    public static final int V_BUTTON_R3 = 2009;
+    
+    public static final int V_BUTTON_DPAD_UP = 2010;
+    public static final int V_BUTTON_DPAD_DOWN = 2011;
+    public static final int V_BUTTON_DPAD_LEFT = 2012;
+    public static final int V_BUTTON_DPAD_RIGHT = 2013;
+
+    // Legacy/Physical Fallbacks (Keep for reference or raw usage)
     public static final int BUTTON_A = 0;
     public static final int BUTTON_B = 1;
     public static final int BUTTON_X = 2;
@@ -230,11 +249,24 @@ public class InputManager {
         
         // 1. Poll configured buttons
         // We iterate through all known mappings to check status
+        ControllerMapping mapping = controller.getMapping();
+        
         for (List<Integer> mappedButtons : controllerMappings.values()) {
             for (int btnCode : mappedButtons) {
-                if (btnCode < VIRTUAL_AXIS_START) {
-                    if (controller.getButton(btnCode)) {
-                        currentButtons.add(btnCode);
+                // Determine the actual physical code to check
+                int physicalCode = btnCode;
+                
+                // If it's a virtual logical button, resolve it
+                if (btnCode >= 2000) {
+                    physicalCode = resolveLogicalButton(btnCode, mapping);
+                }
+                
+                if (physicalCode != -1 && physicalCode < VIRTUAL_AXIS_START) {
+                    if (controller.getButton(physicalCode)) {
+                        currentButtons.add(btnCode); // Store the LOGICAL code if mapped, or physical if not
+                        // Wait, storing logical code is better for consistent logic elsewhere, 
+                        // but currentButtons usage needs to be consistent. 
+                        // Let's store the btnCode (which is the key in the mapping).
                     }
                 }
             }
@@ -261,6 +293,28 @@ public class InputManager {
         // For now, assume standard mapping covers D-Pad as buttons.
     }
 
+    private int resolveLogicalButton(int logicCode, ControllerMapping mapping) {
+        if (mapping == null) return -1;
+        
+        switch (logicCode) {
+            case V_BUTTON_A: return mapping.buttonA;
+            case V_BUTTON_B: return mapping.buttonB;
+            case V_BUTTON_X: return mapping.buttonX;
+            case V_BUTTON_Y: return mapping.buttonY;
+            case V_BUTTON_LB: return mapping.buttonL1;
+            case V_BUTTON_RB: return mapping.buttonR1;
+            case V_BUTTON_BACK: return mapping.buttonBack;
+            case V_BUTTON_START: return mapping.buttonStart;
+            case V_BUTTON_L3: return mapping.buttonLeftStick;
+            case V_BUTTON_R3: return mapping.buttonRightStick;
+            case V_BUTTON_DPAD_UP: return mapping.buttonDpadUp;
+            case V_BUTTON_DPAD_DOWN: return mapping.buttonDpadDown;
+            case V_BUTTON_DPAD_LEFT: return mapping.buttonDpadLeft;
+            case V_BUTTON_DPAD_RIGHT: return mapping.buttonDpadRight;
+            default: return -1;
+        }
+    }
+
     public void reload() {
         keyboardMappings.clear();
         controllerMappings.clear();
@@ -282,7 +336,45 @@ public class InputManager {
         keys.add(key);
     }
 
+    public int getLogicalButtonCode(int physicalCode, Controller controller) {
+        ControllerMapping mapping = controller.getMapping();
+        if (mapping == null) return -1;
+
+        if (mapping.buttonA == physicalCode) return V_BUTTON_A;
+        if (mapping.buttonB == physicalCode) return V_BUTTON_B;
+        if (mapping.buttonX == physicalCode) return V_BUTTON_X;
+        if (mapping.buttonY == physicalCode) return V_BUTTON_Y;
+        
+        if (mapping.buttonL1 == physicalCode) return V_BUTTON_LB;
+        if (mapping.buttonR1 == physicalCode) return V_BUTTON_RB;
+        
+        if (mapping.buttonBack == physicalCode) return V_BUTTON_BACK;
+        if (mapping.buttonStart == physicalCode) return V_BUTTON_START;
+        
+        if (mapping.buttonLeftStick == physicalCode) return V_BUTTON_L3;
+        if (mapping.buttonRightStick == physicalCode) return V_BUTTON_R3;
+        
+        if (mapping.buttonDpadUp == physicalCode) return V_BUTTON_DPAD_UP;
+        if (mapping.buttonDpadDown == physicalCode) return V_BUTTON_DPAD_DOWN;
+        if (mapping.buttonDpadLeft == physicalCode) return V_BUTTON_DPAD_LEFT;
+        if (mapping.buttonDpadRight == physicalCode) return V_BUTTON_DPAD_RIGHT;
+        
+        return -1; // No standard mapping found, use physical code
+    }
+
     public void rebindController(InputAction action, int buttonCode) {
+        // [Safety Check] Try to convert raw physical code to logical code if possible
+        // This ensures that if user binds "A" on an Xbox controller, we save "V_BUTTON_A"
+        // so it works correctly on a Switch controller later.
+        if (Controllers.getControllers().size > 0) {
+            Controller currentController = Controllers.getControllers().first();
+            int logicalCode = getLogicalButtonCode(buttonCode, currentController);
+            if (logicalCode != -1) {
+                Debug.logT("InputManager", "Rebind: Converted physical " + buttonCode + " to logical " + logicalCode);
+                buttonCode = logicalCode;
+            }
+        }
+
         List<Integer> buttons = controllerMappings.get(action);
         if (buttons == null) {
             buttons = new ArrayList<>();
@@ -433,35 +525,29 @@ public class InputManager {
         mapK(InputAction.UI_CONFIRM, Input.Keys.ENTER, Input.Keys.SPACE, Input.Keys.J, Input.Keys.BUTTON_A);
         mapK(InputAction.UI_CANCEL, Input.Keys.ESCAPE, Input.Keys.BACKSPACE, Input.Keys.BUTTON_B);
 
-        // Controller Defaults (Xbox)
-        mapC(InputAction.ATTACK, BUTTON_X);
-        mapC(InputAction.INTERACT, BUTTON_A);
-        mapC(InputAction.SKILL, BUTTON_RB); // Mapping Skill to RB for now (User said RT, but triggers are complex)
-        mapC(InputAction.BACK, BUTTON_B);
-        mapC(InputAction.MAP, BUTTON_Y);
-        mapC(InputAction.BAG, BUTTON_LB); // Mapping Bag to LB
-        mapC(InputAction.PAUSE, BUTTON_START);
-        mapC(InputAction.TAB, BUTTON_L3); // ?
-        mapC(InputAction.QUICK_SLOT, BUTTON_R3); // ?
+        // Controller Defaults (Using Virtual Logical Buttons)
+        // These will be dynamically resolved to physical buttons based on the connected controller
+        mapC(InputAction.ATTACK, V_BUTTON_X);
+        mapC(InputAction.INTERACT, V_BUTTON_A);
+        mapC(InputAction.SKILL, V_BUTTON_RB); 
+        mapC(InputAction.BACK, V_BUTTON_B);
+        mapC(InputAction.MAP, V_BUTTON_Y);
+        mapC(InputAction.BAG, V_BUTTON_LB); 
+        mapC(InputAction.PAUSE, V_BUTTON_START);
+        mapC(InputAction.TAB, V_BUTTON_L3); 
+        mapC(InputAction.QUICK_SLOT, V_BUTTON_R3); 
         
-        // D-Pad (Standard Xbox)
-        mapC(InputAction.MOVE_UP, BUTTON_DPAD_UP, AXIS_LEFT_UP);
-        mapC(InputAction.MOVE_DOWN, BUTTON_DPAD_DOWN, AXIS_LEFT_DOWN);
-        mapC(InputAction.MOVE_LEFT, BUTTON_DPAD_LEFT, AXIS_LEFT_LEFT);
-        mapC(InputAction.MOVE_RIGHT, BUTTON_DPAD_RIGHT, AXIS_LEFT_RIGHT);
+        // D-Pad (Virtual)
+        mapC(InputAction.MOVE_UP, V_BUTTON_DPAD_UP, AXIS_LEFT_UP);
+        mapC(InputAction.MOVE_DOWN, V_BUTTON_DPAD_DOWN, AXIS_LEFT_DOWN);
+        mapC(InputAction.MOVE_LEFT, V_BUTTON_DPAD_LEFT, AXIS_LEFT_LEFT);
+        mapC(InputAction.MOVE_RIGHT, V_BUTTON_DPAD_RIGHT, AXIS_LEFT_RIGHT);
         
-        // D-Pad (Switch Pro / Generic)
-        // Adding 11-14 as fallback based on user report
-        mapC(InputAction.MOVE_UP, SWITCH_DPAD_UP);
-        mapC(InputAction.MOVE_DOWN, SWITCH_DPAD_DOWN);
-        mapC(InputAction.MOVE_LEFT, SWITCH_DPAD_LEFT);
-        mapC(InputAction.MOVE_RIGHT, SWITCH_DPAD_RIGHT);
-        
-        // UI Navigation (Controller) - Add Sticks too
-        mapC(InputAction.UI_UP, BUTTON_DPAD_UP, AXIS_LEFT_UP, SWITCH_DPAD_UP);
-        mapC(InputAction.UI_DOWN, BUTTON_DPAD_DOWN, AXIS_LEFT_DOWN, SWITCH_DPAD_DOWN);
-        mapC(InputAction.UI_LEFT, BUTTON_DPAD_LEFT, AXIS_LEFT_LEFT, SWITCH_DPAD_LEFT);
-        mapC(InputAction.UI_RIGHT, BUTTON_DPAD_RIGHT, AXIS_LEFT_RIGHT, SWITCH_DPAD_RIGHT);
+        // UI Navigation (Controller)
+        mapC(InputAction.UI_UP, V_BUTTON_DPAD_UP, AXIS_LEFT_UP);
+        mapC(InputAction.UI_DOWN, V_BUTTON_DPAD_DOWN, AXIS_LEFT_DOWN);
+        mapC(InputAction.UI_LEFT, V_BUTTON_DPAD_LEFT, AXIS_LEFT_LEFT);
+        mapC(InputAction.UI_RIGHT, V_BUTTON_DPAD_RIGHT, AXIS_LEFT_RIGHT);
     }
     
     public String getButtonName(int code) {

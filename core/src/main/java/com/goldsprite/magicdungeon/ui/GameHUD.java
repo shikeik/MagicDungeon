@@ -29,6 +29,8 @@ import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.SkewBar;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.entities.*;
+import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
@@ -1257,11 +1259,17 @@ public class GameHUD {
     private void updateTooltipPosition() {
         if (currentTooltip == null) return;
         
-        float mouseX = Gdx.input.getX();
-        float mouseY = stage.getHeight() - Gdx.input.getY(); // Stage coords
+        // [Refactor] Use GScreen's built-in coordinate conversion
+        float x = Gdx.input.getX();
+        float y = Gdx.input.getY();
+		
+		// Fallback (Should not happen in normal game loop)
+		Vector2 mousePos = stage.screenToStageCoordinates(new Vector2(x, y));
+		x = mousePos.x;
+		y = mousePos.y;
         
-        float x = mouseX + 15;
-        float y = mouseY - currentTooltip.getHeight(); // Align Top to Mouse
+        x += 15;
+        y -= currentTooltip.getHeight(); // Align Top to Mouse (Y is up in Stage)
         
         // Check Right Boundary
         if (x + currentTooltip.getWidth() > stage.getWidth()) {
@@ -1270,7 +1278,7 @@ public class GameHUD {
         
         // Check Bottom Boundary (Flip to top if not enough space below)
         if (y < 10) {
-            y = mouseY + 15;
+            y = y + currentTooltip.getHeight() + 15; // Move above cursor
         }
         
         // Check Top Boundary
@@ -1302,7 +1310,10 @@ public class GameHUD {
 		}
 	}
 
-	public GameHUD(Viewport viewport) {
+	private GScreen parentScreen;
+
+	public GameHUD(GScreen parentScreen) {
+		this.parentScreen = parentScreen;
 		Tooltip.DEFAULT_APPEAR_DELAY_TIME = 0.2f;
 
 		// Coin info
@@ -1310,7 +1321,7 @@ public class GameHUD {
 
 		// Use NeonBatch for SkewBar support
 		this.neonBatch = new NeonBatch();
-		this.stage = new Stage(viewport, this.neonBatch);
+		this.stage = new Stage(parentScreen.getUIViewport(), this.neonBatch);
 
 		generateAssets();
 
