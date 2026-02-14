@@ -539,13 +539,13 @@ public class GameScreen extends GScreen {
 			if (pos != null) {
 				// Avoid spawning on player
 				if (pos.x == player.x && pos.y == player.y) continue;
-				
+
 				// Avoid spawning on other entities (simple check)
 				boolean overlap = false;
 				for (Monster m : monsters) if (m.x == pos.x && m.y == pos.y) overlap = true;
 				for (Item it : items) if (it.x == pos.x && it.y == pos.y) overlap = true;
 				for (Chest c : chests) if (c.x == pos.x && c.y == pos.y) overlap = true;
-				
+
 				if (!overlap) {
 					Chest chest = new Chest(pos.x, pos.y);
 					// Add 1-3 random items
@@ -562,7 +562,7 @@ public class GameScreen extends GScreen {
 						coins.count = 10 + itemRng.nextInt(50);
 						chest.addItem(coins);
 					}
-					
+
 					chests.add(chest);
 				}
 			}
@@ -723,7 +723,7 @@ public class GameScreen extends GScreen {
 		// Game Input Handling (WASD)
 		int dx = 0;
 		int dy = 0;
-		
+
 		// Only allow movement if NO modal UI is open
 		if (!hud.hasModalUI()) {
 			if (input.isPressed(InputAction.MOVE_LEFT)) dx = -1;
@@ -763,7 +763,7 @@ public class GameScreen extends GScreen {
 		boolean isInteractPressed = input.isJustPressed(InputAction.INTERACT);
 		boolean isInteractBtnJustPressed = hud.isInteractPressed() && !wasInteractPressed;
 		wasInteractPressed = hud.isInteractPressed();
-		
+
 		boolean interactTriggered = isInteractPressed || isInteractBtnJustPressed;
 		boolean handledInteract = false;
 
@@ -791,7 +791,7 @@ public class GameScreen extends GScreen {
 					handledInteract = true;
 				}
 			}
-			
+
 			// Check Chests (Interact)
 			for (Chest chest : chests) {
 				if (chest.x == player.x && chest.y == player.y) {
@@ -816,7 +816,7 @@ public class GameScreen extends GScreen {
 				hud.showMessage("法力不足!");
 			}
 		}
-        
+
         // Map
         if (input.isJustPressed(InputAction.MAP)) {
             // Placeholder for Map
@@ -971,11 +971,11 @@ public class GameScreen extends GScreen {
 					TileType t = tile.type;
 					// 注意：Wall 已经被 DualGrid 接管，这里不再绘制单图块 Wall
 					// Torch 和 Window 现在也由 DualGridDungeonRenderer 负责渲染，以使用新纹理
-					if (t == TileType.Door || t == TileType.Stairs_Up || 
-						t == TileType.Stairs_Down || t == TileType.Dungeon_Entrance || 
+					if (t == TileType.Door || t == TileType.Stairs_Up ||
+						t == TileType.Stairs_Down || t == TileType.Dungeon_Entrance ||
 						t == TileType.Tree || t == TileType.StonePath ||
 						t == TileType.Pillar) {
-						
+
 						TextureRegion texture = TextureManager.getInstance().getTile(t);
 						if (texture != null) {
 							batch.draw(texture, x * Constants.TILE_SIZE, y * Constants.TILE_SIZE, Constants.TILE_SIZE, Constants.TILE_SIZE);
@@ -1005,7 +1005,7 @@ public class GameScreen extends GScreen {
 			// Using batch.drawRect which uses a white pixel texture internally if configured, or we can use a known texture
 			// Assuming drawRect works as used in line 1002
 			batch.drawRect(chest.visualX + 4, chest.visualY + 4, 24, 24, 0, 0, c, true);
-			
+
 			// Optional: Draw a "border" or detail to look like a chest
 			if (!chest.isOpen) {
 				batch.drawRect(chest.visualX + 10, chest.visualY + 10, 12, 4, 0, 0, Color.BLACK, true);

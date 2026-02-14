@@ -42,7 +42,7 @@ public class DualGridDemoScreen extends GScreen {
         SAND("sprites/tilesets/sand_tiles.png", 16),
         DIRT("sprites/tilesets/dirt_tiles.png", 16),
         GRASS("sprites/tilesets/grass_tiles.png", 16),
-        DUNGEON_BRICK("sprites/tilesets/dungeon_brick_tiles_32x.png", 32),
+        DUNGEON_BRICK("sprites/tilesets/dungeon_brick_tiles.png", 16),
         ;
 
         public final int id;
@@ -154,7 +154,7 @@ public class DualGridDemoScreen extends GScreen {
                 }
             }
         }
-        
+
         public TextureRegion getIcon(TerrainType type) {
             if (type == TerrainType.AIR) return null;
             // Return the tile at (2,2) (index 10) as requested
@@ -261,7 +261,7 @@ public class DualGridDemoScreen extends GScreen {
                     }
                     return true;
                 }
-                
+
                 @Override
                 public boolean touchDragged(int screenX, int screenY, int pointer) {
                     if (dragButton == Input.Buttons.LEFT) {
@@ -276,7 +276,7 @@ public class DualGridDemoScreen extends GScreen {
                     }
                     return true;
                 }
-                
+
                 @Override
                 public boolean touchUp(int screenX, int screenY, int pointer, int button) {
                     if (button == dragButton) {
@@ -323,62 +323,62 @@ public class DualGridDemoScreen extends GScreen {
 
         VisTable menu = new VisTable(true);
         menu.setBackground("window-ten");
-        
+
         // 创建一个内部容器来存放内容
         VisTable contentTable = new VisTable();
         contentTable.top();
-        
+
         contentTable.add(new VisLabel("Dual-Grid Editor")).pad(10).row();
 
         // 地形选择 (网格布局)
         contentTable.add(new VisLabel("--- Terrain ---")).row();
-        
+
         VisTable gridTable = new VisTable();
         ButtonGroup<Button> terrainGroup = new ButtonGroup<>();
         int col = 0;
-        
+
         for (TerrainType type : TerrainType.values()) {
             if (type == TerrainType.AIR) continue;
-            
+
             // 使用 VisImageButton 代替 VisImageTextButton 以避免样式问题
             // 我们将手动组合 Image 和 Label
-            VisImageButton btn = new VisImageButton("default"); 
+            VisImageButton btn = new VisImageButton("default");
             // 设置为 Toggle 模式
             VisImageButton.VisImageButtonStyle style = new VisImageButton.VisImageButtonStyle(btn.getStyle());
-            
+
             // 借用 TextButton 的 toggle 选中背景 (如果存在) 或简单使用 default
             // 这里我们手动处理 checked 逻辑，样式上先用 default
-            
+
             TextureRegion icon = dualRenderer.getIcon(type);
             if (icon != null) {
                 style.imageUp = new TextureRegionDrawable(icon);
             }
             btn.setStyle(style);
-            
+
             // 重组布局：上图下文
             btn.clearChildren();
             btn.add(btn.getImage()).size(32).pad(5).row();
             VisLabel label = new VisLabel(type.name());
             label.setFontScale(0.8f);
             btn.add(label).padBottom(5).row();
-            
+
             if (type == selectedTerrain) btn.setChecked(true);
-            
+
             btn.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     if(btn.isChecked()) selectedTerrain = type;
                 }
             });
-            
+
             terrainGroup.add(btn);
             gridTable.add(btn).size(80, 80).pad(4);
-            
+
             col++;
             if (col % 3 == 0) gridTable.row(); // 3列换行
         }
         contentTable.add(gridTable).row();
-        
+
         // 橡皮擦 (AIR)
         VisTextButton btnEraser = new VisTextButton("Eraser (Air)", "toggle");
         btnEraser.addListener(new ChangeListener() {
@@ -393,10 +393,10 @@ public class DualGridDemoScreen extends GScreen {
 
         // 层级选择
         contentTable.add(new VisLabel("--- Layer ---")).padTop(10).row();
-        
+
         VisTable layerTable = new VisTable();
         VisSelectBox<String> layerSelect = new VisSelectBox<>();
-        
+
         Runnable updateLayerItems = new Runnable() {
             @Override
             public void run() {
@@ -405,10 +405,10 @@ public class DualGridDemoScreen extends GScreen {
                     items[i] = "Layer " + i;
                 }
                 layerSelect.setItems(items);
-                
+
                 if (selectedLayer >= items.length) selectedLayer = items.length - 1;
                 if (selectedLayer < 0 && items.length > 0) selectedLayer = 0;
-                
+
                 if (items.length > 0) {
                     layerSelect.setSelectedIndex(selectedLayer);
                 }
@@ -422,7 +422,7 @@ public class DualGridDemoScreen extends GScreen {
                 selectedLayer = layerSelect.getSelectedIndex();
             }
         });
-        
+
         VisTextButton btnDelLayer = new VisTextButton("-");
         btnDelLayer.addListener(new ChangeListener() {
              @Override
@@ -432,14 +432,14 @@ public class DualGridDemoScreen extends GScreen {
                      worldData.removeLayer(idx);
                      // Adjust selected layer logic is handled in updateLayerItems, but we need to update selectedLayer before update UI or let UI handle it
                      // If we delete current layer, we should select the previous one or 0
-                     if (selectedLayer >= idx) selectedLayer--; 
+                     if (selectedLayer >= idx) selectedLayer--;
                      if (selectedLayer < 0) selectedLayer = 0;
-                     
+
                      updateLayerItems.run();
                  }
              }
         });
-        
+
         VisTextButton btnAddLayer = new VisTextButton("+");
         btnAddLayer.addListener(new ChangeListener() {
              @Override
@@ -452,8 +452,8 @@ public class DualGridDemoScreen extends GScreen {
 
         layerTable.add(layerSelect).width(120);
         layerTable.add(btnDelLayer).padLeft(5).width(30);
-        layerTable.add(btnAddLayer).padLeft(20).width(30); 
-        
+        layerTable.add(btnAddLayer).padLeft(20).width(30);
+
         contentTable.add(layerTable).row();
 
         VisCheckBox cbGrid = new VisCheckBox("Show Grid", true);
@@ -478,9 +478,9 @@ public class DualGridDemoScreen extends GScreen {
         VisScrollPane scrollPane = new VisScrollPane(contentTable);
         scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
         scrollPane.setFadeScrollBars(false);
-        
+
         menu.add(scrollPane).width(300).growY(); // 限制宽度并填充高度
-        
+
         root.add(menu).growY().top().right(); // 确保 menu 能够利用垂直空间
         uiStage.addActor(root);
     }
