@@ -48,8 +48,8 @@ public class DualGridDungeonRenderer implements Disposable {
         TextureRegion[] brickBlob = null;
 
         // Priority 1: 32x High Res File
-        if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles.png").exists()) {
-             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
+        if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles_32x.png").exists()) {
+             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
         }
         // Priority 2: TextureManager (Generated)
         else if (com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall) != null) {
