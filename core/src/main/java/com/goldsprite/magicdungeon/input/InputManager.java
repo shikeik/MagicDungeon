@@ -410,7 +410,14 @@ public class InputManager {
             List<Integer> keys = keyboardMappings.get(action);
             if (keys != null && !keys.isEmpty()) {
                 JsonValue kArray = new JsonValue(JsonValue.ValueType.array);
-                for (int k : keys) kArray.addChild(new JsonValue(k));
+                for (int k : keys) {
+                    String keyName = Input.Keys.toString(k);
+                    if (keyName != null) {
+                        kArray.addChild(new JsonValue(keyName));
+                    } else {
+                        kArray.addChild(new JsonValue(k));
+                    }
+                }
                 entry.addChild("keyboard", kArray);
             }
 
@@ -418,7 +425,14 @@ public class InputManager {
             List<Integer> buttons = controllerMappings.get(action);
             if (buttons != null && !buttons.isEmpty()) {
                 JsonValue cArray = new JsonValue(JsonValue.ValueType.array);
-                for (int b : buttons) cArray.addChild(new JsonValue(b));
+                for (int b : buttons) {
+                    String btnName = getSaveNameForButton(b);
+                    if (btnName != null) {
+                        cArray.addChild(new JsonValue(btnName));
+                    } else {
+                        cArray.addChild(new JsonValue(b));
+                    }
+                }
                 entry.addChild("controller", cArray);
             }
 
@@ -431,6 +445,88 @@ public class InputManager {
         file.parent().mkdirs();
         file.writeString(root.prettyPrint(JsonWriter.OutputType.json, 80), false);
         Debug.logT("InputManager", "Mappings saved to " + file.path());
+    }
+
+    private String getSaveNameForButton(int code) {
+        if (code >= V_BUTTON_A) {
+            switch (code) {
+                case V_BUTTON_A: return "A";
+                case V_BUTTON_B: return "B";
+                case V_BUTTON_X: return "X";
+                case V_BUTTON_Y: return "Y";
+                case V_BUTTON_LB: return "LB";
+                case V_BUTTON_RB: return "RB";
+                case V_BUTTON_BACK: return "BACK";
+                case V_BUTTON_START: return "START";
+                case V_BUTTON_L3: return "L3";
+                case V_BUTTON_R3: return "R3";
+                case V_BUTTON_DPAD_UP: return "DPAD_UP";
+                case V_BUTTON_DPAD_DOWN: return "DPAD_DOWN";
+                case V_BUTTON_DPAD_LEFT: return "DPAD_LEFT";
+                case V_BUTTON_DPAD_RIGHT: return "DPAD_RIGHT";
+            }
+        }
+        
+        if (code >= VIRTUAL_AXIS_START) {
+            switch(code) {
+                case AXIS_LEFT_UP: return "AXIS_L_UP";
+                case AXIS_LEFT_DOWN: return "AXIS_L_DOWN";
+                case AXIS_LEFT_LEFT: return "AXIS_L_LEFT";
+                case AXIS_LEFT_RIGHT: return "AXIS_L_RIGHT";
+            }
+        }
+
+        // Fallback for physical buttons
+        switch(code) {
+            case BUTTON_A: return "RAW_A";
+            case BUTTON_B: return "RAW_B";
+            case BUTTON_X: return "RAW_X";
+            case BUTTON_Y: return "RAW_Y";
+            case BUTTON_LB: return "RAW_LB";
+            case BUTTON_RB: return "RAW_RB";
+            case BUTTON_BACK: return "RAW_BACK";
+            case BUTTON_START: return "RAW_START";
+            case BUTTON_L3: return "RAW_L3";
+            case BUTTON_R3: return "RAW_R3";
+        }
+        
+        return null;
+    }
+
+    private int getButtonCodeFromSaveName(String name) {
+        switch (name) {
+            case "A": return V_BUTTON_A;
+            case "B": return V_BUTTON_B;
+            case "X": return V_BUTTON_X;
+            case "Y": return V_BUTTON_Y;
+            case "LB": return V_BUTTON_LB;
+            case "RB": return V_BUTTON_RB;
+            case "BACK": return V_BUTTON_BACK;
+            case "START": return V_BUTTON_START;
+            case "L3": return V_BUTTON_L3;
+            case "R3": return V_BUTTON_R3;
+            case "DPAD_UP": return V_BUTTON_DPAD_UP;
+            case "DPAD_DOWN": return V_BUTTON_DPAD_DOWN;
+            case "DPAD_LEFT": return V_BUTTON_DPAD_LEFT;
+            case "DPAD_RIGHT": return V_BUTTON_DPAD_RIGHT;
+            
+            case "AXIS_L_UP": return AXIS_LEFT_UP;
+            case "AXIS_L_DOWN": return AXIS_LEFT_DOWN;
+            case "AXIS_L_LEFT": return AXIS_LEFT_LEFT;
+            case "AXIS_L_RIGHT": return AXIS_LEFT_RIGHT;
+            
+            case "RAW_A": return BUTTON_A;
+            case "RAW_B": return BUTTON_B;
+            case "RAW_X": return BUTTON_X;
+            case "RAW_Y": return BUTTON_Y;
+            case "RAW_LB": return BUTTON_LB;
+            case "RAW_RB": return BUTTON_RB;
+            case "RAW_BACK": return BUTTON_BACK;
+            case "RAW_START": return BUTTON_START;
+            case "RAW_L3": return BUTTON_L3;
+            case "RAW_R3": return BUTTON_R3;
+        }
+        return -1;
     }
 
     public int getBoundKey(InputAction action) {
@@ -478,8 +574,17 @@ public class InputManager {
                     // Keyboard
                     if (entry.has("keyboard")) {
                         List<Integer> keys = new ArrayList<>();
-                        for (int key : entry.get("keyboard").asIntArray()) {
-                            keys.add(key);
+                        for (JsonValue val : entry.get("keyboard")) {
+                            if (val.isString()) {
+                                int key = Input.Keys.valueOf(val.asString());
+                                if (key != -1) {
+                                    keys.add(key);
+                                } else {
+                                    Debug.logT("InputManager", "Unknown key in config: " + val.asString());
+                                }
+                            } else {
+                                keys.add(val.asInt());
+                            }
                         }
                         keyboardMappings.put(action, keys);
                     }
@@ -487,8 +592,17 @@ public class InputManager {
                     // Controller
                     if (entry.has("controller")) {
                         List<Integer> buttons = new ArrayList<>();
-                        for (int btn : entry.get("controller").asIntArray()) {
-                            buttons.add(btn);
+                        for (JsonValue val : entry.get("controller")) {
+                            if (val.isString()) {
+                                int btn = getButtonCodeFromSaveName(val.asString());
+                                if (btn != -1) {
+                                    buttons.add(btn);
+                                } else {
+                                    Debug.logT("InputManager", "Unknown controller button in config: " + val.asString());
+                                }
+                            } else {
+                                buttons.add(val.asInt());
+                            }
                         }
                         controllerMappings.put(action, buttons);
                     }
