@@ -8,6 +8,7 @@ import com.goldsprite.magicdungeon.screens.tests.MaterialPreviewScreen;
 import com.goldsprite.magicdungeon.screens.tests.NeonGenTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.TexturePreviewScreen;
 import com.goldsprite.magicdungeon.screens.tests.VisUIDemoScreen;
+import com.goldsprite.magicdungeon.screens.tests.SpineTestScreen;
 import java.util.Map;
 
 public class TestSelectionScreen extends BaseSelectionScreen {
@@ -19,6 +20,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("新材质预览", MaterialPreviewScreen.class);
 		map.put("纹理预览", TexturePreviewScreen.class);
 		map.put("Neon生成测试", NeonGenTestScreen.class);
+		map.put("狼Spine动画测试", SpineTestScreen.class);
 
 		map.put("临时观测测试(用完即删)", null);
 	}

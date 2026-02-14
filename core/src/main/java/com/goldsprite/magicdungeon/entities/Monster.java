@@ -14,6 +14,9 @@ public class Monster extends Entity {
 	public float moveDelay;
 	public float moveTimer;
 
+	// Runtime visual state (not serialized)
+	public transient Object visualState;
+
 	public Monster(int x, int y, MonsterType type) {
 		super(x, y, type.color);
 		this.type = type;

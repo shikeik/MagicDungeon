@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 
 public enum MonsterType {
 	Slime("史莱姆", 20, 5, Color.BLUE, 1.0f),
+	Wolf("恶狼", 30, 8, Color.GRAY, 0.6f),
 	Skeleton("骷髅", 40, 10, Color.LIGHT_GRAY, 0.8f),
 	Orc("兽人", 60, 15, Color.OLIVE, 0.6f),
 	Bat("蝙蝠", 10, 3, Color.DARK_GRAY, 0.4f),

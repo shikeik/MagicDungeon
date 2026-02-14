@@ -46,6 +46,13 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector3;
 import com.goldsprite.magicdungeon.ui.ItemRenderer;
 import com.goldsprite.magicdungeon.core.renderer.DualGridDungeonRenderer;
+import com.esotericsoftware.spine.AnimationState;
+import com.esotericsoftware.spine.AnimationStateData;
+import com.esotericsoftware.spine.Skeleton;
+import com.esotericsoftware.spine.SkeletonData;
+import com.esotericsoftware.spine.SkeletonJson;
+import com.esotericsoftware.spine.SkeletonRenderer;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -71,6 +78,16 @@ public class GameScreen extends GScreen {
 
 	private boolean wasAttackPressed = false;
 	private boolean wasInteractPressed = false;
+
+	// Spine Resources
+	private SkeletonRenderer spineRenderer;
+	private TextureAtlas wolfAtlas;
+	private SkeletonData wolfSkeletonData;
+
+	private static class SpineState {
+		Skeleton skeleton;
+		AnimationState state;
+	}
 
 	public GameScreen() {
 		this(MathUtils.random(Long.MIN_VALUE, Long.MAX_VALUE));
@@ -109,6 +126,23 @@ public class GameScreen extends GScreen {
 	public void create() {
 		batch = new NeonBatch();
 		dungeonRenderer = new DualGridDungeonRenderer();
+
+		// Spine Init
+		spineRenderer = new SkeletonRenderer();
+		spineRenderer.setPremultipliedAlpha(false);
+		
+		try {
+			if (Gdx.files.internal("spines/wolf/exports/spine_108_02.atlas").exists()) {
+				wolfAtlas = new TextureAtlas(Gdx.files.internal("spines/wolf/exports/spine_108_02.atlas"));
+				SkeletonJson json = new SkeletonJson(wolfAtlas);
+				json.setScale(1.0f); // Default scale
+				wolfSkeletonData = json.readSkeletonData(Gdx.files.internal("spines/wolf/exports/spine_108_02.json"));
+			} else {
+				Gdx.app.error("GameScreen", "Wolf spine atlas not found!");
+			}
+		} catch (Exception e) {
+			Gdx.app.error("GameScreen", "Failed to load Wolf Spine", e);
+		}
 
 		System.out.println("GameScreen Constructor Started");
 		this.dungeon = new Dungeon(50, 50, seed);
@@ -493,6 +527,7 @@ public class GameScreen extends GScreen {
 				// Varied Monster Types based on Level
 				MonsterType type = MonsterType.Slime;
 				if (dungeon.level >= 2 && monsterRng.nextFloat() < 0.3) type = MonsterType.Bat;
+				if (dungeon.level >= 3 && monsterRng.nextFloat() < 0.3) type = MonsterType.Wolf;
 				if (dungeon.level >= 3 && monsterRng.nextFloat() < 0.3) type = MonsterType.Skeleton;
 				if (dungeon.level >= 5 && monsterRng.nextFloat() < 0.3) type = MonsterType.Orc;
 				if (dungeon.level % 6 == 0 && monsterRng.nextFloat() < 0.3) type = MonsterType.Boss;
@@ -945,6 +980,67 @@ public class GameScreen extends GScreen {
 		// But inventory dialog? toggleInventory() uses currentPlayer, so it's fine.
 	}
 
+	private void renderSpineMonster(Monster m, float delta) {
+		SpineState spineState = (SpineState) m.visualState;
+		if (spineState == null) {
+			Skeleton skeleton = new Skeleton(wolfSkeletonData);
+			AnimationStateData stateData = new AnimationStateData(wolfSkeletonData);
+			AnimationState state = new AnimationState(stateData);
+
+			// Try to find idle animation
+			String defaultAnim = "idle";
+			if (wolfSkeletonData.findAnimation(defaultAnim) == null) {
+				for(com.esotericsoftware.spine.Animation anim : wolfSkeletonData.getAnimations()) {
+					if (anim.getName().toLowerCase().contains("idle") || anim.getName().toLowerCase().contains("stand")) {
+						defaultAnim = anim.getName();
+						break;
+					}
+				}
+				if (wolfSkeletonData.findAnimation(defaultAnim) == null && wolfSkeletonData.getAnimations().size > 0) {
+					defaultAnim = wolfSkeletonData.getAnimations().get(0).getName();
+				}
+			}
+
+			if (defaultAnim != null && wolfSkeletonData.findAnimation(defaultAnim) != null) {
+				state.setAnimation(0, defaultAnim, true);
+			}
+
+			spineState = new SpineState();
+			spineState.skeleton = skeleton;
+			spineState.state = state;
+			m.visualState = spineState;
+		}
+
+		// Position: center bottom
+		// TILE_SIZE is 32.
+		float drawX = m.visualX + Constants.TILE_SIZE / 2f + m.bumpX;
+		float drawY = m.visualY + m.bumpY;
+
+		spineState.skeleton.setPosition(drawX, drawY);
+
+		// Facing direction (Assume asset faces Right)
+		if (player.x < m.x) {
+			spineState.skeleton.setScaleX(-1); // Face Left
+		} else {
+			spineState.skeleton.setScaleX(1); // Face Right
+		}
+
+		spineState.state.update(delta);
+		spineState.state.apply(spineState.skeleton);
+		spineState.skeleton.updateWorldTransform();
+
+		// Hit Flash
+		if (m.applyHitFlash()) {
+			spineState.skeleton.setColor(1, 0, 0, 1);
+		} else {
+			spineState.skeleton.setColor(Color.WHITE);
+		}
+
+		spineRenderer.draw(batch, spineState.skeleton);
+		// Reset batch color
+		batch.setColor(Color.WHITE);
+	}
+
 	private void draw(float delta) {
 		ScreenUtils.clear(0, 0, 0, 1);
 
@@ -1015,6 +1111,11 @@ public class GameScreen extends GScreen {
 		// Render Monsters
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
+				if (m.type == MonsterType.Wolf && wolfSkeletonData != null) {
+					renderSpineMonster(m, delta);
+					continue;
+				}
+
 				TextureRegion mTex = TextureManager.getInstance().get(m.type.name());
 				if (mTex == null) {
 					mTex = TextureManager.getInstance().get(MonsterType.Slime.name());
@@ -1202,15 +1303,13 @@ public class GameScreen extends GScreen {
 
 	@Override
 	public void dispose() {
+		if (batch != null) batch.dispose();
+		if (dungeonRenderer != null) dungeonRenderer.dispose();
+		if (wolfAtlas != null) wolfAtlas.dispose();
+		if (hud != null) hud.dispose();
 		if (audio != null) {
 			audio.stopBGM();
 			audio.dispose();
-		}
-		if (hud != null) {
-			hud.dispose();
-		}
-		if (batch != null) {
-			batch.dispose();
 		}
 		super.dispose();
 	}
