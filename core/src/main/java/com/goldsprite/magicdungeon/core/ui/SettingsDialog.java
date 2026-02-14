@@ -11,6 +11,15 @@ import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.magicdungeon.core.SettingsManager;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
+import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.ControllerAdapter;
+import com.badlogic.gdx.controllers.ControllerListener;
+import com.badlogic.gdx.controllers.Controllers;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.JsonWriter;
+import com.goldsprite.gdengine.log.Debug;
 import com.kotcrab.vis.ui.widget.*;
 
 public class SettingsDialog extends BaseDialog {
@@ -151,10 +160,11 @@ public class SettingsDialog extends BaseDialog {
 		inputTable.top();
 
 		// Header
-		inputTable.add(new VisLabel("动作")).width(200).left();
-		inputTable.add(new VisLabel("按键 (点击修改)")).width(200).left();
+		inputTable.add(new VisLabel("动作")).width(150).left();
+		inputTable.add(new VisLabel("键盘")).width(150).left();
+        inputTable.add(new VisLabel("手柄")).width(150).left();
 		inputTable.row();
-		inputTable.addSeparator().colspan(2).padBottom(10);
+		inputTable.addSeparator().colspan(3).padBottom(10);
 
 		for (InputAction action : InputAction.values()) {
 			addInputRow(action);
@@ -166,25 +176,40 @@ public class SettingsDialog extends BaseDialog {
 	private void addInputRow(InputAction action) {
 		VisLabel nameLabel = new VisLabel(action.name());
 
+		// Keyboard Binding
 		int boundKey = inputManager.getBoundKey(action);
 		String keyName = boundKey == -1 ? "None" : Input.Keys.toString(boundKey);
-
-		VisTextButton bindBtn = new VisTextButton(keyName);
-		bindBtn.addListener(new ClickListener() {
+		VisTextButton bindKeyBtn = new VisTextButton(keyName);
+		bindKeyBtn.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				startRebinding(action, bindBtn);
+				startRebinding(action, bindKeyBtn, true);
 			}
 		});
 
+        // Controller Binding
+        int boundButton = inputManager.getBoundButton(action);
+        String btnName = boundButton == -1 ? "None" : inputManager.getButtonName(boundButton);
+        if(boundButton >= InputManager.VIRTUAL_AXIS_START) {
+            btnName = "Axis"; // Simplify for now or use specific name
+        }
+        VisTextButton bindControllerBtn = new VisTextButton(btnName);
+        bindControllerBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                startRebinding(action, bindControllerBtn, false);
+            }
+        });
+
 		inputTable.add(nameLabel).left().padBottom(5);
-		inputTable.add(bindBtn).width(150).left().padBottom(5);
+		inputTable.add(bindKeyBtn).width(120).left().padBottom(5).padRight(10);
+        inputTable.add(bindControllerBtn).width(120).left().padBottom(5);
 		inputTable.row();
 	}
 
-	private void startRebinding(InputAction action, VisTextButton btn) {
+	private void startRebinding(InputAction action, VisTextButton btn, boolean isKeyboard) {
 		btn.setText("按任意键...");
-		RebindDialog dialog = new RebindDialog(action, btn);
+		RebindDialog dialog = new RebindDialog(action, btn, isKeyboard);
 		getStage().addActor(dialog);
 	}
 
@@ -197,15 +222,57 @@ public class SettingsDialog extends BaseDialog {
 	private class RebindDialog extends VisDialog {
 		private final InputAction action;
 		private final VisTextButton targetBtn;
+        private final boolean isKeyboard;
+        
+        private final ControllerListener controllerListener = new ControllerAdapter() {
+			@Override
+			public boolean buttonDown(Controller controller, int buttonCode) {
+				if(!isKeyboard) {
+					com.goldsprite.gdengine.log.Debug.logT("Settings", "Rebinding Controller Button: " + buttonCode);
+					inputManager.rebindController(action, buttonCode);
+					updateButtonLabel();
+					close();
+					return true;
+				}
+				return false;
+			}
+			
+			@Override
+			public boolean axisMoved(Controller controller, int axisCode, float value) {
+				if(!isKeyboard && Math.abs(value) > 0.5f) {
+					 // Map Axis to Virtual Button
+					 int virtualCode = -1;
+					 if(axisCode == InputManager.AXIS_X) {
+						 virtualCode = value < 0 ? InputManager.AXIS_LEFT_LEFT : InputManager.AXIS_LEFT_RIGHT;
+					 } else if(axisCode == InputManager.AXIS_Y) {
+						 virtualCode = value < 0 ? InputManager.AXIS_LEFT_UP : InputManager.AXIS_LEFT_DOWN;
+					 }
+					 
+					 if(virtualCode != -1) {
+						com.goldsprite.gdengine.log.Debug.logT("Settings", "Rebinding Controller Axis: " + virtualCode);
+						inputManager.rebindController(action, virtualCode);
+						updateButtonLabel();
+						close();
+						return true;
+					 }
+				}
+				return false;
+			}
+		};
 
-		public RebindDialog(InputAction action, VisTextButton targetBtn) {
+		public RebindDialog(InputAction action, VisTextButton targetBtn, boolean isKeyboard) {
 			super("请按键");
 			this.action = action;
 			this.targetBtn = targetBtn;
+			this.isKeyboard = isKeyboard;
 
 			setModal(true);
 
-			text("请按下用于 '" + action.name() + "' 的按键...\n(按 ESC 取消)");
+			if(isKeyboard) {
+				text("请按下用于 '" + action.name() + "' 的按键...\n(按 ESC 取消)");
+			} else {
+				text("请按下手柄按键或拨动摇杆...\n(按 ESC 取消)");
+			}
 			pack();
 			centerWindow();
 
@@ -220,20 +287,34 @@ public class SettingsDialog extends BaseDialog {
 						return true;
 					}
 
-					// Valid key
-					String msg = "Rebinding " + action + " to " + Input.Keys.toString(keycode);
-					com.goldsprite.gdengine.log.Debug.logT("Settings", msg);
-					inputManager.rebindKeyboard(action, keycode);
-					updateButtonLabel();
-					close();
-					return true;
+					if (isKeyboard) {
+						// Valid key
+						String msg = "Rebinding " + action + " to " + Input.Keys.toString(keycode);
+						com.goldsprite.gdengine.log.Debug.logT("Settings", msg);
+						inputManager.rebindKeyboard(action, keycode);
+						updateButtonLabel();
+						close();
+						return true;
+					}
+					return false;
 				}
 			});
+			
+			if(!isKeyboard) {
+				Controllers.addListener(controllerListener);
+			}
 		}
 
 		private void updateButtonLabel() {
-			int key = inputManager.getBoundKey(action);
-			targetBtn.setText(Input.Keys.toString(key));
+            if(isKeyboard) {
+			    int key = inputManager.getBoundKey(action);
+			    targetBtn.setText(Input.Keys.toString(key));
+            } else {
+                int btn = inputManager.getBoundButton(action);
+                String name = inputManager.getButtonName(btn);
+                if(btn >= InputManager.VIRTUAL_AXIS_START) name = "Axis";
+                targetBtn.setText(name);
+            }
 		}
 
 		@Override
@@ -243,5 +324,13 @@ public class SettingsDialog extends BaseDialog {
 				stage.setKeyboardFocus(this);
 			}
 		}
+        
+        @Override
+        public boolean remove() {
+            if(!isKeyboard) {
+                Controllers.removeListener(controllerListener);
+            }
+            return super.remove();
+        }
 	}
 }

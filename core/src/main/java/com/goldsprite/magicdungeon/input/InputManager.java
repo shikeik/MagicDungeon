@@ -367,7 +367,7 @@ public class InputManager {
         mapC(InputAction.UI_RIGHT, BUTTON_DPAD_RIGHT, AXIS_LEFT_RIGHT, SWITCH_DPAD_RIGHT);
     }
     
-    private String getButtonName(int code) {
+    public String getButtonName(int code) {
         if(code == BUTTON_A) return "A";
         if(code == BUTTON_B) return "B";
         if(code == BUTTON_X) return "X";
