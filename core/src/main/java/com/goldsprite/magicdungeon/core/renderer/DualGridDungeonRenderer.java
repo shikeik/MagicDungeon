@@ -246,7 +246,7 @@ public class DualGridDungeonRenderer implements Disposable {
                 int index = ty * 4 + tx;
                 if (index >= 0 && index < atlas.length) {
                     float drawX = x * TILE_SIZE - DISPLAY_OFFSET;
-                    float drawY = y * TILE_SIZE;// - DISPLAY_OFFSET;
+                    float drawY = y * TILE_SIZE - DISPLAY_OFFSET;
                     batch.draw(atlas[index], drawX, drawY, TILE_SIZE, TILE_SIZE);
                 }
             }

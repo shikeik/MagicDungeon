@@ -20,8 +20,6 @@ import com.kotcrab.vis.ui.widget.*;
 public class VisUIHelper {
 	public static BitmapFont cnFont;
 	public static BitmapFont cnFontSmall;
-
-	private static Skin gameSkin;
 	private static int separatorThickness = 5;
 
 	/**
@@ -72,41 +70,24 @@ public class VisUIHelper {
 			mainSkin.add("small", cnFontSmall);
 			mainSkin.add("default-font", cnFont); // 备用
 
-			TextureAtlas shimmerAtlas = new TextureAtlas(Gdx.files.internal("ui_skins/shimmer-ui/shimmer-ui.atlas"));
-			mainSkin.addRegions(shimmerAtlas);
-			mainSkin.load(Gdx.files.internal("ui_skins/shimmer-ui/shimmer-ui.json"));
+			TextureAtlas mainAtlas = new TextureAtlas(Gdx.files.internal("ui_skins/Neutralizer_UI_Skin/neutralizerui/neutralizer-ui.atlas"));
+			mainSkin.addRegions(mainAtlas);
+			mainSkin.load(Gdx.files.internal("ui_skins/Neutralizer_UI_Skin/neutralizerui/neutralizer-ui.json"));
 
-			 // 暂时加载默认, 因为shimmer还没做好
-			mainSkin.addRegions(new TextureAtlas("ui_skins/visui/x1/uiskin.atlas"));
-			mainSkin.load(Gdx.files.internal("ui_skins/visui/x1/uiskin.json"));
+//			 // 暂时加载默认, 因为shimmer还没做好
+//			mainSkin.addRegions(new TextureAtlas("ui_skins/visui/x1/uiskin.atlas"));
+//			mainSkin.load(Gdx.files.internal("ui_skins/visui/x1/uiskin.json"));
 
 			// 映射 VisUI 样式 (因为 Shimmer 是标准皮肤)
-			mapStandardStylesToVisStyles(mainSkin);
+//			mapStandardStylesToVisStyles(mainSkin);
 
 			// 加载 VisUI
 			VisUI.load(mainSkin);
 			Debug.log("VisUI (Shimmer) 加载成功。");
 
-			// 3. 加载游戏内容皮肤 (Neutralizer)
-			gameSkin = new Skin();
-
-			gameSkin.add("font", gameCnFont);
-			gameSkin.add("title", gameCnFont); // Neutralizer 有 title 字体
-			gameSkin.add("default-font", gameCnFont);
-
-			TextureAtlas neutralizerAtlas = new TextureAtlas(Gdx.files.internal("ui_skins/Neutralizer_UI_Skin/neutralizerui/neutralizer-ui.atlas"));
-			gameSkin.addRegions(neutralizerAtlas);
-			gameSkin.load(Gdx.files.internal("ui_skins/Neutralizer_UI_Skin/neutralizerui/neutralizer-ui.json"));
-
-			// 用户要求游戏皮肤也要能用 VisUI
-			mapStandardStylesToVisStyles(gameSkin);
-
-			Debug.log("游戏内容皮肤 (Neutralizer) 加载成功。");
-
 			// 4. 修复一些细节
 			fixHandleSize();
 			addGlobalAssetsStyles(mainSkin, cnFont, cnFontSmall);
-			addGlobalAssetsStyles(gameSkin, gameCnFont, gameCnFontSmall);
 
 			// [新增] 修复 Window 样式
 			if (!mainSkin.has("window-noborder", Drawable.class)) {
@@ -116,49 +97,12 @@ public class VisUIHelper {
 				mainSkin.add("window-bg", "window-ten");
 			}
 
-			// [新增] 注册 VisUI 必需的 Sizes
-			if (!mainSkin.has("default", Sizes.class)) {
-				Sizes sizes = new Sizes();
-				sizes.scaleFactor = 1f;
-				sizes.spacingBottom = 8f;
-				sizes.spacingRight = 6f;
-				sizes.buttonBarSpacing = 10f;
-				sizes.menuItemIconSize = 22f;
-				sizes.borderSize = 1f;
-				sizes.spinnerButtonHeight = 12f;
-				sizes.spinnerFieldSize = 40f;
-				sizes.fileChooserViewModeBigIconsSize = 200f;
-				sizes.fileChooserViewModeMediumIconsSize = 128f;
-				sizes.fileChooserViewModeSmallIconsSize = 64f;
-				sizes.fileChooserViewModeListWidthSize = 155f;
-				mainSkin.add("default", sizes);
-			}
-
-			// 确保 GameSkin 也有 Sizes (以防在游戏界面用 VisUI 组件需要)
-			if (!gameSkin.has("default", Sizes.class)) {
-				gameSkin.add("default", new Sizes());
-			}
-
 		} catch (Exception e) {
 			e.printStackTrace();
 			Debug.log("UI 初始化失败: " + e.getMessage());
 			// 失败回退
 			if (!VisUI.isLoaded()) VisUI.load();
 		}
-	}
-
-	public static Skin getGameSkin() {
-		if (gameSkin == null) {
-			// 如果 gameSkin 还没初始化 (理论上 init() 应该被调用了)，尝试重新 init
-			if (!VisUI.isLoaded()) {
-				init();
-			} else {
-				// 如果 VisUI 已经加载但 gameSkin 没了 (dispose?)，尝试重建
-				// 这里简单处理，返回 VisUI skin 作为 fallback
-				return VisUI.getSkin();
-			}
-		}
-		return gameSkin;
 	}
 
 	private static void mapStandardStylesToVisStyles(Skin skin) {

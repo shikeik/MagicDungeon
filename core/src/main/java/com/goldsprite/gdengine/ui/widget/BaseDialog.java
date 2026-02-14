@@ -9,7 +9,7 @@ public class BaseDialog extends VisDialog {
 
 	public BaseDialog(String title) {
 		super(title);
-		getTitleLabel().setFontScale(0.5f); // 字体太大修正
+		getTitleLabel().setFontScale(0.95f); // 字体太大修正
 		setModal(true);
 		addCloseButton();
 		closeOnEscape();

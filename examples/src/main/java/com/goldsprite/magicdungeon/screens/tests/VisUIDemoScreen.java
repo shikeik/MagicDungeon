@@ -30,7 +30,7 @@ public class VisUIDemoScreen extends GScreen {
             root.remove();
         }
 
-        Skin currentSkin = useDefaultSkin ? VisUI.getSkin() : VisUIHelper.getGameSkin();
+        Skin currentSkin = VisUI.getSkin();
 
         root = new VisTable();
         root.setSkin(currentSkin); // 关键：设置 Table 的 Skin，这样 setBackground("name") 才能从正确的 Skin 查找

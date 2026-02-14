@@ -97,7 +97,7 @@ public class GameHUD {
 	private VisTextButton helpBtn;
 	private BaseDialog helpWindow;
 	private ChestDialog chestDialog;
-	
+
 	private Array<VisTextButton> toolbarButtons = new Array<>();
 	private int toolbarFocusIndex = -1;
 	private boolean isToolbarFocused = false;
@@ -214,15 +214,15 @@ public class GameHUD {
 		// Navigation State
 		enum FocusArea { EQUIPMENT, INVENTORY }
 		FocusArea currentArea = FocusArea.INVENTORY;
-		
+
 		// Slot Lists
 		List<InventorySlot> inventorySlots = new ArrayList<>();
 		List<EquipmentSlot> equipmentSlots = new ArrayList<>();
-		
+
 		int currentInvIndex = 0;
 		int currentEquipIndex = 0;
-		
-		int invItemsPerRow = 8; 
+
+		int invItemsPerRow = 8;
 
 		public InventoryDialog() {
 			super("背包");
@@ -306,7 +306,7 @@ public class GameHUD {
 				}
 				if (dy == 1) currentInvIndex -= invItemsPerRow; // Up
 				if (dy == -1) currentInvIndex += invItemsPerRow; // Down
-				
+
 				// Clamp Inventory
 				if (currentInvIndex < 0) currentInvIndex = 0;
 				if (inventorySlots.size() > 0) {
@@ -314,17 +314,17 @@ public class GameHUD {
 				} else {
 					currentInvIndex = 0;
 				}
-				
+
 			} else {
 				// Equipment Navigation (Manual Logic based on layout)
 				int newIndex = currentEquipIndex;
-				
+
 				if (dy == 1) { // Up
 					if (newIndex == 4 || newIndex == 5) newIndex = 1; // Main/Off -> Acc
 					else if (newIndex == 6) newIndex = 4; // Armor -> Main
 					else if (newIndex == 7) newIndex = 6; // Boots -> Armor
 					else if (newIndex >= 1 && newIndex <= 3) newIndex = 0; // Acc -> Helm
-				} 
+				}
 				else if (dy == -1) { // Down
 					if (newIndex == 0) newIndex = 1; // Helm -> Acc
 					else if (newIndex >= 1 && newIndex <= 3) newIndex = 4; // Acc -> Main
@@ -352,7 +352,7 @@ public class GameHUD {
 					else if (newIndex == 2) newIndex = 1;
 					else if (newIndex == 5) newIndex = 4;
 				}
-				
+
 				currentEquipIndex = newIndex;
 				// Clamp just in case
 				if (equipmentSlots.size() > 0) {
@@ -384,7 +384,7 @@ public class GameHUD {
 
 			// Handle Input Navigation
 			InputManager input = InputManager.getInstance();
-			
+
 			if (input.isJustPressed(InputAction.UI_RIGHT)) {
 				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_RIGHT pressed");
 				navigate(1, 0);
@@ -401,7 +401,7 @@ public class GameHUD {
 				com.goldsprite.gdengine.log.Debug.log("DEBUG: UI_DOWN pressed");
 				navigate(0, -1);
 			}
-			
+
 			// Tab Navigation (Switch Area)
 			if (input.isJustPressed(InputAction.TAB)) {
 				GameHUD.this.updateInputMode(InputMode.KEYBOARD);
@@ -498,7 +498,7 @@ public class GameHUD {
 				if (isEquipped) {
 					VisLabel badge = new VisLabel("E");
 					badge.setColor(Color.YELLOW);
-					badge.setFontScale(0.25f);
+					badge.setFontScale(0.7f);
 					VisTable badgeTable = new VisTable();
 					badgeTable.top().right();
 					badgeTable.add(badge).pad(1);
@@ -509,7 +509,7 @@ public class GameHUD {
 				// Count Badge
 				if (item.count > 1) {
 					VisLabel countLabel = new VisLabel(String.valueOf(item.count));
-					countLabel.setFontScale(0.4f);
+					countLabel.setFontScale(0.9f);
 					VisTable countTable = new VisTable();
 					countTable.bottom().right();
 					countTable.add(countLabel).pad(2);
@@ -698,7 +698,7 @@ public class GameHUD {
 					focusBorder.setColor(fColor); // Lower alpha for background highlight
 				}
 			}
-			
+
 			if (actualFocus && item != null) {
 				showTooltip(this, item);
 			} else if (actualFocus) {
@@ -735,7 +735,7 @@ public class GameHUD {
 			VisTable bg = new VisTable();
 			if (item == null) {
 				VisLabel label = new VisLabel(placeholder);
-				label.setFontScale(0.4f);
+				label.setFontScale(0.9f);
 				label.setColor(Color.GRAY);
 				label.setAlignment(Align.center);
 				bg.add(label);
@@ -869,7 +869,7 @@ public class GameHUD {
 				focusBorder.setVisible(actualFocus);
 				if (actualFocus) focusBorder.setColor(fColor);
 			}
-			
+
 			// Show Tooltip on Focus
 			if (actualFocus && item != null) {
 				showTooltip(this, item);
@@ -918,7 +918,7 @@ public class GameHUD {
 			VisTable countContainer = new VisTable();
 			countContainer.bottom().right();
 			countLabel = new VisLabel("");
-			countLabel.setFontScale(0.4f);
+			countLabel.setFontScale(0.9f);
 			countLabel.setVisible(false);
 			countContainer.add(countLabel).pad(2);
 			stack.add(countContainer);
@@ -1081,19 +1081,19 @@ public class GameHUD {
 			}
 
 			menu.showMenu(stage, x, y);
-			
+
 			// Android: Ensure menu is fully visible
 			if (Gdx.app.getType() == ApplicationType.Android) {
 				menu.pack();
 				float menuW = menu.getWidth();
 				float menuH = menu.getHeight();
-				
+
 				float newX = x;
 				float newY = y;
-				
+
 				if (newX + menuW > stage.getWidth()) newX = stage.getWidth() - menuW - 10;
 				if (newX < 0) newX = 10;
-				
+
 				if (newY - menuH < 0) {
 					// Show above if not enough space below (Wait, menu usually shows below cursor)
 					// VisUI PopupMenu shows at (x, y) with top-left corner usually? Or aligns?
@@ -1101,7 +1101,7 @@ public class GameHUD {
 					// Let's manually clamp just in case.
 					newY = menuH + 10;
 				}
-				
+
 				menu.setPosition(newX, newY);
 			}
 		}
@@ -1216,7 +1216,7 @@ public class GameHUD {
 			// Mouse: Follow mouse
 			x = Gdx.input.getX() + 15;
 			y = stage.getHeight() - Gdx.input.getY() - tooltip.getHeight() - 15;
-			
+
 			// Simple boundary check
 			if (x + tooltip.getWidth() > stage.getWidth()) {
 				x = stage.getWidth() - tooltip.getWidth() - 10;
@@ -1241,7 +1241,7 @@ public class GameHUD {
 	public void updateInputMode(InputMode newMode) {
 		if (currentInputMode == newMode) return;
 		currentInputMode = newMode;
-		
+
 		if (newMode == InputMode.KEYBOARD) {
 			Gdx.input.setCursorCatched(true);
 			if (inventoryDialog != null && inventoryDialog.getParent() != null) {
@@ -1440,7 +1440,7 @@ public class GameHUD {
 		// Level Badge
 		levelBadge = new VisLabel("Lv1");
 		levelBadge.setColor(Color.YELLOW);
-		levelBadge.setFontScale(0.5f);
+		levelBadge.setFontScale(0.95f);
 		VisTable container = new VisTable();
 		VisTable badgeTable = new VisTable();
 		container.add(badgeTable).size(30, 20);
@@ -1537,7 +1537,7 @@ public class GameHUD {
 
 		monsterLvLabel = new VisLabel("1");
 		monsterLvLabel.setColor(Color.CYAN);
-		monsterLvLabel.setFontScale(0.3f);
+		monsterLvLabel.setFontScale(0.78f);
 		VisTable badgeTable = new VisTable();
 		badgeTable.bottom().right();
 		badgeTable.add(monsterLvLabel).pad(0);
@@ -1560,7 +1560,7 @@ public class GameHUD {
 		mobHpStyle.skewDeg = -15f;
 		monsterHpBar = new SkewBar(0, 100, mobHpStyle);
 		monsterHpLabel = new VisLabel("100/100");
-		monsterHpLabel.setFontScale(0.4f);
+		monsterHpLabel.setFontScale(0.9f);
 
 		info.add(createBarWithLabel(monsterHpBar, monsterHpLabel, 120, 15)).left();
 
@@ -1698,7 +1698,7 @@ public class GameHUD {
 		// 我们不需要手动添加关闭按钮，也不需要手动检查 ESC，除非 BaseDialog 的实现有问题。
 		// 为了保险起见，我们添加一个 Listener 来处理 ESC，覆盖默认行为。
 		helpWindow = new BaseDialog("帮助");
-		
+
 		helpWindow.addListener(new InputListener() {
 			@Override
 			public boolean keyDown(InputEvent event, int keycode) {
@@ -1762,7 +1762,7 @@ public class GameHUD {
 				"读档: F9 (仅限PC调试)\n" +
 				"查看信息: 点击怪物或长按物品查看详情");
 		extraLabel.setWrap(true);
-		extraLabel.setFontScale(0.35f);
+		extraLabel.setFontScale(0.78f);
 		extraLabel.setColor(Color.LIGHT_GRAY);
 		leftCol.add(extraLabel).width(400).left();
 
@@ -1862,10 +1862,10 @@ public class GameHUD {
 
 		VisLabel l = new VisLabel(text);
 		l.setAlignment(Align.center);
-		
+
 		// Adaptive font scale
-		if (text.length() > 2) l.setFontScale(0.3f);
-		else l.setFontScale(0.4f);
+		if (text.length() > 2) l.setFontScale(0.78f);
+		else l.setFontScale(0.9f);
 
 		// Increase size for better visibility
 		float minSize = 50;
@@ -2173,7 +2173,7 @@ public class GameHUD {
 			} else {
 				equipmentTable.add().size(128, 128);
 			}
-			
+
 			EquipmentSlot offSlot = new EquipmentSlot(player.equipment.offHand, "副手", player, ItemType.OFF_HAND, -1, dragAndDrop);
 			equipmentTable.add(offSlot).padLeft(10).row();
 			if (inventoryDialog != null) inventoryDialog.equipmentSlots.add(offSlot);
@@ -2196,7 +2196,7 @@ public class GameHUD {
 			statsTable.pad(10); // Add padding inside border
 
 			// Helper for small text
-			float fontScale = 0.25f;
+			float fontScale = 0.7f;
 
 			// Layout: 2 Columns with Separator
 			// [Left Table] | [Right Table]
@@ -2404,7 +2404,7 @@ public class GameHUD {
 				chestDialog.centerWindow();
 			}
 		}
-		
+
 		handleToolbarInput();
 
 		stage.draw();
@@ -2439,7 +2439,7 @@ public class GameHUD {
 		private Player player;
 		private VisTable chestItemsTable;
 		private VisTable playerItemsTable;
-		
+
 		// Navigation
 		enum FocusArea { CHEST, INVENTORY }
 		FocusArea currentArea = FocusArea.CHEST;
@@ -2528,10 +2528,10 @@ public class GameHUD {
 				inventorySlots.add(slot);
 				if ((i + 1) % itemsPerRow == 0) playerItemsTable.row();
 			}
-			
+
 			updateFocus();
 		}
-		
+
 		private void navigate(int dx, int dy) {
             GameHUD.this.updateInputMode(InputMode.KEYBOARD);
 
@@ -2540,7 +2540,7 @@ public class GameHUD {
 				if (dx == -1) currentChestIndex--;
 				if (dy == 1) currentChestIndex -= itemsPerRow;
 				if (dy == -1) currentChestIndex += itemsPerRow;
-				
+
 				// Clamp
 				if (currentChestIndex < 0) currentChestIndex = 0;
 				if (chestSlots.size() > 0) {
@@ -2548,7 +2548,7 @@ public class GameHUD {
 				} else {
 					currentChestIndex = 0;
 				}
-				
+
 				// Switch to Inventory if moving Right from right edge? Or Tab?
 				// Let's use Tab to switch context usually, but maybe simple right/left
 				// If on right edge of Chest, move to Inventory?
@@ -2558,7 +2558,7 @@ public class GameHUD {
 				if (dx == -1) currentInvIndex--;
 				if (dy == 1) currentInvIndex -= itemsPerRow;
 				if (dy == -1) currentInvIndex += itemsPerRow;
-				
+
 				if (currentInvIndex < 0) currentInvIndex = 0;
 				if (inventorySlots.size() > 0) {
 					if (currentInvIndex >= inventorySlots.size()) currentInvIndex = inventorySlots.size() - 1;
@@ -2586,25 +2586,25 @@ public class GameHUD {
 		@Override
 		public void act(float delta) {
 			super.act(delta);
-			
+
 			if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
                  GameHUD.this.updateInputMode(InputMode.MOUSE);
             }
 
 			InputManager input = InputManager.getInstance();
-			
+
 			if (input.isJustPressed(InputAction.UI_RIGHT)) navigate(1, 0);
 			if (input.isJustPressed(InputAction.UI_LEFT)) navigate(-1, 0);
 			if (input.isJustPressed(InputAction.UI_UP)) navigate(0, 1);
 			if (input.isJustPressed(InputAction.UI_DOWN)) navigate(0, -1);
-			
+
 			if (input.isJustPressed(InputAction.TAB)) {
 				GameHUD.this.updateInputMode(InputMode.KEYBOARD);
 				if (currentArea == FocusArea.CHEST) currentArea = FocusArea.INVENTORY;
 				else currentArea = FocusArea.CHEST;
 				updateFocus();
 			}
-			
+
 			if (input.isJustPressed(InputAction.UI_CONFIRM)) {
 				if (currentArea == FocusArea.CHEST) {
 					if (currentChestIndex < chestSlots.size()) chestSlots.get(currentChestIndex).simulateClick();
@@ -2612,12 +2612,12 @@ public class GameHUD {
 					if (currentInvIndex < inventorySlots.size()) inventorySlots.get(currentInvIndex).simulateClick();
 				}
 			}
-			
+
 			if (input.isJustPressed(InputAction.UI_CANCEL)) {
 				hide();
 			}
 		}
-		
+
 		@Override
 		public VisDialog show(Stage stage) {
 			super.show(stage);
