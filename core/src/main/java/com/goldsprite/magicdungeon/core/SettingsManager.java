@@ -12,9 +12,14 @@ public class SettingsManager {
 
     private static SettingsManager instance;
 
-    private float musicVolume = 0.5f;
-    private float sfxVolume = 0.5f;
-    private boolean isFullscreen = false;
+    // Data Object for Serialization
+    public static class SettingsData {
+        public float musicVolume = 0.5f;
+        public float sfxVolume = 0.5f;
+        public boolean isFullscreen = false;
+    }
+
+    private SettingsData data = new SettingsData();
 
     private SettingsManager() {
         load();
@@ -34,14 +39,14 @@ public class SettingsManager {
 
         try {
             Json json = new Json();
-            JsonValue root = json.fromJson(null, file);
-
-            if (root.has("musicVolume")) musicVolume = root.getFloat("musicVolume");
-            if (root.has("sfxVolume")) sfxVolume = root.getFloat("sfxVolume");
-            if (root.has("fullscreen")) isFullscreen = root.getBoolean("fullscreen");
-
-            applySettings();
-            Debug.logT("SettingsManager", "Settings loaded.");
+            json.setIgnoreUnknownFields(true);
+            SettingsData loadedData = json.fromJson(SettingsData.class, file);
+            
+            if (loadedData != null) {
+                this.data = loadedData;
+                applySettings();
+                Debug.logT("SettingsManager", "Settings loaded.");
+            }
         } catch (Exception e) {
             Debug.logErr("SettingsManager", "Failed to load settings: " + e.getMessage());
         }
@@ -52,11 +57,9 @@ public class SettingsManager {
             Json json = new Json();
             json.setOutputType(JsonWriter.OutputType.json);
 
-            // Use simple object serialization for cleaner JSON and to avoid manual construction
-            // which was causing confusion. LibGDX Json can handle this POJO.
             FileHandle file = Gdx.files.local(SETTINGS_FILE);
             file.parent().mkdirs();
-            file.writeString(json.prettyPrint(this), false);
+            file.writeString(json.prettyPrint(data), false);
             Debug.logT("SettingsManager", "Settings saved to " + file.path());
         } catch (Exception e) {
             Debug.logErr("SettingsManager", "Failed to save settings: " + e.getMessage());
@@ -66,7 +69,7 @@ public class SettingsManager {
 
     public void applySettings() {
         // Apply Fullscreen
-        if (isFullscreen) {
+        if (data.isFullscreen) {
             if (!Gdx.graphics.isFullscreen())
                 Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
         } else {
@@ -77,17 +80,17 @@ public class SettingsManager {
         // TODO: Apply Volume when AudioSystem is ready
     }
 
-    public float getMusicVolume() { return musicVolume; }
+    public float getMusicVolume() { return data.musicVolume; }
     public void setMusicVolume(float v) {
-        this.musicVolume = v;
+        data.musicVolume = v;
     }
 
-    public float getSfxVolume() { return sfxVolume; }
-    public void setSfxVolume(float v) { this.sfxVolume = v; }
+    public float getSfxVolume() { return data.sfxVolume; }
+    public void setSfxVolume(float v) { data.sfxVolume = v; }
 
-    public boolean isFullscreen() { return isFullscreen; }
+    public boolean isFullscreen() { return data.isFullscreen; }
     public void setFullscreen(boolean fullscreen) {
-        this.isFullscreen = fullscreen;
+        data.isFullscreen = fullscreen;
         applySettings(); // Apply immediately for preview
     }
 }

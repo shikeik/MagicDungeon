@@ -61,6 +61,9 @@ public class GdxLauncher extends Game {int k4;
 		// 解决初次进入演示屏手柄无法操作及鼠标锁定后无法解锁的问题
 		ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
 		ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
+        
+        // Catch Android Back Key
+        Gdx.input.setCatchKey(Input.Keys.BACK, true);
 
 		// 确保 toastStage 能接收输入 (插入到最前面)
 		sm.getImp().addProcessor(toastStage);
