@@ -53,6 +53,7 @@ import com.esotericsoftware.spine.SkeletonData;
 import com.esotericsoftware.spine.SkeletonJson;
 import com.esotericsoftware.spine.SkeletonRenderer;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -65,6 +66,7 @@ public class GameScreen extends GScreen {
 	private GameHUD hud;
 	private AudioSystem audio;
 	private NeonBatch batch;
+	private PolygonSpriteBatch polyBatch;
 	private long seed;
 
 	private int maxDepth = 1;
@@ -116,15 +118,16 @@ public class GameScreen extends GScreen {
 
 		super.initViewport();
 
-//		// Camera Controller
-//		SimpleCameraController controller = new SimpleCameraController(worldCamera);
-//		controller.setCoordinateMapper((x, y) -> uiViewport.unproject(new Vector2(x, y)));
-//		getImp().addProcessor(controller);
+		// Camera Controller
+		SimpleCameraController controller = new SimpleCameraController(worldCamera);
+		controller.setCoordinateMapper((x, y) -> uiViewport.unproject(new Vector2(x, y)));
+		getImp().addProcessor(controller);
 	}
 
 	@Override
 	public void create() {
 		batch = new NeonBatch();
+		polyBatch = new PolygonSpriteBatch();
 		dungeonRenderer = new DualGridDungeonRenderer();
 
 		// Spine Init
@@ -980,6 +983,7 @@ public class GameScreen extends GScreen {
 		// But inventory dialog? toggleInventory() uses currentPlayer, so it's fine.
 	}
 
+	float wolfScl = 0.75f;
 	private void renderSpineMonster(Monster m, float delta) {
 		SpineState spineState = (SpineState) m.visualState;
 		if (spineState == null) {
@@ -1009,6 +1013,7 @@ public class GameScreen extends GScreen {
 			spineState.skeleton = skeleton;
 			spineState.state = state;
 			m.visualState = spineState;
+			spineState.skeleton.setScale(wolfScl, wolfScl);
 		}
 
 		// Position: center bottom
@@ -1020,9 +1025,9 @@ public class GameScreen extends GScreen {
 
 		// Facing direction (Assume asset faces Right)
 		if (player.x < m.x) {
-			spineState.skeleton.setScaleX(-1); // Face Left
+			spineState.skeleton.setScaleX(-1*wolfScl); // Face Left
 		} else {
-			spineState.skeleton.setScaleX(1); // Face Right
+			spineState.skeleton.setScaleX(1*wolfScl); // Face Right
 		}
 
 		spineState.state.update(delta);
@@ -1031,19 +1036,19 @@ public class GameScreen extends GScreen {
 
 		// Hit Flash
 		if (m.applyHitFlash()) {
-			spineState.skeleton.setColor(1, 0, 0, 1);
+			spineState.skeleton.setColor(Color.RED);
 		} else {
 			spineState.skeleton.setColor(Color.WHITE);
 		}
 
-		spineRenderer.draw(batch, spineState.skeleton);
+		spineRenderer.draw(polyBatch, spineState.skeleton);
 		// Reset batch color
 		batch.setColor(Color.WHITE);
 	}
 
 	private void draw(float delta) {
 		ScreenUtils.clear(0, 0, 0, 1);
-
+		
 		// 使用 GScreen 的 worldCamera
 		batch.setProjectionMatrix(worldCamera.combined);
 		batch.begin();
@@ -1112,7 +1117,6 @@ public class GameScreen extends GScreen {
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
 				if (m.type == MonsterType.Wolf && wolfSkeletonData != null) {
-					renderSpineMonster(m, delta);
 					continue;
 				}
 
@@ -1157,6 +1161,19 @@ public class GameScreen extends GScreen {
 		}
 
 		batch.end();
+
+		polyBatch.setProjectionMatrix(worldCamera.combined);
+		polyBatch.begin();
+
+		for (Monster m : monsters) {
+			if (m.hp > 0) {
+				if (m.type == MonsterType.Wolf && wolfSkeletonData != null) {
+					renderSpineMonster(m, delta);
+				}
+			}
+		}
+
+		polyBatch.end();
 
 		// HUD Render
 		hud.render();

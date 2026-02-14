@@ -13,9 +13,10 @@ import com.esotericsoftware.spine.SkeletonRenderer;
 import com.esotericsoftware.spine.SkeletonRendererDebug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 
 public class SpineTestScreen extends GScreen {
-    private NeonBatch batch;
+    private PolygonSpriteBatch batch;
     private SkeletonRenderer renderer;
     private SkeletonRendererDebug debugRenderer;
 
@@ -25,7 +26,7 @@ public class SpineTestScreen extends GScreen {
 
     @Override
     public void create() {
-        batch = new NeonBatch();
+        batch = new PolygonSpriteBatch();
         renderer = new SkeletonRenderer();
         renderer.setPremultipliedAlpha(false); // 通常不需要 premultiplied alpha，除非导出设置了
 
@@ -85,10 +86,6 @@ public class SpineTestScreen extends GScreen {
         } else {
             System.out.println("No animation found to play.");
         }
-
-        // Use World Camera from GScreen
-        getWorldCamera().position.set(0, 0, 0);
-        getWorldCamera().update();
     }
 
     @Override
@@ -97,7 +94,7 @@ public class SpineTestScreen extends GScreen {
         this.viewSizeShort = 600;
         this.viewSizeLong = 800;
         this.worldScale = 1.0f; // 1:1 pixel
-        this.autoCenterWorldCamera = true;
+        this.autoCenterWorldCamera = false;
         super.initViewport();
     }
 
@@ -127,6 +124,5 @@ public class SpineTestScreen extends GScreen {
     @Override
     public void dispose() {
         if (atlas != null) atlas.dispose();
-        if (batch != null) batch.dispose();
     }
 }
