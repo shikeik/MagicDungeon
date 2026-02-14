@@ -16,6 +16,8 @@ import com.goldsprite.gdengine.ui.widget.single.ToastUI;
 import com.goldsprite.gdengine.ui.widget.single.DialogUI;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.gdengine.web.DocServer;
+import com.goldsprite.magicdungeon.input.InputAction;
+import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
 import com.goldsprite.magicdungeon.testing.GameAutoTests;
 import com.kotcrab.vis.ui.VisUI;
@@ -54,6 +56,11 @@ public class GdxLauncher extends Game {int k4;
 		ScreenManager sm = new ScreenManager()
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);
+
+		// [修复] 全局配置输入更新钩子，确保 InputManager 在启动时立即生效
+		// 解决初次进入演示屏手柄无法操作及鼠标锁定后无法解锁的问题
+		ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
+		ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
 
 		// 确保 toastStage 能接收输入 (插入到最前面)
 		sm.getImp().addProcessor(toastStage);

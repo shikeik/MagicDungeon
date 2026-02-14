@@ -139,6 +139,17 @@ public class InputManager {
         for(Controller c : Controllers.getControllers()) {
              Debug.logT("InputManager", " - " + c.getName() + " [" + c.getUniqueId() + "]");
         }
+        
+        // [New Feature] Detect initial hardware and set mode
+        // If controller connected -> Keyboard Mode (Gamepad friendly)
+        // Else -> Mouse Mode (PC friendly)
+        if (hasConnectedController()) {
+            Debug.logT("InputManager", "Controller detected on startup. Setting mode to KEYBOARD.");
+            setInputMode(InputMode.KEYBOARD);
+        } else {
+            Debug.logT("InputManager", "No controller detected on startup. Setting mode to MOUSE.");
+            setInputMode(InputMode.MOUSE);
+        }
     }
     
     private void applyPlatformDefaults() {
