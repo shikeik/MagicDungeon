@@ -162,7 +162,7 @@ public class SettingsDialog extends BaseDialog {
 		// Header
 		inputTable.add(new VisLabel("动作")).width(150).left();
 		inputTable.add(new VisLabel("键盘")).width(150).left();
-        inputTable.add(new VisLabel("手柄")).width(150).left();
+		inputTable.add(new VisLabel("手柄")).width(150).left();
 		inputTable.row();
 		inputTable.addSeparator().colspan(3).padBottom(10);
 
@@ -223,7 +223,7 @@ public class SettingsDialog extends BaseDialog {
 		private final InputAction action;
 		private final VisTextButton targetBtn;
         private final boolean isKeyboard;
-        
+
         private final ControllerListener controllerListener = new ControllerAdapter() {
 			@Override
 			public boolean buttonDown(Controller controller, int buttonCode) {
@@ -236,7 +236,7 @@ public class SettingsDialog extends BaseDialog {
 				}
 				return false;
 			}
-			
+
 			@Override
 			public boolean axisMoved(Controller controller, int axisCode, float value) {
 				if(!isKeyboard && Math.abs(value) > 0.5f) {
@@ -247,7 +247,7 @@ public class SettingsDialog extends BaseDialog {
 					 } else if(axisCode == InputManager.AXIS_Y) {
 						 virtualCode = value < 0 ? InputManager.AXIS_LEFT_UP : InputManager.AXIS_LEFT_DOWN;
 					 }
-					 
+
 					 if(virtualCode != -1) {
 						com.goldsprite.gdengine.log.Debug.logT("Settings", "Rebinding Controller Axis: " + virtualCode);
 						inputManager.rebindController(action, virtualCode);
@@ -299,7 +299,7 @@ public class SettingsDialog extends BaseDialog {
 					return false;
 				}
 			});
-			
+
 			if(!isKeyboard) {
 				Controllers.addListener(controllerListener);
 			}
@@ -324,7 +324,7 @@ public class SettingsDialog extends BaseDialog {
 				stage.setKeyboardFocus(this);
 			}
 		}
-        
+
         @Override
         public boolean remove() {
             if(!isKeyboard) {

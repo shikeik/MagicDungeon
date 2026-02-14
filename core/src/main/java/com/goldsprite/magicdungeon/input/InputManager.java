@@ -27,22 +27,22 @@ public class InputManager {
     private final Map<InputAction, List<Integer>> keyboardMappings = new HashMap<>();
     private final Map<InputAction, List<Integer>> controllerMappings = new HashMap<>();
     private boolean isVirtualGamepad = false;
-    
+
     // Global Input Mode State
     public enum InputMode {
         MOUSE,
         KEYBOARD // Includes Controller
     }
     private InputMode currentInputMode = InputMode.MOUSE;
-    
+
     // State Tracking
     private final Set<Integer> currentButtons = new HashSet<>();
     private final Set<Integer> previousButtons = new HashSet<>();
-    
+
     // Startup delay to prevent initial controller drift/noise from locking cursor
     private float startupTimer = 0f;
     private static final float STARTUP_DELAY = 0.5f;
-    
+
     // Debug Listener
     private final ControllerListener debugListener = new ControllerAdapter() {
         @Override
@@ -94,7 +94,7 @@ public class InputManager {
     public static final int V_BUTTON_START = 2007;
     public static final int V_BUTTON_L3 = 2008;
     public static final int V_BUTTON_R3 = 2009;
-    
+
     public static final int V_BUTTON_DPAD_UP = 2010;
     public static final int V_BUTTON_DPAD_DOWN = 2011;
     public static final int V_BUTTON_DPAD_LEFT = 2012;
@@ -111,7 +111,7 @@ public class InputManager {
     public static final int BUTTON_START = 7;
     public static final int BUTTON_L3 = 8;
     public static final int BUTTON_R3 = 9;
-    
+
     // D-Pad Mappings
     public static int BUTTON_DPAD_UP = 10;
     public static int BUTTON_DPAD_DOWN = 11;
@@ -123,7 +123,7 @@ public class InputManager {
     public static final int SWITCH_DPAD_DOWN = 12;
     public static final int SWITCH_DPAD_LEFT = 13;
     public static final int SWITCH_DPAD_RIGHT = 14;
-    
+
     // Android Mappings (Standard HID)
     // A=96, B=97, X=99, Y=100, L1=102, R1=103
     // DPAD: Up=19, Down=20, Left=21, Right=22
@@ -134,31 +134,33 @@ public class InputManager {
     public static final int ANDROID_DPAD_DOWN = 20;
     public static final int ANDROID_DPAD_LEFT = 21;
     public static final int ANDROID_DPAD_RIGHT = 22;
-    
+
     // Virtual Button IDs for Axis Simulation
-    public static final int VIRTUAL_AXIS_START = 200;
-    public static final int AXIS_LEFT_UP = 200;
-    public static final int AXIS_LEFT_DOWN = 201;
-    public static final int AXIS_LEFT_LEFT = 202;
-    public static final int AXIS_LEFT_RIGHT = 203;
-    
+    // [Fix] Increase VIRTUAL_AXIS_START to avoid conflict with physical buttons (0-255)
+    // Some controllers report buttons up to 100+.
+    public static final int VIRTUAL_AXIS_START = 1000;
+    public static final int AXIS_LEFT_UP = 1000;
+    public static final int AXIS_LEFT_DOWN = 1001;
+    public static final int AXIS_LEFT_LEFT = 1002;
+    public static final int AXIS_LEFT_RIGHT = 1003;
+
     // Standard Axis Indices
     public static final int AXIS_X = 0; // Left Stick X
     public static final int AXIS_Y = 1; // Left Stick Y
-    
+
     private static final float DEADZONE = 0.3f;
 
     private InputManager() {
         // Platform specific defaults
         applyPlatformDefaults();
-        
+
         loadMappings();
         Controllers.addListener(debugListener);
         Debug.logT("InputManager", "Initialized. Current controllers: " + Controllers.getControllers().size);
         for(Controller c : Controllers.getControllers()) {
              Debug.logT("InputManager", " - " + c.getName() + " [" + c.getUniqueId() + "]");
         }
-        
+
         // [New Feature] Detect initial hardware and set mode
         // If controller connected -> Keyboard Mode (Gamepad friendly)
         // Else -> Mouse Mode (PC friendly)
@@ -170,7 +172,7 @@ public class InputManager {
             setInputMode(InputMode.MOUSE);
         }
     }
-    
+
     private void applyPlatformDefaults() {
         if (Gdx.app.getType() == Application.ApplicationType.Android) {
             BUTTON_DPAD_UP = ANDROID_DPAD_UP;
@@ -201,7 +203,7 @@ public class InputManager {
     public void setInputMode(InputMode mode) {
         if (currentInputMode == mode) return;
         currentInputMode = mode;
-        
+
         if (mode == InputMode.KEYBOARD) {
             // Lock cursor
             Gdx.input.setCursorCatched(true);
@@ -212,7 +214,7 @@ public class InputManager {
             Debug.logT("InputManager", "InputMode -> MOUSE (Cursor Unlocked)");
         }
     }
-    
+
     public InputMode getInputMode() {
         return currentInputMode;
     }
@@ -221,7 +223,7 @@ public class InputManager {
         if (instance == null) instance = new InputManager();
         return instance;
     }
-    
+
     /**
      * Must be called once per frame, preferably at start of render()
      */
@@ -241,61 +243,61 @@ public class InputManager {
         if (Math.abs(Gdx.input.getDeltaX()) > 2 || Math.abs(Gdx.input.getDeltaY()) > 2 || Gdx.input.isTouched()) {
              setInputMode(InputMode.MOUSE);
         }
-        
+
         if (Controllers.getControllers().size == 0) return;
         if (startupTimer < STARTUP_DELAY) return; // Ignore controller input during startup
-        
+
         Controller controller = Controllers.getControllers().first();
-        
+
         // 1. Poll configured buttons
         // We iterate through all known mappings to check status
         ControllerMapping mapping = controller.getMapping();
-        
+
         for (List<Integer> mappedButtons : controllerMappings.values()) {
             for (int btnCode : mappedButtons) {
                 // Determine the actual physical code to check
                 int physicalCode = btnCode;
-                
+
                 // If it's a virtual logical button, resolve it
                 if (btnCode >= 2000) {
                     physicalCode = resolveLogicalButton(btnCode, mapping);
                 }
-                
+
                 if (physicalCode != -1 && physicalCode < VIRTUAL_AXIS_START) {
                     if (controller.getButton(physicalCode)) {
                         currentButtons.add(btnCode); // Store the LOGICAL code if mapped, or physical if not
-                        // Wait, storing logical code is better for consistent logic elsewhere, 
-                        // but currentButtons usage needs to be consistent. 
+                        // Wait, storing logical code is better for consistent logic elsewhere,
+                        // but currentButtons usage needs to be consistent.
                         // Let's store the btnCode (which is the key in the mapping).
                     }
                 }
             }
         }
-        
+
         // 2. Poll Axes and simulate buttons
         // Note: Axis Y is often inverted (-1 is Up on many controllers)
         float xAxis = controller.getAxis(AXIS_X);
         float yAxis = controller.getAxis(AXIS_Y);
-        
+
         if (Math.abs(xAxis) > DEADZONE) {
             if (xAxis < 0) currentButtons.add(AXIS_LEFT_LEFT);
             else currentButtons.add(AXIS_LEFT_RIGHT);
         }
-        
+
         if (Math.abs(yAxis) > DEADZONE) {
             // Usually -1 is Up, 1 is Down
             if (yAxis < 0) currentButtons.add(AXIS_LEFT_UP);
             else currentButtons.add(AXIS_LEFT_DOWN);
         }
-        
+
         // D-Pad is often handled as buttons by LibGDX (10-13), but verify if needed.
-        // If D-Pad is Axis 6/7, we might need more logic here. 
+        // If D-Pad is Axis 6/7, we might need more logic here.
         // For now, assume standard mapping covers D-Pad as buttons.
     }
 
     private int resolveLogicalButton(int logicCode, ControllerMapping mapping) {
         if (mapping == null) return -1;
-        
+
         switch (logicCode) {
             case V_BUTTON_A: return mapping.buttonA;
             case V_BUTTON_B: return mapping.buttonB;
@@ -344,21 +346,21 @@ public class InputManager {
         if (mapping.buttonB == physicalCode) return V_BUTTON_B;
         if (mapping.buttonX == physicalCode) return V_BUTTON_X;
         if (mapping.buttonY == physicalCode) return V_BUTTON_Y;
-        
+
         if (mapping.buttonL1 == physicalCode) return V_BUTTON_LB;
         if (mapping.buttonR1 == physicalCode) return V_BUTTON_RB;
-        
+
         if (mapping.buttonBack == physicalCode) return V_BUTTON_BACK;
         if (mapping.buttonStart == physicalCode) return V_BUTTON_START;
-        
+
         if (mapping.buttonLeftStick == physicalCode) return V_BUTTON_L3;
         if (mapping.buttonRightStick == physicalCode) return V_BUTTON_R3;
-        
+
         if (mapping.buttonDpadUp == physicalCode) return V_BUTTON_DPAD_UP;
         if (mapping.buttonDpadDown == physicalCode) return V_BUTTON_DPAD_DOWN;
         if (mapping.buttonDpadLeft == physicalCode) return V_BUTTON_DPAD_LEFT;
         if (mapping.buttonDpadRight == physicalCode) return V_BUTTON_DPAD_RIGHT;
-        
+
         return -1; // No standard mapping found, use physical code
     }
 
@@ -450,13 +452,11 @@ public class InputManager {
         FileHandle file = Gdx.files.local(INPUTACTIONS_FILE);
 
         if (!file.exists()) {
-            file = Gdx.files.internal("options/input.json");
-        }
-
-		if (!file.exists()) {
 			Debug.logT("InputManager", "No config found at options/input.json, using defaults.");
+			// [Fix] If no config exists, save the default one immediately
+			saveMappings();
 			return;
-		}
+        }
 
         try {
             JsonValue root = new Json().fromJson(null, file);
@@ -494,30 +494,39 @@ public class InputManager {
     }
 
     private void setDefaultMappings() {
-        // WASD / Arrow Keys
+        // --- Keyboard Mappings (includes Android Virtual Gamepad keys) ---
+        // Android Virtual Gamepad sends standard Android KeyCodes (which map to LibGDX Input.Keys.BUTTON_*)
+        // So we must include BUTTON_A, BUTTON_B etc. in keyboard mappings for Android support.
+
+        // Movement (WASD + Arrows)
         mapK(InputAction.MOVE_UP, Input.Keys.W, Input.Keys.UP);
         mapK(InputAction.MOVE_DOWN, Input.Keys.S, Input.Keys.DOWN);
         mapK(InputAction.MOVE_LEFT, Input.Keys.A, Input.Keys.LEFT);
         mapK(InputAction.MOVE_RIGHT, Input.Keys.D, Input.Keys.RIGHT);
 
-        mapK(InputAction.ATTACK, Input.Keys.J, Input.Keys.BUTTON_X); // X
-        mapK(InputAction.INTERACT, Input.Keys.SPACE, Input.Keys.BUTTON_A); // A
-        mapK(InputAction.SKILL, Input.Keys.H, Input.Keys.BUTTON_R2); // RT
-        mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.DEL, Input.Keys.BUTTON_B); // B
+        // Actions
+        // Attack: J, X, Button X
+        mapK(InputAction.ATTACK, Input.Keys.J, Input.Keys.X, Input.Keys.BUTTON_X);
+        // Interact: Space, A, Button A
+        mapK(InputAction.INTERACT, Input.Keys.SPACE, Input.Keys.BUTTON_A);
+        // Skill: H, Button R2
+        mapK(InputAction.SKILL, Input.Keys.H, Input.Keys.BUTTON_R2);
+        // Back: Esc, Del, Button B
+        mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.DEL, Input.Keys.BUTTON_B);
 
-        mapK(InputAction.MAP, Input.Keys.M, Input.Keys.BUTTON_Y); // Y
-        mapK(InputAction.BAG, Input.Keys.E, Input.Keys.BUTTON_R1); // RB
-        mapK(InputAction.PAUSE, Input.Keys.P, Input.Keys.BUTTON_START); // Start
+        // Menus
+        mapK(InputAction.MAP, Input.Keys.M, Input.Keys.BUTTON_Y);
+        mapK(InputAction.BAG, Input.Keys.E, Input.Keys.BUTTON_R1);
+        mapK(InputAction.PAUSE, Input.Keys.P, Input.Keys.BUTTON_START);
 
-        mapK(InputAction.TAB, Input.Keys.TAB, Input.Keys.BUTTON_L2); // LT
-        mapK(InputAction.QUICK_SLOT, Input.Keys.Q, Input.Keys.BUTTON_L1); // LB
-        mapK(InputAction.SAVE, Input.Keys.F5); // Home
-        
+        // Shortcuts
+        mapK(InputAction.TAB, Input.Keys.TAB, Input.Keys.BUTTON_L2);
+        mapK(InputAction.QUICK_SLOT, Input.Keys.Q, Input.Keys.BUTTON_L1);
+        mapK(InputAction.SAVE, Input.Keys.F5);
         mapK(InputAction.LOAD_GAME, Input.Keys.F9);
         mapK(InputAction.RESET_MAP, Input.Keys.R);
-        
-        // UI Navigation Defaults
-        // Re-use Move keys + Arrows for UI
+
+        // UI Navigation
         mapK(InputAction.UI_UP, Input.Keys.W, Input.Keys.UP);
         mapK(InputAction.UI_DOWN, Input.Keys.S, Input.Keys.DOWN);
         mapK(InputAction.UI_LEFT, Input.Keys.A, Input.Keys.LEFT);
@@ -525,50 +534,94 @@ public class InputManager {
         mapK(InputAction.UI_CONFIRM, Input.Keys.ENTER, Input.Keys.SPACE, Input.Keys.J, Input.Keys.BUTTON_A);
         mapK(InputAction.UI_CANCEL, Input.Keys.ESCAPE, Input.Keys.BACKSPACE, Input.Keys.BUTTON_B);
 
-        // Controller Defaults (Using Virtual Logical Buttons)
-        // These will be dynamically resolved to physical buttons based on the connected controller
-        mapC(InputAction.ATTACK, V_BUTTON_X);
-        mapC(InputAction.INTERACT, V_BUTTON_A);
-        mapC(InputAction.SKILL, V_BUTTON_RB); 
-        mapC(InputAction.BACK, V_BUTTON_B);
-        mapC(InputAction.MAP, V_BUTTON_Y);
-        mapC(InputAction.BAG, V_BUTTON_LB); 
+        // --- Controller Mappings (Using Virtual Logical Buttons) ---
+        // These are for PHYSICAL controllers (Xbox, PS4, Switch, etc.)
+
+        // Face Buttons
+        mapC(InputAction.ATTACK, V_BUTTON_X);       // West Button (X/Square/Y)
+        mapC(InputAction.INTERACT, V_BUTTON_A);     // South Button (A/Cross/B)
+        mapC(InputAction.BACK, V_BUTTON_B);         // East Button (B/Circle/A)
+        mapC(InputAction.MAP, V_BUTTON_Y);          // North Button (Y/Triangle/X)
+
+        // Triggers & Shoulders
+        mapC(InputAction.BAG, V_BUTTON_RB);         // R1 / RB
+        mapC(InputAction.QUICK_SLOT, V_BUTTON_LB);  // L1 / LB
+        mapC(InputAction.SKILL, V_BUTTON_R3);       // R3 (Right Stick Click) - Wait, usually Skill is heavy attack?
+        // Let's stick to user previous pref: Skill on Trigger?
+        // Previous default was R2 for keyboard, but triggers are axes on controllers usually.
+        // If we want button, maybe R1/RB? But Bag is there.
+        // Let's put Skill on RB for now, and Bag on LB.
+        // (Wait, prev code had Skill on RB and Bag on LB).
+
+        // Let's refine based on typical RPG:
+        // Attack: X
+        // Interact/Jump: A
+        // Cancel/Back: B
+        // Map/Menu: Y
+        // Skill: RB (Right Bumper)
+        // Quick Item/Potion: LB (Left Bumper)
+        // Lock-on/Tab: L3
+        // Pause: Start
+
+        mapC(InputAction.SKILL, V_BUTTON_RB);
+        mapC(InputAction.QUICK_SLOT, V_BUTTON_LB); // Quick Slot
+        mapC(InputAction.TAB, V_BUTTON_L3);
         mapC(InputAction.PAUSE, V_BUTTON_START);
-        mapC(InputAction.TAB, V_BUTTON_L3); 
-        mapC(InputAction.QUICK_SLOT, V_BUTTON_R3); 
-        
-        // D-Pad (Virtual)
+
+        // D-Pad Movement
         mapC(InputAction.MOVE_UP, V_BUTTON_DPAD_UP, AXIS_LEFT_UP);
         mapC(InputAction.MOVE_DOWN, V_BUTTON_DPAD_DOWN, AXIS_LEFT_DOWN);
         mapC(InputAction.MOVE_LEFT, V_BUTTON_DPAD_LEFT, AXIS_LEFT_LEFT);
         mapC(InputAction.MOVE_RIGHT, V_BUTTON_DPAD_RIGHT, AXIS_LEFT_RIGHT);
-        
-        // UI Navigation (Controller)
+
+        // UI Navigation
         mapC(InputAction.UI_UP, V_BUTTON_DPAD_UP, AXIS_LEFT_UP);
         mapC(InputAction.UI_DOWN, V_BUTTON_DPAD_DOWN, AXIS_LEFT_DOWN);
         mapC(InputAction.UI_LEFT, V_BUTTON_DPAD_LEFT, AXIS_LEFT_LEFT);
         mapC(InputAction.UI_RIGHT, V_BUTTON_DPAD_RIGHT, AXIS_LEFT_RIGHT);
+        mapC(InputAction.UI_CONFIRM, V_BUTTON_A);
     }
-    
+
     public String getButtonName(int code) {
-        if(code == BUTTON_A) return "A";
-        if(code == BUTTON_B) return "B";
-        if(code == BUTTON_X) return "X";
-        if(code == BUTTON_Y) return "Y";
-        if(code == BUTTON_LB) return "LB";
-        if(code == BUTTON_RB) return "RB";
-        if(code == BUTTON_BACK) return "BACK";
-        if(code == BUTTON_START) return "START";
-        if(code == BUTTON_L3) return "L3";
-        if(code == BUTTON_R3) return "R3";
-        
+        // [New] Support Logical Buttons
+        if (code >= V_BUTTON_A) {
+            switch (code) {
+                case V_BUTTON_A: return "A";
+                case V_BUTTON_B: return "B";
+                case V_BUTTON_X: return "X";
+                case V_BUTTON_Y: return "Y";
+                case V_BUTTON_LB: return "LB";
+                case V_BUTTON_RB: return "RB";
+                case V_BUTTON_BACK: return "Back";
+                case V_BUTTON_START: return "Start";
+                case V_BUTTON_L3: return "L3";
+                case V_BUTTON_R3: return "R3";
+                case V_BUTTON_DPAD_UP: return "D-Pad Up";
+                case V_BUTTON_DPAD_DOWN: return "D-Pad Down";
+                case V_BUTTON_DPAD_LEFT: return "D-Pad Left";
+                case V_BUTTON_DPAD_RIGHT: return "D-Pad Right";
+            }
+        }
+
+        // Physical Fallbacks (for debugging or raw codes)
+        if(code == BUTTON_A) return "A (Raw)";
+        if(code == BUTTON_B) return "B (Raw)";
+        if(code == BUTTON_X) return "X (Raw)";
+        if(code == BUTTON_Y) return "Y (Raw)";
+        if(code == BUTTON_LB) return "LB (Raw)";
+        if(code == BUTTON_RB) return "RB (Raw)";
+        if(code == BUTTON_BACK) return "BACK (Raw)";
+        if(code == BUTTON_START) return "START (Raw)";
+        if(code == BUTTON_L3) return "L3 (Raw)";
+        if(code == BUTTON_R3) return "R3 (Raw)";
+
         // Use dynamic values
         if(code == BUTTON_DPAD_UP) return "DPAD_UP (" + code + ")";
         if(code == BUTTON_DPAD_DOWN) return "DPAD_DOWN (" + code + ")";
         if(code == BUTTON_DPAD_LEFT) return "DPAD_LEFT (" + code + ")";
         if(code == BUTTON_DPAD_RIGHT) return "DPAD_RIGHT (" + code + ")";
-        
-        return "Unknown";
+
+        return "Unknown (" + code + ")";
     }
 
     private void mapK(InputAction action, int... keys) {
@@ -619,7 +672,7 @@ public class InputManager {
                 }
             }
         }
-        
+
         // Check Controller
         List<Integer> buttons = controllerMappings.get(action);
         if (buttons != null) {
