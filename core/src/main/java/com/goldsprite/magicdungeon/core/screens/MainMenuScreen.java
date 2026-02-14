@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.magicdungeon.core.renderer.TitleParallaxRenderer;
 import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
 import com.goldsprite.magicdungeon.systems.SaveManager;
@@ -52,6 +53,10 @@ public class MainMenuScreen extends GScreen {
 
 	@Override
 	public void create() {
+        // 配置 ScreenManager 的输入钩子
+        ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
+        ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
+
 		// 1. Init Renderer
 		batch = new NeonBatch();
 		renderer = new TitleParallaxRenderer();
@@ -237,7 +242,6 @@ public class MainMenuScreen extends GScreen {
 
 	@Override
 	public void render(float delta) {
-        InputManager.getInstance().update();
 		ScreenUtils.clear(0, 0, 0, 1);
 
 		float scl = 1f;

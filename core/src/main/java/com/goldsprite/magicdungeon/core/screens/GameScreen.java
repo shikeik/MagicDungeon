@@ -626,7 +626,6 @@ public class GameScreen extends GScreen {
 
 	@Override
 	public void render(float delta) {
-        InputManager.getInstance().update();
 		handleInput(delta);
 
 		if (!isPaused) {

@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.function.Consumer;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
+import java.util.function.Supplier;
+
 /**
  * 使用：
  * * 创建:
@@ -32,6 +34,12 @@ public class ScreenManager implements Disposable {
 	// 2. 定义回调接口 (底层不依赖 Android/Lwjgl)
 	public static Consumer<Orientation> orientationChanger;
 	public static List<Runnable> exitGame = new ArrayList<>();//声明退出游戏事件回调，需要在各平台自身实现
+    
+    // [新增] 输入系统钩子，解耦具体输入实现
+    public static Runnable inputUpdater;
+    public static Supplier<Boolean> backKeyTrigger = () -> 
+        Gdx.input.isKeyJustPressed(Input.Keys.BACK) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
+
 	private static ScreenManager instance;
 	private final Map<Class<?>, GScreen> screens = new HashMap<>();
 	private InputMultiplexer imp;
@@ -83,35 +91,15 @@ public class ScreenManager implements Disposable {
 
 		//设置到gdx输入管线
 		if (Gdx.input.getInputProcessor() == null) Gdx.input.setInputProcessor(imp);
-		//创建默认处理器
+		
+		// 移除旧的 InputAdapter，改为在 render 中轮询以支持所有输入设备 (包括手柄)
 		InputAdapter defaultHandler = new InputAdapter() {
 			boolean isFullscreen;
 
 			public boolean keyDown(int keyCode) {
-				Application.ApplicationType userType = Gdx.app.getType();
-
-				//从堆栈弹出并返回上个屏幕
-				if (keyCode == Input.Keys.BACK || keyCode == Input.Keys.ESCAPE) {
-					// 优先检查当前屏幕是否处理了 Back/Esc (例如关闭 UI 弹窗)
-					GScreen current = getCurScreen();
-					if (current != null) {
-						if (current.handleBackKey()) {
-							return true; // 已经被屏幕逻辑消费了（如关闭了背包）
-						}
-					}
-
-					if (!popLastScreen()) {
-						//如果已在最顶层则退出游戏
-						if (exitGame != null && !exitGame.isEmpty()) exitGame.forEach(r -> r.run());
-					}
-					return true;
-				}
-				else if(keyCode == Input.Keys.F11) {
+				if(keyCode == Input.Keys.F11) {
 					isFullscreen = !isFullscreen;
 					PlatformImpl.fullScreenEvent.accept(isFullscreen);
-//					if(Application.ApplicationType.Desktop.equals(userType))
-//						ScreenManager.orientationChanger.accept(isFullscreen ? ScreenManager.Orientation.LANDSCAPE : ScreenManager.Orientation.PORTRAIT);
-//					Debug.logT("FullscreenManager", "切换到%s模式", isFullscreen ? "全屏" : "窗口");
 				}
 				return false;
 			}
@@ -136,6 +124,24 @@ public class ScreenManager implements Disposable {
 	 * 渲染(已初始化的)当前屏幕
 	 */
 	public void render() {
+        // 全局输入更新
+        if (inputUpdater != null) inputUpdater.run();
+        
+        // 全局返回键逻辑
+        if (backKeyTrigger != null && backKeyTrigger.get()) {
+            GScreen current = getCurScreen();
+            boolean consumed = false;
+            if (current != null) {
+                consumed = current.handleBackKey();
+            }
+            
+            if (!consumed) {
+                if (!popLastScreen()) {
+                    if (exitGame != null && !exitGame.isEmpty()) exitGame.forEach(r -> r.run());
+                }
+            }
+        }
+
 		if (!curScreen.isInitialized()) return;
 
 		float delta = Gdx.graphics.getDeltaTime();

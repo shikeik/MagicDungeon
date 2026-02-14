@@ -378,10 +378,6 @@ public class GameHUD {
 		public void act(float delta) {
 			super.act(delta);
 
-            if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
-                 GameHUD.this.updateInputMode(InputMode.MOUSE);
-            }
-
 			// Handle Input Navigation
 			InputManager input = InputManager.getInstance();
 
@@ -2383,6 +2379,11 @@ public class GameHUD {
 	}
 
 	public void render() {
+        // Check for Mouse Movement to unlock cursor globally
+        if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
+             updateInputMode(InputMode.MOUSE);
+        }
+
 		// --- Auto Refresh Logic ---
 		boolean currentIsController = InputManager.getInstance().isUsingController();
 		if (currentIsController != lastIsController) {

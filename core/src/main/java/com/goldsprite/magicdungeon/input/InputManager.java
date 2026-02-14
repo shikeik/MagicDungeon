@@ -34,32 +34,32 @@ public class InputManager {
     private final ControllerListener debugListener = new ControllerAdapter() {
         @Override
         public void connected(Controller controller) {
-            Debug.logT("InputManager", "Controller connected: " + controller.getName());
+            Debug.logT("InputManager", "Controller connected: " + getFriendlyName(controller));
         }
 
         @Override
         public void disconnected(Controller controller) {
-            Debug.logT("InputManager", "Controller disconnected: " + controller.getName());
+            Debug.logT("InputManager", "Controller disconnected: " + getFriendlyName(controller));
         }
 
         @Override
         public boolean buttonDown(Controller controller, int buttonCode) {
             String btnName = getButtonName(buttonCode);
-            Debug.logT("InputManager", "Controller Button Down: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
+            Debug.logT("InputManager", "Controller Button Down: " + buttonCode + " [" + btnName + "] (" + getFriendlyName(controller) + ")");
             return false;
         }
 
         @Override
         public boolean buttonUp(Controller controller, int buttonCode) {
             String btnName = getButtonName(buttonCode);
-            Debug.logT("InputManager", "Controller Button Up: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
+            Debug.logT("InputManager", "Controller Button Up: " + buttonCode + " [" + btnName + "] (" + getFriendlyName(controller) + ")");
             return false;
         }
 
         @Override
         public boolean axisMoved(Controller controller, int axisCode, float value) {
             if (Math.abs(value) > 0.3f) { // Only log significant movements to avoid spam
-                Debug.logT("InputManager", "Controller Axis Moved: " + axisCode + " = " + value + " (" + controller.getName() + ")");
+                Debug.logT("InputManager", "Controller Axis Moved: " + axisCode + " = " + value + " (" + getFriendlyName(controller) + ")");
             }
             return false;
         }
@@ -109,8 +109,16 @@ public class InputManager {
         Controllers.addListener(debugListener);
         Debug.logT("InputManager", "Initialized. Current controllers: " + Controllers.getControllers().size);
         for(Controller c : Controllers.getControllers()) {
-             Debug.logT("InputManager", " - " + c.getName() + " [" + c.getUniqueId() + "]");
+             Debug.logT("InputManager", " - " + getFriendlyName(c) + " [" + c.getUniqueId() + "]");
         }
+    }
+
+    private String getFriendlyName(Controller c) {
+        String name = c.getName().toLowerCase();
+        if (name.contains("xbox")) return "Xbox Controller";
+        if (name.contains("sony") || name.contains("wireless controller")) return "PlayStation Controller"; // DS4 usually "Wireless Controller"
+        if (name.contains("nintendo") || name.contains("switch")) return "Switch Pro Controller";
+        return c.getName();
     }
 
     public static InputManager getInstance() {
