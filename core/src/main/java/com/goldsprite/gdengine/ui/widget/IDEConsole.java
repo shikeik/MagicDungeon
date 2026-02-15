@@ -29,7 +29,7 @@ public class IDEConsole extends VisTable {
 		logContent.setAlignment(com.badlogic.gdx.utils.Align.topLeft);
 		logContent.setWrap(true);
 
-		scrollPane = new VisScrollPane(logContent);
+		scrollPane = new HoverFocusScrollPane(logContent);
 		scrollPane.setFadeScrollBars(false);
 		scrollPane.setScrollingDisabled(true, false);
 

@@ -22,6 +22,7 @@ import com.goldsprite.magicdungeon.input.InputManager;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 
 public abstract class BaseSelectionScreen extends ExampleGScreen {
 	protected final Map<String, Class<? extends GScreen>> screenMapping = new LinkedHashMap<>();
@@ -72,7 +73,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		stage.addActor(rootTable);
 
 		VisTable buttonList = getButtonTable();
-		VisScrollPane scrollPane = new VisScrollPane(buttonList);
+		VisScrollPane scrollPane = new HoverFocusScrollPane(buttonList);
 		scrollPane.setScrollingDisabled(true, false);
 		scrollPane.setFadeScrollBars(false);
 		rootTable.add(scrollPane).expand().fill().pad(20);

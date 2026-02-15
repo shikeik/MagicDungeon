@@ -28,6 +28,7 @@ import com.goldsprite.magicdungeon.AppConstants;
 import com.goldsprite.magicdungeon.BuildConfig;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 
 public class PolyBatchTestScreen extends GScreen {
 	// 渲染
@@ -911,7 +912,7 @@ public class PolyBatchTestScreen extends GScreen {
 			pointListTable = new VisTable();
 			pointListTable.top().left();
 
-			VisScrollPane scrollPane = new VisScrollPane(pointListTable);
+			VisScrollPane scrollPane = new HoverFocusScrollPane(pointListTable);
 			scrollPane.setFadeScrollBars(false);
 			scrollPane.setScrollingDisabled(true, false);
 			panel.add(scrollPane).colspan(2).height(300).expandX().fillX().row();
@@ -956,7 +957,7 @@ public class PolyBatchTestScreen extends GScreen {
 			table.setBackground("window");
 			table.add(new VisLabel("参数调节")).pad(10).row();
 
-			VisScrollPane scrollPane = new VisScrollPane(createSlidersContent());
+			VisScrollPane scrollPane = new HoverFocusScrollPane(createSlidersContent());
 			scrollPane.setFadeScrollBars(false);
 			scrollPane.setScrollingDisabled(true, false);
 

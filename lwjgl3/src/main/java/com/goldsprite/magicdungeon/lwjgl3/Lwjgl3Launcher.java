@@ -20,6 +20,14 @@ public class Lwjgl3Launcher {
 
 	public static void main(String[] args) {
 		if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
+
+		// [新增] 全局异常捕获，确保崩溃时终止程序和 Gradle 任务
+		Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+			System.err.println("[CRITICAL] Uncaught exception in thread " + t.getName());
+			e.printStackTrace();
+			System.exit(1); // 强制以错误码退出
+		});
+
 		createApplication();
 	}
 

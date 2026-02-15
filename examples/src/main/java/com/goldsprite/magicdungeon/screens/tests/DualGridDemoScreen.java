@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -475,7 +476,7 @@ public class DualGridDemoScreen extends GScreen {
         contentTable.add(btnClear).fillX().padTop(10).padBottom(20).row();
 
         // 将 contentTable 放入 ScrollPane
-        VisScrollPane scrollPane = new VisScrollPane(contentTable);
+        VisScrollPane scrollPane = new HoverFocusScrollPane(contentTable);
         scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
         scrollPane.setFadeScrollBars(false);
 

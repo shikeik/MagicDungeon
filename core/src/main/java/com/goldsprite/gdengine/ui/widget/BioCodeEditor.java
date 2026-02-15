@@ -113,7 +113,7 @@ public class BioCodeEditor extends VisTable {
 
 		contentTable.add(textArea).grow().top();
 
-		scrollPane = new VisScrollPane(contentTable);
+		scrollPane = new HoverFocusScrollPane(contentTable);
 		scrollPane.setScrollBarPositions(false, false);
 		scrollPane.setFadeScrollBars(false);
 		scrollPane.setFlickScroll(false);

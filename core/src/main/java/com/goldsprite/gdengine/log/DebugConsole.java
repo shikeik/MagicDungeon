@@ -18,6 +18,7 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.goldsprite.gdengine.assets.ColorTextureUtils;
 import com.goldsprite.gdengine.assets.VisUIHelper;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 
 /**
  * 调试控制台 (抽屉动画版)
@@ -149,11 +150,11 @@ public class DebugConsole extends Group {
 
 		// --- 内容区 ---
 		introLabel = new VisLabel("", "small"); introLabel.setWrap(true);
-		introScroll = new ScrollPane(introLabel);
+		introScroll = new HoverFocusScrollPane(introLabel);
 		logLabel = new VisLabel("", "small"); logLabel.setWrap(true);
-		logScroll = new ScrollPane(logLabel);
+		logScroll = new HoverFocusScrollPane(logLabel);
 		infoLabel = new VisLabel("", "small");
-		infoScroll = new ScrollPane(infoLabel);
+		infoScroll = new HoverFocusScrollPane(infoLabel);
 
 		contentContainer = new Container<>();
 		contentContainer.fill();

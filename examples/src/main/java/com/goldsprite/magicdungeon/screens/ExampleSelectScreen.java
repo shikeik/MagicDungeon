@@ -3,6 +3,7 @@ package com.goldsprite.magicdungeon.screens;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
+import com.goldsprite.magicdungeon.screens.tests.ScrollLayoutTestScreen;
 
 import java.util.Map;
 
@@ -20,6 +21,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 		map.put("", null); // 分隔线
 
 		// --- 引擎功能测试 ---
+		map.put("Scroll Layout Test", ScrollLayoutTestScreen.class);
 		map.put("测试", TestSelectionScreen.class);
 	}
 }

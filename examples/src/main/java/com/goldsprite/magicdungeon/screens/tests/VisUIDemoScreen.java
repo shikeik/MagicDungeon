@@ -9,6 +9,7 @@ import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisTable;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 
 public class VisUIDemoScreen extends GScreen {
     private Stage stage;
@@ -189,7 +190,7 @@ public class VisUIDemoScreen extends GScreen {
         node1.setExpanded(true);
 
         // ScrollPane
-        ScrollPane scrollPane = new ScrollPane(tree, currentSkin, "list"); // Shimmer uses "list" for scrollpane usually? Or default.
+        ScrollPane scrollPane = new HoverFocusScrollPane(tree, currentSkin, "list"); // Shimmer uses "list" for scrollpane usually? Or default.
         // VisUI uses "list" style for scrollpane background.
         // Let's try "list" or "default".
         // Neutralizer has "list"? VisUIHelper maps "default" to "list" if missing.
