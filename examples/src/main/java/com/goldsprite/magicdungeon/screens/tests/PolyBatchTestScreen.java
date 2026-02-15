@@ -45,6 +45,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 	@Override protected void initViewport() {
 		autoCenterWorldCamera = true;
+		uiViewportScale = 2f;
 		super.initViewport();
 	}
 
