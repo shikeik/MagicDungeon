@@ -5,7 +5,6 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
-import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -190,7 +189,7 @@ public class VisUIDemoScreen extends GScreen {
         node1.setExpanded(true);
 
         // ScrollPane
-        ScrollPane scrollPane = new HoverFocusScrollPane(tree, currentSkin, "list"); // Shimmer uses "list" for scrollpane usually? Or default.
+		HoverFocusScrollPane scrollPane = new HoverFocusScrollPane(tree, "list"); // Shimmer uses "list" for scrollpane usually? Or default.
         // VisUI uses "list" style for scrollpane background.
         // Let's try "list" or "default".
         // Neutralizer has "list"? VisUIHelper maps "default" to "list" if missing.

@@ -14,10 +14,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import com.goldsprite.gdengine.log.Debug;
-// import com.goldsprite.magicdungeon.ui.widget.ToastUI; // 你的代码里好像没用到
-// import com.goldsprite.magicdungeon.core.Gd;
-// import com.goldsprite.magicdungeon.core.config.MagicDungeonConfig;
-// import com.goldsprite.magicdungeon.BuildConfig;
 
 public class ThreadedDownload {
 

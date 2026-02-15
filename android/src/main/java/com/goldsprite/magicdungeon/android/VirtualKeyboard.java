@@ -21,6 +21,7 @@ import com.goldsprite.gdengine.log.Debug; // 使用项目 Log
 
 import java.util.HashMap;
 import java.util.Map;
+import android.view.HapticFeedbackConstants;
 
 /**
  * 虚拟键盘管理类
@@ -310,7 +311,7 @@ public class VirtualKeyboard {
                 isLongPressMode = true;
                 showModeSelectionView();
                 // 震动反馈
-                floatingToggleBtn.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                floatingToggleBtn.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             }
 
             @Override

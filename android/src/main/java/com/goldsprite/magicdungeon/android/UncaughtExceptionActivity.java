@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import android.os.Process;
 
 public class UncaughtExceptionActivity extends Activity {
 	public static final String launchMode = "launchMode";
@@ -90,7 +91,7 @@ public class UncaughtExceptionActivity extends Activity {
 						i.putExtra("title", title);
 						i.putExtra("msg", msg);
 						activity.startActivity(i);
-						android.os.Process.killProcess(android.os.Process.myPid());
+						Process.killProcess(Process.myPid());
 					});
 				}
 			}
@@ -128,7 +129,7 @@ public class UncaughtExceptionActivity extends Activity {
 		Intent i = new Intent(instance, targetClazz);
 		i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		instance.startActivity(i);
-		android.os.Process.killProcess(android.os.Process.myPid());
+		Process.killProcess(Process.myPid());
 	}
 }
 

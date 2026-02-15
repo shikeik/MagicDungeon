@@ -23,6 +23,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.goldsprite.magicdungeon.assets.TextureManager;
+import java.util.Map;
 
 public class TexturePreviewScreen extends GScreen {
 	private SpriteBatch batch;
@@ -68,7 +69,7 @@ public class TexturePreviewScreen extends GScreen {
 		TextureManager tm = TextureManager.getInstance();
 
 		// Iterate all textures
-		for (java.util.Map.Entry<String, TextureRegion> entry : tm.getAllTextures().entrySet()) {
+		for (Map.Entry<String, TextureRegion> entry : tm.getAllTextures().entrySet()) {
 			if (col >= 6) { col = 0; row++; }
 			addPreview(entry.getValue(), entry.getKey(), col++, row);
 		}

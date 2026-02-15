@@ -54,6 +54,7 @@ import com.esotericsoftware.spine.SkeletonJson;
 import com.esotericsoftware.spine.SkeletonRenderer;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
+import com.esotericsoftware.spine.Animation;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -121,6 +122,7 @@ public class GameScreen extends GScreen {
 		// Camera Controller
 		SimpleCameraController controller = new SimpleCameraController(worldCamera);
 		controller.setCoordinateMapper((x, y) -> uiViewport.unproject(new Vector2(x, y)));
+//		controller.setActivationCondition(() -> ); // 这里需要完成逻辑: 仅在光标落在ui区域外时, 注意SplitPane的空面板也需要识别为落空在ui区域外(好像可以用GSplitPane他处理了这种问题, 查看分析源码来确认这一点)
 		getImp().addProcessor(controller);
 	}
 
@@ -133,7 +135,7 @@ public class GameScreen extends GScreen {
 		// Spine Init
 		spineRenderer = new SkeletonRenderer();
 		spineRenderer.setPremultipliedAlpha(false);
-		
+
 		try {
 			if (Gdx.files.internal("spines/wolf/exports/spine_108_02.atlas").exists()) {
 				wolfAtlas = new TextureAtlas(Gdx.files.internal("spines/wolf/exports/spine_108_02.atlas"));
@@ -927,17 +929,17 @@ public class GameScreen extends GScreen {
 				getScreenManager().playTransition(() -> {
 					isGameOver = false;
 					if (audio != null) audio.playBGM();
-	
+
 					// Reset Player
 					player = new Player(0, 0);
-	
+
 					// Reset World History
 					visitedLevels.clear();
 					maxDepth = 1;
-	
+
 					// Enter Camp
 					enterCamp(false);
-	
+
 					hud.showMessage("你已复活。一切归零。");
 				});
 			}
@@ -1000,7 +1002,7 @@ public class GameScreen extends GScreen {
 			// Try to find idle animation
 			String defaultAnim = "idle";
 			if (wolfSkeletonData.findAnimation(defaultAnim) == null) {
-				for(com.esotericsoftware.spine.Animation anim : wolfSkeletonData.getAnimations()) {
+				for(Animation anim : wolfSkeletonData.getAnimations()) {
 					if (anim.getName().toLowerCase().contains("idle") || anim.getName().toLowerCase().contains("stand")) {
 						defaultAnim = anim.getName();
 						break;
@@ -1054,7 +1056,7 @@ public class GameScreen extends GScreen {
 
 	private void draw(float delta) {
 		ScreenUtils.clear(0, 0, 0, 1);
-		
+
 		// 使用 GScreen 的 worldCamera
 		batch.setProjectionMatrix(worldCamera.combined);
 		batch.begin();

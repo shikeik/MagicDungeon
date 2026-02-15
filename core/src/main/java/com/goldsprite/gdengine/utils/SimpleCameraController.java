@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
 import java.util.function.BooleanSupplier;
+import com.badlogic.gdx.InputMultiplexer;
 
 /**
  * 简易相机控制器 (通用版).
@@ -22,7 +23,7 @@ import java.util.function.BooleanSupplier;
  *     <li><b>触摸手势</b> (双指缩放、单指平移)</li>
  * </ul>
  * <p>
- * 本控制器设计为通用的 {@link InputProcessor}，可直接添加到 {@link com.badlogic.gdx.InputMultiplexer} 中使用。
+ * 本控制器设计为通用的 {@link InputProcessor}，可直接添加到 {@link InputMultiplexer} 中使用。
  * <p>
  * <b>高级特性：</b>
  * <ul>

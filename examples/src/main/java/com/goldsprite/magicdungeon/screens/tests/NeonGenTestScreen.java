@@ -20,6 +20,8 @@ import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
 import com.goldsprite.gdengine.ui.input.SmartNumInput;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Scaling;
 
 public class NeonGenTestScreen extends ExampleGScreen {
     private NeonBatch neonBatch;
@@ -106,13 +108,13 @@ public class NeonGenTestScreen extends ExampleGScreen {
 
         // Middle: Texture Result (Stretch)
         previewImage = new Image();
-        previewImage.setScaling(com.badlogic.gdx.utils.Scaling.stretch);
+        previewImage.setScaling(Scaling.stretch);
         contentTable.add(createPanel("Texture (Stretch)", previewImage)).pad(10);
 
         // Right: Texture Result (Actual)
         actualImage = new Image();
-        actualImage.setScaling(com.badlogic.gdx.utils.Scaling.none); // 1:1
-        actualImage.setAlign(com.badlogic.gdx.utils.Align.center);
+        actualImage.setScaling(Scaling.none); // 1:1
+        actualImage.setAlign(Align.center);
         contentTable.add(createPanel("Texture (Actual)", actualImage)).pad(10);
 
         regenerate();

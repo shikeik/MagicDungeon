@@ -29,6 +29,21 @@ import com.goldsprite.magicdungeon.BuildConfig;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonReader;
+import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.JsonWriter;
+import com.badlogic.gdx.utils.ObjectMap;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.function.Consumer;
 
 public class PolyBatchTestScreen extends GScreen {
 	// 渲染
@@ -64,7 +79,7 @@ public class PolyBatchTestScreen extends GScreen {
 		batch = new SpriteBatch();
 		polyBatch = new PolygonSpriteBatch();
 		neonBatch = new NeonBatch();
-		
+
 		// [重构] 移除独立的 worldCamera，统一使用 uiViewport
 		// UI Stage 默认使用 ScreenViewport，我们需要确保它能正确缩放
 		// 这里使用 GScreen 的 uiViewport，或者直接创建一个新的 FitViewport 给 Stage？
@@ -114,7 +129,7 @@ public class PolyBatchTestScreen extends GScreen {
 		if (polyBatch != null) polyBatch.dispose();
 		if (neonBatch != null) neonBatch.dispose();
 		if (uiStage != null) uiStage.dispose();
-		
+
 		// Dispose textures
 		if (capeState.knightRegion != null && capeState.knightRegion.getTexture() != null) {
 			capeState.knightRegion.getTexture().dispose();
@@ -136,10 +151,10 @@ public class PolyBatchTestScreen extends GScreen {
 		float h = area.getHeight();
 
 		// 设置裁剪区域
-		com.badlogic.gdx.math.Rectangle scissor = new com.badlogic.gdx.math.Rectangle();
-		com.badlogic.gdx.math.Rectangle clipBounds = new com.badlogic.gdx.math.Rectangle(x, y, w, h);
-		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.calculateScissors(uiStage.getCamera(), uiStage.getBatch().getTransformMatrix(), clipBounds, scissor);
-		boolean isScissorsPushed = com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.pushScissors(scissor);
+		Rectangle scissor = new Rectangle();
+		Rectangle clipBounds = new Rectangle(x, y, w, h);
+		ScissorStack.calculateScissors(uiStage.getCamera(), uiStage.getBatch().getTransformMatrix(), clipBounds, scissor);
+		boolean isScissorsPushed = ScissorStack.pushScissors(scissor);
 
 		if (isScissorsPushed) {
 			Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
@@ -166,7 +181,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 			batch.setProjectionMatrix(uiStage.getCamera().combined);
 			polyBatch.setProjectionMatrix(uiStage.getCamera().combined);
-			
+
 			// 1. 绘制背景骑士
 			if (currentMode != Mode.MESH) {
 				batch.begin();
@@ -181,7 +196,7 @@ public class PolyBatchTestScreen extends GScreen {
 			renderCapeByMode(delta, baseX, baseY);
 
 			// 结束裁剪
-			com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.popScissors();
+			ScissorStack.popScissors();
 			Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 		}
 	}
@@ -297,7 +312,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 			if (p != null) {
 				// 选中点框4倍并改为简单空心矩形
-				float rectSize = 40; 
+				float rectSize = 40;
 				neonBatch.drawRect(p.position.x + ox - rectSize/2, p.position.y + oy - rectSize/2, rectSize, rectSize, 0, 3, Color.GREEN, false);
 			}
 		}
@@ -306,7 +321,7 @@ public class PolyBatchTestScreen extends GScreen {
 		if (isWeightMode && inputHandler != null) {
 			neonBatch.drawCircle(inputHandler.currentMousePos.x, inputHandler.currentMousePos.y, uiController.brushRadius, 2, Color.WHITE, 32, false);
 		}
-		
+
 		neonBatch.end();
 	}
 
@@ -391,7 +406,7 @@ public class PolyBatchTestScreen extends GScreen {
 			capeRegion = new TextureRegion(new Texture(cPath));
 		}
 
-		public void loadFromJson(com.badlogic.gdx.utils.JsonValue root) {
+		public void loadFromJson(JsonValue root) {
 			if (root == null) return;
 			// 1. 读取 Offset
 			if (root.has("offset")) {
@@ -402,7 +417,7 @@ public class PolyBatchTestScreen extends GScreen {
 			// 2. 读取 Hull Points
 			hullPoints.clear();
 			if (root.has("hullPoints")) {
-				for (com.badlogic.gdx.utils.JsonValue v : root.get("hullPoints")) {
+				for (JsonValue v : root.get("hullPoints")) {
 					float w = v.has("weight") ? v.getFloat("weight") : calculateDefaultWeight(v.getFloat("y"));
 					hullPoints.add(new ControlPoint(v.getFloat("x"), v.getFloat("y"), w));
 				}
@@ -411,7 +426,7 @@ public class PolyBatchTestScreen extends GScreen {
 			// 3. 读取 Interior Points
 			interiorPoints.clear();
 			if (root.has("interiorPoints")) {
-				for (com.badlogic.gdx.utils.JsonValue v : root.get("interiorPoints")) {
+				for (JsonValue v : root.get("interiorPoints")) {
 					float w = v.has("weight") ? v.getFloat("weight") : calculateDefaultWeight(v.getFloat("y"));
 					interiorPoints.add(new ControlPoint(v.getFloat("x"), v.getFloat("y"), w));
 				}
@@ -435,18 +450,18 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 
 		public String toJson() {
-			java.io.StringWriter stringWriter = new java.io.StringWriter();
-			com.badlogic.gdx.utils.JsonWriter writer = new com.badlogic.gdx.utils.JsonWriter(stringWriter);
-			writer.setOutputType(com.badlogic.gdx.utils.JsonWriter.OutputType.json);
-			
+			StringWriter stringWriter = new StringWriter();
+			JsonWriter writer = new JsonWriter(stringWriter);
+			writer.setOutputType(JsonWriter.OutputType.json);
+
 			try {
 				writer.object();
-				
+
 				writer.name("offset").object()
 					.name("x").value(offset.x)
 					.name("y").value(offset.y)
 				.pop();
-				
+
 				writer.name("hullPoints").array();
 				for(ControlPoint p : hullPoints) {
 					writer.object()
@@ -456,7 +471,7 @@ public class PolyBatchTestScreen extends GScreen {
 					.pop();
 				}
 				writer.pop();
-				
+
 				writer.name("interiorPoints").array();
 				for(ControlPoint p : interiorPoints) {
 					writer.object()
@@ -466,7 +481,7 @@ public class PolyBatchTestScreen extends GScreen {
 					.pop();
 				}
 				writer.pop();
-				
+
 				writer.name("windStrength").value(windStrength);
 				writer.name("bigWaveFreq").value(bigWaveFreq);
 				writer.name("bigWavePhase").value(bigWavePhase);
@@ -475,19 +490,19 @@ public class PolyBatchTestScreen extends GScreen {
 				writer.name("smallWavePhase").value(smallWavePhase);
 				writer.name("smallWaveAmp").value(smallWaveAmp);
 				writer.name("transmissionAmp").value(transmissionAmp);
-				
+
 				writer.pop();
 				writer.close();
-			} catch (java.io.IOException e) {
+			} catch (IOException e) {
 				Gdx.app.error("CapeState", "Failed to write json", e);
 			}
-			
-			return new com.badlogic.gdx.utils.Json().prettyPrint(stringWriter.toString());
+
+			return new Json().prettyPrint(stringWriter.toString());
 		}
 
 		private Array<Object> serializePoints(Array<ControlPoint> points) {
 			// Deprecated: used by old toJson
-			return null; 
+			return null;
 		}
 
 		public void clear() {
@@ -607,7 +622,7 @@ public class PolyBatchTestScreen extends GScreen {
 				float dist = Vector2.dst(vx, vy, pullPos.x, pullPos.y);
 				if (dist < radius) {
 					float falloff = (radius - dist) / radius; // 1.0 at center, 0.0 at edge
-					falloff = com.badlogic.gdx.math.Interpolation.pow2Out.apply(falloff); // 非线性衰减
+					falloff = Interpolation.pow2Out.apply(falloff); // 非线性衰减
 
 					animatedVertices[i] += pullDelta.x * falloff;
 					animatedVertices[i+1] += pullDelta.y * falloff;
@@ -642,7 +657,7 @@ public class PolyBatchTestScreen extends GScreen {
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 			Vector2 screenPos = new Vector2(screenX, screenY);
 			Vector2 stagePos = uiStage.screenToStageCoordinates(screenPos.cpy());
-			com.badlogic.gdx.scenes.scene2d.Actor hitActor = uiStage.hit(stagePos.x, stagePos.y, true);
+			Actor hitActor = uiStage.hit(stagePos.x, stagePos.y, true);
 
 			if (hitActor != null && hitActor != uiController.gameArea && !hitActor.isDescendantOf(uiController.gameArea)) {
 				return false;
@@ -691,7 +706,7 @@ public class PolyBatchTestScreen extends GScreen {
 					uiController.update();
 
 					if (currentMode == Mode.MESH) {
-						if (button == com.badlogic.gdx.Input.Buttons.RIGHT) {
+						if (button == Input.Buttons.RIGHT) {
 							if (isHullPoint) capeState.hullPoints.removeIndex(selectedPointIndex);
 							else capeState.interiorPoints.removeIndex(selectedPointIndex);
 							capeState.generateMesh();
@@ -700,11 +715,11 @@ public class PolyBatchTestScreen extends GScreen {
 							isDraggingPoint = true;
 						}
 					} else if (currentMode == Mode.WEIGHT) {
-						applyWeightBrush(localClick, button == com.badlogic.gdx.Input.Buttons.RIGHT);
+						applyWeightBrush(localClick, button == Input.Buttons.RIGHT);
 						isDraggingPoint = true;
 					}
 				} else {
-					if (currentMode == Mode.MESH && button == com.badlogic.gdx.Input.Buttons.LEFT) {
+					if (currentMode == Mode.MESH && button == Input.Buttons.LEFT) {
 						if (currentMeshTool == MeshTool.HULL) {
 							capeState.hullPoints.add(new ControlPoint(localClick, deafultWeight));
 						} else {
@@ -712,7 +727,7 @@ public class PolyBatchTestScreen extends GScreen {
 						}
 						capeState.generateMesh();
 					} else if (currentMode == Mode.WEIGHT) {
-						applyWeightBrush(localClick, button == com.badlogic.gdx.Input.Buttons.RIGHT);
+						applyWeightBrush(localClick, button == Input.Buttons.RIGHT);
 						isDraggingPoint = true;
 					}
 				}
@@ -741,7 +756,7 @@ public class PolyBatchTestScreen extends GScreen {
 				float baseX = uiController.renderBaseX + capeState.offset.x;
 				float baseY = uiController.renderBaseY + capeState.offset.y;
 				Vector2 localPos = new Vector2(currentMouse).sub(baseX, baseY);
-				applyWeightBrush(localPos, Gdx.input.isButtonPressed(com.badlogic.gdx.Input.Buttons.RIGHT));
+				applyWeightBrush(localPos, Gdx.input.isButtonPressed(Input.Buttons.RIGHT));
 			}
 			else if (currentMode == Mode.STATIC_TEST && isDraggingPoint) {
 				float baseX = uiController.renderBaseX + capeState.offset.x;
@@ -783,7 +798,7 @@ public class PolyBatchTestScreen extends GScreen {
 				// 这里使用 lerp 效果是可以的。
 				// 如果希望橡皮擦更强力，可以根据 strength 调整。
 				p.weight = p.weight + (target - p.weight) * alpha;
-				p.weight = com.badlogic.gdx.math.MathUtils.clamp(p.weight, 0f, 1f);
+				p.weight = MathUtils.clamp(p.weight, 0f, 1f);
 			}
 		}
 	}
@@ -805,9 +820,9 @@ public class PolyBatchTestScreen extends GScreen {
 
 		// 当前高亮的点信息
 		private PointItem highlightedItem = null;
-		
+
 		// 缓存 ControlPoint 到 UI 组件的映射，用于快速更新文本
-		private com.badlogic.gdx.utils.ObjectMap<ControlPoint, VisTextButton> pointWidgetMap = new com.badlogic.gdx.utils.ObjectMap<>();
+		private ObjectMap<ControlPoint, VisTextButton> pointWidgetMap = new ObjectMap<>();
 
 		public UIController(Stage stage, final PolyBatchTestScreen screen) {
 			this.screen = screen;
@@ -882,7 +897,7 @@ public class PolyBatchTestScreen extends GScreen {
 					if (paramPanel != null) {
 						paramPanel.clearChildren();
 						paramPanel.add(new VisLabel("参数调节")).pad(10).row();
-						VisScrollPane sp = new VisScrollPane(createSlidersContent());
+						HoverFocusScrollPane sp = new HoverFocusScrollPane(createSlidersContent());
 						sp.setFadeScrollBars(false);
 						sp.setScrollingDisabled(true, false);
 						paramPanel.add(sp).expand().fill().row();
@@ -912,7 +927,7 @@ public class PolyBatchTestScreen extends GScreen {
 			pointListTable = new VisTable();
 			pointListTable.top().left();
 
-			VisScrollPane scrollPane = new HoverFocusScrollPane(pointListTable);
+			HoverFocusScrollPane scrollPane = new HoverFocusScrollPane(pointListTable);
 			scrollPane.setFadeScrollBars(false);
 			scrollPane.setScrollingDisabled(true, false);
 			panel.add(scrollPane).colspan(2).height(300).expandX().fillX().row();
@@ -957,7 +972,7 @@ public class PolyBatchTestScreen extends GScreen {
 			table.setBackground("window");
 			table.add(new VisLabel("参数调节")).pad(10).row();
 
-			VisScrollPane scrollPane = new HoverFocusScrollPane(createSlidersContent());
+			HoverFocusScrollPane scrollPane = new HoverFocusScrollPane(createSlidersContent());
 			scrollPane.setFadeScrollBars(false);
 			scrollPane.setScrollingDisabled(true, false);
 
@@ -991,7 +1006,7 @@ public class PolyBatchTestScreen extends GScreen {
 			return t;
 		}
 
-		private void addSlider(VisTable t, String label, float min, float max, float def, java.util.function.Consumer<Float> onChange) {
+		private void addSlider(VisTable t, String label, float min, float max, float def, Consumer<Float> onChange) {
 			t.add(new VisLabel(label)).row();
 			VisSlider slider = new VisSlider(min, max, (max-min)/100f, false);
 			slider.setValue(def);
@@ -1085,7 +1100,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 		private void saveConfig() {
 			try {
-				com.badlogic.gdx.files.FileHandle file = AppConstants.getLocalFile("cape_config.json");
+				FileHandle file = AppConstants.getLocalFile("cape_config.json");
 				file.writeString(screen.capeState.toJson(), false);
 				Gdx.app.log("Config", "Saved to " + file.file().getAbsolutePath());
 			} catch (Exception e) {
@@ -1095,9 +1110,9 @@ public class PolyBatchTestScreen extends GScreen {
 
 		private void loadConfig() {
 			try {
-				com.badlogic.gdx.files.FileHandle file = AppConstants.getLocalFile("cape_config.json");
+				FileHandle file = AppConstants.getLocalFile("cape_config.json");
 				if (file.exists()) {
-					com.badlogic.gdx.utils.JsonReader reader = new com.badlogic.gdx.utils.JsonReader();
+					JsonReader reader = new JsonReader();
 					screen.capeState.loadFromJson(reader.parse(file));
 
 					// 刷新 UI 显示
@@ -1112,7 +1127,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 		private VisTextButton createPointItemWidget(boolean isHull, int index, String text) {
 			VisTextButton btn = new VisTextButton(text, "toggle");
-			btn.getLabel().setAlignment(com.badlogic.gdx.utils.Align.left);
+			btn.getLabel().setAlignment(Align.left);
 
 			// 检查当前按钮是否应该是选中状态
 			if (highlightedItem != null && highlightedItem.isHull == isHull && highlightedItem.index == index) {

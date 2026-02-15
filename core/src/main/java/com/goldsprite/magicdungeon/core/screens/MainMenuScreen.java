@@ -27,6 +27,7 @@ import com.goldsprite.gdengine.neonbatch.BloomRenderer;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
+import com.badlogic.gdx.scenes.scene2d.Action;
 
 public class MainMenuScreen extends GScreen {
 	private NeonBatch batch;
@@ -212,7 +213,7 @@ public class MainMenuScreen extends GScreen {
 		menuButtons.add(btn);
 	}
 
-	private com.badlogic.gdx.scenes.scene2d.Action createEntranceAction(float delay) {
+	private Action createEntranceAction(float delay) {
 		return Actions.sequence(
 			Actions.alpha(0),
 			Actions.moveBy(-300, 0),

@@ -10,6 +10,7 @@ import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.entities.InventoryItem;
 import com.kotcrab.vis.ui.widget.VisImage;
 import com.kotcrab.vis.ui.widget.VisTable;
+import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 
 public class ItemRenderer {
 
@@ -53,7 +54,7 @@ public class ItemRenderer {
 	
 	private static VisTable buildStackIcon(InventoryItem item, float size) {
 		VisTable stackTable = new VisTable();
-		com.badlogic.gdx.scenes.scene2d.ui.Stack stack = new com.badlogic.gdx.scenes.scene2d.ui.Stack();
+		Stack stack = new Stack();
 		
 		// Layer 1: Item Icon
 		TextureRegion tex = TextureManager.getInstance().getItem(item.data.name());

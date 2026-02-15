@@ -16,6 +16,7 @@ import com.goldsprite.gdengine.log.Debug;
 import com.kotcrab.vis.ui.Sizes;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
+import com.ray3k.tenpatch.TenPatchDrawable;
 
 public class VisUIHelper {
 	public static BitmapFont cnFont;
@@ -58,7 +59,7 @@ public class VisUIHelper {
 			// 添加 TenPatch 支持 (如果项目中使用了 com.ray3k.tenpatch)
 			try {
 				// 尝试通过反射注册，避免编译错误如果依赖尚未刷新
-				Class<?> tenPatchClass = Class.forName("com.ray3k.tenpatch.TenPatchDrawable");
+				Class<?> tenPatchClass = Class.forName("TenPatchDrawable");
 				// Skin 不需要显式注册类，只要 JSON 里写了全限定名且 Classpath 里有即可
 				Debug.log("检测到 TenPatch 库，支持动态切片皮肤。");
 			} catch (ClassNotFoundException e) {

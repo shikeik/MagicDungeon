@@ -476,7 +476,7 @@ public class DualGridDemoScreen extends GScreen {
         contentTable.add(btnClear).fillX().padTop(10).padBottom(20).row();
 
         // 将 contentTable 放入 ScrollPane
-        VisScrollPane scrollPane = new HoverFocusScrollPane(contentTable);
+        HoverFocusScrollPane scrollPane = new HoverFocusScrollPane(contentTable);
         scrollPane.setScrollingDisabled(true, false); // 只允许垂直滚动
         scrollPane.setFadeScrollBars(false);
 

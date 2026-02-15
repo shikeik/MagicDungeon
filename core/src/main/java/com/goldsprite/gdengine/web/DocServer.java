@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import fi.iki.elonen.NanoHTTPD;
+import java.awt.Desktop;
+import java.net.URI;
 
 /**
  * 通用静态文件服务器
@@ -89,7 +91,7 @@ public class DocServer extends NanoHTTPD {
 
 			// 尝试自动打开浏览器
 			try {
-				//java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
+				//Desktop.getDesktop().browse(new URI(url));
 			} catch (Exception ignored) {}
 
 			System.in.read(); // 阻塞等待回车

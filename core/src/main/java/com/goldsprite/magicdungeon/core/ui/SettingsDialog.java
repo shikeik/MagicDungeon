@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.goldsprite.magicdungeon.core.SettingsManager;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
@@ -65,7 +66,7 @@ public class SettingsDialog extends BaseDialog {
 
 		// --- Content Area ---
 		contentTable = new VisTable();
-		VisScrollPane scrollPane = new VisScrollPane(contentTable);
+		HoverFocusScrollPane scrollPane = new HoverFocusScrollPane(contentTable);
 		scrollPane.setFadeScrollBars(false);
 
 		mainTable.add(scrollPane).expand().fill().row();

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.goldsprite.magicdungeon.assets.TextureManager;
 
 public class DualGridDungeonRenderer implements Disposable {
     private static final int TILE_SIZE = Constants.TILE_SIZE;
@@ -52,8 +53,8 @@ public class DualGridDungeonRenderer implements Disposable {
              brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
         }
         // Priority 2: TextureManager (Generated)
-        else if (com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall) != null) {
-             Texture tex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Wall).getTexture();
+        else if (TextureManager.getInstance().getTile(TileType.Wall) != null) {
+             Texture tex = TextureManager.getInstance().getTile(TileType.Wall).getTexture();
              int size = tex.getWidth() / 4;
              TextureRegion[][] split = TextureRegion.split(tex, size, size);
              brickBlob = new TextureRegion[16];
@@ -86,7 +87,7 @@ public class DualGridDungeonRenderer implements Disposable {
             }
         } else {
              // Fallback to TextureManager's floor if missing
-             TextureRegion tr = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Floor);
+             TextureRegion tr = TextureManager.getInstance().getTile(TileType.Floor);
              if (tr != null) {
                  for(int i=0; i<7; i++) dungeonFloors[i] = tr;
              }

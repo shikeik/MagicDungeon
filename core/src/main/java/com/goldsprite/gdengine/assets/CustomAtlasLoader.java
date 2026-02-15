@@ -7,6 +7,8 @@ import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * 通用自定义 Atlas 加载器
@@ -112,12 +114,12 @@ public class CustomAtlasLoader {
 	 * @param imagePath 图片路径
 	 * @return Region 名称集合
 	 */
-	public java.util.Set<String> getRegionNames(String imagePath) {
+	public Set<String> getRegionNames(String imagePath) {
 		if (!atlasDataCache.containsKey(imagePath)) {
 			loadAtlasData(imagePath);
 		}
 		AtlasData data = atlasDataCache.get(imagePath);
-		return data != null ? data.regions.keySet() : java.util.Collections.emptySet();
+		return data != null ? data.regions.keySet() : Collections.emptySet();
 	}
 
 	/**

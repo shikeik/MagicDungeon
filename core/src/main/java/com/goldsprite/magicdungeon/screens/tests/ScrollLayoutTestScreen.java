@@ -6,7 +6,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 
 public class ScrollLayoutTestScreen extends GScreen {
@@ -15,14 +14,14 @@ public class ScrollLayoutTestScreen extends GScreen {
     @Override
     public void create() {
         super.create();
-        
+
         stage = new Stage(getUIViewport());
         getImp().addProcessor(stage);
-        
+
         VisTable root = new VisTable();
         root.setFillParent(true);
         root.defaults().pad(20);
-        
+
         // 左侧面板
         VisTable leftContent = new VisTable();
         for (int i = 0; i < 50; i++) {
@@ -31,7 +30,7 @@ public class ScrollLayoutTestScreen extends GScreen {
         HoverFocusScrollPane leftPane = new HoverFocusScrollPane(leftContent);
         leftPane.setFadeScrollBars(false);
         leftPane.setScrollingDisabled(true, false);
-        
+
         // 右侧面板
         VisTable rightContent = new VisTable();
         for (int i = 0; i < 50; i++) {
@@ -40,18 +39,18 @@ public class ScrollLayoutTestScreen extends GScreen {
         HoverFocusScrollPane rightPane = new HoverFocusScrollPane(rightContent);
         rightPane.setFadeScrollBars(false);
         rightPane.setScrollingDisabled(true, false);
-        
+
         VisTable leftContainer = new VisTable();
         leftContainer.add(new VisLabel("Hover Left to Scroll")).row();
         leftContainer.add(leftPane).size(300, 400);
-        
+
         VisTable rightContainer = new VisTable();
         rightContainer.add(new VisLabel("Hover Right to Scroll")).row();
         rightContainer.add(rightPane).size(300, 400);
-        
+
         root.add(leftContainer);
         root.add(rightContainer);
-        
+
         stage.addActor(root);
     }
 
@@ -61,7 +60,7 @@ public class ScrollLayoutTestScreen extends GScreen {
         stage.act(delta);
         stage.draw();
     }
-    
+
     @Override
     public void resize(int width, int height) {
         super.resize(width, height);

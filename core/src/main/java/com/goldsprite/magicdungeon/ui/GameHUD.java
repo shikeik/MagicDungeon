@@ -26,6 +26,7 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.goldsprite.gdengine.ui.widget.SkewBar;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
@@ -55,6 +56,7 @@ import static com.goldsprite.magicdungeon.core.screens.GameScreen.isPaused;
 import com.goldsprite.magicdungeon.utils.Constants;
 
 import com.badlogic.gdx.utils.Array;
+import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
 
 public class GameHUD {
 	public Stage stage;
@@ -260,7 +262,7 @@ public class GameHUD {
 			inventoryList = new VisTable();
 			inventoryList.top().left();
 
-			VisScrollPane inventoryScrollPane = new VisScrollPane(inventoryList);
+			HoverFocusScrollPane inventoryScrollPane = new HoverFocusScrollPane(inventoryList);
 			inventoryScrollPane.setScrollingDisabled(true, false);
 			inventoryScrollPane.setFlickScroll(true);
 			inventoryScrollPane.setFadeScrollBars(false);
@@ -1848,7 +1850,7 @@ public class GameHUD {
 		content.add(new Separator("vertical")).growY().pad(10);
 		content.add(rightCol).top().left().growX();
 
-		VisScrollPane scroll = new VisScrollPane(content);
+		HoverFocusScrollPane scroll = new HoverFocusScrollPane(content);
 		scroll.setScrollingDisabled(true, false);
 		scroll.setFadeScrollBars(false);
 
@@ -2177,7 +2179,7 @@ public class GameHUD {
 		btnSettings.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				new com.goldsprite.magicdungeon.core.ui.SettingsDialog().show(stage);
+				new SettingsDialog().show(stage);
 				// pauseWindow.fadeOut(); // 可选：关闭暂停菜单，或者保持在 Settings 下面
 			}
 		});
@@ -2231,7 +2233,7 @@ public class GameHUD {
 			if (i % 4 == 0) content.row();
 		}
 
-		VisScrollPane scroll = new VisScrollPane(content);
+		HoverFocusScrollPane scroll = new HoverFocusScrollPane(content);
 		scroll.setFlickScroll(true);
 		scroll.setFadeScrollBars(false);
 
@@ -2611,7 +2613,7 @@ public class GameHUD {
 			leftCol.add(new VisLabel("宝箱内容")).pad(10).top().row();
 
 			chestItemsTable = new VisTable();
-			VisScrollPane chestScroll = new VisScrollPane(chestItemsTable);
+			HoverFocusScrollPane chestScroll = new HoverFocusScrollPane(chestItemsTable);
 			chestScroll.setScrollingDisabled(true, false);
 			chestScroll.setFadeScrollBars(false);
 			leftCol.add(chestScroll).grow();
@@ -2622,7 +2624,7 @@ public class GameHUD {
 			rightCol.add(new VisLabel("你的背包")).pad(10).top().row();
 
 			playerItemsTable = new VisTable();
-			VisScrollPane playerScroll = new VisScrollPane(playerItemsTable);
+			HoverFocusScrollPane playerScroll = new HoverFocusScrollPane(playerItemsTable);
 			playerScroll.setScrollingDisabled(true, false);
 			playerScroll.setFadeScrollBars(false);
 			rightCol.add(playerScroll).grow();

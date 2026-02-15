@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
+import com.badlogic.gdx.graphics.Texture;
+import com.goldsprite.magicdungeon.assets.TextureManager;
+import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 
 public class Player extends Entity {
 	public float moveTimer;
@@ -185,8 +188,8 @@ public class Player extends Entity {
 		String armor = equipment.armor != null ? equipment.armor.data.name() : null;
 		String boots = equipment.boots != null ? equipment.boots.data.name() : null;
 		
-		com.badlogic.gdx.graphics.Texture newTex = com.goldsprite.magicdungeon.utils.SpriteGenerator.generateCharacterTexture(mainHand, offHand, helmet, armor, boots);
-		com.goldsprite.magicdungeon.assets.TextureManager.getInstance().updateTexture("PLAYER", newTex);
+		Texture newTex = SpriteGenerator.generateCharacterTexture(mainHand, offHand, helmet, armor, boots);
+		TextureManager.getInstance().updateTexture("PLAYER", newTex);
 	}
 
 	private void equipAccessory(InventoryItem item, int slotIndex) {

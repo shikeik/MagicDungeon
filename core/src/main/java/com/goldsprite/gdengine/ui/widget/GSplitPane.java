@@ -7,7 +7,6 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.SplitPane;
 import com.badlogic.gdx.utils.Null;
-//import com.goldsprite.gdxcore.logs.LogViewerService;
 import com.badlogic.gdx.math.*;
 
 /**

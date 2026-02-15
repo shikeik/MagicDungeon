@@ -26,6 +26,7 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import android.view.KeyEvent;
 
 /**
  * Android 内嵌浏览器 (重构版)
@@ -472,7 +473,7 @@ public class AndroidWebBrowser implements IWebBrowser {
 
 	private void setupBackKey() {
 		webDialog.setOnKeyListener((dialog, keyCode, event) -> {
-			if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == 0) {
+			if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == 0) {
 				if (modalOverlay.getVisibility() == View.VISIBLE) {
 					toggleMenu(); return true;
 				}

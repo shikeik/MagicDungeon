@@ -5,17 +5,17 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import java.util.List;
+import com.badlogic.gdx.utils.Align;
 
 public class IDEConsole extends VisTable {
 
 	private boolean expanded = false;
 	private final VisLabel logContent;
 	private final VisLabel lastLogLabel;
-	private final VisScrollPane scrollPane;
+	private final HoverFocusScrollPane scrollPane;
 	private final VisTextButton toggleBtn;
 
 	private final float COLLAPSED_HEIGHT = 35f;
@@ -26,7 +26,7 @@ public class IDEConsole extends VisTable {
 
 		// 1. 内容区 (放在第一行，默认隐藏)
 		logContent = new VisLabel();
-		logContent.setAlignment(com.badlogic.gdx.utils.Align.topLeft);
+		logContent.setAlignment(Align.topLeft);
 		logContent.setWrap(true);
 
 		scrollPane = new HoverFocusScrollPane(logContent);

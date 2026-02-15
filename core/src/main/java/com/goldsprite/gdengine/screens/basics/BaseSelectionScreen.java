@@ -8,7 +8,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.badlogic.gdx.Input;
@@ -31,10 +30,10 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 	private final float cell_height = 80;
 	protected Stage stage;
 	protected VisTable rootTable;
-	
+
 	private Array<VisTextButton> selectionButtons = new Array<>();
 	private int focusedIndex = -1;
-	
+
 	public BaseSelectionScreen() {
 		super();
 		initScreenMapping(screenMapping);
@@ -73,7 +72,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		stage.addActor(rootTable);
 
 		VisTable buttonList = getButtonTable();
-		VisScrollPane scrollPane = new HoverFocusScrollPane(buttonList);
+		HoverFocusScrollPane scrollPane = new HoverFocusScrollPane(buttonList);
 		scrollPane.setScrollingDisabled(true, false);
 		scrollPane.setFadeScrollBars(false);
 		rootTable.add(scrollPane).expand().fill().pad(20);
@@ -86,7 +85,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		ButtonGroup<Button> btnGroup = new ButtonGroup<>();
 		btnGroup.setMaxCheckCount(1);
 		btnGroup.setUncheckLast(true);
-		
+
 		selectionButtons.clear();
 
 		for (String title : screenMapping.keySet()) {
@@ -105,7 +104,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 			cell.expandX().fillX();
 			cell.height(cell_height);
 			buttonTable.row();
-			
+
 			selectionButtons.add(button);
 
 			button.addListener(new ClickListener() {

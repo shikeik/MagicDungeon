@@ -18,16 +18,16 @@ import com.badlogic.gdx.utils.Align;
 import com.goldsprite.gdengine.assets.FontUtils;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextArea;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 
 public class BioCodeEditor extends VisTable {
 	private CodeTextArea textArea;
 	private VisLabel lineNumbers;
-	private VisScrollPane scrollPane;
+	private HoverFocusScrollPane scrollPane;
 	private VisTable popupMenu;
 	private VisTable contentTable;
 
@@ -155,9 +155,9 @@ public class BioCodeEditor extends VisTable {
 				if (keycode == Input.Keys.S && isCtrlPressed()) {
 					if (onSaveCallback != null) {
 						onSaveCallback.run();
-						textArea.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(
-							com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.GREEN, 0.1f),
-							com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.WHITE, 0.3f)
+						textArea.addAction(Actions.sequence(
+							Actions.color(Color.GREEN, 0.1f),
+							Actions.color(Color.WHITE, 0.3f)
 						));
 					}
 					return true;
