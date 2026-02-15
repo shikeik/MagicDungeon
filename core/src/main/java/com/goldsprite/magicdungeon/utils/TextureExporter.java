@@ -9,13 +9,15 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.goldsprite.magicdungeon.AppConstants;
+import com.goldsprite.magicdungeon.BuildConfig;
 
 public class TextureExporter {
 
     public static void exportToDisk(final Texture texture, final String filename) {
         if (texture == null) return;
 
-		if(Gdx.files.local("MagicDungeon/TempTexes/"+ filename+".png").exists()) return; //存在则跳过
+		if(AppConstants.getLocalFile("TempTexes/"+ filename+".png").exists()) return; //存在则跳过
 
         // Use Gdx.app.postRunnable to ensure we are on the OpenGL thread
         Gdx.app.postRunnable(new Runnable() {
@@ -64,7 +66,7 @@ public class TextureExporter {
                     fbo.end();
 
                     // 7. Save
-                    FileHandle dir = Gdx.files.local("MagicDungeon/TempTexes");
+                    FileHandle dir = AppConstants.getLocalFile("TempTexes");
                     if (!dir.exists()) dir.mkdirs();
                     FileHandle file = dir.child(filename + ".png");
 

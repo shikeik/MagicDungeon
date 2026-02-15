@@ -13,6 +13,8 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.magicdungeon.AppConstants;
+import com.goldsprite.magicdungeon.BuildConfig;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class InputManager {
-	private static String INPUTACTIONS_FILE = "MagicDungeon/input_actions.json";
+	private static String INPUTACTIONS_FILE = "input_actions.json";
     private static InputManager instance;
     private final Map<InputAction, List<Integer>> keyboardMappings = new HashMap<>();
     private final Map<InputAction, List<Integer>> controllerMappings = new HashMap<>();
@@ -441,7 +443,7 @@ public class InputManager {
 
         // Save to local storage (user preferences/config)
         // Note: 'options/input.json' in local storage
-        FileHandle file = Gdx.files.local(INPUTACTIONS_FILE);
+        FileHandle file = AppConstants.getLocalFile(INPUTACTIONS_FILE);
         file.parent().mkdirs();
         file.writeString(root.prettyPrint(JsonWriter.OutputType.json, 80), false);
         Debug.logT("InputManager", "Mappings saved to " + file.path());
@@ -556,7 +558,7 @@ public class InputManager {
         setDefaultMappings();
 
         // Priority: Local > Assets/Options > Assets/Data
-        FileHandle file = Gdx.files.local(INPUTACTIONS_FILE);
+        FileHandle file = AppConstants.getLocalFile(INPUTACTIONS_FILE);
 
         if (!file.exists()) {
 			Debug.logT("InputManager", "No config found at options/input.json, using defaults.");

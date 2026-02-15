@@ -22,7 +22,9 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.ShortArray;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.magicdungeon.AppConstants;
 import com.goldsprite.magicdungeon.BuildConfig;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
@@ -31,7 +33,7 @@ public class PolyBatchTestScreen extends GScreen {
 	// 渲染
 	private SpriteBatch batch;
 	private PolygonSpriteBatch polyBatch;
-	private ShapeRenderer shapes;
+	private NeonBatch neonBatch;
 
 	// 状态与数据
 	public enum Mode { ALIGN, MESH, WEIGHT, STATIC_TEST, DYNAMIC_WAVE }
@@ -60,8 +62,8 @@ public class PolyBatchTestScreen extends GScreen {
 
 		batch = new SpriteBatch();
 		polyBatch = new PolygonSpriteBatch();
-		shapes = new ShapeRenderer();
-
+		neonBatch = new NeonBatch();
+		
 		// [重构] 移除独立的 worldCamera，统一使用 uiViewport
 		// UI Stage 默认使用 ScreenViewport，我们需要确保它能正确缩放
 		// 这里使用 GScreen 的 uiViewport，或者直接创建一个新的 FitViewport 给 Stage？
@@ -102,6 +104,23 @@ public class PolyBatchTestScreen extends GScreen {
 		// 为了简单起见，我们仍然在 render 中绘制，但坐标系变换为 UI 坐标系，并限制在 gameArea 区域。
 
 		drawSceneInGameArea(delta);
+	}
+
+	@Override
+	public void dispose() {
+		super.dispose();
+		if (batch != null) batch.dispose();
+		if (polyBatch != null) polyBatch.dispose();
+		if (neonBatch != null) neonBatch.dispose();
+		if (uiStage != null) uiStage.dispose();
+		
+		// Dispose textures
+		if (capeState.knightRegion != null && capeState.knightRegion.getTexture() != null) {
+			capeState.knightRegion.getTexture().dispose();
+		}
+		if (capeState.capeRegion != null && capeState.capeRegion.getTexture() != null) {
+			capeState.capeRegion.getTexture().dispose();
+		}
 	}
 
 	private void drawSceneInGameArea(float delta) {
@@ -166,8 +185,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 		batch.setProjectionMatrix(uiStage.getCamera().combined);
 		polyBatch.setProjectionMatrix(uiStage.getCamera().combined);
-		shapes.setProjectionMatrix(uiStage.getCamera().combined);
-
+		
 		// 1. 绘制背景骑士
 		if (currentMode != Mode.MESH) {
 			batch.begin();
@@ -217,39 +235,34 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 	}
 
-	private void drawMeshDebug(float ox, float oy) {
+		private void drawMeshDebug(float ox, float oy) {
 		if (!showDebugInfo) return; // [修改] 只有开启调试才绘制任何线框/点
 
-		shapes.setProjectionMatrix(uiStage.getCamera().combined);
+		// 使用 NeonBatch 进行加粗绘制
+		neonBatch.setProjectionMatrix(uiStage.getCamera().combined);
+		neonBatch.begin();
 
 		// 1. 绘制纹理边框 (红色矩形)
-		shapes.begin(ShapeRenderer.ShapeType.Line);
-		shapes.setColor(Color.RED);
 		float w = capeState.capeRegion.getRegionWidth();
 		float h = capeState.capeRegion.getRegionHeight();
-		shapes.rect(ox, oy, w, h);
-		shapes.end();
-
-		shapes.begin(ShapeRenderer.ShapeType.Line);
-		shapes.setColor(Color.CYAN);
+		neonBatch.drawRect(ox, oy, w, h, 0, 2, Color.RED, false);
 
 		// 绘制三角形网格线
 		if (capeState.triangles != null) {
 			float[] v = capeState.animatedVertices;
+			Color meshColor = Color.CYAN.cpy();
+			meshColor.a = 0.6f;
 
 			for (int i = 0; i < capeState.triangles.length; i += 3) {
 				int i1 = capeState.triangles[i] * 2;
 				int i2 = capeState.triangles[i+1] * 2;
 				int i3 = capeState.triangles[i+2] * 2;
-				shapes.line(v[i1]+ox, v[i1+1]+oy, v[i2]+ox, v[i2+1]+oy);
-				shapes.line(v[i2]+ox, v[i2+1]+oy, v[i3]+ox, v[i3+1]+oy);
-				shapes.line(v[i3]+ox, v[i3+1]+oy, v[i1]+ox, v[i1+1]+oy);
+				neonBatch.drawLine(v[i1]+ox, v[i1+1]+oy, v[i2]+ox, v[i2+1]+oy, 1.5f, meshColor);
+				neonBatch.drawLine(v[i2]+ox, v[i2+1]+oy, v[i3]+ox, v[i3+1]+oy, 1.5f, meshColor);
+				neonBatch.drawLine(v[i3]+ox, v[i3+1]+oy, v[i1]+ox, v[i1+1]+oy, 1.5f, meshColor);
 			}
 		}
-		shapes.end();
 
-		// 绘制顶点 (点)
-		shapes.begin(ShapeRenderer.ShapeType.Filled);
 		boolean isWeightMode = (currentMode == Mode.WEIGHT);
 
 		// 1. 绘制轮廓点 (蓝色)
@@ -259,23 +272,23 @@ public class PolyBatchTestScreen extends GScreen {
 			if (isWeightMode) {
 				drawWeightPoint(p, ox, oy);
 			} else {
-				shapes.setColor(Color.BLUE);
-				shapes.circle(p.position.x + ox, p.position.y + oy, 4);
+				// 加粗轮廓点
+				neonBatch.drawCircle(p.position.x + ox, p.position.y + oy, 5, 2, Color.BLUE, 16, false);
+				// 中心点实心
+				neonBatch.drawCircle(p.position.x + ox, p.position.y + oy, 2, 0, Color.BLUE, 8, true);
 			}
 
 			// 绘制轮廓连线
 			if (i > 0) {
 				ControlPoint prev = capeState.hullPoints.get(i-1);
-				shapes.setColor(Color.BLUE);
-				shapes.rectLine(prev.position.x+ox, prev.position.y+oy, p.position.x+ox, p.position.y+oy, 2);
+				neonBatch.drawLine(prev.position.x+ox, prev.position.y+oy, p.position.x+ox, p.position.y+oy, 3, Color.BLUE);
 			}
 		}
 		// 闭合轮廓线
 		if (capeState.hullPoints.size > 2) {
 			ControlPoint first = capeState.hullPoints.first();
 			ControlPoint last = capeState.hullPoints.peek();
-			shapes.setColor(Color.BLUE);
-			shapes.rectLine(last.position.x+ox, last.position.y+oy, first.position.x+ox, first.position.y+oy, 2);
+			neonBatch.drawLine(last.position.x+ox, last.position.y+oy, first.position.x+ox, first.position.y+oy, 3, Color.BLUE);
 		}
 
 		// 2. 绘制内部点 (黄色)
@@ -283,15 +296,13 @@ public class PolyBatchTestScreen extends GScreen {
 			if (isWeightMode) {
 				drawWeightPoint(p, ox, oy);
 			} else {
-				shapes.setColor(Color.YELLOW);
-				shapes.circle(p.position.x + ox, p.position.y + oy, 3);
+				neonBatch.drawCircle(p.position.x + ox, p.position.y + oy, 4, 0, Color.YELLOW, 12, true);
 			}
 		}
 
-		// 3. 绘制列表选中的高亮提示 (绿色大圆圈)
+		// 3. 绘制列表选中的高亮提示 (绿色矩形)
 		PointItem item = uiController.getHighlightedItem();
 		if (item != null) {
-			shapes.setColor(Color.GREEN);
 			ControlPoint p = null;
 			if (item.isHull && item.index < capeState.hullPoints.size) {
 				p = capeState.hullPoints.get(item.index);
@@ -300,47 +311,32 @@ public class PolyBatchTestScreen extends GScreen {
 			}
 
 			if (p != null) {
-				shapes.circle(p.position.x + ox, p.position.y + oy, 6); // 更大的圆
-				shapes.rect(p.position.x + ox - 8, p.position.y + oy - 8, 16, 16); // 方框
+				// 选中点框4倍并改为简单空心矩形
+				float rectSize = 40; 
+				neonBatch.drawRect(p.position.x + ox - rectSize/2, p.position.y + oy - rectSize/2, rectSize, rectSize, 0, 3, Color.GREEN, false);
 			}
 		}
 
 		// 4. [新增] 绘制笔刷光标 (在 WEIGHT 模式下)
-		// 移到 Filled 块之外绘制，因为它是 Line 类型
-		shapes.end();
-
 		if (isWeightMode && inputHandler != null) {
-			shapes.begin(ShapeRenderer.ShapeType.Line);
-			shapes.setColor(Color.WHITE);
-			shapes.circle(inputHandler.currentMousePos.x, inputHandler.currentMousePos.y, uiController.brushRadius);
-			shapes.end();
+			neonBatch.drawCircle(inputHandler.currentMousePos.x, inputHandler.currentMousePos.y, uiController.brushRadius, 2, Color.WHITE, 32, false);
 		}
+		
+		neonBatch.end();
 	}
 
 	private void drawWeightPoint(ControlPoint p, float ox, float oy) {
-		float outerR = 6;
+		float outerR = 12; // 2x
 		float x = p.position.x + ox;
 		float y = p.position.y + oy;
 
 		// 1. 绘制背景圆 (深色)
-		shapes.setColor(Color.DARK_GRAY);
-		shapes.circle(x, y, outerR);
+		neonBatch.drawCircle(x, y, outerR, 0, Color.DARK_GRAY, 16, true);
 
-		// 2. 绘制扇形进度条 (红色)
-		// Spine 风格：通常 1 是满圆。我们用扇形表示进度。
+		// 2. 绘制扇形进度条 (绿色)
 		if (p.weight > 0) {
-			shapes.setColor(Color.RED);
-			// arc(x, y, radius, start, degrees)
-			// start 从 90 度开始 (顶部)，逆时针画? ShapeRenderer arc 是逆时针。
-			// 我们希望顺时针？或者就是简单的饼图。
-			// 注意：ShapeRenderer.arc 在 Filled 模式下绘制扇形
-			shapes.arc(x, y, outerR, 90, 360 * p.weight);
+			neonBatch.drawSector(x, y, outerR, 90, 360 * p.weight, Color.GREEN, 16);
 		}
-
-		// 3. 绘制轮廓 (白色细圈) 以增强对比度
-		// 需要切换到 Line 模式，但这会打断 batch。
-		// 为了性能，也许可以不画轮廓，或者在最后统一画 Line。
-		// 暂时保持简单。
 	}
 
 	// --- 内部数据类 ---
@@ -410,10 +406,11 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 
 		public void loadFromJson(com.badlogic.gdx.utils.JsonValue root) {
+			if (root == null) return;
 			// 1. 读取 Offset
 			if (root.has("offset")) {
-				offset.x = root.get("offset").getFloat("x");
-				offset.y = root.get("offset").getFloat("y");
+				offset.x = root.get("offset").getFloat("x", 0);
+				offset.y = root.get("offset").getFloat("y", 0);
 			}
 
 			// 2. 读取 Hull Points
@@ -452,36 +449,59 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 
 		public String toJson() {
-			com.badlogic.gdx.utils.Json json = new com.badlogic.gdx.utils.Json();
-			json.setOutputType(com.badlogic.gdx.utils.JsonWriter.OutputType.json);
-
-			java.util.HashMap<String, Object> map = new java.util.HashMap<>();
-			map.put("offset", offset);
-			// 序列化 ControlPoint
-			map.put("hullPoints", serializePoints(hullPoints));
-			map.put("interiorPoints", serializePoints(interiorPoints));
-			map.put("windStrength", windStrength);
-			map.put("bigWaveFreq", bigWaveFreq);
-			map.put("bigWavePhase", bigWavePhase);
-			map.put("bigWaveAmp", bigWaveAmp);
-			map.put("smallWaveFreq", smallWaveFreq);
-			map.put("smallWavePhase", smallWavePhase);
-			map.put("smallWaveAmp", smallWaveAmp);
-			map.put("transmissionAmp", transmissionAmp);
-
-			return json.prettyPrint(map);
+			java.io.StringWriter stringWriter = new java.io.StringWriter();
+			com.badlogic.gdx.utils.JsonWriter writer = new com.badlogic.gdx.utils.JsonWriter(stringWriter);
+			writer.setOutputType(com.badlogic.gdx.utils.JsonWriter.OutputType.json);
+			
+			try {
+				writer.object();
+				
+				writer.name("offset").object()
+					.name("x").value(offset.x)
+					.name("y").value(offset.y)
+				.pop();
+				
+				writer.name("hullPoints").array();
+				for(ControlPoint p : hullPoints) {
+					writer.object()
+						.name("x").value(p.position.x)
+						.name("y").value(p.position.y)
+						.name("weight").value(p.weight)
+					.pop();
+				}
+				writer.pop();
+				
+				writer.name("interiorPoints").array();
+				for(ControlPoint p : interiorPoints) {
+					writer.object()
+						.name("x").value(p.position.x)
+						.name("y").value(p.position.y)
+						.name("weight").value(p.weight)
+					.pop();
+				}
+				writer.pop();
+				
+				writer.name("windStrength").value(windStrength);
+				writer.name("bigWaveFreq").value(bigWaveFreq);
+				writer.name("bigWavePhase").value(bigWavePhase);
+				writer.name("bigWaveAmp").value(bigWaveAmp);
+				writer.name("smallWaveFreq").value(smallWaveFreq);
+				writer.name("smallWavePhase").value(smallWavePhase);
+				writer.name("smallWaveAmp").value(smallWaveAmp);
+				writer.name("transmissionAmp").value(transmissionAmp);
+				
+				writer.pop();
+				writer.close();
+			} catch (java.io.IOException e) {
+				Gdx.app.error("CapeState", "Failed to write json", e);
+			}
+			
+			return stringWriter.toString();
 		}
 
 		private Array<Object> serializePoints(Array<ControlPoint> points) {
-			Array<Object> arr = new Array<>();
-			for(ControlPoint p : points) {
-				java.util.HashMap<String, Object> pm = new java.util.HashMap<>();
-				pm.put("x", p.position.x);
-				pm.put("y", p.position.y);
-				pm.put("weight", p.weight);
-				arr.add(pm);
-			}
-			return arr;
+			// Deprecated: used by old toJson
+			return null; 
 		}
 
 		public void clear() {
@@ -694,7 +714,7 @@ public class PolyBatchTestScreen extends GScreen {
 							isDraggingPoint = true;
 						}
 					} else if (currentMode == Mode.WEIGHT) {
-						applyWeightBrush(localClick);
+						applyWeightBrush(localClick, button == com.badlogic.gdx.Input.Buttons.RIGHT);
 						isDraggingPoint = true;
 					}
 				} else {
@@ -706,7 +726,7 @@ public class PolyBatchTestScreen extends GScreen {
 						}
 						capeState.generateMesh();
 					} else if (currentMode == Mode.WEIGHT) {
-						applyWeightBrush(localClick);
+						applyWeightBrush(localClick, button == com.badlogic.gdx.Input.Buttons.RIGHT);
 						isDraggingPoint = true;
 					}
 				}
@@ -735,7 +755,7 @@ public class PolyBatchTestScreen extends GScreen {
 				float baseX = uiController.renderBaseX + capeState.offset.x;
 				float baseY = uiController.renderBaseY + capeState.offset.y;
 				Vector2 localPos = new Vector2(currentMouse).sub(baseX, baseY);
-				applyWeightBrush(localPos);
+				applyWeightBrush(localPos, Gdx.input.isButtonPressed(com.badlogic.gdx.Input.Buttons.RIGHT));
 			}
 			else if (currentMode == Mode.STATIC_TEST && isDraggingPoint) {
 				float baseX = uiController.renderBaseX + capeState.offset.x;
@@ -754,9 +774,9 @@ public class PolyBatchTestScreen extends GScreen {
 			return true;
 		}
 
-		private void applyWeightBrush(Vector2 localPos) {
+		private void applyWeightBrush(Vector2 localPos, boolean isEraser) {
 			float radius = uiController.brushRadius;
-			float target = uiController.brushTargetWeight;
+			float target = isEraser ? 0f : uiController.brushTargetWeight;
 			float strength = uiController.brushStrength;
 
 			for (ControlPoint p : capeState.hullPoints) updatePointWeight(p, localPos, radius, target, strength);
@@ -776,6 +796,9 @@ public class PolyBatchTestScreen extends GScreen {
 			if (dst <= radius) {
 				float alpha = strength * (1.0f - dst / radius);
 				if (alpha < 0) alpha = 0;
+				// 如果是橡皮擦 (target=0)，且 strength 通常较小，
+				// 这里使用 lerp 效果是可以的。
+				// 如果希望橡皮擦更强力，可以根据 strength 调整。
 				p.weight = p.weight + (target - p.weight) * alpha;
 				p.weight = com.badlogic.gdx.math.MathUtils.clamp(p.weight, 0f, 1f);
 			}
@@ -1040,7 +1063,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 		private void saveConfig() {
 			try {
-				com.badlogic.gdx.files.FileHandle file = Gdx.files.local(BuildConfig.PROJECT_NAME+"/cape_config.json");
+				com.badlogic.gdx.files.FileHandle file = AppConstants.getLocalFile("cape_config.json");
 				file.writeString(screen.capeState.toJson(), false);
 				Gdx.app.log("Config", "Saved to " + file.file().getAbsolutePath());
 			} catch (Exception e) {
@@ -1050,7 +1073,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 		private void loadConfig() {
 			try {
-				com.badlogic.gdx.files.FileHandle file = Gdx.files.local(BuildConfig.PROJECT_NAME+"/cape_config.json");
+				com.badlogic.gdx.files.FileHandle file = AppConstants.getLocalFile("cape_config.json");
 				if (file.exists()) {
 					com.badlogic.gdx.utils.JsonReader reader = new com.badlogic.gdx.utils.JsonReader();
 					screen.capeState.loadFromJson(reader.parse(file));

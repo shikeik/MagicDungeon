@@ -6,9 +6,11 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.magicdungeon.AppConstants;
+import com.goldsprite.magicdungeon.BuildConfig;
 
 public class SettingsManager {
-    private static final String SETTINGS_FILE = "MagicDungeon/settings.json";
+    private static final String SETTINGS_FILE = "settings.json";
 
     private static SettingsManager instance;
 
@@ -31,7 +33,7 @@ public class SettingsManager {
     }
 
     private void load() {
-        FileHandle file = Gdx.files.local(SETTINGS_FILE);
+        FileHandle file = AppConstants.getLocalFile(SETTINGS_FILE);
         if (!file.exists()) {
             Debug.logT("SettingsManager", "No settings file found, using defaults.");
             return;
@@ -57,7 +59,7 @@ public class SettingsManager {
             Json json = new Json();
             json.setOutputType(JsonWriter.OutputType.json);
 
-            FileHandle file = Gdx.files.local(SETTINGS_FILE);
+            FileHandle file = AppConstants.getLocalFile(SETTINGS_FILE);
             file.parent().mkdirs();
             file.writeString(json.prettyPrint(data), false);
             Debug.logT("SettingsManager", "Settings saved to " + file.path());

@@ -12,13 +12,15 @@ import com.goldsprite.magicdungeon.entities.Item;
 import com.goldsprite.magicdungeon.entities.Monster;
 import com.goldsprite.magicdungeon.entities.Player;
 import com.goldsprite.magicdungeon.world.Dungeon;
+import com.goldsprite.magicdungeon.AppConstants;
+import com.goldsprite.magicdungeon.BuildConfig;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class SaveManager {
-	private static final String SAVE_DIR = "MagicDungeon/saves/";
+	public static final String SAVE_DIR = AppConstants.STORAGE_ROOT + "saves/";
 	private static final String SAVE_FILE_NAME = "game_save.json";
 	private static final String SAVE_PATH = SAVE_DIR + SAVE_FILE_NAME;
 
