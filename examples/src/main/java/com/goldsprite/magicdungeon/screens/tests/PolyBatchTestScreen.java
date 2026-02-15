@@ -21,6 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.ShortArray;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
@@ -32,7 +33,7 @@ public class PolyBatchTestScreen extends GScreen {
 	private ShapeRenderer shapes;
 
 	// 状态与数据
-	public enum Mode { ALIGN, MESH, STATIC_TEST, DYNAMIC_WAVE }
+	public enum Mode { ALIGN, MESH, WEIGHT, STATIC_TEST, DYNAMIC_WAVE }
 	public enum MeshTool { HULL, INTERIOR } // 子模式：轮廓/内部点
 	private Mode currentMode = Mode.ALIGN;
 	private MeshTool currentMeshTool = MeshTool.HULL;
@@ -46,7 +47,7 @@ public class PolyBatchTestScreen extends GScreen {
 	@Override protected void initViewport() {
 		// 移除 worldCamera 相关的设置，现在全部使用 UI viewport
 		// autoCenterWorldCamera = true;
-		uiViewportScale = 2f;
+		uiViewportScale = PlatformImpl.isDesktopUser() ? 1.5f : 2f;
 		super.initViewport();
 	}
 
@@ -244,37 +245,49 @@ public class PolyBatchTestScreen extends GScreen {
 
 		// 绘制顶点 (点)
 		shapes.begin(ShapeRenderer.ShapeType.Filled);
+		boolean isWeightMode = (currentMode == Mode.WEIGHT);
 		
 		// 1. 绘制轮廓点 (蓝色)
-		shapes.setColor(Color.BLUE);
 		for(int i=0; i<capeState.hullPoints.size; i++) {
-			Vector2 p = capeState.hullPoints.get(i);
-			shapes.circle(p.x + ox, p.y + oy, 4);
+			ControlPoint p = capeState.hullPoints.get(i);
+			
+			if (isWeightMode) {
+				drawWeightPoint(p, ox, oy);
+			} else {
+				shapes.setColor(Color.BLUE);
+				shapes.circle(p.position.x + ox, p.position.y + oy, 4);
+			}
 			
 			// 绘制轮廓连线
 			if (i > 0) {
-				Vector2 prev = capeState.hullPoints.get(i-1);
-				shapes.rectLine(prev.x+ox, prev.y+oy, p.x+ox, p.y+oy, 2);
+				ControlPoint prev = capeState.hullPoints.get(i-1);
+				shapes.setColor(Color.BLUE);
+				shapes.rectLine(prev.position.x+ox, prev.position.y+oy, p.position.x+ox, p.position.y+oy, 2);
 			}
 		}
 		// 闭合轮廓线
 		if (capeState.hullPoints.size > 2) {
-			Vector2 first = capeState.hullPoints.first();
-			Vector2 last = capeState.hullPoints.peek();
-			shapes.rectLine(last.x+ox, last.y+oy, first.x+ox, first.y+oy, 2);
+			ControlPoint first = capeState.hullPoints.first();
+			ControlPoint last = capeState.hullPoints.peek();
+			shapes.setColor(Color.BLUE);
+			shapes.rectLine(last.position.x+ox, last.position.y+oy, first.position.x+ox, first.position.y+oy, 2);
 		}
 
 		// 2. 绘制内部点 (黄色)
-		shapes.setColor(Color.YELLOW);
-		for(Vector2 p : capeState.interiorPoints) {
-			shapes.circle(p.x + ox, p.y + oy, 3);
+		for(ControlPoint p : capeState.interiorPoints) {
+			if (isWeightMode) {
+				drawWeightPoint(p, ox, oy);
+			} else {
+				shapes.setColor(Color.YELLOW);
+				shapes.circle(p.position.x + ox, p.position.y + oy, 3);
+			}
 		}
 		
 		// 3. 绘制列表选中的高亮提示 (绿色大圆圈)
 		PointItem item = uiController.getHighlightedItem();
 		if (item != null) {
 			shapes.setColor(Color.GREEN);
-			Vector2 p = null;
+			ControlPoint p = null;
 			if (item.isHull && item.index < capeState.hullPoints.size) {
 				p = capeState.hullPoints.get(item.index);
 			} else if (!item.isHull && item.index < capeState.interiorPoints.size) {
@@ -282,15 +295,44 @@ public class PolyBatchTestScreen extends GScreen {
 			}
 			
 			if (p != null) {
-				shapes.circle(p.x + ox, p.y + oy, 6); // 更大的圆
-				shapes.rect(p.x + ox - 8, p.y + oy - 8, 16, 16); // 方框
+				shapes.circle(p.position.x + ox, p.position.y + oy, 6); // 更大的圆
+				shapes.rect(p.position.x + ox - 8, p.position.y + oy - 8, 16, 16); // 方框
 			}
 		}
 		
 		shapes.end();
 	}
 
+	private void drawWeightPoint(ControlPoint p, float ox, float oy) {
+		Color c = new Color(1.0f - p.weight, p.weight, 0, 1);
+		shapes.setColor(c);
+		float outerR = 6;
+		float innerR = 3;
+		shapes.circle(p.position.x + ox, p.position.y + oy, outerR);
+		shapes.setColor(Color.BLACK);
+		shapes.circle(p.position.x + ox, p.position.y + oy, innerR);
+	}
+
 	// --- 内部数据类 ---
+	public static class ControlPoint {
+		public Vector2 position;
+		public float weight; // 0.0 - 1.0
+
+		public ControlPoint() {
+			this(0, 0, 0);
+		}
+
+		public ControlPoint(float x, float y, float weight) {
+			this.position = new Vector2(x, y);
+			this.weight = weight;
+		}
+
+		public ControlPoint(Vector2 pos, float weight) {
+			this.position = new Vector2(pos);
+			this.weight = weight;
+		}
+	}
+
 	// 移出 PointItem 到外部或静态类，方便引用
 	public static class PointItem {
 		boolean isHull;
@@ -308,12 +350,12 @@ public class PolyBatchTestScreen extends GScreen {
 		public boolean dirty = true; // 数据变更标记
 		
 		// 1. 数据结构拆分
-		public Array<Vector2> hullPoints = new Array<>(); // 轮廓点 (有序)
-		public Array<Vector2> interiorPoints = new Array<>(); // 内部点 (无序)
+		public Array<ControlPoint> hullPoints = new Array<>(); // 轮廓点 (有序)
+		public Array<ControlPoint> interiorPoints = new Array<>(); // 内部点 (无序)
 		
 		// 所有的点 (hull + interior)，用于构建网格顶点数组
 		// 注意：PolygonRegion 的 vertices 数组必须和这个列表的顺序一致
-		private Array<Vector2> allPoints = new Array<>(); 
+		private Array<ControlPoint> allPoints = new Array<>(); 
 		
 		public short[] triangles;
 		public float[] originalVertices, animatedVertices;
@@ -330,21 +372,7 @@ public class PolyBatchTestScreen extends GScreen {
 		public float smallWaveAmp = 4f;
 		
 		// 传导幅度 (从上到下的放大倍率)
-		public float transmissionAmp = 1f; // 默认倍率 (比如底部幅度是顶部的10倍？或者只是一个线性系数)
-		// 之前的代码逻辑是: factor = 1.0 - (oldY / h); 
-		// factor 范围是 0 (顶) -> 1 (底)
-		// 然后 wave = ... * factor;
-		// 如果我们要引入 transmissionAmp，可能是想控制 factor 的曲线，或者底部的最大增益。
-		// 假设 transmissionAmp 控制的是底部的最大系数。
-		// 但之前的 factor 已经是 0-1 的归一化值了，waveAmp 才是实际的幅度。
-		// 用户的意思是 "决定从上往下从0到10倍还是多少倍"
-		// 这听起来像是控制 factor 的增长斜率，或者底部的最终倍率。
-		// 让我们把 factor 改为: factor = (1.0 - (oldY / h)) * transmissionAmp;
-		// 或者保留 0-1 的 factor，但引入一个 power 指数来控制非线性？
-		// “从0到10倍” -> 这意味着底部的幅度是某个基准值的10倍。
-		// 我们现在的 waveAmp 就是那个基准值。
-		// 也许用户希望 transmissionAmp 作为一个独立的滑块，来整体缩放“随高度变化的增益”。
-		// 让我们添加这个参数，并在 updateAnimation 中使用它。
+		public float transmissionAmp = 1f;
 
 		public void initTextures(String kPath, String cPath) {
 			knightRegion = new TextureRegion(new Texture(kPath));
@@ -362,7 +390,8 @@ public class PolyBatchTestScreen extends GScreen {
 			hullPoints.clear();
 			if (root.has("hullPoints")) {
 				for (com.badlogic.gdx.utils.JsonValue v : root.get("hullPoints")) {
-					hullPoints.add(new Vector2(v.getFloat("x"), v.getFloat("y")));
+					float w = v.has("weight") ? v.getFloat("weight") : calculateDefaultWeight(v.getFloat("y"));
+					hullPoints.add(new ControlPoint(v.getFloat("x"), v.getFloat("y"), w));
 				}
 			}
 			
@@ -370,7 +399,8 @@ public class PolyBatchTestScreen extends GScreen {
 			interiorPoints.clear();
 			if (root.has("interiorPoints")) {
 				for (com.badlogic.gdx.utils.JsonValue v : root.get("interiorPoints")) {
-					interiorPoints.add(new Vector2(v.getFloat("x"), v.getFloat("y")));
+					float w = v.has("weight") ? v.getFloat("weight") : calculateDefaultWeight(v.getFloat("y"));
+					interiorPoints.add(new ControlPoint(v.getFloat("x"), v.getFloat("y"), w));
 				}
 			}
 			
@@ -386,17 +416,23 @@ public class PolyBatchTestScreen extends GScreen {
 			
 			generateMesh();
 		}
+
+		private float calculateDefaultWeight(float y) {
+			if (capeRegion == null) return 0;
+			float h = capeRegion.getRegionHeight();
+			float factor = 1.0f - (y / h);
+			return Math.max(0, factor);
+		}
 		
 		public String toJson() {
 			com.badlogic.gdx.utils.Json json = new com.badlogic.gdx.utils.Json();
 			json.setOutputType(com.badlogic.gdx.utils.JsonWriter.OutputType.json);
 			
-			// 手动构建对象以控制输出格式更整洁，或者直接序列化字段
-			// 这里我们构建一个 Map 或者简单对象来序列化
 			java.util.HashMap<String, Object> map = new java.util.HashMap<>();
 			map.put("offset", offset);
-			map.put("hullPoints", hullPoints);
-			map.put("interiorPoints", interiorPoints);
+			// 序列化 ControlPoint
+			map.put("hullPoints", serializePoints(hullPoints));
+			map.put("interiorPoints", serializePoints(interiorPoints));
 			map.put("windStrength", windStrength);
 			map.put("bigWaveFreq", bigWaveFreq);
 			map.put("bigWavePhase", bigWavePhase);
@@ -407,6 +443,18 @@ public class PolyBatchTestScreen extends GScreen {
 			map.put("transmissionAmp", transmissionAmp);
 			
 			return json.prettyPrint(map);
+		}
+
+		private Array<Object> serializePoints(Array<ControlPoint> points) {
+			Array<Object> arr = new Array<>();
+			for(ControlPoint p : points) {
+				java.util.HashMap<String, Object> pm = new java.util.HashMap<>();
+				pm.put("x", p.position.x);
+				pm.put("y", p.position.y);
+				pm.put("weight", p.weight);
+				arr.add(pm);
+			}
+			return arr;
 		}
 
 		public void clear() {
@@ -431,7 +479,7 @@ public class PolyBatchTestScreen extends GScreen {
 			dirty = true;
 
 			FloatArray fa = new FloatArray();
-			for (Vector2 v : allPoints) fa.addAll(v.x, v.y);
+			for (ControlPoint p : allPoints) fa.addAll(p.position.x, p.position.y);
 			
 			originalVertices = fa.toArray();
 			animatedVertices = fa.toArray();
@@ -442,11 +490,8 @@ public class PolyBatchTestScreen extends GScreen {
 				
 				// 3. 剔除重心在轮廓外部的三角形 (实现凹包)
 				// 准备轮廓多边形数据用于检测
-				float[] hullVerts = new float[hullPoints.size * 2];
-				for(int i=0; i<hullPoints.size; i++) {
-					hullVerts[i*2] = hullPoints.get(i).x;
-					hullVerts[i*2+1] = hullPoints.get(i).y;
-				}
+				Array<Vector2> hullVectors = new Array<>();
+				for(ControlPoint p : hullPoints) hullVectors.add(p.position);
 				
 				ShortArray validTriangles = new ShortArray();
 				for (int i = 0; i < allTriangles.size; i += 3) {
@@ -459,7 +504,7 @@ public class PolyBatchTestScreen extends GScreen {
 					float cy = (originalVertices[p1+1] + originalVertices[p2+1] + originalVertices[p3+1]) / 3f;
 					
 					// 判断重心是否在轮廓内
-					if (Intersector.isPointInPolygon(hullPoints, new Vector2(cx, cy))) {
+					if (Intersector.isPointInPolygon(hullVectors, new Vector2(cx, cy))) {
 						validTriangles.add(allTriangles.get(i));
 						validTriangles.add(allTriangles.get(i+1));
 						validTriangles.add(allTriangles.get(i+2));
@@ -477,31 +522,21 @@ public class PolyBatchTestScreen extends GScreen {
 			stateTime += delta;
 			if (originalVertices == null) return;
 			
-			float h = capeRegion.getRegionHeight();
-
 			for (int i = 0; i < originalVertices.length; i += 2) {
 				float oldX = originalVertices[i];
 				float oldY = originalVertices[i + 1];
 				
 				float finalOffset = 0;
 				
-				// 仅在动态模式下计算波动
-				// 静态测试模式下 (STATIC_TEST)，我们可以让它静止，或者应用一个固定的风力
-				// 这里假设 STATIC_TEST 只是展示“被吹起”的一瞬间状态，或者是无动画状态
-				// 为了区分，我们在 STATIC_TEST 下只应用 windStrength，不应用 sin 波动
+				// 获取权重
+				int pointIndex = i / 2;
+				float weight = 0;
+				if (pointIndex < allPoints.size) {
+					weight = allPoints.get(pointIndex).weight;
+				}
 				
 				// 1. 权重计算
-				float factor = 1.0f - (oldY / h);
-				if (factor < 0) factor = 0; 
-				
-				// 应用传导幅度 (Transmission Amp)
-				// 这里的 transmissionAmp 就是底部的最大放大倍率
-				// 假设原本 factor 是 0-1，现在 factor 变为 0 - transmissionAmp
-				// 但为了不改变现有的 waveAmp 意义，我们将 transmissionAmp 理解为：
-				// "底部相对于顶部的额外增益系数" 或者 "整体强度的垂直梯度斜率"
-				// 如果 transmissionAmp = 1，那就是线性 0-1。
-				// 如果 transmissionAmp = 10，那就是线性 0-10。
-				factor *= transmissionAmp;
+				float factor = weight * transmissionAmp;
 				
 				// A. 基础持续风力
 				float baseWind = windStrength * factor;
@@ -509,36 +544,6 @@ public class PolyBatchTestScreen extends GScreen {
 				finalOffset = baseWind;
 
 				// B & C. 波动 (仅 Dynamic)
-				// 注意：这里需要一个区分 currentMode 的方式，但 CapeState 是静态内部类，不持有 screen 引用
-				// 我们可以传入 mode 参数，或者简化逻辑：STATIC_TEST 不调用 updateAnimation？
-				// 但 renderCapeByMode 里确实调用了 updateAnimation。
-				// 让我们修改 updateAnimation 方法签名，或者就在这里简单加上波动
-				
-				// 为了支持 STATIC_TEST 作为“演算变形预览”，我们可以在 STATIC_TEST 时应用一个静态的波形
-				// 但通常 STATIC_TEST 意味着“静态网格测试”。
-				// 如果用户的意思是“临时数据演算”，那可能是想手动拖拽模拟风力？
-				// 根据需求“静态渲染模式不是修改点配置, 是临时数据, 并且这个修改是演算变形的”，
-				// 我理解为：在 STATIC_TEST 模式下，允许用户拖拽某个点，但这不改变 hullPoints，
-				// 而是像橡皮筋一样拉扯网格，松开后复原？或者只是展示静态的弯曲效果？
-				
-				// 鉴于目前 updateAnimation 是每一帧覆盖 animatedVertices，
-				// 如果要实现“拖拽临时形变”，我们需要在 InputHandler 里修改 animatedVertices 而不是 originalVertices
-				// 并且在 updateAnimation 里不要覆盖掉用户的拖拽。
-				
-				// 让我们先保留 DYNAMIC_WAVE 的逻辑。
-				// 对于 STATIC_TEST，我们在 renderCapeByMode 里已经做了区分：
-				// case STATIC_TEST: if (polyRegion != null) { ... } (没有调用 updateAnimation)
-				// 等等，之前的代码里：
-				// if (currentMode == Mode.DYNAMIC_WAVE) capeState.updateAnimation(delta);
-				// 所以 STATIC_TEST 根本不会进这个方法！
-				// 那么 STATIC_TEST 显示的是什么？是 originalVertices。
-				// 也就是“无变形”的初始网格。
-				
-				// 既然用户说“静态渲染模式...是临时数据...演算变形”，
-				// 那我应该允许在 STATIC_TEST 模式下，对 animatedVertices 进行非破坏性的修改。
-				// 比如：鼠标拖拽某个位置，网格跟随变形，但 hullPoints 不变。
-			
-				// 恢复动态波动的逻辑 (仅供 DYNAMIC_WAVE 使用)
 				float bigWave = (float) Math.sin(stateTime * bigWaveFreq - oldY * bigWavePhase) * bigWaveAmp * factor;
 				float smallRipple = (float) Math.sin(stateTime * smallWaveFreq - oldY * smallWavePhase) * smallWaveAmp * factor;
 				finalOffset += bigWave + smallRipple;
@@ -584,7 +589,6 @@ public class PolyBatchTestScreen extends GScreen {
 			}
 		}
 	}
-
 	// --- 输入处理器 ---
 	class EditorInputHandler extends InputAdapter {
 		private int selectedPointIndex = -1; // 当前选中的顶点索引
@@ -594,29 +598,15 @@ public class PolyBatchTestScreen extends GScreen {
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-			// 如果点击在 UI 上，则拦截输入
 			Vector2 screenPos = new Vector2(screenX, screenY);
 			Vector2 stagePos = uiStage.screenToStageCoordinates(screenPos.cpy());
 			com.badlogic.gdx.scenes.scene2d.Actor hitActor = uiStage.hit(stagePos.x, stagePos.y, true);
-			
-			// [DEBUG] 输出点击信息
-			// Gdx.app.log("Input", "TouchDown: screen=" + screenPos + ", stage=" + stagePos + ", hit=" + (hitActor==null?"null":hitActor.getName() + "/" + hitActor.getClass().getSimpleName()));
 
 			if (hitActor != null && hitActor != uiController.gameArea && !hitActor.isDescendantOf(uiController.gameArea)) {
 				return false;
 			}
 
-			// Vector2 worldPos = screenToWorldCoord(screenX, screenY);
-			// lastMousePos.set(worldPos);
-
-			// 获取相对于披风左下角的局部坐标
-			// 披风渲染位置是 (baseX + offset.x, baseY + offset.y)
-			// uiController.renderBaseX 已经在 drawSceneInGameArea 中更新
-			
 			Vector2 stageCoords = uiStage.screenToStageCoordinates(new Vector2(screenX, screenY));
-			
-			// 使用 stageCoords 代替 worldPos
-			// lastMousePos 记录的是 stage 坐标
 			lastMousePos.set(stageCoords);
 			
 			float baseX = uiController.renderBaseX + capeState.offset.x;
@@ -624,34 +614,25 @@ public class PolyBatchTestScreen extends GScreen {
 			
 			Vector2 localClick = new Vector2(stageCoords).sub(baseX, baseY);
 			
-			// [DEBUG] 输出坐标转换结果
-			// Gdx.app.log("Input", "LocalClick=" + localClick + ", Mode=" + currentMode);
-
-			if (currentMode == Mode.MESH) {
-				// MESH 模式：支持添加、删除、移动点
-				
-				// 1. 尝试选中现有的点 (优先)
+			if (currentMode == Mode.MESH || currentMode == Mode.WEIGHT) {
 				selectedPointIndex = -1;
 				isDraggingPoint = false;
-				float minDst = 15f; // UI 坐标系，不需要 zoom
+				float minDst = 15f; 
 				
-				// 统一搜索最近的点
 				float closestDst = Float.MAX_VALUE;
 				int closestIndex = -1;
 				boolean closestIsHull = false;
 				
-				// 搜索轮廓点
 				for (int i = 0; i < capeState.hullPoints.size; i++) {
-					float dst = capeState.hullPoints.get(i).dst(localClick);
+					float dst = capeState.hullPoints.get(i).position.dst(localClick);
 					if (dst < minDst && dst < closestDst) {
 						closestDst = dst;
 						closestIndex = i;
 						closestIsHull = true;
 					}
 				}
-				// 搜索内部点
 				for (int i = 0; i < capeState.interiorPoints.size; i++) {
-					float dst = capeState.interiorPoints.get(i).dst(localClick);
+					float dst = capeState.interiorPoints.get(i).position.dst(localClick);
 					if (dst < minDst && dst < closestDst) {
 						closestDst = dst;
 						closestIndex = i;
@@ -660,39 +641,40 @@ public class PolyBatchTestScreen extends GScreen {
 				}
 				
 				if (closestIndex != -1) {
-					// 选中了最近的点
 					selectedPointIndex = closestIndex;
 					isHullPoint = closestIsHull;
 					
-					if (button == com.badlogic.gdx.Input.Buttons.RIGHT) {
-						// 右键删除
-						if (isHullPoint) capeState.hullPoints.removeIndex(selectedPointIndex);
-						else capeState.interiorPoints.removeIndex(selectedPointIndex);
-						capeState.generateMesh();
-						selectedPointIndex = -1;
-					} else {
-						// 左键准备拖动
+					uiController.highlightedItem = new PointItem(isHullPoint, selectedPointIndex);
+					uiController.update(); 
+					
+					if (currentMode == Mode.MESH) {
+						if (button == com.badlogic.gdx.Input.Buttons.RIGHT) {
+							if (isHullPoint) capeState.hullPoints.removeIndex(selectedPointIndex);
+							else capeState.interiorPoints.removeIndex(selectedPointIndex);
+							capeState.generateMesh();
+							selectedPointIndex = -1;
+						} else {
+							isDraggingPoint = true;
+						}
+					} else if (currentMode == Mode.WEIGHT) {
+						applyWeightBrush(localClick);
 						isDraggingPoint = true;
-						
-						// 高亮 UI 列表项
-						uiController.highlightedItem = new PointItem(isHullPoint, selectedPointIndex);
-						uiController.update(); // 强制刷新列表选中状态
 					}
 				} else {
-					// 没选中点，且是左键 -> 添加新点
-					if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+					if (currentMode == Mode.MESH && button == com.badlogic.gdx.Input.Buttons.LEFT) {
 						if (currentMeshTool == MeshTool.HULL) {
-							capeState.hullPoints.add(localClick);
+							capeState.hullPoints.add(new ControlPoint(localClick, 0));
 						} else {
-							capeState.interiorPoints.add(localClick);
+							capeState.interiorPoints.add(new ControlPoint(localClick, 0));
 						}
 						capeState.generateMesh();
+					} else if (currentMode == Mode.WEIGHT) {
+						applyWeightBrush(localClick);
+						isDraggingPoint = true;
 					}
 				}
 			}
 			else if (currentMode == Mode.STATIC_TEST) {
-				// 模式3：任意位置拖拽 -> 临时形变
-				// 不需要选中特定的点，只要点下去就开始变形
 				isDraggingPoint = true;
 			}
 			return true;
@@ -704,21 +686,22 @@ public class PolyBatchTestScreen extends GScreen {
 			Vector2 delta = new Vector2(currentMouse).sub(lastMousePos);
 
 			if (currentMode == Mode.ALIGN) {
-				// 模式1：整体移动披风偏移
 				capeState.offset.add(delta);
 			}
 			else if (currentMode == Mode.MESH && isDraggingPoint && selectedPointIndex != -1) {
-				// 模式2 (MESH)：移动选中的顶点
-				Vector2 p = isHullPoint ? capeState.hullPoints.get(selectedPointIndex) : capeState.interiorPoints.get(selectedPointIndex);
-				p.add(delta);
+				ControlPoint p = isHullPoint ? capeState.hullPoints.get(selectedPointIndex) : capeState.interiorPoints.get(selectedPointIndex);
+				p.position.add(delta);
 				capeState.generateMesh();
 			}
-			else if (currentMode == Mode.STATIC_TEST && isDraggingPoint) {
-				// 模式3 (STATIC_TEST)：临时形变演算
-				// 获取相对于披风左下角的局部坐标
+			else if (currentMode == Mode.WEIGHT && isDraggingPoint) {
 				float baseX = uiController.renderBaseX + capeState.offset.x;
 				float baseY = uiController.renderBaseY + capeState.offset.y;
-				
+				Vector2 localPos = new Vector2(currentMouse).sub(baseX, baseY);
+				applyWeightBrush(localPos);
+			}
+			else if (currentMode == Mode.STATIC_TEST && isDraggingPoint) {
+				float baseX = uiController.renderBaseX + capeState.offset.x;
+				float baseY = uiController.renderBaseY + capeState.offset.y;
 				Vector2 pullPos = new Vector2(lastMousePos).sub(baseX, baseY);
 				capeState.applyTemporaryDeformation(pullPos, delta);
 			}
@@ -730,15 +713,35 @@ public class PolyBatchTestScreen extends GScreen {
 		@Override
 		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 			isDraggingPoint = false;
-			// STATIC_TEST 模式下，松开鼠标是否要回弹？
-			// 既然是“演算变形”，可能用户想看到变形后的样子。
-			// 如果要回弹，可以在这里调用 capeState.resetAnimatedVertices();
-			// 暂时保留变形。
 			return true;
 		}
 		
-		// 移除无用的 screenToWorldCoord 方法，避免混淆
-		// private Vector2 screenToWorldCoord(int screenX, int screenY) { ... }
+		private void applyWeightBrush(Vector2 localPos) {
+			float radius = uiController.brushRadius;
+			float target = uiController.brushTargetWeight;
+			float strength = uiController.brushStrength;
+			
+			for (ControlPoint p : capeState.hullPoints) updatePointWeight(p, localPos, radius, target, strength);
+			for (ControlPoint p : capeState.interiorPoints) updatePointWeight(p, localPos, radius, target, strength);
+			
+			// 触发 UI 列表刷新 (可选，可能会有点卡)
+			// 为了流畅度，这里不全量刷新列表，只在松手或点击时刷新？
+			// 或者，列表显示只在 update() 里做
+			if (uiController.highlightedItem != null) {
+				// 强制刷新一下选中的项的信息?
+				// 暂时留空
+			}
+		}
+		
+		private void updatePointWeight(ControlPoint p, Vector2 brushPos, float radius, float target, float strength) {
+			float dst = p.position.dst(brushPos);
+			if (dst <= radius) {
+				float alpha = strength * (1.0f - dst / radius);
+				if (alpha < 0) alpha = 0;
+				p.weight = p.weight + (target - p.weight) * alpha;
+				p.weight = com.badlogic.gdx.math.MathUtils.clamp(p.weight, 0f, 1f);
+			}
+		}
 	}
 
 	// --- UI 控制类 ---
@@ -750,6 +753,11 @@ public class PolyBatchTestScreen extends GScreen {
 		
 		// 渲染基准点 (用于 InputHandler 坐标转换)
 		public float renderBaseX, renderBaseY;
+		
+		// 笔刷设置
+		public float brushRadius = 50f;
+		public float brushTargetWeight = 1.0f;
+		public float brushStrength = 0.1f;
 		
 		// 当前高亮的点信息
 		private PointItem highlightedItem = null;
@@ -770,7 +778,6 @@ public class PolyBatchTestScreen extends GScreen {
 			// 模式切换
 			VisSelectBox<Mode> modeSelect = new VisSelectBox<>();
 			modeSelect.setItems(Mode.values());
-			// 使用 ChangeListener 替代通用 Listener，仅在值实际改变时触发
 			modeSelect.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
@@ -824,13 +831,10 @@ public class PolyBatchTestScreen extends GScreen {
 			btnLoad.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					loadConfig();
-					// 加载后需要重建 UI 才能刷新 Slider 的值
-					// 这里简单粗暴：重新创建面板内容
-					// 注意：这会导致 UI 闪烁，但在工具中可接受
 					VisTable paramPanel = (VisTable) screen.uiStage.getRoot().findActor("ParamPanel");
 					if (paramPanel != null) {
 						paramPanel.clearChildren();
-						paramPanel.add(new VisLabel("波动参数调节")).pad(10).row();
+						paramPanel.add(new VisLabel("参数调节")).pad(10).row();
 						VisScrollPane sp = new VisScrollPane(createSlidersContent());
 						sp.setFadeScrollBars(false);
 						sp.setScrollingDisabled(true, false);
@@ -867,7 +871,7 @@ public class PolyBatchTestScreen extends GScreen {
 			panel.add(scrollPane).colspan(2).height(300).expandX().fillX().row();
 
 			// 操作说明
-			VisLabel tip = new VisLabel("操作说明:\nAlign: 拖动调整位置\nMesh: 点击添加点\nStatic: 拖动点\nDynamic: 观看演示");
+			VisLabel tip = new VisLabel("操作说明:\nAlign: 拖动调整位置\nMesh: 点击添加点\nWeight: 拖动刷权重\nDynamic: 观看演示");
 			tip.setWrap(true);
 			panel.add(tip).colspan(2).width(200).padTop(10).row();
 			panel.pack(); 
@@ -875,31 +879,18 @@ public class PolyBatchTestScreen extends GScreen {
 			// 左侧作为游戏操作区，设置为可触摸，以便在 InputHandler 中识别
 			gameArea = new VisTable();
 			gameArea.setTouchable(Touchable.enabled);
-			// [DEBUG] 设置显眼背景色，方便调试布局范围
 			gameArea.setBackground(VisUI.getSkin().newDrawable("white", new Color(0.2f, 0.2f, 0.2f, 1f))); 
-			// 这里使用深灰色背景，区别于清屏的 0.15f
 			
-			// 使用 VisSplitPane 实现左右分栏
-			// 布局结构：[游戏区] | [参数面板] | [控制面板]
-			// 为了实现三栏，我们需要嵌套 SplitPane
-			// SplitPane1 = [参数面板] | [控制面板]
-			// SplitPane2 = [游戏区] | [SplitPane1]
-			
-			// 1. 参数面板 (左边那个侧边栏)
 			VisTable paramPanel = createParamPanel();
-			
-			// 2. 右侧组合栏 (参数 + 控制)
 			VisSplitPane rightSideSplit = new VisSplitPane(paramPanel, panel, false);
-			rightSideSplit.setSplitAmount(0.5f); // 均分
+			rightSideSplit.setSplitAmount(0.5f); 
 			rightSideSplit.setMinSplitAmount(0.1f);
 			rightSideSplit.setMaxSplitAmount(0.9f);
 
-			// 3. 主布局 (游戏区 + 右侧组合栏)
 			VisSplitPane mainSplit = new VisSplitPane(gameArea, rightSideSplit, false);
 			
-			// 计算初始分割比例
 			float totalWidth = stage.getWidth();
-			float rightSidePrefWidth = panel.getPrefWidth() * 2 + 40; // 估算宽度
+			float rightSidePrefWidth = panel.getPrefWidth() * 2 + 40; 
 			float split = 0.6f; 
 			if (totalWidth > 0) {
 				split = (totalWidth - rightSidePrefWidth) / totalWidth;
@@ -917,7 +908,7 @@ public class PolyBatchTestScreen extends GScreen {
 			VisTable table = new VisTable(true);
 			table.setName("ParamPanel"); // 设置 Name 以便查找
 			table.setBackground("window");
-			table.add(new VisLabel("波动参数调节")).pad(10).row();
+			table.add(new VisLabel("参数调节")).pad(10).row();
 			
 			VisScrollPane scrollPane = new VisScrollPane(createSlidersContent());
 			scrollPane.setFadeScrollBars(false);
@@ -931,6 +922,12 @@ public class PolyBatchTestScreen extends GScreen {
 			VisTable t = new VisTable();
 			t.defaults().left().expandX().fillX().pad(2);
 			
+			t.add(new VisLabel("--- 权重刷设置 ---")).padTop(10).row();
+			addSlider(t, "目标权重", 0, 1, brushTargetWeight, v -> brushTargetWeight = v);
+			addSlider(t, "笔刷半径", 10, 200, brushRadius, v -> brushRadius = v);
+			addSlider(t, "笔刷强度", 0, 1, brushStrength, v -> brushStrength = v);
+			
+			t.add(new VisLabel("--- 波动参数 ---")).padTop(10).row();
 			addSlider(t, "基础风力", -50, 50, screen.capeState.windStrength, v -> screen.capeState.windStrength = v);
 			addSlider(t, "传导幅度 (垂直增益)", 0, 10, screen.capeState.transmissionAmp, v -> screen.capeState.transmissionAmp = v);
 			
@@ -982,8 +979,8 @@ public class PolyBatchTestScreen extends GScreen {
 			if (screen.capeState.hullPoints.size > 0) {
 				pointListTable.add(new VisLabel("[轮廓点 - 蓝色]")).left().padTop(5).row();
 				for (int i = 0; i < screen.capeState.hullPoints.size; i++) {
-					Vector2 p = screen.capeState.hullPoints.get(i);
-					String text = String.format("%d: UV(%.2f, %.2f)", i, p.x / w, p.y / h);
+					ControlPoint p = screen.capeState.hullPoints.get(i);
+					String text = String.format("%d: UV(%.2f, %.2f) W:%.2f", i, p.position.x / w, p.position.y / h, p.weight);
 					pointListTable.add(createPointItemWidget(true, i, text)).expandX().fillX().row();
 				}
 			}
@@ -992,8 +989,8 @@ public class PolyBatchTestScreen extends GScreen {
 			if (screen.capeState.interiorPoints.size > 0) {
 				pointListTable.add(new VisLabel("[内部点 - 黄色]")).left().padTop(10).row();
 				for (int i = 0; i < screen.capeState.interiorPoints.size; i++) {
-					Vector2 p = screen.capeState.interiorPoints.get(i);
-					String text = String.format("%d: UV(%.2f, %.2f)", i, p.x / w, p.y / h);
+					ControlPoint p = screen.capeState.interiorPoints.get(i);
+					String text = String.format("%d: UV(%.2f, %.2f) W:%.2f", i, p.position.x / w, p.position.y / h, p.weight);
 					pointListTable.add(createPointItemWidget(false, i, text)).expandX().fillX().row();
 				}
 			}
@@ -1023,12 +1020,6 @@ public class PolyBatchTestScreen extends GScreen {
 					// 刷新 UI 显示
 					screen.capeState.dirty = true;
 					update(); 
-					// 重建参数面板 (简单起见，重新 createParamPanel 比较麻烦，这里暂时只刷新了顶点列表)
-					// 实际应该通知 Slider 更新值，或者重建整个 UI。
-					// 由于这是个 TestScreen，我们简单地重建整个 Screen 实例或者手动更新 Slider 引用比较复杂
-					// 这里我们选择让 Slider 监听的数据源更新后，Slider 并不自动刷新 UI 值。
-					// 改进：我们可以在 createSlidersContent 时把 Slider 存起来，或者简单地... 
-					// 为了快速实现，这里提示用户重新进入或手动拖一下。
 					Gdx.app.log("Config", "Loaded from " + file.file().getAbsolutePath());
 				}
 			} catch (Exception e) {

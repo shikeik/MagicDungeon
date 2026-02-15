@@ -17,4 +17,3 @@ description: 项目全局硬性规则 (始终生效)
 
 3. **代码规范**:
    - **禁止全限定名**: 严禁在代码中直接使用全限定名 (如 `java.util.List`)，必须使用 `import`。
-   - **LibGDX 资源**: 所有 `Disposable` 对象必须手动释放。
