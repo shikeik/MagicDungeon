@@ -595,20 +595,34 @@ public class PolyBatchTestScreen extends GScreen {
 			Vector2 screenPos = new Vector2(screenX, screenY);
 			Vector2 stagePos = uiStage.screenToStageCoordinates(screenPos.cpy());
 			com.badlogic.gdx.scenes.scene2d.Actor hitActor = uiStage.hit(stagePos.x, stagePos.y, true);
-			if (hitActor != null && hitActor != uiController.gameArea) {
+			
+			// [DEBUG] 输出点击信息
+			// Gdx.app.log("Input", "TouchDown: screen=" + screenPos + ", stage=" + stagePos + ", hit=" + (hitActor==null?"null":hitActor.getName() + "/" + hitActor.getClass().getSimpleName()));
+
+			if (hitActor != null && hitActor != uiController.gameArea && !hitActor.isDescendantOf(uiController.gameArea)) {
 				return false;
 			}
 
-			Vector2 worldPos = screenToWorldCoord(screenX, screenY);
-			lastMousePos.set(worldPos);
+			// Vector2 worldPos = screenToWorldCoord(screenX, screenY);
+			// lastMousePos.set(worldPos);
 
 			// 获取相对于披风左下角的局部坐标
 			// 披风渲染位置是 (baseX + offset.x, baseY + offset.y)
 			// uiController.renderBaseX 已经在 drawSceneInGameArea 中更新
+			
+			Vector2 stageCoords = uiStage.screenToStageCoordinates(new Vector2(screenX, screenY));
+			
+			// 使用 stageCoords 代替 worldPos
+			// lastMousePos 记录的是 stage 坐标
+			lastMousePos.set(stageCoords);
+			
 			float baseX = uiController.renderBaseX + capeState.offset.x;
 			float baseY = uiController.renderBaseY + capeState.offset.y;
 			
-			Vector2 localClick = new Vector2(worldPos).sub(baseX, baseY);
+			Vector2 localClick = new Vector2(stageCoords).sub(baseX, baseY);
+			
+			// [DEBUG] 输出坐标转换结果
+			// Gdx.app.log("Input", "LocalClick=" + localClick + ", Mode=" + currentMode);
 
 			if (currentMode == Mode.MESH) {
 				// MESH 模式：支持添加、删除、移动点
@@ -683,7 +697,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 		@Override
 		public boolean touchDragged(int screenX, int screenY, int pointer) {
-			Vector2 currentMouse = screenToWorldCoord(screenX, screenY);
+			Vector2 currentMouse = uiStage.screenToStageCoordinates(new Vector2(screenX, screenY));
 			Vector2 delta = new Vector2(currentMouse).sub(lastMousePos);
 
 			if (currentMode == Mode.ALIGN) {
@@ -720,11 +734,8 @@ public class PolyBatchTestScreen extends GScreen {
 			return true;
 		}
 		
-		private Vector2 screenToWorldCoord(int screenX, int screenY) {
-			Vector3 vec = new Vector3(screenX, screenY, 0);
-			worldCamera.unproject(vec);
-			return new Vector2(vec.x, vec.y);
-		}
+		// 移除无用的 screenToWorldCoord 方法，避免混淆
+		// private Vector2 screenToWorldCoord(int screenX, int screenY) { ... }
 	}
 
 	// --- UI 控制类 ---
