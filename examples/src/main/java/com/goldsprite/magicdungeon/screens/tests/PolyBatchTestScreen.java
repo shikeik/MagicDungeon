@@ -46,6 +46,7 @@ public class PolyBatchTestScreen extends GScreen {
 	@Override protected void initViewport() {
 		// 移除 worldCamera 相关的设置，现在全部使用 UI viewport
 		// autoCenterWorldCamera = true;
+		uiViewportScale = 2f;
 		super.initViewport();
 	}
 
@@ -116,24 +117,44 @@ public class PolyBatchTestScreen extends GScreen {
 		
 		// 绘制内容
 		// 坐标系原点移到 gameArea 左下角 + 居中偏移
-		// 假设我们希望 (0,0) 在 gameArea 中心？或者 (0,0) 就是 gameArea 左下角？
-		// 为了方便，我们将 (0,0) 设为 gameArea 左下角，并且应用平移和缩放
+		// 为了使渲染内容在 gameArea 中心，我们需要：
+		// CenterX = x + w/2
+		// CenterY = y + h/2
+		// 渲染偏移量 = capeState.offset
 		
-		// 使用 UI Camera 的矩阵，但需要平移
-		// 注意：polyBatch 和 batch 需要单独的 ProjectionMatrix
-		// uiStage.getCamera().combined 是基于整个屏幕的。
-		// 我们不需要修改 ProjectionMatrix，只需要在 draw 时加上偏移量即可。
-		// 或者，我们可以修改 ProjectionMatrix 来实现“子视口”效果。
+		// [修复] 渲染图像位置问题
+		// 之前可能因为 coordinate system 的理解偏差。
+		// UI Stage 的 (0,0) 通常在屏幕左下角。
+		// gameArea.localToStageCoordinates(0,0) 返回的是 gameArea 左下角在 Stage 中的位置。
+		// 所以 centerX, centerY 就是 gameArea 的几何中心。
+		// 我们的绘制逻辑 renderCapeByMode 是基于 (drawX, drawY) 进行绘制。
+		// 只要 drawX = centerX, drawY = centerY，那么披风的“锚点”就在中心。
+		// 披风纹理本身可能不是中心对齐的，这取决于纹理坐标和 Region 的使用方式。
+		// 但只要 drawX/Y 是中心，且 batch.draw 是以左下角为基准，那么我们需要减去纹理宽高的一半才能真正居中。
+		// 在 renderCapeByMode 里：
+		// float drawX = baseX + capeState.offset.x;
+		// float drawY = baseY + capeState.offset.y;
+		// 如果 baseX, baseY 是中心点，那么 drawX, drawY 也是中心点。
+		// 具体的 batch.draw(region, x, y) 是画在 x,y 的。
+		// 所以如果要居中，我们需要在 draw 时减去 w/2, h/2。
+		// 但目前的 renderCapeByMode 是直接 draw(region, drawX, drawY)。
+		// 这意味着 drawX, drawY 是纹理的左下角。
+		// 所以为了居中，baseX 应该等于 centerX - textureWidth/2。
 		
-		// 简单的做法：直接在 (x, y) 基础上绘制，加上 capeState.offset
-		// 比如骑士位置：x + w/2 - 50, y + h/2 - 50 (居中)
+		float cw = capeState.capeRegion.getRegionWidth();
+		float ch = capeState.capeRegion.getRegionHeight();
 		
-		float centerX = x + w / 2f;
-		float centerY = y + h / 2f;
+		float baseX = (x + w / 2f) - cw / 2f;
+		float baseY = (y + h / 2f) - ch / 2f;
 		
 		// 更新 CapeState 的渲染基准点 (用于 InputHandler 计算鼠标点击)
-		// uiController.renderBaseX = centerX;
-		// uiController.renderBaseY = centerY;
+		// InputHandler 计算 localClick = worldPos - baseX - offset
+		// 所以这里的 baseX 必须和 InputHandler 里用的一致。
+		// 我们需要把这个计算好的基准点传给 UIController 或者直接存到 CapeState 里？
+		// 为了解耦，我们最好在 InputHandler 里也动态获取 gameArea 的中心。
+		// 但 InputHandler 访问 UIController 比较容易。
+		uiController.renderBaseX = baseX;
+		uiController.renderBaseY = baseY;
 
 		batch.setProjectionMatrix(uiStage.getCamera().combined);
 		polyBatch.setProjectionMatrix(uiStage.getCamera().combined);
@@ -142,12 +163,15 @@ public class PolyBatchTestScreen extends GScreen {
 		// 1. 绘制背景骑士
 		if (currentMode != Mode.MESH) {
 			batch.begin();
-			batch.draw(capeState.knightRegion, centerX - 50, centerY - 50); // 假设骑士大概 100x100
+			// 骑士稍微大一点，假设 100x100，也居中
+			// 既然披风是基于 baseX, baseY 画的，骑士也应该基于此相对位置画
+			// 假设骑士和披风的相对位置是固定的 (0,0)
+			batch.draw(capeState.knightRegion, baseX, baseY); 
 			batch.end();
 		}
 		
 		// 2. 绘制披风
-		renderCapeByMode(delta, centerX, centerY);
+		renderCapeByMode(delta, baseX, baseY);
 		
 		// 结束裁剪
 		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.popScissors();
@@ -578,8 +602,12 @@ public class PolyBatchTestScreen extends GScreen {
 			Vector2 worldPos = screenToWorldCoord(screenX, screenY);
 			lastMousePos.set(worldPos);
 
-			float baseX = 100 + capeState.offset.x;
-			float baseY = 100 + capeState.offset.y;
+			// 获取相对于披风左下角的局部坐标
+			// 披风渲染位置是 (baseX + offset.x, baseY + offset.y)
+			// uiController.renderBaseX 已经在 drawSceneInGameArea 中更新
+			float baseX = uiController.renderBaseX + capeState.offset.x;
+			float baseY = uiController.renderBaseY + capeState.offset.y;
+			
 			Vector2 localClick = new Vector2(worldPos).sub(baseX, baseY);
 
 			if (currentMode == Mode.MESH) {
@@ -671,7 +699,10 @@ public class PolyBatchTestScreen extends GScreen {
 			else if (currentMode == Mode.STATIC_TEST && isDraggingPoint) {
 				// 模式3 (STATIC_TEST)：临时形变演算
 				// 获取相对于披风左下角的局部坐标
-				Vector2 pullPos = new Vector2(lastMousePos).sub(100 + capeState.offset.x, 100 + capeState.offset.y);
+				float baseX = uiController.renderBaseX + capeState.offset.x;
+				float baseY = uiController.renderBaseY + capeState.offset.y;
+				
+				Vector2 pullPos = new Vector2(lastMousePos).sub(baseX, baseY);
 				capeState.applyTemporaryDeformation(pullPos, delta);
 			}
 
@@ -702,6 +733,9 @@ public class PolyBatchTestScreen extends GScreen {
 		private final VisTable pointListTable; // 替换 VisList 为 Table 容器
 		private final VisCheckBox boundsCheck;
 		public final VisTable gameArea;
+		
+		// 渲染基准点 (用于 InputHandler 坐标转换)
+		public float renderBaseX, renderBaseY;
 		
 		// 当前高亮的点信息
 		private PointItem highlightedItem = null;
@@ -827,7 +861,10 @@ public class PolyBatchTestScreen extends GScreen {
 			// 左侧作为游戏操作区，设置为可触摸，以便在 InputHandler 中识别
 			gameArea = new VisTable();
 			gameArea.setTouchable(Touchable.enabled);
-
+			// [DEBUG] 设置显眼背景色，方便调试布局范围
+			gameArea.setBackground(VisUI.getSkin().newDrawable("white", new Color(0.2f, 0.2f, 0.2f, 1f))); 
+			// 这里使用深灰色背景，区别于清屏的 0.15f
+			
 			// 使用 VisSplitPane 实现左右分栏
 			// 布局结构：[游戏区] | [参数面板] | [控制面板]
 			// 为了实现三栏，我们需要嵌套 SplitPane
