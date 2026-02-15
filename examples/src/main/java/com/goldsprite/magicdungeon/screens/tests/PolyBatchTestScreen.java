@@ -187,6 +187,23 @@ public class PolyBatchTestScreen extends GScreen {
 			shapes.circle(p.x + ox, p.y + oy, 3);
 		}
 		
+		// 3. 绘制列表选中的高亮提示 (绿色大圆圈)
+		UIController.PointItem item = uiController.getHighlightedItem();
+		if (item != null) {
+			shapes.setColor(Color.GREEN);
+			Vector2 p = null;
+			if (item.isHull && item.index < capeState.hullPoints.size) {
+				p = capeState.hullPoints.get(item.index);
+			} else if (!item.isHull && item.index < capeState.interiorPoints.size) {
+				p = capeState.interiorPoints.get(item.index);
+			}
+			
+			if (p != null) {
+				shapes.circle(p.x + ox, p.y + oy, 6); // 更大的圆
+				shapes.rect(p.x + ox - 8, p.y + oy - 8, 16, 16); // 方框
+			}
+		}
+		
 		shapes.end();
 	}
 
@@ -404,16 +421,37 @@ public class PolyBatchTestScreen extends GScreen {
 	// --- UI 控制类 ---
 	static class UIController {
 		private final PolyBatchTestScreen screen;
-		private final VisLabel pointListLabel; 
+		private final VisList<PointItem> pointList; // 改回 List 以支持选择事件
 		private final VisCheckBox boundsCheck;
-		public final VisTable gameArea; // 暴露给 InputHandler 使用
+		public final VisTable gameArea;
+		
+		// 存储列表项对应的点索引信息，用于反查高亮
+		private static class PointItem {
+			boolean isHull;
+			int index;
+			String text;
+			
+			PointItem(boolean isHull, int index, String text) {
+				this.isHull = isHull;
+				this.index = index;
+				this.text = text;
+			}
+			
+			@Override
+			public String toString() {
+				return text;
+			}
+		}
+		
+		// 辅助数组，用于保持 List 的数据
+		private Array<PointItem> listItems = new Array<>();
 
 		public UIController(Stage stage, final PolyBatchTestScreen screen) {
 			this.screen = screen;
 			
 			VisTable root = new VisTable();
 			root.setFillParent(true);
-			root.setTouchable(Touchable.childrenOnly); // 确保 root 不拦截点击，只让子元素响应
+			root.setTouchable(Touchable.childrenOnly);
 
 			VisTable panel = new VisTable(true);
 			panel.setBackground("window");
@@ -478,15 +516,27 @@ public class PolyBatchTestScreen extends GScreen {
 			panel.add(boundsCheck).colspan(2).left().padTop(5).row();
 
 			// 顶点列表
-			panel.add(new VisLabel("网格顶点:")).colspan(2).left().padTop(10).row();
+			panel.add(new VisLabel("网格顶点 (UV):")).colspan(2).left().padTop(10).row();
 			
-			// 使用 Label 而不是 List，因为 List 的 item height 是固定的，不支持多行文本
-			pointListLabel = new VisLabel("无顶点");
-			pointListLabel.setAlignment(com.badlogic.gdx.utils.Align.topLeft);
-			
-			VisScrollPane scrollPane = new VisScrollPane(pointListLabel);
+			pointList = new VisList<>();
+			pointList.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					PointItem item = pointList.getSelected();
+					if (item != null) {
+						// 列表选中时，更新 InputHandler 中的选中状态，以便高亮
+						// 由于 InputHandler 的 selectedPointIndex 是私有的，
+						// 且 InputHandler 主要用于处理 touch 输入
+						// 我们可以直接通过 screen.capeState 获取点，然后在 drawMeshDebug 中高亮
+						// 或者添加一个 highlightPoint 到 UIController，让 drawMeshDebug 读取
+						// 这里简单点，我们添加一个 public 字段到 UIController
+					}
+				}
+			});
+
+			VisScrollPane scrollPane = new VisScrollPane(pointList);
 			scrollPane.setFadeScrollBars(false);
-			scrollPane.setScrollingDisabled(true, false); // 仅允许垂直滚动
+			scrollPane.setScrollingDisabled(true, false);
 			panel.add(scrollPane).colspan(2).height(300).expandX().fillX().row();
 
 			// 操作说明
@@ -520,30 +570,34 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 
 		public void update() {
-			// 更新顶点列表显示
-			int hullSize = screen.capeState.hullPoints.size;
-			int interiorSize = screen.capeState.interiorPoints.size;
+			listItems.clear();
 			
-			if (hullSize + interiorSize > 0) {
-				float baseX = 100 + screen.capeState.offset.x;
-				float baseY = 100 + screen.capeState.offset.y;
-				
-				StringBuilder sb = new StringBuilder();
-				sb.append("[轮廓点 - 蓝色]\n");
-				for (int i = 0; i < hullSize; i++) {
-					Vector2 p = screen.capeState.hullPoints.get(i);
-					sb.append(String.format("%d: (%.0f, %.0f)\n", i, p.x, p.y));
-				}
-				
-				sb.append("\n[内部点 - 黄色]\n");
-				for (int i = 0; i < interiorSize; i++) {
-					Vector2 p = screen.capeState.interiorPoints.get(i);
-					sb.append(String.format("%d: (%.0f, %.0f)\n", i, p.x, p.y));
-				}
-				pointListLabel.setText(sb.toString());
-			} else {
-				pointListLabel.setText("无顶点");
+			float w = screen.capeState.capeRegion.getRegionWidth();
+			float h = screen.capeState.capeRegion.getRegionHeight();
+			
+			int hullSize = screen.capeState.hullPoints.size;
+			for (int i = 0; i < hullSize; i++) {
+				Vector2 p = screen.capeState.hullPoints.get(i);
+				String text = String.format("[轮廓 %d] UV(%.2f, %.2f)", i, p.x / w, p.y / h);
+				listItems.add(new PointItem(true, i, text));
 			}
+			
+			int interiorSize = screen.capeState.interiorPoints.size;
+			for (int i = 0; i < interiorSize; i++) {
+				Vector2 p = screen.capeState.interiorPoints.get(i);
+				String text = String.format("[内部 %d] UV(%.2f, %.2f)", i, p.x / w, p.y / h);
+				listItems.add(new PointItem(false, i, text));
+			}
+			
+			if (listItems.size > 0) {
+				pointList.setItems(listItems);
+			} else {
+				pointList.setItems(new Array<PointItem>());
+			}
+		}
+		
+		public PointItem getHighlightedItem() {
+			return pointList.getSelected();
 		}
 	}
 }
