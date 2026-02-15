@@ -151,25 +151,85 @@ public class PolyBatchTestScreen extends GScreen {
 
 		public void updateAnimation(float delta) {
 			stateTime += delta;
-			// ... 这里放入你之前的正弦波权重计算逻辑
+			if (originalVertices == null) return;
+
+			for (int i = 0; i < originalVertices.length; i += 2) {
+				float oldX = originalVertices[i];
+				float oldY = originalVertices[i + 1];
+
+				// 越往右（X越大）的顶点，波动幅度越大，且有一定的相位延迟
+				float factor = oldX / 100f; // 假设披风宽度大概100
+				float wave = (float) Math.sin(stateTime * 5f + oldX * 0.05f) * 10f * factor;
+
+				animatedVertices[i] = oldX;
+				animatedVertices[i + 1] = oldY + wave;
+			}
+			// 关键：通知 polyRegion 顶点数据已更新
+			// PolygonRegion 内部引用的是数组地址，通常直接修改数组即可，
+			// 但某些版本可能需要重新 new PolygonRegion(capeRegion, animatedVertices, triangles);
 		}
 	}
 
 	// --- 输入处理器 ---
 	class EditorInputHandler extends InputAdapter {
+		private int selectedPointIndex = -1; // 当前选中的顶点索引
+		private Vector2 lastMousePos = new Vector2();
+
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 			float worldY = Gdx.graphics.getHeight() - screenY;
 			Vector2 click = new Vector2(screenX, worldY);
+			lastMousePos.set(click);
+
+			// 获取相对于披风左下角的局部坐标
+			Vector2 localClick = new Vector2(click).sub(100 + capeState.offset.x, 100 + capeState.offset.y);
 
 			if (currentMode == Mode.MESH) {
-				// 记录相对于披风起始点的局部坐标
-				capeState.points.add(click.sub(100 + capeState.offset.x, 100 + capeState.offset.y));
+				// 模式2：点击即添加点
+				capeState.points.add(localClick);
 				capeState.generateMesh();
+			}
+			else if (currentMode == Mode.STATIC_TEST) {
+				// 模式3：寻找最近的顶点进行拾取
+				selectedPointIndex = -1;
+				float minDst = 20f; // 拾取半径
+				for (int i = 0; i < capeState.points.size; i++) {
+					float dst = capeState.points.get(i).dst(localClick);
+					if (dst < minDst) {
+						minDst = dst;
+						selectedPointIndex = i;
+					}
+				}
 			}
 			return true;
 		}
-		// ... 此处还需实现 touchDragged 逻辑来处理模式1的整体偏移和模式3的顶点拖动
+
+		@Override
+		public boolean touchDragged(int screenX, int screenY, int pointer) {
+			float worldY = Gdx.graphics.getHeight() - screenY;
+			Vector2 currentMouse = new Vector2(screenX, worldY);
+			Vector2 delta = new Vector2(currentMouse).sub(lastMousePos);
+
+			if (currentMode == Mode.ALIGN) {
+				// 模式1：整体移动披风偏移
+				capeState.offset.add(delta);
+			}
+			else if (currentMode == Mode.STATIC_TEST && selectedPointIndex != -1) {
+				// 模式3：移动选中的顶点
+				Vector2 p = capeState.points.get(selectedPointIndex);
+				p.add(delta);
+				capeState.generateMesh(); // 顶点变了，必须重新生成网格数据
+			}
+
+			lastMousePos.set(currentMouse);
+			return true;
+		}
+
+		@Override
+		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+			selectedPointIndex = -1;
+			return true;
+		}
 	}
 
 	// --- UI 控制类 ---
