@@ -135,73 +135,54 @@ public class PolyBatchTestScreen extends GScreen {
 		float h = area.getHeight();
 
 		// 设置裁剪区域
-		Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
-		// calculateScissors 需要传入 Camera，这里使用 UI Camera
 		com.badlogic.gdx.math.Rectangle scissor = new com.badlogic.gdx.math.Rectangle();
 		com.badlogic.gdx.math.Rectangle clipBounds = new com.badlogic.gdx.math.Rectangle(x, y, w, h);
 		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.calculateScissors(uiStage.getCamera(), uiStage.getBatch().getTransformMatrix(), clipBounds, scissor);
-		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.pushScissors(scissor);
+		boolean isScissorsPushed = com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.pushScissors(scissor);
 
-		// 绘制内容
-		// 坐标系原点移到 gameArea 左下角 + 居中偏移
-		// 为了使渲染内容在 gameArea 中心，我们需要：
-		// CenterX = x + w/2
-		// CenterY = y + h/2
-		// 渲染偏移量 = capeState.offset
+		if (isScissorsPushed) {
+			Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 
-		// [修复] 渲染图像位置问题
-		// 之前可能因为 coordinate system 的理解偏差。
-		// UI Stage 的 (0,0) 通常在屏幕左下角。
-		// gameArea.localToStageCoordinates(0,0) 返回的是 gameArea 左下角在 Stage 中的位置。
-		// 所以 centerX, centerY 就是 gameArea 的几何中心。
-		// 我们的绘制逻辑 renderCapeByMode 是基于 (drawX, drawY) 进行绘制。
-		// 只要 drawX = centerX, drawY = centerY，那么披风的“锚点”就在中心。
-		// 披风纹理本身可能不是中心对齐的，这取决于纹理坐标和 Region 的使用方式。
-		// 但只要 drawX/Y 是中心，且 batch.draw 是以左下角为基准，那么我们需要减去纹理宽高的一半才能真正居中。
-		// 在 renderCapeByMode 里：
-		// float drawX = baseX + capeState.offset.x;
-		// float drawY = baseY + capeState.offset.y;
-		// 如果 baseX, baseY 是中心点，那么 drawX, drawY 也是中心点。
-		// 具体的 batch.draw(region, x, y) 是画在 x,y 的。
-		// 所以如果要居中，我们需要在 draw 时减去 w/2, h/2。
-		// 但目前的 renderCapeByMode 是直接 draw(region, drawX, drawY)。
-		// 这意味着 drawX, drawY 是纹理的左下角。
-		// 所以为了居中，baseX 应该等于 centerX - textureWidth/2。
+			// 绘制内容
+			// 坐标系原点移到 gameArea 左下角 + 居中偏移
+			// 为了使渲染内容在 gameArea 中心，我们需要：
+			// CenterX = x + w/2
+			// CenterY = y + h/2
+			// 渲染偏移量 = capeState.offset
 
-		float cw = capeState.capeRegion.getRegionWidth();
-		float ch = capeState.capeRegion.getRegionHeight();
+			// [修复] 渲染图像位置问题
+			// 之前可能因为 coordinate system 的理解偏差。
+			// UI Stage 的 (0,0) 通常在屏幕左下角。
+			// gameArea.localToStageCoordinates(0,0) 返回的是 gameArea 左下角在 Stage 中的位置。
+			// 所以 centerX, centerY 就是 gameArea 的几何中心。
+			float baseX = x + w / 2f;
+			float baseY = y + h / 2f;
 
-		float baseX = (x + w / 2f) - cw / 2f;
-		float baseY = (y + h / 2f) - ch / 2f;
+			// 为了解耦，我们最好在 InputHandler 里也动态获取 gameArea 的中心。
+			// 但 InputHandler 访问 UIController 比较容易。
+			uiController.renderBaseX = baseX;
+			uiController.renderBaseY = baseY;
 
-		// 更新 CapeState 的渲染基准点 (用于 InputHandler 计算鼠标点击)
-		// InputHandler 计算 localClick = worldPos - baseX - offset
-		// 所以这里的 baseX 必须和 InputHandler 里用的一致。
-		// 我们需要把这个计算好的基准点传给 UIController 或者直接存到 CapeState 里？
-		// 为了解耦，我们最好在 InputHandler 里也动态获取 gameArea 的中心。
-		// 但 InputHandler 访问 UIController 比较容易。
-		uiController.renderBaseX = baseX;
-		uiController.renderBaseY = baseY;
+			batch.setProjectionMatrix(uiStage.getCamera().combined);
+			polyBatch.setProjectionMatrix(uiStage.getCamera().combined);
+			
+			// 1. 绘制背景骑士
+			if (currentMode != Mode.MESH) {
+				batch.begin();
+				// 骑士稍微大一点，假设 100x100，也居中
+				// 既然披风是基于 baseX, baseY 画的，骑士也应该基于此相对位置画
+				// 假设骑士和披风的相对位置是固定的 (0,0)
+				batch.draw(capeState.knightRegion, baseX, baseY);
+				batch.end();
+			}
 
-		batch.setProjectionMatrix(uiStage.getCamera().combined);
-		polyBatch.setProjectionMatrix(uiStage.getCamera().combined);
-		
-		// 1. 绘制背景骑士
-		if (currentMode != Mode.MESH) {
-			batch.begin();
-			// 骑士稍微大一点，假设 100x100，也居中
-			// 既然披风是基于 baseX, baseY 画的，骑士也应该基于此相对位置画
-			// 假设骑士和披风的相对位置是固定的 (0,0)
-			batch.draw(capeState.knightRegion, baseX, baseY);
-			batch.end();
+			// 2. 绘制披风
+			renderCapeByMode(delta, baseX, baseY);
+
+			// 结束裁剪
+			com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.popScissors();
+			Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 		}
-
-		// 2. 绘制披风
-		renderCapeByMode(delta, baseX, baseY);
-
-		// 结束裁剪
-		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.popScissors();
-		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 	}
 
 	private void renderCapeByMode(float delta, float baseX, float baseY) {
@@ -265,20 +246,9 @@ public class PolyBatchTestScreen extends GScreen {
 
 		boolean isWeightMode = (currentMode == Mode.WEIGHT);
 
-		// 1. 绘制轮廓点 (蓝色)
+		// 1. 绘制轮廓连线 (先画线，避免遮挡点)
 		for(int i=0; i<capeState.hullPoints.size; i++) {
 			ControlPoint p = capeState.hullPoints.get(i);
-
-			if (isWeightMode) {
-				drawWeightPoint(p, ox, oy);
-			} else {
-				// 加粗轮廓点
-				neonBatch.drawCircle(p.position.x + ox, p.position.y + oy, 5, 2, Color.BLUE, 16, false);
-				// 中心点实心
-				neonBatch.drawCircle(p.position.x + ox, p.position.y + oy, 2, 0, Color.BLUE, 8, true);
-			}
-
-			// 绘制轮廓连线
 			if (i > 0) {
 				ControlPoint prev = capeState.hullPoints.get(i-1);
 				neonBatch.drawLine(prev.position.x+ox, prev.position.y+oy, p.position.x+ox, p.position.y+oy, 3, Color.BLUE);
@@ -291,7 +261,21 @@ public class PolyBatchTestScreen extends GScreen {
 			neonBatch.drawLine(last.position.x+ox, last.position.y+oy, first.position.x+ox, first.position.y+oy, 3, Color.BLUE);
 		}
 
-		// 2. 绘制内部点 (黄色)
+		// 2. 绘制轮廓点 (蓝色)
+		for(int i=0; i<capeState.hullPoints.size; i++) {
+			ControlPoint p = capeState.hullPoints.get(i);
+
+			if (isWeightMode) {
+				drawWeightPoint(p, ox, oy);
+			} else {
+				// 加粗轮廓点
+				neonBatch.drawCircle(p.position.x + ox, p.position.y + oy, 5, 2, Color.BLUE, 16, false);
+				// 中心点实心
+				neonBatch.drawCircle(p.position.x + ox, p.position.y + oy, 2, 0, Color.BLUE, 8, true);
+			}
+		}
+
+		// 3. 绘制内部点 (黄色)
 		for(ControlPoint p : capeState.interiorPoints) {
 			if (isWeightMode) {
 				drawWeightPoint(p, ox, oy);
@@ -373,7 +357,8 @@ public class PolyBatchTestScreen extends GScreen {
 	static class CapeState {
 		public TextureRegion knightRegion, capeRegion;
 		public Vector2 offset = new Vector2(0, 0);
-		public boolean dirty = true; // 数据变更标记
+		public boolean dirty = true; // 结构变更标记 (增删点)
+		public boolean weightChanged = false; // 权重变更标记 (刷权重)
 
 		// 1. 数据结构拆分
 		public Array<ControlPoint> hullPoints = new Array<>(); // 轮廓点 (有序)
@@ -496,7 +481,7 @@ public class PolyBatchTestScreen extends GScreen {
 				Gdx.app.error("CapeState", "Failed to write json", e);
 			}
 			
-			return stringWriter.toString();
+			return new com.badlogic.gdx.utils.Json().prettyPrint(stringWriter.toString());
 		}
 
 		private Array<Object> serializePoints(Array<ControlPoint> points) {
@@ -782,12 +767,9 @@ public class PolyBatchTestScreen extends GScreen {
 			for (ControlPoint p : capeState.hullPoints) updatePointWeight(p, localPos, radius, target, strength);
 			for (ControlPoint p : capeState.interiorPoints) updatePointWeight(p, localPos, radius, target, strength);
 
-			// 触发 UI 列表刷新 (可选，可能会有点卡)
-			// 为了流畅度，这里不全量刷新列表，只在松手或点击时刷新？
-			// 或者，列表显示只在 update() 里做
-			if (uiController.highlightedItem != null) {
-				// 强制刷新一下选中的项的信息?
-				// 暂时留空
+			// 标记权重变更，以便 UIController 刷新显示
+			if (uiController.brushStrength > 0) { // 只有确实刷了才标记? 简单点总是标记吧
+				capeState.weightChanged = true;
 			}
 		}
 
@@ -822,6 +804,9 @@ public class PolyBatchTestScreen extends GScreen {
 
 		// 当前高亮的点信息
 		private PointItem highlightedItem = null;
+		
+		// 缓存 ControlPoint 到 UI 组件的映射，用于快速更新文本
+		private com.badlogic.gdx.utils.ObjectMap<ControlPoint, VisTextButton> pointWidgetMap = new com.badlogic.gdx.utils.ObjectMap<>();
 
 		public UIController(Stage stage, final PolyBatchTestScreen screen) {
 			this.screen = screen;
@@ -1028,10 +1013,19 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 
 		public void update() {
-			if (!screen.capeState.dirty) return;
-			screen.capeState.dirty = false;
+			if (screen.capeState.dirty) {
+				rebuildPointList();
+				screen.capeState.dirty = false;
+				screen.capeState.weightChanged = false;
+			} else if (screen.capeState.weightChanged) {
+				refreshPointWeights();
+				screen.capeState.weightChanged = false;
+			}
+		}
 
+		private void rebuildPointList() {
 			pointListTable.clear();
+			pointWidgetMap.clear();
 
 			float w = screen.capeState.capeRegion.getRegionWidth();
 			float h = screen.capeState.capeRegion.getRegionHeight();
@@ -1042,7 +1036,9 @@ public class PolyBatchTestScreen extends GScreen {
 				for (int i = 0; i < screen.capeState.hullPoints.size; i++) {
 					ControlPoint p = screen.capeState.hullPoints.get(i);
 					String text = String.format("%d: UV(%.2f, %.2f) W:%.2f", i, p.position.x / w, p.position.y / h, p.weight);
-					pointListTable.add(createPointItemWidget(true, i, text)).expandX().fillX().row();
+					VisTextButton btn = createPointItemWidget(true, i, text);
+					pointWidgetMap.put(p, btn);
+					pointListTable.add(btn).expandX().fillX().row();
 				}
 			}
 
@@ -1052,12 +1048,37 @@ public class PolyBatchTestScreen extends GScreen {
 				for (int i = 0; i < screen.capeState.interiorPoints.size; i++) {
 					ControlPoint p = screen.capeState.interiorPoints.get(i);
 					String text = String.format("%d: UV(%.2f, %.2f) W:%.2f", i, p.position.x / w, p.position.y / h, p.weight);
-					pointListTable.add(createPointItemWidget(false, i, text)).expandX().fillX().row();
+					VisTextButton btn = createPointItemWidget(false, i, text);
+					pointWidgetMap.put(p, btn);
+					pointListTable.add(btn).expandX().fillX().row();
 				}
 			}
 
 			if (screen.capeState.hullPoints.size == 0 && screen.capeState.interiorPoints.size == 0) {
 				pointListTable.add(new VisLabel("无顶点")).left().row();
+			}
+		}
+
+		private void refreshPointWeights() {
+			float w = screen.capeState.capeRegion.getRegionWidth();
+			float h = screen.capeState.capeRegion.getRegionHeight();
+
+			// 重新遍历以获取 index 并更新文本
+			for (int i = 0; i < screen.capeState.hullPoints.size; i++) {
+				ControlPoint p = screen.capeState.hullPoints.get(i);
+				VisTextButton btn = pointWidgetMap.get(p);
+				if (btn != null) {
+					String text = String.format("%d: UV(%.2f, %.2f) W:%.2f", i, p.position.x / w, p.position.y / h, p.weight);
+					btn.setText(text);
+				}
+			}
+			for (int i = 0; i < screen.capeState.interiorPoints.size; i++) {
+				ControlPoint p = screen.capeState.interiorPoints.get(i);
+				VisTextButton btn = pointWidgetMap.get(p);
+				if (btn != null) {
+					String text = String.format("%d: UV(%.2f, %.2f) W:%.2f", i, p.position.x / w, p.position.y / h, p.weight);
+					btn.setText(text);
+				}
 			}
 		}
 
@@ -1088,7 +1109,7 @@ public class PolyBatchTestScreen extends GScreen {
 			}
 		}
 
-		private Actor createPointItemWidget(boolean isHull, int index, String text) {
+		private VisTextButton createPointItemWidget(boolean isHull, int index, String text) {
 			VisTextButton btn = new VisTextButton(text, "toggle");
 			btn.getLabel().setAlignment(com.badlogic.gdx.utils.Align.left);
 
