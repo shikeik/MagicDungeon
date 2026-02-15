@@ -229,6 +229,15 @@ public class PolyBatchTestScreen extends GScreen {
 		public float[] originalVertices, animatedVertices;
 		public PolygonRegion polyRegion;
 		public float stateTime = 0;
+		
+		// 动态波动参数
+		public float windStrength = -15f;
+		public float bigWaveFreq = 2f;
+		public float bigWavePhase = 0.02f;
+		public float bigWaveAmp = 20f;
+		public float smallWaveFreq = 8f;
+		public float smallWavePhase = 0.1f;
+		public float smallWaveAmp = 4f;
 
 		public void initTextures(String kPath, String cPath) {
 			knightRegion = new TextureRegion(new Texture(kPath));
@@ -319,15 +328,15 @@ public class PolyBatchTestScreen extends GScreen {
 				// 模拟风从右边吹向左边 -> 整体向左偏 (windBias) + 波浪 (wave)
 				
 				// A. 基础持续风力 (让披风整体往左飘，不仅仅是摆动)
-				float baseWind = -15f * factor;
+				float baseWind = windStrength * factor;
 				
 				// B. 大摆动 (低频、大幅度、相位差小) -> 模拟风的主体方向变化
 				// 频率 2f，相位差 0.02f (波长长)，幅度 20f
-				float bigWave = (float) Math.sin(stateTime * 2f - oldY * 0.02f) * 20f * factor;
+				float bigWave = (float) Math.sin(stateTime * bigWaveFreq - oldY * bigWavePhase) * bigWaveAmp * factor;
 				
 				// C. 小摆动 (高频、小幅度、相位差大) -> 模拟布料褶皱和湍流
 				// 频率 8f，相位差 0.1f (波长短)，幅度 4f
-				float smallRipple = (float) Math.sin(stateTime * 8f - oldY * 0.1f) * 4f * factor;
+				float smallRipple = (float) Math.sin(stateTime * smallWaveFreq - oldY * smallWavePhase) * smallWaveAmp * factor;
 				
 				// 叠加所有效果
 				// 注意：bigWave 的正值可能会抵消 baseWind，导致披风偶尔回到右边，
@@ -560,23 +569,91 @@ public class PolyBatchTestScreen extends GScreen {
 			gameArea.setTouchable(Touchable.enabled);
 
 			// 使用 VisSplitPane 实现左右分栏
-			VisSplitPane splitPane = new VisSplitPane(gameArea, panel, false);
+			// 布局结构：[游戏区] | [参数面板] | [控制面板]
+			// 为了实现三栏，我们需要嵌套 SplitPane
+			// SplitPane1 = [参数面板] | [控制面板]
+			// SplitPane2 = [游戏区] | [SplitPane1]
 			
-			// 计算初始分割比例 (让面板恰好展示完整)
+			// 1. 参数面板 (左边那个侧边栏)
+			VisTable paramPanel = createParamPanel();
+			
+			// 2. 右侧组合栏 (参数 + 控制)
+			VisSplitPane rightSideSplit = new VisSplitPane(paramPanel, panel, false);
+			rightSideSplit.setSplitAmount(0.5f); // 均分
+			rightSideSplit.setMinSplitAmount(0.1f);
+			rightSideSplit.setMaxSplitAmount(0.9f);
+
+			// 3. 主布局 (游戏区 + 右侧组合栏)
+			VisSplitPane mainSplit = new VisSplitPane(gameArea, rightSideSplit, false);
+			
+			// 计算初始分割比例
 			float totalWidth = stage.getWidth();
-			float panelPrefWidth = panel.getPrefWidth() + 20; // 稍微多给一点余量
-			float split = 0.75f; // 默认值
+			float rightSidePrefWidth = panel.getPrefWidth() * 2 + 40; // 估算宽度
+			float split = 0.6f; 
 			if (totalWidth > 0) {
-				split = (totalWidth - panelPrefWidth) / totalWidth;
-				// 限制范围，避免面板太宽或太窄
+				split = (totalWidth - rightSidePrefWidth) / totalWidth;
 				split = Math.max(0.2f, Math.min(0.85f, split));
 			}
-			splitPane.setSplitAmount(split);
-			splitPane.setMinSplitAmount(0.1f);
-			splitPane.setMaxSplitAmount(0.9f);
+			mainSplit.setSplitAmount(split);
+			mainSplit.setMinSplitAmount(0.1f);
+			mainSplit.setMaxSplitAmount(0.9f);
 
-			root.add(splitPane).fill().expand();
+			root.add(mainSplit).fill().expand();
 			stage.addActor(root);
+		}
+		
+		private VisTable createParamPanel() {
+			VisTable table = new VisTable(true);
+			table.setBackground("window");
+			table.add(new VisLabel("波动参数调节")).pad(10).row();
+			
+			VisScrollPane scrollPane = new VisScrollPane(createSlidersContent());
+			scrollPane.setFadeScrollBars(false);
+			scrollPane.setScrollingDisabled(true, false);
+			
+			table.add(scrollPane).expand().fill().row();
+			return table;
+		}
+		
+		private VisTable createSlidersContent() {
+			VisTable t = new VisTable();
+			t.defaults().left().expandX().fillX().pad(2);
+			
+			addSlider(t, "基础风力", -50, 50, screen.capeState.windStrength, v -> screen.capeState.windStrength = v);
+			
+			t.add(new VisLabel("--- 大波浪 (主体) ---")).padTop(10).row();
+			addSlider(t, "频率 (速度)", 0, 10, screen.capeState.bigWaveFreq, v -> screen.capeState.bigWaveFreq = v);
+			addSlider(t, "幅度 (摆幅)", 0, 50, screen.capeState.bigWaveAmp, v -> screen.capeState.bigWaveAmp = v);
+			addSlider(t, "相位 (波长)", 0, 0.2f, screen.capeState.bigWavePhase, v -> screen.capeState.bigWavePhase = v);
+			
+			t.add(new VisLabel("--- 小颤动 (细节) ---")).padTop(10).row();
+			addSlider(t, "频率 (速度)", 0, 20, screen.capeState.smallWaveFreq, v -> screen.capeState.smallWaveFreq = v);
+			addSlider(t, "幅度 (摆幅)", 0, 20, screen.capeState.smallWaveAmp, v -> screen.capeState.smallWaveAmp = v);
+			addSlider(t, "相位 (波长)", 0, 0.5f, screen.capeState.smallWavePhase, v -> screen.capeState.smallWavePhase = v);
+			
+			return t;
+		}
+		
+		private void addSlider(VisTable t, String label, float min, float max, float def, java.util.function.Consumer<Float> onChange) {
+			t.add(new VisLabel(label)).row();
+			VisSlider slider = new VisSlider(min, max, (max-min)/100f, false);
+			slider.setValue(def);
+			
+			final VisLabel valLabel = new VisLabel(String.format("%.2f", def));
+			
+			slider.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					float v = slider.getValue();
+					valLabel.setText(String.format("%.2f", v));
+					onChange.accept(v);
+				}
+			});
+			
+			VisTable row = new VisTable();
+			row.add(slider).expandX().fillX();
+			row.add(valLabel).width(40).padLeft(5);
+			t.add(row).row();
 		}
 
 		public void update() {
