@@ -3,11 +3,9 @@ package com.goldsprite.magicdungeon.core;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
-import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.magicdungeon.AppConstants;
-import com.goldsprite.magicdungeon.BuildConfig;
 
 public class SettingsManager {
     private static final String SETTINGS_FILE = "settings.json";

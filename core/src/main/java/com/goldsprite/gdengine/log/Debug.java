@@ -6,7 +6,6 @@ import com.badlogic.gdx.utils.Logger;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.magicdungeon.AppConstants;
 import com.goldsprite.magicdungeon.BuildConfig;
 
 import java.time.LocalTime;

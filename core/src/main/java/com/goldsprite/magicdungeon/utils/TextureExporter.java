@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.magicdungeon.AppConstants;
-import com.goldsprite.magicdungeon.BuildConfig;
 
 public class TextureExporter {
 
