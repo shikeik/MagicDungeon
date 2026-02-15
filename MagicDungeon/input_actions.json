@@ -28,7 +28,7 @@
 	"controller": [ "R3", "RB" ]
 },
 "BACK": {
-	"keyboard": [ "Escape", "Delete", "B Button" ],
+	"keyboard": [ "Escape", "Delete", "B Button", "Back" ],
 	"controller": [ "B" ]
 },
 "MAP": {
@@ -81,6 +81,6 @@
 	"controller": [ "A" ]
 },
 "UI_CANCEL": {
-	"keyboard": [ "Escape", "Delete", "B Button" ]
+	"keyboard": [ "Escape", "Delete", "B Button", "Back" ]
 }
 }
