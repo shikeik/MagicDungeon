@@ -315,16 +315,26 @@ public class PolyBatchTestScreen extends GScreen {
 				float factor = 1.0f - (oldY / h);
 				if (factor < 0) factor = 0; 
 				
-				// 2. 披风摆动：横向摆动 (修改 X)
-				// 模拟风从右边吹向左边 -> 整体可能偏左(负向偏移)，且有波浪
-				// 波浪随时间变化，且随 Y 轴有相位差 (产生传递感)
-				// 这里的相位 oldY * 0.1f 决定了波浪沿披风上下传递的视觉效果
-				float wave = (float) Math.sin(stateTime * 4f - oldY * 0.08f) * 15f * factor;
+				// 2. 披风摆动：大风摆动 + 细节颤动 (修改 X)
+				// 模拟风从右边吹向左边 -> 整体向左偏 (windBias) + 波浪 (wave)
 				
-				// 额外的风力偏移 (持续向左的风力)
-				float windBias = -10f * factor; 
+				// A. 基础持续风力 (让披风整体往左飘，不仅仅是摆动)
+				float baseWind = -15f * factor;
+				
+				// B. 大摆动 (低频、大幅度、相位差小) -> 模拟风的主体方向变化
+				// 频率 2f，相位差 0.02f (波长长)，幅度 20f
+				float bigWave = (float) Math.sin(stateTime * 2f - oldY * 0.02f) * 20f * factor;
+				
+				// C. 小摆动 (高频、小幅度、相位差大) -> 模拟布料褶皱和湍流
+				// 频率 8f，相位差 0.1f (波长短)，幅度 4f
+				float smallRipple = (float) Math.sin(stateTime * 8f - oldY * 0.1f) * 4f * factor;
+				
+				// 叠加所有效果
+				// 注意：bigWave 的正值可能会抵消 baseWind，导致披风偶尔回到右边，
+				// 如果希望一直吹向左边，可以调整 baseWind 的大小大于 bigWave 的幅度。
+				float finalOffset = baseWind + bigWave + smallRipple;
 
-				animatedVertices[i] = oldX + wave + windBias;
+				animatedVertices[i] = oldX + finalOffset;
 				animatedVertices[i + 1] = oldY; // Y 轴保持稳定
 			}
 			// 关键：通知 polyRegion 顶点数据已更新
