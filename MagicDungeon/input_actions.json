@@ -1,0 +1,86 @@
+{
+"MOVE_UP": {
+	"keyboard": [ "W", "Up" ],
+	"controller": [ "DPAD_UP", "AXIS_L_UP" ]
+},
+"MOVE_DOWN": {
+	"keyboard": [ "S", "Down" ],
+	"controller": [ "DPAD_DOWN", "AXIS_L_DOWN" ]
+},
+"MOVE_LEFT": {
+	"keyboard": [ "A", "Left" ],
+	"controller": [ "DPAD_LEFT", "AXIS_L_LEFT" ]
+},
+"MOVE_RIGHT": {
+	"keyboard": [ "D", "Right" ],
+	"controller": [ "DPAD_RIGHT", "AXIS_L_RIGHT" ]
+},
+"ATTACK": {
+	"keyboard": [ "J", "X", "X Button" ],
+	"controller": [ "X" ]
+},
+"INTERACT": {
+	"keyboard": [ "Space", "A Button" ],
+	"controller": [ "A" ]
+},
+"SKILL": {
+	"keyboard": [ "H", "R2 Button" ],
+	"controller": [ "R3", "RB" ]
+},
+"BACK": {
+	"keyboard": [ "Escape", "Delete", "B Button" ],
+	"controller": [ "B" ]
+},
+"MAP": {
+	"keyboard": [ "M", "Y Button" ],
+	"controller": [ "Y" ]
+},
+"BAG": {
+	"keyboard": [ "E", "R1 Button" ],
+	"controller": [ "RB" ]
+},
+"PAUSE": {
+	"keyboard": [ "P", "Start" ],
+	"controller": [ "START" ]
+},
+"TAB": {
+	"keyboard": [ "Tab", "L2 Button" ],
+	"controller": [ "L3" ]
+},
+"QUICK_SLOT": {
+	"keyboard": [ "Q", "L1 Button" ],
+	"controller": [ "LB", "LB" ]
+},
+"SAVE": {
+	"keyboard": [ "F5" ]
+},
+"LOAD_GAME": {
+	"keyboard": [ "F9" ]
+},
+"RESET_MAP": {
+	"keyboard": [ "R" ]
+},
+"UI_UP": {
+	"keyboard": [ "W", "Up" ],
+	"controller": [ "DPAD_UP", "AXIS_L_UP" ]
+},
+"UI_DOWN": {
+	"keyboard": [ "S", "Down" ],
+	"controller": [ "DPAD_DOWN", "AXIS_L_DOWN" ]
+},
+"UI_LEFT": {
+	"keyboard": [ "A", "Left" ],
+	"controller": [ "DPAD_LEFT", "AXIS_L_LEFT" ]
+},
+"UI_RIGHT": {
+	"keyboard": [ "D", "Right" ],
+	"controller": [ "DPAD_RIGHT", "AXIS_L_RIGHT" ]
+},
+"UI_CONFIRM": {
+	"keyboard": [ "Enter", "Space", "J", "A Button" ],
+	"controller": [ "A" ]
+},
+"UI_CANCEL": {
+	"keyboard": [ "Escape", "Delete", "B Button" ]
+}
+}

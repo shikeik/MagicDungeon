@@ -1,0 +1,331 @@
+diff --git a/examples/src/main/java/com/goldsprite/magicdungeon/screens/tests/PolyBatchTestScreen.java b/examples/src/main/java/com/goldsprite/magicdungeon/screens/tests/PolyBatchTestScreen.java
+index 00426a5..a87e7be 100644
+--- a/examples/src/main/java/com/goldsprite/magicdungeon/screens/tests/PolyBatchTestScreen.java
++++ b/examples/src/main/java/com/goldsprite/magicdungeon/screens/tests/PolyBatchTestScreen.java
+@@ -1,179 +1,194 @@
+ package com.goldsprite.magicdungeon.screens.tests;
+ 
+-import com.badlogic.gdx.ApplicationAdapter;
+ import com.badlogic.gdx.Gdx;
+ import com.badlogic.gdx.InputAdapter;
++import com.badlogic.gdx.InputMultiplexer;
+ import com.badlogic.gdx.graphics.Color;
+ import com.badlogic.gdx.graphics.GL20;
+ import com.badlogic.gdx.graphics.Texture;
+-import com.badlogic.gdx.graphics.g2d.PolygonRegion;
+-import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
+-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+-import com.badlogic.gdx.graphics.g2d.TextureRegion;
++import com.badlogic.gdx.graphics.g2d.*;
+ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+ import com.badlogic.gdx.math.DelaunayTriangulator;
+ import com.badlogic.gdx.math.Vector2;
++import com.badlogic.gdx.scenes.scene2d.Stage;
+ import com.badlogic.gdx.utils.Array;
+ import com.badlogic.gdx.utils.FloatArray;
+ import com.goldsprite.gdengine.screens.GScreen;
+-import com.goldsprite.gdengine.log.Debug;
++import com.kotcrab.vis.ui.VisUI;
++import com.kotcrab.vis.ui.widget.*;
+ 
+ public class PolyBatchTestScreen extends GScreen {
+-	// 渲染工具
+-	private SpriteBatch spriteBatch;
++	// 渲染
++	private SpriteBatch batch;
+ 	private PolygonSpriteBatch polyBatch;
+-	private ShapeRenderer shapeRenderer;
++	private ShapeRenderer shapes;
+ 
+-	// 素材
+-	private Texture knightTex, capeTex;
+-	private TextureRegion knightRegion, capeRegion;
+-	private PolygonRegion polyRegion;
++	// 状态与数据
++	public enum Mode { ALIGN, MESH, STATIC_TEST, DYNAMIC_WAVE }
++	private Mode currentMode = Mode.ALIGN;
++	private CapeState capeState = new CapeState();
+ 
+-	// 交互数据
+-	private Array<Vector2> contourPoints = new Array<>();
+-	private Array<Vector2> internalPoints = new Array<>();
+-	private boolean isContourFinished = false;
++	// UI
++	private Stage uiStage;
++	private UIController uiController;
+ 
+-	// 动态网格数据
+-	private float[] originalVertices; // 原始UV对应的位置
+-	private float[] animatedVertices; // 实时计算的位置
+-	private short[] triangles;
+-	private float stateTime = 0;
+-
+-	// 调节参数 (对应UI区域)
+-	private float amplitude = 20f; // 摆动幅度
+-	private float frequency = 5f; // 频率
+-	private float waveSpeed = 3f; // 波速
++	@Override protected void initViewport() {
++		autoCenterWorldCamera = true;
++		super.initViewport();
++	}
+ 
+ 	@Override
+ 	public void create() {
+-		spriteBatch = new SpriteBatch();
+-		polyBatch = new PolygonSpriteBatch();
+-		shapeRenderer = new ShapeRenderer();
+-
+-		// 路径请确保正确：assets/packs/PolyBatchTest/
+-		knightTex = new Texture("packs/PolyBatchTest/Knight.png");
+-		capeTex = new Texture("packs/PolyBatchTest/Cape.png");
+-		knightRegion = new TextureRegion(knightTex);
+-		capeRegion = new TextureRegion(capeTex);
+-
+-		setupInput();
+-	}
+-
+-	private void setupInput() {
+-		Gdx.input.setInputProcessor(new InputAdapter() {
+-			@Override
+-			public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+-				float y = Gdx.graphics.getHeight() - screenY; // 坐标转换
+-				Vector2 p = new Vector2(screenX, y);
+-
+-				if (!isContourFinished) {
+-					contourPoints.add(p);
+-				} else {
+-					internalPoints.add(p);
+-					generateMesh(); // 每次点内部点都重新生成网格
+-				}
+-				return true;
+-			}
++		if(!VisUI.isLoaded()) VisUI.load();
+ 
+-			@Override
+-			public boolean keyDown(int keycode) {
+-				Debug.log("keycode: %s", keycode);
+-				if (!isContourFinished && contourPoints.size > 2) {
+-					isContourFinished = true; // 按任意键结束轮廓标注
+-					generateMesh();
+-				}
+-				return true;
+-			}
+-		});
+-	}
+-
+-	private void generateMesh() {
+-		// 1. 合并所有点
+-		FloatArray allPoints = new FloatArray();
+-		for (Vector2 v : contourPoints) {
+-			allPoints.addAll(v.x, v.y);
+-		}
+-		for (Vector2 v : internalPoints) {
+-			allPoints.addAll(v.x, v.y);
+-		}
++		batch = new SpriteBatch();
++		polyBatch = new PolygonSpriteBatch();
++		shapes = new ShapeRenderer();
++		uiStage = new Stage(getUIViewport());
+ 
+-		// 2. 三角剖分 (Delaunay 算法)
+-		DelaunayTriangulator triangulator = new DelaunayTriangulator();
+-		triangles = triangulator.computeTriangles(allPoints, false).toArray();
++		// 加载素材
++		capeState.initTextures("packs/PolyBatchTest/Knight.png", "packs/PolyBatchTest/Cape.png");
+ 
+-		// 3. 构建 PolygonRegion
+-		// 注意：这里的坐标需要转换为相对于贴图的 0-1 坐标或像素坐标
+-		originalVertices = allPoints.toArray();
+-		animatedVertices = new float[originalVertices.length];
++		// 初始化 UI
++		uiController = new UIController(uiStage, this);
+ 
+-		polyRegion = new PolygonRegion(capeRegion, originalVertices, triangles);
++		// 输入多路复用：先 UI，再场景
++		InputMultiplexer multiplexer = new InputMultiplexer(uiStage, new EditorInputHandler());
++		Gdx.input.setInputProcessor(multiplexer);
+ 	}
+ 
+ 	@Override
+ 	public void render(float delta) {
+-		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
++		Gdx.gl.glClearColor(0.15f, 0.15f, 0.15f, 1);
+ 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+-		stateTime += Gdx.graphics.getDeltaTime();
+-
+-		// --- 区域 1 & 3：绘制骑士和披风 ---
+-		spriteBatch.begin();
+-		spriteBatch.draw(knightRegion, 100, 100); // 绘制骑士
+-		spriteBatch.end();
+-
+-		if (polyRegion != null) {
+-			updateCapeAnimation();
+-			polyBatch.begin();
+-			// 直接传入更新后的顶点进行绘制
+-			polyBatch.draw(polyRegion, 0, 0);
+-			polyBatch.end();
++
++		// 1. 绘制背景骑士 (除网格标注模式外都要画)
++		if (currentMode != Mode.MESH) {
++			batch.begin();
++			batch.setProjectionMatrix(worldCamera.combined);
++			batch.draw(capeState.knightRegion, 100, 100);
++			batch.end();
+ 		}
+ 
+-		// --- 区域 2：绘制标注线和控制点 ---
+-		drawDebugInfo();
++		// 2. 根据模式渲染披风
++		renderCapeByMode(delta);
++
++		// 3. 绘制 UI
++		uiStage.act(delta);
++		uiStage.draw();
+ 	}
+ 
+-	private void updateCapeAnimation() {
+-		float minY = Float.MAX_VALUE;
+-		float maxY = Float.MIN_VALUE;
+-		for (int i = 1; i < originalVertices.length; i += 2) {
+-			minY = Math.min(minY, originalVertices[i]);
+-			maxY = Math.max(maxY, originalVertices[i]);
++	private void renderCapeByMode(float delta) {
++		switch (currentMode) {
++			case ALIGN:
++				batch.begin();
++				batch.draw(capeState.capeRegion, 100 + capeState.offset.x, 100 + capeState.offset.y);
++				batch.end();
++				break;
++			case MESH:
++				batch.begin();
++				batch.draw(capeState.capeRegion, 100 + capeState.offset.x, 100 + capeState.offset.y);
++				batch.end();
++				drawMeshDebug();
++				break;
++			case STATIC_TEST:
++			case DYNAMIC_WAVE:
++				if (capeState.polyRegion != null) {
++					if (currentMode == Mode.DYNAMIC_WAVE) capeState.updateAnimation(delta);
++					polyBatch.begin();
++					polyBatch.draw(capeState.polyRegion, 100 + capeState.offset.x, 100 + capeState.offset.y);
++					polyBatch.end();
++					drawMeshDebug();
++				}
++				break;
+ 		}
++	}
+ 
+-		float totalHeight = maxY - minY;
+-
+-		for (int i = 0; i < originalVertices.length; i += 2) {
+-			float x = originalVertices[i];
+-			float y = originalVertices[i + 1];
++	private void drawMeshDebug() {
++		shapes.begin(ShapeRenderer.ShapeType.Line);
++		shapes.setColor(Color.CYAN);
++
++		// 绘制三角形网格线
++		if (capeState.triangles != null) {
++			float[] v = capeState.animatedVertices;
++			float ox = 100 + capeState.offset.x;
++			float oy = 100 + capeState.offset.y;
++			for (int i = 0; i < capeState.triangles.length; i += 3) {
++				int i1 = capeState.triangles[i] * 2;
++				int i2 = capeState.triangles[i+1] * 2;
++				int i3 = capeState.triangles[i+2] * 2;
++				shapes.line(v[i1]+ox, v[i1+1]+oy, v[i2]+ox, v[i2+1]+oy);
++				shapes.line(v[i2]+ox, v[i2+1]+oy, v[i3]+ox, v[i3+1]+oy);
++				shapes.line(v[i3]+ox, v[i3+1]+oy, v[i1]+ox, v[i1+1]+oy);
++			}
++		}
++		shapes.end();
++	}
+ 
+-			// 渐进权重计算：顶部(maxY)权重为0，底部权重为1
+-			float weight = (maxY - y) / totalHeight;
++	// --- 内部数据类 ---
++	static class CapeState {
++		public TextureRegion knightRegion, capeRegion;
++		public Vector2 offset = new Vector2(0, 0);
++		public Array<Vector2> points = new Array<>();
++		public short[] triangles;
++		public float[] originalVertices, animatedVertices;
++		public PolygonRegion polyRegion;
++		public float stateTime = 0;
++
++		public void initTextures(String kPath, String cPath) {
++			knightRegion = new TextureRegion(new Texture(kPath));
++			capeRegion = new TextureRegion(new Texture(cPath));
++		}
+ 
+-			// X方向正弦波
+-			float offsetX = (float) Math.sin(stateTime * waveSpeed + y * 0.05f) * amplitude * weight;
++		public void generateMesh() {
++			FloatArray fa = new FloatArray();
++			for (Vector2 v : points) fa.addAll(v.x, v.y);
++			originalVertices = fa.toArray();
++			animatedVertices = fa.toArray();
++			triangles = new DelaunayTriangulator().computeTriangles(fa, false).toArray();
++			polyRegion = new PolygonRegion(capeRegion, animatedVertices, triangles);
++		}
+ 
+-			animatedVertices[i] = x + offsetX;
+-			animatedVertices[i + 1] = y;
++		public void updateAnimation(float delta) {
++			stateTime += delta;
++			// ... 这里放入你之前的正弦波权重计算逻辑
+ 		}
++	}
+ 
+-		// 将计算好的顶点存回 polyRegion 进行渲染
+-		System.arraycopy(animatedVertices, 0, polyRegion.getVertices(), 0, animatedVertices.length);
++	// --- 输入处理器 ---
++	class EditorInputHandler extends InputAdapter {
++		@Override
++		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
++			float worldY = Gdx.graphics.getHeight() - screenY;
++			Vector2 click = new Vector2(screenX, worldY);
++
++			if (currentMode == Mode.MESH) {
++				// 记录相对于披风起始点的局部坐标
++				capeState.points.add(click.sub(100 + capeState.offset.x, 100 + capeState.offset.y));
++				capeState.generateMesh();
++			}
++			return true;
++		}
++		// ... 此处还需实现 touchDragged 逻辑来处理模式1的整体偏移和模式3的顶点拖动
+ 	}
+ 
+-	private void drawDebugInfo() {
+-		shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+-		shapeRenderer.setColor(Color.CYAN);
+-		// 绘制轮廓
+-		for (int i = 0; i < contourPoints.size; i++) {
+-			Vector2 p1 = contourPoints.get(i);
+-			Vector2 p2 = contourPoints.get((i + 1) % contourPoints.size);
+-			shapeRenderer.line(p1, p2);
++	// --- UI 控制类 ---
++	static class UIController {
++		public UIController(Stage stage, final PolyBatchTestScreen screen) {
++			VisTable root = new VisTable();
++			root.top().left().setFillParent(true);
++
++			VisSelectBox<Mode> modeSelect = new VisSelectBox<>();
++			modeSelect.setItems(Mode.values());
++			modeSelect.addListener(event -> {
++				if (modeSelect.getSelected() != null) screen.currentMode = modeSelect.getSelected();
++				return true;
++			});
++
++			root.add(new VisLabel("模式切换: "));
++			root.add(modeSelect).row();
++			// ... 继续添加滑块 (Slider) 用于调节频率和幅度
++			stage.addActor(root);
+ 		}
+-		shapeRenderer.setColor(Color.YELLOW);
+-		for (Vector2 p : internalPoints)
+-			shapeRenderer.circle(p.x, p.y, 3);
+-		shapeRenderer.end();
+ 	}
+ }
+-

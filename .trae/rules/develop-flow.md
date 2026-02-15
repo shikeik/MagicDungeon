@@ -15,11 +15,13 @@ description: AI 自动开发流程 (简明版)
    - 全局构建: `./gradlew assemble` 确保编译通过。
 4. **版本提交 (Commit)**: 
    - 升级版本: `./gradlew bumpPatch` (修复) 或 `bumpMinor` (新功能)。
-   - 规范提交: `git commit -m "<type>: <summary>"` (精简描述，限 1-2 行)。
+   - 规范提交: 
+     1. 编辑 `commit_msg.txt` (格式: `<type>: <summary>` + 空行 + `<details>`)。
+     2. 运行: `git commit -F commit_msg.txt`。
 5. **清理交付 (Clean)**: 移除调试代码，更新文档，标记 TODO 完成。
 
 ## 2. 常用命令速查
 - **运行桌面版**: `./gradlew lwjgl3:run`
-- **运行安卓版**: `./gradlew android:installDebug` (安装后手动打开)
+- **运行安卓版**: (暂无)
 - **全局构建**: `./gradlew assemble` (全平台编译检查)
 - **清理构建**: `./gradlew clean`
