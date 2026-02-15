@@ -44,8 +44,8 @@ public class PolyBatchTestScreen extends GScreen {
 	private boolean showDebugInfo = true; // [修改] 控制所有调试信息的显隐
 
 	@Override protected void initViewport() {
-		autoCenterWorldCamera = true;
-		uiViewportScale = 2f;
+		// 移除 worldCamera 相关的设置，现在全部使用 UI viewport
+		// autoCenterWorldCamera = true;
 		super.initViewport();
 	}
 
@@ -56,19 +56,22 @@ public class PolyBatchTestScreen extends GScreen {
 		batch = new SpriteBatch();
 		polyBatch = new PolygonSpriteBatch();
 		shapes = new ShapeRenderer();
+		
+		// [重构] 移除独立的 worldCamera，统一使用 uiViewport
+		// UI Stage 默认使用 ScreenViewport，我们需要确保它能正确缩放
+		// 这里使用 GScreen 的 uiViewport，或者直接创建一个新的 FitViewport 给 Stage？
+		// 为了保持一致，我们使用 uiViewport
 		uiStage = new Stage(getUIViewport());
-
+		// 注意：GScreen.getUIViewport() 返回的是一个 ScreenViewport (通常)，
+		// 这里的需求是“UI 视口绘制”，即所有坐标基于 Stage 坐标系。
+		
 		// 加载素材
 		capeState.initTextures("packs/PolyBatchTest/Knight.png", "packs/PolyBatchTest/Cape.png");
-
+		
 		// 初始化 UI
 		uiController = new UIController(uiStage, this);
-
-		// 输入多路复用：先 UI，再场景
-		// InputMultiplexer multiplexer = new InputMultiplexer(uiStage, new EditorInputHandler());
-		// Gdx.input.setInputProcessor(multiplexer);
 		
-		// 使用基类 GScreen 的 imp (InputMultiplexer)
+		// 使用基类 GScreen 的 imp
 		imp.addProcessor(uiStage);
 		imp.addProcessor(new EditorInputHandler());
 	}
@@ -78,42 +81,91 @@ public class PolyBatchTestScreen extends GScreen {
 		Gdx.gl.glClearColor(0.15f, 0.15f, 0.15f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		// 1. 绘制背景骑士 (除网格标注模式外都要画)
-		if (currentMode != Mode.MESH) {
-			batch.setProjectionMatrix(worldCamera.combined);
-			batch.begin();
-			batch.draw(capeState.knightRegion, 100, 100);
-			batch.end();
-		}
-
-		// 2. 根据模式渲染披风
-		renderCapeByMode(delta);
-
-		// 3. 绘制 UI
-		uiController.update();
+		// 1. 在 gameArea 区域内绘制场景
+		// 由于我们要在 UI 布局中绘制，我们需要获取 gameArea 的位置和尺寸
+		// 并设置裁剪区域 (ScissorStack)
+		
 		uiStage.act(delta);
 		uiStage.draw();
+		
+		// [重构] 场景绘制移到 UI 绘制之后？不，应该是在 gameArea 内部绘制
+		// 或者我们在 render 中手动计算坐标。
+		// 为了简单起见，我们仍然在 render 中绘制，但坐标系变换为 UI 坐标系，并限制在 gameArea 区域。
+		
+		drawSceneInGameArea(delta);
+	}
+	
+	private void drawSceneInGameArea(float delta) {
+		Actor area = uiController.gameArea;
+		if (area == null) return;
+		
+		// 获取 gameArea 在屏幕上的坐标和尺寸
+		Vector2 pos = area.localToStageCoordinates(new Vector2(0, 0));
+		float x = pos.x;
+		float y = pos.y;
+		float w = area.getWidth();
+		float h = area.getHeight();
+		
+		// 设置裁剪区域
+		Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+		// calculateScissors 需要传入 Camera，这里使用 UI Camera
+		com.badlogic.gdx.math.Rectangle scissor = new com.badlogic.gdx.math.Rectangle();
+		com.badlogic.gdx.math.Rectangle clipBounds = new com.badlogic.gdx.math.Rectangle(x, y, w, h);
+		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.calculateScissors(uiStage.getCamera(), uiStage.getBatch().getTransformMatrix(), clipBounds, scissor);
+		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.pushScissors(scissor);
+		
+		// 绘制内容
+		// 坐标系原点移到 gameArea 左下角 + 居中偏移
+		// 假设我们希望 (0,0) 在 gameArea 中心？或者 (0,0) 就是 gameArea 左下角？
+		// 为了方便，我们将 (0,0) 设为 gameArea 左下角，并且应用平移和缩放
+		
+		// 使用 UI Camera 的矩阵，但需要平移
+		// 注意：polyBatch 和 batch 需要单独的 ProjectionMatrix
+		// uiStage.getCamera().combined 是基于整个屏幕的。
+		// 我们不需要修改 ProjectionMatrix，只需要在 draw 时加上偏移量即可。
+		// 或者，我们可以修改 ProjectionMatrix 来实现“子视口”效果。
+		
+		// 简单的做法：直接在 (x, y) 基础上绘制，加上 capeState.offset
+		// 比如骑士位置：x + w/2 - 50, y + h/2 - 50 (居中)
+		
+		float centerX = x + w / 2f;
+		float centerY = y + h / 2f;
+		
+		// 更新 CapeState 的渲染基准点 (用于 InputHandler 计算鼠标点击)
+		// uiController.renderBaseX = centerX;
+		// uiController.renderBaseY = centerY;
+
+		batch.setProjectionMatrix(uiStage.getCamera().combined);
+		polyBatch.setProjectionMatrix(uiStage.getCamera().combined);
+		shapes.setProjectionMatrix(uiStage.getCamera().combined);
+		
+		// 1. 绘制背景骑士
+		if (currentMode != Mode.MESH) {
+			batch.begin();
+			batch.draw(capeState.knightRegion, centerX - 50, centerY - 50); // 假设骑士大概 100x100
+			batch.end();
+		}
+		
+		// 2. 绘制披风
+		renderCapeByMode(delta, centerX, centerY);
+		
+		// 结束裁剪
+		com.badlogic.gdx.scenes.scene2d.utils.ScissorStack.popScissors();
+		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 	}
 
-	private void renderCapeByMode(float delta) {		
-		// 修正：offset 应理解为披风左下角的偏移量，而非中心点偏移
-		// 骑士绘制在 (100, 100)，披风如果也要在骑士背后，
-		// 它的左下角起始点应该是 (100 + offset.x, 100 + offset.y)
-		// 之前的 drawX = cx - w/2 导致披风被居中到了 (100, 100)，所以偏左下了
-		
-		float drawX = 100 + capeState.offset.x;
-		float drawY = 100 + capeState.offset.y;
+	private void renderCapeByMode(float delta, float baseX, float baseY) {		
+		float drawX = baseX + capeState.offset.x;
+		float drawY = baseY + capeState.offset.y;
 
 		switch (currentMode) {
 			case ALIGN:
-				batch.setProjectionMatrix(worldCamera.combined);
 				batch.begin();
 				batch.draw(capeState.capeRegion, drawX, drawY);
 				batch.end();
 				drawMeshDebug(drawX, drawY);
 				break;
 			case MESH:
-				batch.setProjectionMatrix(worldCamera.combined);
 				batch.begin();
 				batch.draw(capeState.capeRegion, drawX, drawY);
 				batch.end();
@@ -123,20 +175,19 @@ public class PolyBatchTestScreen extends GScreen {
 			case DYNAMIC_WAVE:
 				if (capeState.polyRegion != null) {
 					if (currentMode == Mode.DYNAMIC_WAVE) capeState.updateAnimation(delta);
-					polyBatch.setProjectionMatrix(worldCamera.combined);
 					polyBatch.begin();
 					polyBatch.draw(capeState.polyRegion, drawX, drawY);
 					polyBatch.end();
-					drawMeshDebug(drawX, drawY);
+				drawMeshDebug(drawX, drawY);
 				}
 				break;
 		}
 	}
-
+	
 	private void drawMeshDebug(float ox, float oy) {
 		if (!showDebugInfo) return; // [修改] 只有开启调试才绘制任何线框/点
 		
-		shapes.setProjectionMatrix(worldCamera.combined);
+		shapes.setProjectionMatrix(uiStage.getCamera().combined);
 		
 		// 1. 绘制纹理边框 (红色矩形)
 		shapes.begin(ShapeRenderer.ShapeType.Line);
@@ -250,6 +301,23 @@ public class PolyBatchTestScreen extends GScreen {
 		public float smallWaveFreq = 8f;
 		public float smallWavePhase = 0.1f;
 		public float smallWaveAmp = 4f;
+		
+		// 传导幅度 (从上到下的放大倍率)
+		public float transmissionAmp = 1f; // 默认倍率 (比如底部幅度是顶部的10倍？或者只是一个线性系数)
+		// 之前的代码逻辑是: factor = 1.0 - (oldY / h); 
+		// factor 范围是 0 (顶) -> 1 (底)
+		// 然后 wave = ... * factor;
+		// 如果我们要引入 transmissionAmp，可能是想控制 factor 的曲线，或者底部的最大增益。
+		// 假设 transmissionAmp 控制的是底部的最大系数。
+		// 但之前的 factor 已经是 0-1 的归一化值了，waveAmp 才是实际的幅度。
+		// 用户的意思是 "决定从上往下从0到10倍还是多少倍"
+		// 这听起来像是控制 factor 的增长斜率，或者底部的最终倍率。
+		// 让我们把 factor 改为: factor = (1.0 - (oldY / h)) * transmissionAmp;
+		// 或者保留 0-1 的 factor，但引入一个 power 指数来控制非线性？
+		// “从0到10倍” -> 这意味着底部的幅度是某个基准值的10倍。
+		// 我们现在的 waveAmp 就是那个基准值。
+		// 也许用户希望 transmissionAmp 作为一个独立的滑块，来整体缩放“随高度变化的增益”。
+		// 让我们添加这个参数，并在 updateAnimation 中使用它。
 
 		public void initTextures(String kPath, String cPath) {
 			knightRegion = new TextureRegion(new Texture(kPath));
@@ -287,6 +355,7 @@ public class PolyBatchTestScreen extends GScreen {
 			smallWaveFreq = root.getFloat("smallWaveFreq", 8f);
 			smallWavePhase = root.getFloat("smallWavePhase", 0.1f);
 			smallWaveAmp = root.getFloat("smallWaveAmp", 4f);
+			transmissionAmp = root.getFloat("transmissionAmp", 1f); // 默认 1
 			
 			generateMesh();
 		}
@@ -308,6 +377,7 @@ public class PolyBatchTestScreen extends GScreen {
 			map.put("smallWaveFreq", smallWaveFreq);
 			map.put("smallWavePhase", smallWavePhase);
 			map.put("smallWaveAmp", smallWaveAmp);
+			map.put("transmissionAmp", transmissionAmp);
 			
 			return json.prettyPrint(map);
 		}
@@ -396,6 +466,15 @@ public class PolyBatchTestScreen extends GScreen {
 				// 1. 权重计算
 				float factor = 1.0f - (oldY / h);
 				if (factor < 0) factor = 0; 
+				
+				// 应用传导幅度 (Transmission Amp)
+				// 这里的 transmissionAmp 就是底部的最大放大倍率
+				// 假设原本 factor 是 0-1，现在 factor 变为 0 - transmissionAmp
+				// 但为了不改变现有的 waveAmp 意义，我们将 transmissionAmp 理解为：
+				// "底部相对于顶部的额外增益系数" 或者 "整体强度的垂直梯度斜率"
+				// 如果 transmissionAmp = 1，那就是线性 0-1。
+				// 如果 transmissionAmp = 10，那就是线性 0-10。
+				factor *= transmissionAmp;
 				
 				// A. 基础持续风力
 				float baseWind = windStrength * factor;
@@ -509,29 +588,37 @@ public class PolyBatchTestScreen extends GScreen {
 				// 1. 尝试选中现有的点 (优先)
 				selectedPointIndex = -1;
 				isDraggingPoint = false;
-				float minDst = 15f * worldCamera.zoom;
+				float minDst = 15f; // UI 坐标系，不需要 zoom
+				
+				// 统一搜索最近的点
+				float closestDst = Float.MAX_VALUE;
+				int closestIndex = -1;
+				boolean closestIsHull = false;
 				
 				// 搜索轮廓点
 				for (int i = 0; i < capeState.hullPoints.size; i++) {
 					float dst = capeState.hullPoints.get(i).dst(localClick);
-					if (dst < minDst) {
-						minDst = dst;
-						selectedPointIndex = i;
-						isHullPoint = true;
+					if (dst < minDst && dst < closestDst) {
+						closestDst = dst;
+						closestIndex = i;
+						closestIsHull = true;
 					}
 				}
 				// 搜索内部点
 				for (int i = 0; i < capeState.interiorPoints.size; i++) {
 					float dst = capeState.interiorPoints.get(i).dst(localClick);
-					if (dst < minDst) {
-						minDst = dst;
-						selectedPointIndex = i;
-						isHullPoint = false;
+					if (dst < minDst && dst < closestDst) {
+						closestDst = dst;
+						closestIndex = i;
+						closestIsHull = false;
 					}
 				}
 				
-				if (selectedPointIndex != -1) {
-					// 选中了点
+				if (closestIndex != -1) {
+					// 选中了最近的点
+					selectedPointIndex = closestIndex;
+					isHullPoint = closestIsHull;
+					
 					if (button == com.badlogic.gdx.Input.Buttons.RIGHT) {
 						// 右键删除
 						if (isHullPoint) capeState.hullPoints.removeIndex(selectedPointIndex);
@@ -794,6 +881,7 @@ public class PolyBatchTestScreen extends GScreen {
 			t.defaults().left().expandX().fillX().pad(2);
 			
 			addSlider(t, "基础风力", -50, 50, screen.capeState.windStrength, v -> screen.capeState.windStrength = v);
+			addSlider(t, "传导幅度 (垂直增益)", 0, 10, screen.capeState.transmissionAmp, v -> screen.capeState.transmissionAmp = v);
 			
 			t.add(new VisLabel("--- 大波浪 (主体) ---")).padTop(10).row();
 			addSlider(t, "频率 (速度)", 0, 10, screen.capeState.bigWaveFreq, v -> screen.capeState.bigWaveFreq = v);
