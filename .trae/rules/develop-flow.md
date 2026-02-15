@@ -1,8 +1,6 @@
 ---
-alwaysApply: false
-description: AI 自动开发流程 (简明版)
+alwaysApply: true
 ---
-
 # AI 自动开发流程 (简明版)
 
 > **核心循环**: 分析 -> 计划 -> 实现 -> 验证 -> 提交
@@ -21,7 +19,10 @@ description: AI 自动开发流程 (简明版)
      3. 运行: `git commit -F commit_msg.txt`。
    - **禁止推送**: 只提交到本地，严禁自动 Push，推送由人工操作。
 
-5. **清理交付 (Clean)**: 移除调试代码，更新文档，标记 TODO 完成。
+5. **清理交付 (Clean)**: 
+   - 移除临时调试代码 (Logs)。
+   - 更新相关文档 (如果功能变更)。
+   - **更新 Tasks**: 标记 `Tasks.md` 中的任务为 `[x] (待检查)`，**禁止**直接删除任务。
 
 ## 2. 常用命令速查
 - **运行桌面版**: `./gradlew lwjgl3:run`
