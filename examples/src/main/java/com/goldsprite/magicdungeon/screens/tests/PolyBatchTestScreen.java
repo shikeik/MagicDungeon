@@ -10,13 +10,17 @@ import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.DelaunayTriangulator;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
+import com.badlogic.gdx.utils.ShortArray;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
@@ -29,7 +33,9 @@ public class PolyBatchTestScreen extends GScreen {
 
 	// 状态与数据
 	public enum Mode { ALIGN, MESH, STATIC_TEST, DYNAMIC_WAVE }
+	public enum MeshTool { HULL, INTERIOR } // 子模式：轮廓/内部点
 	private Mode currentMode = Mode.ALIGN;
+	private MeshTool currentMeshTool = MeshTool.HULL;
 	private CapeState capeState = new CapeState();
 
 	// UI
@@ -155,10 +161,32 @@ public class PolyBatchTestScreen extends GScreen {
 
 		// 绘制顶点 (点)
 		shapes.begin(ShapeRenderer.ShapeType.Filled);
+		
+		// 1. 绘制轮廓点 (蓝色)
+		shapes.setColor(Color.BLUE);
+		for(int i=0; i<capeState.hullPoints.size; i++) {
+			Vector2 p = capeState.hullPoints.get(i);
+			shapes.circle(p.x + ox, p.y + oy, 4);
+			
+			// 绘制轮廓连线
+			if (i > 0) {
+				Vector2 prev = capeState.hullPoints.get(i-1);
+				shapes.rectLine(prev.x+ox, prev.y+oy, p.x+ox, p.y+oy, 2);
+			}
+		}
+		// 闭合轮廓线
+		if (capeState.hullPoints.size > 2) {
+			Vector2 first = capeState.hullPoints.first();
+			Vector2 last = capeState.hullPoints.peek();
+			shapes.rectLine(last.x+ox, last.y+oy, first.x+ox, first.y+oy, 2);
+		}
+
+		// 2. 绘制内部点 (黄色)
 		shapes.setColor(Color.YELLOW);
-		for(Vector2 p : capeState.points) {
+		for(Vector2 p : capeState.interiorPoints) {
 			shapes.circle(p.x + ox, p.y + oy, 3);
 		}
+		
 		shapes.end();
 	}
 
@@ -166,7 +194,15 @@ public class PolyBatchTestScreen extends GScreen {
 	static class CapeState {
 		public TextureRegion knightRegion, capeRegion;
 		public Vector2 offset = new Vector2(0, 0);
-		public Array<Vector2> points = new Array<>();
+		
+		// 1. 数据结构拆分
+		public Array<Vector2> hullPoints = new Array<>(); // 轮廓点 (有序)
+		public Array<Vector2> interiorPoints = new Array<>(); // 内部点 (无序)
+		
+		// 所有的点 (hull + interior)，用于构建网格顶点数组
+		// 注意：PolygonRegion 的 vertices 数组必须和这个列表的顺序一致
+		private Array<Vector2> allPoints = new Array<>(); 
+		
 		public short[] triangles;
 		public float[] originalVertices, animatedVertices;
 		public PolygonRegion polyRegion;
@@ -177,14 +213,62 @@ public class PolyBatchTestScreen extends GScreen {
 			capeRegion = new TextureRegion(new Texture(cPath));
 		}
 
+		public void clear() {
+			hullPoints.clear();
+			interiorPoints.clear();
+			allPoints.clear();
+			triangles = null;
+			originalVertices = null;
+			animatedVertices = null;
+			polyRegion = null;
+		}
+
 		public void generateMesh() {
-			if (points.size < 3) return; // 至少三个点才能构成多边形
+			// 至少要有3个轮廓点才能构成多边形
+			if (hullPoints.size < 3) return;
+			
+			// 1. 合并所有点
+			allPoints.clear();
+			allPoints.addAll(hullPoints);
+			allPoints.addAll(interiorPoints);
+
 			FloatArray fa = new FloatArray();
-			for (Vector2 v : points) fa.addAll(v.x, v.y);
+			for (Vector2 v : allPoints) fa.addAll(v.x, v.y);
+			
 			originalVertices = fa.toArray();
 			animatedVertices = fa.toArray();
+
 			try {
-				triangles = new DelaunayTriangulator().computeTriangles(fa, false).toArray();
+				// 2. 使用 Delaunay 生成全凸包网格
+				ShortArray allTriangles = new DelaunayTriangulator().computeTriangles(fa, false);
+				
+				// 3. 剔除重心在轮廓外部的三角形 (实现凹包)
+				// 准备轮廓多边形数据用于检测
+				float[] hullVerts = new float[hullPoints.size * 2];
+				for(int i=0; i<hullPoints.size; i++) {
+					hullVerts[i*2] = hullPoints.get(i).x;
+					hullVerts[i*2+1] = hullPoints.get(i).y;
+				}
+				
+				ShortArray validTriangles = new ShortArray();
+				for (int i = 0; i < allTriangles.size; i += 3) {
+					int p1 = allTriangles.get(i) * 2;
+					int p2 = allTriangles.get(i+1) * 2;
+					int p3 = allTriangles.get(i+2) * 2;
+					
+					// 计算三角形重心
+					float cx = (originalVertices[p1] + originalVertices[p2] + originalVertices[p3]) / 3f;
+					float cy = (originalVertices[p1+1] + originalVertices[p2+1] + originalVertices[p3+1]) / 3f;
+					
+					// 判断重心是否在轮廓内
+					if (Intersector.isPointInPolygon(hullPoints, new Vector2(cx, cy))) {
+						validTriangles.add(allTriangles.get(i));
+						validTriangles.add(allTriangles.get(i+1));
+						validTriangles.add(allTriangles.get(i+2));
+					}
+				}
+				
+				triangles = validTriangles.toArray();
 				polyRegion = new PolygonRegion(capeRegion, animatedVertices, triangles);
 			} catch (Exception e) {
 				Gdx.app.error("CapeState", "Failed to generate mesh", e);
@@ -222,6 +306,7 @@ public class PolyBatchTestScreen extends GScreen {
 	// --- 输入处理器 ---
 	class EditorInputHandler extends InputAdapter {
 		private int selectedPointIndex = -1; // 当前选中的顶点索引
+		private boolean isHullPoint = false; // 选中的是轮廓点还是内部点
 		private Vector2 lastMousePos = new Vector2();
 
 		@Override
@@ -246,21 +331,37 @@ public class PolyBatchTestScreen extends GScreen {
 			Vector2 localClick = new Vector2(worldPos).sub(baseX, baseY);
 
 			if (currentMode == Mode.MESH) {
-				// 模式2：点击即添加点
-				capeState.points.add(localClick);
+				if (currentMeshTool == MeshTool.HULL) {
+					// 轮廓模式：直接添加轮廓点
+					capeState.hullPoints.add(localClick);
+				} else {
+					// 内部点模式：添加内部控制点
+					capeState.interiorPoints.add(localClick);
+				}
 				capeState.generateMesh();
 			}
 			else if (currentMode == Mode.STATIC_TEST) {
-				// 模式3：寻找最近的顶点进行拾取
+				// 模式3：寻找最近的顶点进行拾取 (搜索轮廓和内部点)
 				selectedPointIndex = -1;
 				float minDst = 20f * worldCamera.zoom; // 拾取半径随缩放调整
-				for (int i = 0; i < capeState.points.size; i++) {
-					// 顶点的存储坐标是 local 坐标，比较时需要加上 base 转换回世界坐标，或者把鼠标转成 local
-					// 这里我们比较 local 坐标距离
-					float dst = capeState.points.get(i).dst(localClick);
+				
+				// 1. 搜索轮廓点
+				for (int i = 0; i < capeState.hullPoints.size; i++) {
+					float dst = capeState.hullPoints.get(i).dst(localClick);
 					if (dst < minDst) {
 						minDst = dst;
 						selectedPointIndex = i;
+						isHullPoint = true;
+					}
+				}
+				
+				// 2. 搜索内部点 (如果有更近的，覆盖)
+				for (int i = 0; i < capeState.interiorPoints.size; i++) {
+					float dst = capeState.interiorPoints.get(i).dst(localClick);
+					if (dst < minDst) {
+						minDst = dst;
+						selectedPointIndex = i;
+						isHullPoint = false;
 					}
 				}
 			}
@@ -278,7 +379,7 @@ public class PolyBatchTestScreen extends GScreen {
 			}
 			else if (currentMode == Mode.STATIC_TEST && selectedPointIndex != -1) {
 				// 模式3：移动选中的顶点
-				Vector2 p = capeState.points.get(selectedPointIndex);
+				Vector2 p = isHullPoint ? capeState.hullPoints.get(selectedPointIndex) : capeState.interiorPoints.get(selectedPointIndex);
 				p.add(delta); // delta 是世界坐标差值，直接加在 local 坐标上也是对的（平移量一致）
 				capeState.generateMesh(); // 顶点变了，必须重新生成网格数据
 			}
@@ -336,6 +437,38 @@ public class PolyBatchTestScreen extends GScreen {
 			panel.add(new VisLabel("模式:")).left();
 			panel.add(modeSelect).expandX().fillX().row();
 			
+			// Mesh 子模式切换 (仅在 MESH 模式下显示)
+			VisTable toolTable = new VisTable();
+			VisTextButton btnHull = new VisTextButton("轮廓 (蓝)", "toggle");
+			VisTextButton btnInterior = new VisTextButton("内部 (黄)", "toggle");
+			ButtonGroup<VisTextButton> toolGroup = new ButtonGroup<>(btnHull, btnInterior);
+			
+			btnHull.setChecked(true);
+			btnHull.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					if(btnHull.isChecked()) screen.currentMeshTool = MeshTool.HULL;
+				}
+			});
+			btnInterior.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					if(btnInterior.isChecked()) screen.currentMeshTool = MeshTool.INTERIOR;
+				}
+			});
+			
+			toolTable.add(btnHull).expandX().fillX().padRight(5);
+			toolTable.add(btnInterior).expandX().fillX();
+			
+			// 清空按钮
+			VisTextButton btnClear = new VisTextButton("清空网格");
+			btnClear.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					screen.capeState.clear();
+				}
+			});
+			
+			panel.add(toolTable).colspan(2).expandX().fillX().padTop(5).row();
+			panel.add(btnClear).colspan(2).fillX().padTop(5).row();
+
 			// 调试选项
 			boundsCheck = new VisCheckBox("显示纹理边框", true);
 			boundsCheck.addListener(event -> {
@@ -388,16 +521,24 @@ public class PolyBatchTestScreen extends GScreen {
 
 		public void update() {
 			// 更新顶点列表显示
-			if (screen.capeState.points.size > 0) {
+			int hullSize = screen.capeState.hullPoints.size;
+			int interiorSize = screen.capeState.interiorPoints.size;
+			
+			if (hullSize + interiorSize > 0) {
 				float baseX = 100 + screen.capeState.offset.x;
 				float baseY = 100 + screen.capeState.offset.y;
 				
 				StringBuilder sb = new StringBuilder();
-				for (int i = 0; i < screen.capeState.points.size; i++) {
-					Vector2 p = screen.capeState.points.get(i);
-					// 显示局部坐标和世界坐标
-					sb.append(String.format("[%d] Local: (%.0f, %.0f)\n      World: (%.0f, %.0f)\n\n", 
-						i, p.x, p.y, p.x + baseX, p.y + baseY));
+				sb.append("[轮廓点 - 蓝色]\n");
+				for (int i = 0; i < hullSize; i++) {
+					Vector2 p = screen.capeState.hullPoints.get(i);
+					sb.append(String.format("%d: (%.0f, %.0f)\n", i, p.x, p.y));
+				}
+				
+				sb.append("\n[内部点 - 黄色]\n");
+				for (int i = 0; i < interiorSize; i++) {
+					Vector2 p = screen.capeState.interiorPoints.get(i);
+					sb.append(String.format("%d: (%.0f, %.0f)\n", i, p.x, p.y));
 				}
 				pointListLabel.setText(sb.toString());
 			} else {
