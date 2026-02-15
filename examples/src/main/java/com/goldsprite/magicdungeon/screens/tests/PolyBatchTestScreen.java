@@ -302,17 +302,30 @@ public class PolyBatchTestScreen extends GScreen {
 		public void updateAnimation(float delta) {
 			stateTime += delta;
 			if (originalVertices == null) return;
+			
+			float h = capeRegion.getRegionHeight();
 
 			for (int i = 0; i < originalVertices.length; i += 2) {
 				float oldX = originalVertices[i];
 				float oldY = originalVertices[i + 1];
 
-				// 越往右（X越大）的顶点，波动幅度越大，且有一定的相位延迟
-				float factor = oldX / 100f; // 假设披风宽度大概100
-				float wave = (float) Math.sin(stateTime * 5f + oldX * 0.05f) * 10f * factor;
+				// 1. 权重计算：从顶部往下逐级增加
+				// 假设 Y=h 是顶部，Y=0 是底部 (LibGDX 默认坐标系)
+				// 权重：0.0 (顶) -> 1.0 (底)
+				float factor = 1.0f - (oldY / h);
+				if (factor < 0) factor = 0; 
+				
+				// 2. 披风摆动：横向摆动 (修改 X)
+				// 模拟风从右边吹向左边 -> 整体可能偏左(负向偏移)，且有波浪
+				// 波浪随时间变化，且随 Y 轴有相位差 (产生传递感)
+				// 这里的相位 oldY * 0.1f 决定了波浪沿披风上下传递的视觉效果
+				float wave = (float) Math.sin(stateTime * 4f - oldY * 0.08f) * 15f * factor;
+				
+				// 额外的风力偏移 (持续向左的风力)
+				float windBias = -10f * factor; 
 
-				animatedVertices[i] = oldX;
-				animatedVertices[i + 1] = oldY + wave;
+				animatedVertices[i] = oldX + wave + windBias;
+				animatedVertices[i + 1] = oldY; // Y 轴保持稳定
 			}
 			// 关键：通知 polyRegion 顶点数据已更新
 			// PolygonRegion 内部引用的是数组地址，通常直接修改数组即可，
