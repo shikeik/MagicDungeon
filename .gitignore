@@ -192,3 +192,6 @@ Thumbs.db
 Project*.txt
 /logs.txt
 # /docs/engine_docs/changelog/changelog.json
+
+# Commit Msg
+commit_msg.txt
