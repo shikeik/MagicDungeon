@@ -13,7 +13,7 @@ commit_msg.txt
 
 # Outputs & Temp Files
 /outputs/
-!/outputs/exe4j/
+!/outputs/MagicDungeon.exe4j
 /changes.diff
 /changes.txt
 /git_logs.txt

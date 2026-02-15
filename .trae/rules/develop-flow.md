@@ -17,9 +17,15 @@ description: AI 自动开发流程 (简明版)
    - 升级版本: `./gradlew bumpPatch` (修复) 或 `bumpMinor` (新功能)。
    - 规范提交: 
      1. 编辑 `commit_msg.txt` (格式: `<type>: <summary>` + 空行 + `<details>`)。
-	 2. **必须**使用中文编写提交信息。
-	 3. 运行: `git commit -F commit_msg.txt`。
+     2. **必须**使用中文编写提交信息。
+     3. 运行: `git commit -F commit_msg.txt`。
+   - **禁止推送**: 只提交到本地，严禁自动 Push，推送由人工操作。
+
 5. **清理交付 (Clean)**: 移除调试代码，更新文档，标记 TODO 完成。
+
+## 2. 硬性规则 (Hard Rules)
+- **中文优先**: 所有代码注释、提交信息必须全中文。
+- **禁止推送**: 任何流程禁止执行 `git push`。
 
 ## 2. 常用命令速查
 - **运行桌面版**: `./gradlew lwjgl3:run`
