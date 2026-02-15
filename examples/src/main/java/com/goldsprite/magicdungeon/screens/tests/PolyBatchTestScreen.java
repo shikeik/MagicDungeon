@@ -64,8 +64,12 @@ public class PolyBatchTestScreen extends GScreen {
 		uiController = new UIController(uiStage, this);
 
 		// 输入多路复用：先 UI，再场景
-		InputMultiplexer multiplexer = new InputMultiplexer(uiStage, new EditorInputHandler());
-		Gdx.input.setInputProcessor(multiplexer);
+		// InputMultiplexer multiplexer = new InputMultiplexer(uiStage, new EditorInputHandler());
+		// Gdx.input.setInputProcessor(multiplexer);
+		
+		// 使用基类 GScreen 的 imp (InputMultiplexer)
+		imp.addProcessor(uiStage);
+		imp.addProcessor(new EditorInputHandler());
 	}
 
 	@Override
@@ -421,30 +425,22 @@ public class PolyBatchTestScreen extends GScreen {
 	// --- UI 控制类 ---
 	static class UIController {
 		private final PolyBatchTestScreen screen;
-		private final VisList<PointItem> pointList; // 改回 List 以支持选择事件
+		private final VisTable pointListTable; // 替换 VisList 为 Table 容器
 		private final VisCheckBox boundsCheck;
 		public final VisTable gameArea;
 		
-		// 存储列表项对应的点索引信息，用于反查高亮
+		// 当前高亮的点信息
+		private PointItem highlightedItem = null;
+		
 		private static class PointItem {
 			boolean isHull;
 			int index;
-			String text;
 			
-			PointItem(boolean isHull, int index, String text) {
+			PointItem(boolean isHull, int index) {
 				this.isHull = isHull;
 				this.index = index;
-				this.text = text;
-			}
-			
-			@Override
-			public String toString() {
-				return text;
 			}
 		}
-		
-		// 辅助数组，用于保持 List 的数据
-		private Array<PointItem> listItems = new Array<>();
 
 		public UIController(Stage stage, final PolyBatchTestScreen screen) {
 			this.screen = screen;
@@ -518,23 +514,11 @@ public class PolyBatchTestScreen extends GScreen {
 			// 顶点列表
 			panel.add(new VisLabel("网格顶点 (UV):")).colspan(2).left().padTop(10).row();
 			
-			pointList = new VisList<>();
-			pointList.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					PointItem item = pointList.getSelected();
-					if (item != null) {
-						// 列表选中时，更新 InputHandler 中的选中状态，以便高亮
-						// 由于 InputHandler 的 selectedPointIndex 是私有的，
-						// 且 InputHandler 主要用于处理 touch 输入
-						// 我们可以直接通过 screen.capeState 获取点，然后在 drawMeshDebug 中高亮
-						// 或者添加一个 highlightPoint 到 UIController，让 drawMeshDebug 读取
-						// 这里简单点，我们添加一个 public 字段到 UIController
-					}
-				}
-			});
-
-			VisScrollPane scrollPane = new VisScrollPane(pointList);
+			// 使用 Table 作为列表容器
+			pointListTable = new VisTable();
+			pointListTable.top().left();
+			
+			VisScrollPane scrollPane = new VisScrollPane(pointListTable);
 			scrollPane.setFadeScrollBars(false);
 			scrollPane.setScrollingDisabled(true, false);
 			panel.add(scrollPane).colspan(2).height(300).expandX().fillX().row();
@@ -570,34 +554,73 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 
 		public void update() {
-			listItems.clear();
+			pointListTable.clear();
 			
 			float w = screen.capeState.capeRegion.getRegionWidth();
 			float h = screen.capeState.capeRegion.getRegionHeight();
 			
-			int hullSize = screen.capeState.hullPoints.size;
-			for (int i = 0; i < hullSize; i++) {
-				Vector2 p = screen.capeState.hullPoints.get(i);
-				String text = String.format("[轮廓 %d] UV(%.2f, %.2f)", i, p.x / w, p.y / h);
-				listItems.add(new PointItem(true, i, text));
+			// 1. 轮廓点部分
+			if (screen.capeState.hullPoints.size > 0) {
+				pointListTable.add(new VisLabel("[轮廓点 - 蓝色]")).left().padTop(5).row();
+				for (int i = 0; i < screen.capeState.hullPoints.size; i++) {
+					Vector2 p = screen.capeState.hullPoints.get(i);
+					String text = String.format("%d: UV(%.2f, %.2f)", i, p.x / w, p.y / h);
+					pointListTable.add(createPointItemWidget(true, i, text)).expandX().fillX().row();
+				}
 			}
 			
-			int interiorSize = screen.capeState.interiorPoints.size;
-			for (int i = 0; i < interiorSize; i++) {
-				Vector2 p = screen.capeState.interiorPoints.get(i);
-				String text = String.format("[内部 %d] UV(%.2f, %.2f)", i, p.x / w, p.y / h);
-				listItems.add(new PointItem(false, i, text));
+			// 2. 内部点部分
+			if (screen.capeState.interiorPoints.size > 0) {
+				pointListTable.add(new VisLabel("[内部点 - 黄色]")).left().padTop(10).row();
+				for (int i = 0; i < screen.capeState.interiorPoints.size; i++) {
+					Vector2 p = screen.capeState.interiorPoints.get(i);
+					String text = String.format("%d: UV(%.2f, %.2f)", i, p.x / w, p.y / h);
+					pointListTable.add(createPointItemWidget(false, i, text)).expandX().fillX().row();
+				}
 			}
 			
-			if (listItems.size > 0) {
-				pointList.setItems(listItems);
-			} else {
-				pointList.setItems(new Array<PointItem>());
+			if (screen.capeState.hullPoints.size == 0 && screen.capeState.interiorPoints.size == 0) {
+				pointListTable.add(new VisLabel("无顶点")).left().row();
+			}
+		}
+		
+		private Actor createPointItemWidget(boolean isHull, int index, String text) {
+			VisTextButton btn = new VisTextButton(text, "toggle");
+			btn.getLabel().setAlignment(com.badlogic.gdx.utils.Align.left);
+			
+			// 检查当前按钮是否应该是选中状态
+			if (highlightedItem != null && highlightedItem.isHull == isHull && highlightedItem.index == index) {
+				btn.setChecked(true);
+			}
+			
+			btn.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					if (btn.isChecked()) {
+						// 取消其他所有按钮的选中状态 (手动实现单选组逻辑，因为跨类别不好用 ButtonGroup)
+						uncheckAllOthers(btn);
+						highlightedItem = new PointItem(isHull, index);
+					} else {
+						// 如果取消选中，则清空高亮
+						if (highlightedItem != null && highlightedItem.isHull == isHull && highlightedItem.index == index) {
+							highlightedItem = null;
+						}
+					}
+				}
+			});
+			return btn;
+		}
+		
+		private void uncheckAllOthers(VisTextButton current) {
+			for (Actor child : pointListTable.getChildren()) {
+				if (child instanceof VisTextButton && child != current) {
+					((VisTextButton) child).setChecked(false);
+				}
 			}
 		}
 		
 		public PointItem getHighlightedItem() {
-			return pointList.getSelected();
+			return highlightedItem;
 		}
 	}
 }
