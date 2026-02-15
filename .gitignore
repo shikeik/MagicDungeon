@@ -3,7 +3,7 @@ gradle-app.setting
 /gradle/gradle-daemon-jvm.properties
 .gradle/
 
-## Custom
+## Custom User Defined (DO NOT DELETE)
 build/
 #javadoc/ # 现在我们需要javadoc因为需要上传云端查看
 .idea/
@@ -11,6 +11,22 @@ build/
 /.lwjgl/
 commit_msg.txt
 
+# Outputs & Temp Files
+/outputs/
+!/outputs/exe4j/
+/changes.diff
+/changes.txt
+/git_logs.txt
+/ProjectCode.txt
+/ProjectTree.txt
+/docs/tmp/
+/.temp/
+/ProjectGradle.txt
+Project*.txt
+/logs.txt
+
+# Game Data Root
+/MagicDungeon/
 
 ## Java:
 *.class
