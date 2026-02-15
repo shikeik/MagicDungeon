@@ -11,7 +11,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.DelaunayTriangulator;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
@@ -82,21 +84,29 @@ public class PolyBatchTestScreen extends GScreen {
 		uiStage.draw();
 	}
 
-	private void renderCapeByMode(float delta) {
+	private void renderCapeByMode(float delta) {		
+		// 修正：offset 应理解为披风左下角的偏移量，而非中心点偏移
+		// 骑士绘制在 (100, 100)，披风如果也要在骑士背后，
+		// 它的左下角起始点应该是 (100 + offset.x, 100 + offset.y)
+		// 之前的 drawX = cx - w/2 导致披风被居中到了 (100, 100)，所以偏左下了
+		
+		float drawX = 100 + capeState.offset.x;
+		float drawY = 100 + capeState.offset.y;
+
 		switch (currentMode) {
 			case ALIGN:
 				batch.setProjectionMatrix(worldCamera.combined);
 				batch.begin();
-				batch.draw(capeState.capeRegion, 100 + capeState.offset.x, 100 + capeState.offset.y);
+				batch.draw(capeState.capeRegion, drawX, drawY);
 				batch.end();
-				drawMeshDebug();
+				drawMeshDebug(drawX, drawY);
 				break;
 			case MESH:
 				batch.setProjectionMatrix(worldCamera.combined);
 				batch.begin();
-				batch.draw(capeState.capeRegion, 100 + capeState.offset.x, 100 + capeState.offset.y);
+				batch.draw(capeState.capeRegion, drawX, drawY);
 				batch.end();
-				drawMeshDebug();
+				drawMeshDebug(drawX, drawY);
 				break;
 			case STATIC_TEST:
 			case DYNAMIC_WAVE:
@@ -104,26 +114,24 @@ public class PolyBatchTestScreen extends GScreen {
 					if (currentMode == Mode.DYNAMIC_WAVE) capeState.updateAnimation(delta);
 					polyBatch.setProjectionMatrix(worldCamera.combined);
 					polyBatch.begin();
-					polyBatch.draw(capeState.polyRegion, 100 + capeState.offset.x, 100 + capeState.offset.y);
+					polyBatch.draw(capeState.polyRegion, drawX, drawY);
 					polyBatch.end();
-					drawMeshDebug();
+					drawMeshDebug(drawX, drawY);
 				}
 				break;
 		}
 	}
 
-	private void drawMeshDebug() {
+	private void drawMeshDebug(float ox, float oy) {
 		shapes.setProjectionMatrix(worldCamera.combined);
 		
 		// 1. 绘制纹理边框 (红色矩形)
 		if (showTextureBounds) {
 			shapes.begin(ShapeRenderer.ShapeType.Line);
 			shapes.setColor(Color.RED);
-			float x = 100 + capeState.offset.x;
-			float y = 100 + capeState.offset.y;
 			float w = capeState.capeRegion.getRegionWidth();
 			float h = capeState.capeRegion.getRegionHeight();
-			shapes.rect(x, y, w, h);
+			shapes.rect(ox, oy, w, h);
 			shapes.end();
 		}
 
@@ -133,8 +141,7 @@ public class PolyBatchTestScreen extends GScreen {
 		// 绘制三角形网格线
 		if (capeState.triangles != null) {
 			float[] v = capeState.animatedVertices;
-			float ox = 100 + capeState.offset.x;
-			float oy = 100 + capeState.offset.y;
+			
 			for (int i = 0; i < capeState.triangles.length; i += 3) {
 				int i1 = capeState.triangles[i] * 2;
 				int i2 = capeState.triangles[i+1] * 2;
@@ -149,8 +156,6 @@ public class PolyBatchTestScreen extends GScreen {
 		// 绘制顶点 (点)
 		shapes.begin(ShapeRenderer.ShapeType.Filled);
 		shapes.setColor(Color.YELLOW);
-		float ox = 100 + capeState.offset.x;
-		float oy = 100 + capeState.offset.y;
 		for(Vector2 p : capeState.points) {
 			shapes.circle(p.x + ox, p.y + oy, 3);
 		}
@@ -221,6 +226,15 @@ public class PolyBatchTestScreen extends GScreen {
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+			// 如果点击在 UI 上，则拦截输入，不进行场景操作
+			Vector2 screenPos = new Vector2(screenX, screenY);
+			Vector2 stagePos = uiStage.screenToStageCoordinates(screenPos.cpy());
+			// 使用 hit 检测，并且确保命中的不是 gameArea (游戏操作区)
+			com.badlogic.gdx.scenes.scene2d.Actor hitActor = uiStage.hit(stagePos.x, stagePos.y, true);
+			if (hitActor != null && hitActor != uiController.gameArea) {
+				return false;
+			}
+
 			Vector2 worldPos = screenToWorldCoord(screenX, screenY);
 			lastMousePos.set(worldPos);
 
@@ -228,12 +242,11 @@ public class PolyBatchTestScreen extends GScreen {
 			// 披风渲染位置是 (100 + offset.x, 100 + offset.y)
 			float baseX = 100 + capeState.offset.x;
 			float baseY = 100 + capeState.offset.y;
+			
 			Vector2 localClick = new Vector2(worldPos).sub(baseX, baseY);
 
 			if (currentMode == Mode.MESH) {
 				// 模式2：点击即添加点
-				// 只有在点在图片范围内才允许添加（可选，或者允许在外部添加）
-				// 这里直接添加，localClick 即为相对于纹理左下角的坐标
 				capeState.points.add(localClick);
 				capeState.generateMesh();
 			}
@@ -290,30 +303,35 @@ public class PolyBatchTestScreen extends GScreen {
 	// --- UI 控制类 ---
 	static class UIController {
 		private final PolyBatchTestScreen screen;
-		private final VisList<String> pointList;
+		private final VisLabel pointListLabel; 
 		private final VisCheckBox boundsCheck;
+		public final VisTable gameArea; // 暴露给 InputHandler 使用
 
 		public UIController(Stage stage, final PolyBatchTestScreen screen) {
 			this.screen = screen;
 			
 			VisTable root = new VisTable();
 			root.setFillParent(true);
+			root.setTouchable(Touchable.childrenOnly); // 确保 root 不拦截点击，只让子元素响应
 
 			VisTable panel = new VisTable(true);
 			panel.setBackground("window");
-			
+
 			// 标题
 			panel.add(new VisLabel("控制面板")).pad(10).row();
 
 			// 模式切换
 			VisSelectBox<Mode> modeSelect = new VisSelectBox<>();
 			modeSelect.setItems(Mode.values());
-			modeSelect.addListener(event -> {
-				if (modeSelect.getSelected() != null) {
-					screen.currentMode = modeSelect.getSelected();
-					screen.capeState.reset();
+			// 使用 ChangeListener 替代通用 Listener，仅在值实际改变时触发
+			modeSelect.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					if (modeSelect.getSelected() != null) {
+						screen.currentMode = modeSelect.getSelected();
+						screen.capeState.reset();
+					}
 				}
-				return true;
 			});
 			panel.add(new VisLabel("模式:")).left();
 			panel.add(modeSelect).expandX().fillX().row();
@@ -328,22 +346,27 @@ public class PolyBatchTestScreen extends GScreen {
 
 			// 顶点列表
 			panel.add(new VisLabel("网格顶点:")).colspan(2).left().padTop(10).row();
-			pointList = new VisList<>();
-			VisScrollPane scrollPane = new VisScrollPane(pointList);
+			
+			// 使用 Label 而不是 List，因为 List 的 item height 是固定的，不支持多行文本
+			pointListLabel = new VisLabel("无顶点");
+			pointListLabel.setAlignment(com.badlogic.gdx.utils.Align.topLeft);
+			
+			VisScrollPane scrollPane = new VisScrollPane(pointListLabel);
 			scrollPane.setFadeScrollBars(false);
+			scrollPane.setScrollingDisabled(true, false); // 仅允许垂直滚动
 			panel.add(scrollPane).colspan(2).height(300).expandX().fillX().row();
 
 			// 操作说明
 			VisLabel tip = new VisLabel("操作说明:\nAlign: 拖动调整位置\nMesh: 点击添加点\nStatic: 拖动点\nDynamic: 观看演示");
 			tip.setWrap(true);
 			panel.add(tip).colspan(2).width(200).padTop(10).row();
-			panel.pack(); // 让面板先计算出首选尺寸
+			panel.pack(); 
 
-			// 左侧作为游戏操作区，设置为不可触摸（让点击穿透到底层）
-			VisTable gameArea = new VisTable();
-			gameArea.setTouchable(Touchable.disabled);
+			// 左侧作为游戏操作区，设置为可触摸，以便在 InputHandler 中识别
+			gameArea = new VisTable();
+			gameArea.setTouchable(Touchable.enabled);
 
-			// 使用 VisSplitPane 实现左右分栏，右侧面板宽度可调
+			// 使用 VisSplitPane 实现左右分栏
 			VisSplitPane splitPane = new VisSplitPane(gameArea, panel, false);
 			
 			// 计算初始分割比例 (让面板恰好展示完整)
@@ -369,16 +392,16 @@ public class PolyBatchTestScreen extends GScreen {
 				float baseX = 100 + screen.capeState.offset.x;
 				float baseY = 100 + screen.capeState.offset.y;
 				
-				String[] items = new String[screen.capeState.points.size];
+				StringBuilder sb = new StringBuilder();
 				for (int i = 0; i < screen.capeState.points.size; i++) {
 					Vector2 p = screen.capeState.points.get(i);
 					// 显示局部坐标和世界坐标
-					items[i] = String.format("[%d] Local: (%.0f, %.0f)\n      World: (%.0f, %.0f)", 
-						i, p.x, p.y, p.x + baseX, p.y + baseY);
+					sb.append(String.format("[%d] Local: (%.0f, %.0f)\n      World: (%.0f, %.0f)\n\n", 
+						i, p.x, p.y, p.x + baseX, p.y + baseY));
 				}
-				pointList.setItems(items);
+				pointListLabel.setText(sb.toString());
 			} else {
-				pointList.setItems(new String[]{"无顶点"});
+				pointListLabel.setText("无顶点");
 			}
 		}
 	}
