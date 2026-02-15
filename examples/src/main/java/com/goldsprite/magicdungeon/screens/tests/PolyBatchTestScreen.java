@@ -16,6 +16,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.log.Debug;
 
 public class PolyBatchTestScreen extends GScreen {
 	// 渲染工具
@@ -77,6 +78,7 @@ public class PolyBatchTestScreen extends GScreen {
 
 			@Override
 			public boolean keyDown(int keycode) {
+				Debug.log("keycode: %s", keycode);
 				if (!isContourFinished && contourPoints.size > 2) {
 					isContourFinished = true; // 按任意键结束轮廓标注
 					generateMesh();

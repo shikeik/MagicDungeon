@@ -22,7 +22,7 @@ import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
 import com.goldsprite.magicdungeon.testing.GameAutoTests;
 import com.kotcrab.vis.ui.VisUI;
 
-public class GdxLauncher extends Game {int k4;
+public class GdxLauncher extends Game {int k7;
 	private Stage toastStage;
 	public Debug debug;
 	private Application.ApplicationType userType;

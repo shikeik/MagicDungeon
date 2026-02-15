@@ -12,7 +12,7 @@ import com.goldsprite.magicdungeon.screens.tests.SpineTestScreen;
 import java.util.Map;
 import com.goldsprite.magicdungeon.screens.tests.PolyBatchTestScreen;
 
-public class TestSelectionScreen extends BaseSelectionScreen {int k2;
+public class TestSelectionScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);
