@@ -215,6 +215,7 @@ public class PolyBatchTestScreen extends GScreen {
 	static class CapeState {
 		public TextureRegion knightRegion, capeRegion;
 		public Vector2 offset = new Vector2(0, 0);
+		public boolean dirty = true; // 数据变更标记
 		
 		// 1. 数据结构拆分
 		public Array<Vector2> hullPoints = new Array<>(); // 轮廓点 (有序)
@@ -242,6 +243,7 @@ public class PolyBatchTestScreen extends GScreen {
 			originalVertices = null;
 			animatedVertices = null;
 			polyRegion = null;
+			dirty = true;
 		}
 
 		public void generateMesh() {
@@ -252,6 +254,7 @@ public class PolyBatchTestScreen extends GScreen {
 			allPoints.clear();
 			allPoints.addAll(hullPoints);
 			allPoints.addAll(interiorPoints);
+			dirty = true;
 
 			FloatArray fa = new FloatArray();
 			for (Vector2 v : allPoints) fa.addAll(v.x, v.y);
@@ -554,6 +557,9 @@ public class PolyBatchTestScreen extends GScreen {
 		}
 
 		public void update() {
+			if (!screen.capeState.dirty) return;
+			screen.capeState.dirty = false;
+			
 			pointListTable.clear();
 			
 			float w = screen.capeState.capeRegion.getRegionWidth();
@@ -596,6 +602,7 @@ public class PolyBatchTestScreen extends GScreen {
 			btn.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
+					Gdx.app.log("UI", "Button clicked: " + text + ", checked: " + btn.isChecked());
 					if (btn.isChecked()) {
 						// 取消其他所有按钮的选中状态 (手动实现单选组逻辑，因为跨类别不好用 ButtonGroup)
 						uncheckAllOthers(btn);
