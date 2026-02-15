@@ -86,6 +86,9 @@ public class PolyBatchTestScreen extends GScreen {
 		// 由于我们要在 UI 布局中绘制，我们需要获取 gameArea 的位置和尺寸
 		// 并设置裁剪区域 (ScissorStack)
 		
+		// 刷新 UI 数据 (如顶点列表)
+		if (uiController != null) uiController.update();
+		
 		uiStage.act(delta);
 		uiStage.draw();
 		
