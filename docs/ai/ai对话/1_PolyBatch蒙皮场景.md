@@ -25,6 +25,7 @@ PolygonSpriteBatch 允许你定义一个紧贴物体轮廓的多边形网格，�
  * EarClippingTriangulator: LibGDX 提供的一个工具类，用于将一个多边形坐标点数组转化为三角形索引。
 3. 代码示例：如何使用 PolygonSpriteBatch
 要在项目中使用它，你通常需要先将普通的 TextureRegion 转换为 PolygonRegion。
+```
 // 1. 初始化 Batch
 PolygonSpriteBatch polyBatch = new PolygonSpriteBatch();
 
@@ -51,7 +52,7 @@ PolygonSprite polySprite = new PolygonSprite(polyRegion);
 polyBatch.begin();
 polySprite.draw(polyBatch);
 polyBatch.end();
-
+```
 4. 什么时候该选哪一个？
  * 选 SpriteBatch 的情况：
    * 大部分游戏对象都是矩形或接近矩形。
@@ -85,6 +86,7 @@ polyBatch.end();
  * InputHandler (核心逻辑)：处理不同模式下的点击、拖拽和网格生成。
 🛡️ 核心代码实现
 这里是基于你项目环境更新后的单文件代码方案。请注意查看注释中的模式切换逻辑。
+```
 package com.goldsprite.magicdungeon.screens.tests;
 
 import com.badlogic.gdx.Gdx;
@@ -275,7 +277,7 @@ public class PolyBatchTestScreen extends GScreen {
         }
     }
 }
-
+```
 🎨 关键改进说明
  * 网格线绘制 (drawMeshDebug)：我添加了根据 triangles 索引数组遍历并绘制线段的逻辑。这样你在标注点的时候，能实时看到  的生成过程。
  * 坐标系同步：在模式 2 标注时，记录的是局部坐标（点击位置减去披风偏移）。这样无论你在模式 1 里把披风拖到哪，网格都能正确对齐纹理。
