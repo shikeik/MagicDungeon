@@ -9,7 +9,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.audio.SynthAudio;
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.single.ToastUI;
@@ -24,7 +24,7 @@ import com.kotcrab.vis.ui.VisUI;
 
 public class GdxLauncher extends Game {int k11;
 	private Stage toastStage;
-	public Debug debug;
+	public DLog debug;
 	private Application.ApplicationType userType;
 
 	// [新增] 标记是否已初始化完成
@@ -47,7 +47,7 @@ public class GdxLauncher extends Game {int k11;
 		VisUIHelper.loadWithChineseFont();
 		SynthAudio.init();
 		userType = Gdx.app.getType();
-		debug = Debug.getInstance();
+		debug = DLog.getInstance();
 		debug.initUI();
 		toastStage = new Stage(new ScreenViewport());
 		toastStage.addActor(ToastUI.inst());
@@ -83,8 +83,8 @@ public class GdxLauncher extends Game {int k11;
 		}
 
 		if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
-//			Debug.showDebugUI = !Debug.showDebugUI;
-			if(Debug.shortcuts) DebugConsole.autoSwitchState();
+//			DLog.showDebugUI = !DLog.showDebugUI;
+			if(DLog.shortcuts) DebugConsole.autoSwitchState();
 		}
 
 		ScreenManager.getInstance().render();

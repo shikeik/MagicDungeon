@@ -148,3 +148,6 @@ tasks.register('updateExe4jOptions') {
 
 compileJava.dependsOn(updateExe4jOptions)
 jar.dependsOn(updateExe4jOptions)
+
+// [新增] 引入 jpackage 打包任务
+apply from: "${rootProject.projectDir}/gradle/jpackage.gradle"

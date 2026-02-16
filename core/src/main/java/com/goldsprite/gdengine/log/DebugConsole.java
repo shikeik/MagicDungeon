@@ -125,7 +125,7 @@ public class DebugConsole extends Group {
 		btnClear.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				Debug.logMessages.clear();
+				DLog.logMessages.clear();
 				logLabel.setText(""); // 立即清空文本
 			}
 		});
@@ -282,7 +282,7 @@ public class DebugConsole extends Group {
 			updateTimer = 0;
 			refreshData();
 		}
-		Debug.clearInfo();
+		DLog.clearInfo();
 	}
 
 	private void refreshData() {
@@ -291,7 +291,7 @@ public class DebugConsole extends Group {
 		// 只有面板在屏幕内时才更新文本 (优化)
 		if (currentPanelY < getStage().getHeight()) {
 			if (contentContainer.getActor() == logScroll) {
-				logLabel.setText(String.join("\n", Debug.getLogs()));
+				logLabel.setText(String.join("\n", DLog.getLogs()));
 
 				if (autoScroll) {
 					// 只有在自动滚动开启时才执行
@@ -301,7 +301,7 @@ public class DebugConsole extends Group {
 					logScroll.setVelocityY(0);
 				}
 			} else if (contentContainer.getActor() == infoScroll) {
-				infoLabel.setText(Debug.getInfoString());
+				infoLabel.setText(DLog.getInfoString());
 			}
 		}
 	}

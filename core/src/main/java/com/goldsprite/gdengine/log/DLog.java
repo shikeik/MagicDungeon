@@ -14,8 +14,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class Debug {
-	private static Debug instance;
+public class DLog {
+	private static DLog instance;
 
 	public static final String passStr = "Y";
 	public static boolean singleMode = false;
@@ -60,12 +60,12 @@ public class Debug {
 	private static final float LOGICAL_LONG = 960f;
 
 	// [修改] 构造函数只做最基础的数据准备，绝对不碰 UI
-	public Debug() {
+	public DLog() {
 		instance = this;
 	}
 
-	public static Debug getInstance() {
-		if (instance == null) new Debug();
+	public static DLog getInstance() {
+		if (instance == null) new DLog();
 		return instance;
 	}
 

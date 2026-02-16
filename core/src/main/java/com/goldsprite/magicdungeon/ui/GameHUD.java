@@ -1539,7 +1539,7 @@ public class GameHUD {
 		hud.add(quickTable).padLeft(20);
 
 		// Floor info
-		floorLabel = new VisLabel("Floor 1");
+		floorLabel = new VisLabel("层数 1");
 		hud.add(floorLabel).padLeft(20);
 
 		return hud;

@@ -1,7 +1,7 @@
 package com.goldsprite.gdengine.screens.basics;
 
 import com.goldsprite.gdengine.screens.GScreen;
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DLog;
 
 public abstract class ExampleGScreen extends GScreen {
 
@@ -13,6 +13,6 @@ public abstract class ExampleGScreen extends GScreen {
 		super.show();
 
 		// [核心改动] 将介绍文本注入到 DebugUI，而不是自己画
-		Debug.setIntros(getIntroduction());
+		DLog.setIntros(getIntroduction());
 	}
 }

@@ -13,7 +13,7 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DLog;
 
 public class ThreadedDownload {
 
@@ -205,15 +205,15 @@ public class ThreadedDownload {
 			String msg = String.format(Locale.CHINESE, "%s [%-50s]", message, progressBar);
 
 			if (percentage == -1) {
-				Debug.logErrT("ZipDownLoader", "\n" + message);
+				DLog.logErrT("ZipDownLoader", "\n" + message);
 			} else {
-				Debug.logT("ZipDownLoader", msg);
+				DLog.logT("ZipDownLoader", msg);
 			}
 		};
 
 		Thread thread = new Thread(new DownloadTask(DOWNLOAD_URL, SAVE_PATH, listener, onFinish));
 		thread.start();
-		Debug.logT("ZipDownLoader", "下载任务已启动...");
+		DLog.logT("ZipDownLoader", "下载任务已启动...");
 	}
 
 	public static void main(String[] args) {

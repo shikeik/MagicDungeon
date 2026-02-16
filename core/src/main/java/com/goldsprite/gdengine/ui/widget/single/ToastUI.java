@@ -9,7 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.goldsprite.gdengine.assets.FontUtils;
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DLog;
 
 public class ToastUI extends Label {
 
@@ -69,7 +69,7 @@ public class ToastUI extends Label {
 
 	public void show(String msg) {
 		Gdx.app.postRunnable(()->{
-			Debug.logT("ToastUI", msg);
+			DLog.logT("ToastUI", msg);
 			setText(msg);
 			pack(); // 重新计算尺寸
 

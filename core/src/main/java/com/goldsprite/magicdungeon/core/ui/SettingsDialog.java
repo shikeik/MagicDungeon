@@ -172,9 +172,9 @@ public class SettingsDialog extends BaseDialog {
 	private void addInputRow(InputAction action) {
 		VisLabel nameLabel = new VisLabel(action.name());
 
-		// Keyboard Binding
+		// 键盘绑定
 		int boundKey = inputManager.getBoundKey(action);
-		String keyName = boundKey == -1 ? "None" : Input.Keys.toString(boundKey);
+		String keyName = boundKey == -1 ? "无" : Input.Keys.toString(boundKey);
 		VisTextButton bindKeyBtn = new VisTextButton(keyName);
 		bindKeyBtn.addListener(new ClickListener() {
 			@Override
@@ -183,11 +183,11 @@ public class SettingsDialog extends BaseDialog {
 			}
 		});
 
-        // Controller Binding
+        // 手柄绑定
         int boundButton = inputManager.getBoundButton(action);
-        String btnName = boundButton == -1 ? "None" : inputManager.getButtonName(boundButton);
+        String btnName = boundButton == -1 ? "无" : inputManager.getButtonName(boundButton);
         if(boundButton >= InputManager.VIRTUAL_AXIS_START) {
-            btnName = "Axis"; // Simplify for now or use specific name
+            btnName = "轴"; // 暂时简化或使用具体名称
         }
         VisTextButton bindControllerBtn = new VisTextButton(btnName);
         bindControllerBtn.addListener(new ClickListener() {
@@ -215,7 +215,7 @@ public class SettingsDialog extends BaseDialog {
 		inputManager.saveMappings();
 	}
 
-	// --- Inner Class for Input Capture ---
+	// --- 输入捕获内部类 ---
 	private class RebindDialog extends VisDialog {
 		private final InputAction action;
 		private final VisTextButton targetBtn;
@@ -225,7 +225,7 @@ public class SettingsDialog extends BaseDialog {
 			@Override
 			public boolean buttonDown(Controller controller, int buttonCode) {
 				if(!isKeyboard) {
-					com.goldsprite.gdengine.log.Debug.logT("Settings", "Rebinding Controller Button: " + buttonCode);
+					com.goldsprite.gdengine.log.DLog.logT("Settings", "正在重新绑定手柄按键: " + buttonCode);
 					inputManager.rebindController(action, buttonCode);
 					updateButtonLabel();
 					close();
@@ -237,7 +237,7 @@ public class SettingsDialog extends BaseDialog {
 			@Override
 			public boolean axisMoved(Controller controller, int axisCode, float value) {
 				if(!isKeyboard && Math.abs(value) > 0.5f) {
-					 // Map Axis to Virtual Button
+					 // 映射摇杆到虚拟按键
 					 int virtualCode = -1;
 					 if(axisCode == InputManager.AXIS_X) {
 						 virtualCode = value < 0 ? InputManager.AXIS_LEFT_LEFT : InputManager.AXIS_LEFT_RIGHT;
@@ -246,7 +246,7 @@ public class SettingsDialog extends BaseDialog {
 					 }
 
 					 if(virtualCode != -1) {
-						com.goldsprite.gdengine.log.Debug.logT("Settings", "Rebinding Controller Axis: " + virtualCode);
+						com.goldsprite.gdengine.log.DLog.logT("Settings", "正在重新绑定手柄摇杆: " + virtualCode);
 						inputManager.rebindController(action, virtualCode);
 						updateButtonLabel();
 						close();
@@ -273,21 +273,21 @@ public class SettingsDialog extends BaseDialog {
 			pack();
 			centerWindow();
 
-			// Capture keyboard input
+			// 捕获键盘输入
 			addListener(new InputListener() {
 				@Override
 				public boolean keyDown(InputEvent event, int keycode) {
 					if (keycode == Input.Keys.ESCAPE) {
-						// Cancel
+						// 取消
 						updateButtonLabel();
 						close();
 						return true;
 					}
 
 					if (isKeyboard) {
-						// Valid key
-						String msg = "Rebinding " + action + " to " + Input.Keys.toString(keycode);
-						com.goldsprite.gdengine.log.Debug.logT("Settings", msg);
+						// 有效按键
+						String msg = "正在重绑定 " + action + " 为 " + Input.Keys.toString(keycode);
+						com.goldsprite.gdengine.log.DLog.logT("Settings", msg);
 						inputManager.rebindKeyboard(action, keycode);
 						updateButtonLabel();
 						close();

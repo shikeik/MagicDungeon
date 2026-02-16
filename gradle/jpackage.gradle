@@ -1,0 +1,129 @@
+
+// jpackage 打包任务配置
+// 放在 lwjgl3/build.gradle 中引用
+
+// 获取 JDK 版本
+def javaVersion = org.gradle.internal.jvm.Jvm.current().javaVersion.majorVersion.toInteger()
+if (javaVersion < 14) {
+    logger.warn("⚠️ 当前 JDK 版本为 ${javaVersion}, jpackage 需要 JDK 14+. 任务可能无法运行.")
+}
+
+tasks.register('packageApp', Exec) {
+    group = 'distribution'
+    description = '使用 jpackage 打包为自带运行时的应用程序镜像 (App Image)'
+    
+    dependsOn 'jar'
+
+    // 配置路径
+    def rootDir = rootProject.projectDir
+    def appName = rootProject.name
+    // 使用 rootProject.findProperty 避免在子项目中找不到属性
+    def projectVersion = rootProject.findProperty('projectVersion')
+    def jarName = "${appName}_V${projectVersion}.jar"
+    def inputJar = file("${rootDir}/outputs/${jarName}")
+    
+    // 临时输入目录 (用于隔离 jpackage 输入)
+    def stagingDir = file("${project.buildDir}/jpackage-staging")
+    // 输出目录
+    def outputDir = file("${rootDir}/outputs/dist")
+    
+    // 图标
+    def iconPath = "${rootDir}/assets/icon.ico"
+    
+    // 主类
+    def mainClass = project.mainClassName
+
+    // 准备输入文件
+    doFirst {
+        if (!inputJar.exists()) {
+            throw new GradleException("找不到输入 Jar 文件: ${inputJar}\n请确保 jar 任务已成功运行.")
+        }
+        
+        // 清理并重新创建 staging 目录
+        delete stagingDir
+        stagingDir.mkdirs()
+        
+        // 复制 Jar 到 staging 目录
+        copy {
+            from inputJar
+            into stagingDir
+        }
+        
+        // 清理输出目录
+        delete outputDir
+        
+        println "📦 开始使用 jpackage 打包..."
+        println "   - 输入 Jar: ${jarName}"
+        println "   - 输出目录: ${outputDir}"
+        println "   - 主类: ${mainClass}"
+    }
+
+    // jpackage 命令
+    commandLine 'jpackage',
+            '--type', 'app-image',
+            '--dest', outputDir,
+            '--input', stagingDir,
+            '--name', appName,
+            '--main-jar', jarName,
+            '--main-class', mainClass,
+            '--icon', iconPath,
+            '--java-options', '-Xmx1G -Dfile.encoding=UTF-8',
+            '--verbose'
+            
+    doLast {
+        println "✅ 应用程序镜像已生成: ${outputDir}/${appName}"
+        println "👉 您可以运行 ${outputDir}/${appName}/${appName}.exe 来启动游戏 (无需已安装的 JRE)"
+        println "👉 若需制作单文件 EXE, 请配置 Enigma Virtual Box 并运行 packageSingleExe 任务."
+    }
+}
+
+// 尝试注册 Enigma Virtual Box 打包任务
+tasks.register('packageSingleExe', Exec) {
+    group = 'distribution'
+    description = '使用 Enigma Virtual Box 将 App Image 打包为单文件 Exe (需要配置 enigmavb.path)'
+    dependsOn 'packageApp'
+    
+    // 尝试从 local.properties 读取路径
+    def evbPath = null
+    def localPropsFile = rootProject.file('local.properties')
+    if (localPropsFile.exists()) {
+        Properties p = new Properties()
+        p.load(new FileInputStream(localPropsFile))
+        evbPath = p.getProperty('enigmavb.path')
+    }
+    
+    // 默认路径尝试
+    if (!evbPath) {
+        def defaultPath = "C:/Program Files (x86)/Enigma Virtual Box/enigmavbconsole.exe"
+        if (file(defaultPath).exists()) {
+            evbPath = defaultPath
+        }
+    }
+
+    def appName = rootProject.name
+    def distDir = file("${rootProject.projectDir}/outputs/dist/${appName}")
+    def outputExe = "${rootProject.projectDir}/outputs/${appName}_Portable_V${rootProject.findProperty('projectVersion')}.exe"
+    
+    // 检查工具是否存在
+    if (!evbPath || !file(evbPath).exists()) {
+        // 如果找不到工具，使用 echo 打印警告并正常退出 (不阻塞构建，但提示用户)
+        commandLine 'cmd', '/c', 'echo', '⚠️ 未找到 Enigma Virtual Box (enigmavbconsole.exe), 跳过单文件打包.'
+        doLast {
+            println "\n⚠️ [警告] 无法执行单文件打包"
+            println "请在 local.properties 中配置 'enigmavb.path' 指向 enigmavbconsole.exe"
+            println "或者将 Enigma Virtual Box 安装到默认路径: C:/Program Files (x86)/Enigma Virtual Box/"
+        }
+    } else {
+        // 如果找到了工具，尝试打包
+        // 注意: 这里假设用户已经配置好了 template.evb 或者我们尝试直接打包 (如果支持的话)
+        // 实际上 EnigmaVB Console 需要项目文件。
+        // 我们这里暂时只打印“工具已找到，但缺少模板”提示，除非我们实现了模板生成。
+        
+        commandLine 'cmd', '/c', 'echo', "✅ 找到 EnigmaVB: ${evbPath}"
+        
+        doLast {
+            println "🚀 单文件打包自动化功能开发中..."
+            println "请手动使用 Enigma Virtual Box 打包目录: ${distDir}"
+        }
+    }
+}

@@ -17,7 +17,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.graphics.Rect;
 
-import com.goldsprite.gdengine.log.Debug; // 使用项目 Log
+import com.goldsprite.gdengine.log.DLog; // 使用项目 Log
 
 import java.util.HashMap;
 import java.util.Map;
@@ -125,7 +125,7 @@ public class VirtualKeyboard {
         // 取 0.15 和 最小需求比例 中的较大值，确保按键不溢出
         this.GAMEPAD_PANEL_RATIO = Math.max(0.15f, minRatio);
 
-        Debug.logT("VirtualKeyboard", "Screen: %d, MinPx: %d, Ratio: %.2f", screenWidth, minPx, GAMEPAD_PANEL_RATIO);
+        DLog.logT("VirtualKeyboard", "Screen: %d, MinPx: %d, Ratio: %.2f", screenWidth, minPx, GAMEPAD_PANEL_RATIO);
     }
 
     private void initModeSelectionView() {
@@ -832,7 +832,7 @@ public class VirtualKeyboard {
     private void sendKeyEvent(int keyCode, boolean isDown) {
         String actionName = isDown ? "DOWN" : "UP";
         String keyName = KeyEvent.keyCodeToString(keyCode);
-        Debug.logT("VirtualKeyboard", "Key: %s(%d) | Action: %s", keyName, keyCode, actionName);
+        DLog.logT("VirtualKeyboard", "Key: %s(%d) | Action: %s", keyName, keyCode, actionName);
 
         long time = System.currentTimeMillis();
         int action = isDown ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP;
@@ -843,7 +843,7 @@ public class VirtualKeyboard {
         // For joystick continuous hold, we might need state management
         // This is a simplified version
         String keyName = KeyEvent.keyCodeToString(keyCode);
-        Debug.logT("VirtualKeyboard", "Joystick Key: %s(%d)", keyName, keyCode);
+        DLog.logT("VirtualKeyboard", "Joystick Key: %s(%d)", keyName, keyCode);
 
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
         activity.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));

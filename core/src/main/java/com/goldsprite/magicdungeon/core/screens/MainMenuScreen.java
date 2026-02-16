@@ -67,12 +67,12 @@ public class MainMenuScreen extends GScreen {
         ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
         ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
 
-		// 1. Init Renderer
+		// 1. 初始化渲染器
 		batch = new NeonBatch();
 		renderer = new TitleParallaxRenderer();
 		bloomRender = new BloomRenderer();
 
-		// 2. Init UI Stage
+		// 2. 初始化 UI 舞台
 		stage = new Stage(getUIViewport());
 		getImp().addProcessor(stage);
 
@@ -82,8 +82,8 @@ public class MainMenuScreen extends GScreen {
 	}
 
 	private void buildUI() {
-		// 1. Title Label (Centered)
-		titleLabel = new VisLabel("MAGIC DUNGEON");
+		// 1. 标题标签 (居中)
+		titleLabel = new VisLabel("魔塔地牢");
 		titleLabel.setFontScale(1.5f);
 		titleLabel.setColor(Color.CYAN);
 
@@ -96,7 +96,7 @@ public class MainMenuScreen extends GScreen {
 		titleLabel.setOrigin(Align.center);
 		stage.addActor(titleLabel);
 
-		// 2. Menu Group
+		// 2. 菜单组
 		if (menuGroup != null) menuGroup.remove();
 		menuGroup = new Group();
 		stage.addActor(menuGroup);
@@ -104,20 +104,20 @@ public class MainMenuScreen extends GScreen {
 		menuButtons.clear();
 		focusedIndex = -1;
 
-		// Seed Input Area
+		// 种子输入区域
  		VisTable seedTable = new VisTable();
 
-		float targetX = 50; // X offset from left
-		float currentY = 50; // Start from top-ish relative to center
+		float targetX = 50; // 距左侧偏移
+		float currentY = 50; // 从相对于中心的顶部开始
  		float gap = 70;
 
- 		// Seed Group
+ 		// 种子组
  		seedTable.setSize(220, 50);
  		seedTable.setPosition(targetX, currentY);
 
  		seedTable.clearChildren();
  		seedTable.left();
- 		seedTable.add(new VisLabel("Seed: ")).width(50).padRight(5);
+ 		seedTable.add(new VisLabel("种子: ")).width(50).padRight(5);
  		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
 	 	seedField.setAlignment(Align.center);
  		seedTable.add(seedField).expandX().fillX().padRight(5);
@@ -134,8 +134,8 @@ public class MainMenuScreen extends GScreen {
 
  		currentY -= gap;
 
-		// Buttons
-		createMenuButton("New Game", targetX, currentY, 0.1f, new ClickListener() {
+		// 按钮
+		createMenuButton("开始游戏", targetX, currentY, 0.1f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				startGame();
@@ -145,7 +145,7 @@ public class MainMenuScreen extends GScreen {
 		currentY -= gap;
 
 		if (SaveManager.hasSave()) {
-			createMenuButton("Continue", targetX, currentY, 0.2f, new ClickListener() {
+			createMenuButton("继续游戏", targetX, currentY, 0.2f, new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
 					continueGame();
@@ -154,8 +154,8 @@ public class MainMenuScreen extends GScreen {
 			currentY -= gap;
 		}
 
-		// [New] Settings Button
-		createMenuButton("Settings", targetX, currentY, 0.25f, new ClickListener() {
+		// [New] 设置按钮
+		createMenuButton("设置", targetX, currentY, 0.25f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				openSettings();
@@ -163,17 +163,17 @@ public class MainMenuScreen extends GScreen {
 		});
 		currentY -= gap;
 
-		createMenuButton("Exit", targetX, currentY, 0.3f, new ClickListener() {
+		createMenuButton("退出游戏", targetX, currentY, 0.3f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				Gdx.app.exit();
 			}
 		});
 
-		// Seed table animation
+		// 种子表动画
 		seedTable.addAction(createEntranceAction(0f));
 
-		// Initial Layout
+		// 初始布局
 		updateLayout();
 	}
 

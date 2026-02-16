@@ -4,7 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon.AppConstants;
 
 public class SettingsManager {
@@ -33,7 +33,7 @@ public class SettingsManager {
     private void load() {
         FileHandle file = AppConstants.getLocalFile(SETTINGS_FILE);
         if (!file.exists()) {
-            Debug.logT("SettingsManager", "No settings file found, using defaults.");
+            DLog.logT("SettingsManager", "No settings file found, using defaults.");
             return;
         }
 
@@ -45,10 +45,10 @@ public class SettingsManager {
             if (loadedData != null) {
                 this.data = loadedData;
                 applySettings();
-                Debug.logT("SettingsManager", "Settings loaded.");
+                DLog.logT("SettingsManager", "Settings loaded.");
             }
         } catch (Exception e) {
-            Debug.logErr("SettingsManager", "Failed to load settings: " + e.getMessage());
+            DLog.logErr("SettingsManager", "Failed to load settings: " + e.getMessage());
         }
     }
 
@@ -60,9 +60,9 @@ public class SettingsManager {
             FileHandle file = AppConstants.getLocalFile(SETTINGS_FILE);
             file.parent().mkdirs();
             file.writeString(json.prettyPrint(data), false);
-            Debug.logT("SettingsManager", "Settings saved to " + file.path());
+            DLog.logT("SettingsManager", "Settings saved to " + file.path());
         } catch (Exception e) {
-            Debug.logErr("SettingsManager", "Failed to save settings: " + e.getMessage());
+            DLog.logErr("SettingsManager", "Failed to save settings: " + e.getMessage());
             e.printStackTrace();
         }
     }

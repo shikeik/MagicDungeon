@@ -12,7 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.goldsprite.gdengine.PlatformImpl;
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DLog;
 import com.kotcrab.vis.ui.Sizes;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
@@ -34,7 +34,7 @@ public class VisUIHelper {
 		if (VisUI.isLoaded()) return;
 
 		try {
-			Debug.log("开始初始化 UI 系统...");
+			DLog.log("开始初始化 UI 系统...");
 
 			int fntSize = 16, smFntSize = 12;
 			float scl = 1, smScl = 1;
@@ -61,9 +61,9 @@ public class VisUIHelper {
 				// 尝试通过反射注册，避免编译错误如果依赖尚未刷新
 				Class<?> tenPatchClass = Class.forName("TenPatchDrawable");
 				// Skin 不需要显式注册类，只要 JSON 里写了全限定名且 Classpath 里有即可
-				Debug.log("检测到 TenPatch 库，支持动态切片皮肤。");
+				DLog.log("检测到 TenPatch 库，支持动态切片皮肤。");
 			} catch (ClassNotFoundException e) {
-				Debug.log("未检测到 TenPatch 库...");
+				DLog.log("未检测到 TenPatch 库...");
 			}
 
 			// 预注入字体 (Shimmer 使用 font 和 small)
@@ -84,7 +84,7 @@ public class VisUIHelper {
 
 			// 加载 VisUI
 			VisUI.load(mainSkin);
-			Debug.log("VisUI (Shimmer) 加载成功。");
+			DLog.log("VisUI (Shimmer) 加载成功。");
 
 			// 4. 修复一些细节
 			fixHandleSize();
@@ -100,7 +100,7 @@ public class VisUIHelper {
 
 		} catch (Exception e) {
 			e.printStackTrace();
-			Debug.log("UI 初始化失败: " + e.getMessage());
+			DLog.log("UI 初始化失败: " + e.getMessage());
 			// 失败回退
 			if (!VisUI.isLoaded()) VisUI.load();
 		}
@@ -252,7 +252,7 @@ public class VisUIHelper {
 		// [新增] 确保 window-bg 存在 (用于 GlobalDialog 和 VisUIDemoScreen)
 		// 优先复用现有的窗口背景
 		if (!skin.has("window-bg", Drawable.class)) {
-			Debug.log("Injecting window-bg fallback for skin.");
+			DLog.log("Injecting window-bg fallback for skin.");
 			try {
 				if (skin.has("window", Drawable.class)) {
 					skin.add("window-bg", skin.getDrawable("window"));
@@ -265,7 +265,7 @@ public class VisUIHelper {
 					skin.add("window-bg", new TextureRegionDrawable(ColorTextureUtils.createColorTexture(new Color(0.1f, 0.1f, 0.1f, 0.9f))));
 				}
 			} catch (Exception e) {
-				Debug.log("Failed to inject window-bg: " + e.getMessage());
+				DLog.log("Failed to inject window-bg: " + e.getMessage());
 			}
 		}
 

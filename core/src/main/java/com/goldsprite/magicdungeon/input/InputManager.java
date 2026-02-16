@@ -12,7 +12,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon.AppConstants;
 
 import java.util.ArrayList;
@@ -51,12 +51,12 @@ public class InputManager {
     private final ControllerListener debugListener = new ControllerAdapter() {
         @Override
         public void connected(Controller controller) {
-            Debug.logT("InputManager", "Controller connected: " + controller.getName());
+            DLog.logT("InputManager", "Controller connected: " + controller.getName());
         }
 
         @Override
         public void disconnected(Controller controller) {
-            Debug.logT("InputManager", "Controller disconnected: " + controller.getName());
+            DLog.logT("InputManager", "Controller disconnected: " + controller.getName());
         }
 
         @Override
@@ -64,14 +64,14 @@ public class InputManager {
             if (startupTimer < STARTUP_DELAY) return false;
             setInputMode(InputMode.KEYBOARD);
             String btnName = getButtonName(buttonCode);
-            Debug.logT("InputManager", "Controller Button Down: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
+            DLog.logT("InputManager", "Controller Button Down: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
             return false;
         }
 
         @Override
         public boolean buttonUp(Controller controller, int buttonCode) {
             String btnName = getButtonName(buttonCode);
-            Debug.logT("InputManager", "Controller Button Up: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
+            DLog.logT("InputManager", "Controller Button Up: " + buttonCode + " [" + btnName + "] (" + controller.getName() + ")");
             return false;
         }
 
@@ -80,7 +80,7 @@ public class InputManager {
             if (startupTimer < STARTUP_DELAY) return false;
             if (Math.abs(value) > 0.5f) { // Increased threshold for mode switching (was 0.3f)
                 setInputMode(InputMode.KEYBOARD);
-                Debug.logT("InputManager", "Controller Axis Moved: " + axisCode + " = " + value + " (" + controller.getName() + ")");
+                DLog.logT("InputManager", "Controller Axis Moved: " + axisCode + " = " + value + " (" + controller.getName() + ")");
             }
             return false;
         }
@@ -160,19 +160,19 @@ public class InputManager {
 
         loadMappings();
         Controllers.addListener(debugListener);
-        Debug.logT("InputManager", "Initialized. Current controllers: " + Controllers.getControllers().size);
+        DLog.logT("InputManager", "Initialized. Current controllers: " + Controllers.getControllers().size);
         for(Controller c : Controllers.getControllers()) {
-             Debug.logT("InputManager", " - " + c.getName() + " [" + c.getUniqueId() + "]");
+             DLog.logT("InputManager", " - " + c.getName() + " [" + c.getUniqueId() + "]");
         }
 
         // [New Feature] Detect initial hardware and set mode
         // If controller connected -> Keyboard Mode (Gamepad friendly)
         // Else -> Mouse Mode (PC friendly)
         if (hasConnectedController()) {
-            Debug.logT("InputManager", "Controller detected on startup. Setting mode to KEYBOARD.");
+            DLog.logT("InputManager", "Controller detected on startup. Setting mode to KEYBOARD.");
             setInputMode(InputMode.KEYBOARD);
         } else {
-            Debug.logT("InputManager", "No controller detected on startup. Setting mode to MOUSE.");
+            DLog.logT("InputManager", "No controller detected on startup. Setting mode to MOUSE.");
             setInputMode(InputMode.MOUSE);
         }
     }
@@ -183,7 +183,7 @@ public class InputManager {
             BUTTON_DPAD_DOWN = ANDROID_DPAD_DOWN;
             BUTTON_DPAD_LEFT = ANDROID_DPAD_LEFT;
             BUTTON_DPAD_RIGHT = ANDROID_DPAD_RIGHT;
-            Debug.logT("InputManager", "Applied Android specific D-Pad mappings.");
+            DLog.logT("InputManager", "Applied Android specific D-Pad mappings.");
         } else {
             // Desktop Defaults (Xbox style or based on user feedback)
             // User confirmed: Up=11, Down=12, Left=13, Right=14 for their Switch Pro
@@ -211,11 +211,11 @@ public class InputManager {
         if (mode == InputMode.KEYBOARD) {
             // Lock cursor
             Gdx.input.setCursorCatched(true);
-            Debug.logT("InputManager", "InputMode -> KEYBOARD (Cursor Locked)");
+            DLog.logT("InputManager", "InputMode -> KEYBOARD (Cursor Locked)");
         } else {
             // Unlock cursor
             Gdx.input.setCursorCatched(false);
-            Debug.logT("InputManager", "InputMode -> MOUSE (Cursor Unlocked)");
+            DLog.logT("InputManager", "InputMode -> MOUSE (Cursor Unlocked)");
         }
     }
 
@@ -384,7 +384,7 @@ public class InputManager {
             Controller currentController = Controllers.getControllers().first();
             int logicalCode = getLogicalButtonCode(buttonCode, currentController);
             if (logicalCode != -1) {
-                Debug.logT("InputManager", "Rebind: Converted physical " + buttonCode + " to logical " + logicalCode);
+                DLog.logT("InputManager", "Rebind: Converted physical " + buttonCode + " to logical " + logicalCode);
                 buttonCode = logicalCode;
             }
         }
@@ -445,7 +445,7 @@ public class InputManager {
         FileHandle file = AppConstants.getLocalFile(INPUTACTIONS_FILE);
         file.parent().mkdirs();
         file.writeString(root.prettyPrint(JsonWriter.OutputType.json, 80), false);
-        Debug.logT("InputManager", "Mappings saved to " + file.path());
+        DLog.logT("InputManager", "Mappings saved to " + file.path());
     }
 
     private String getSaveNameForButton(int code) {
@@ -560,7 +560,7 @@ public class InputManager {
         FileHandle file = AppConstants.getLocalFile(INPUTACTIONS_FILE);
 
         if (!file.exists()) {
-			Debug.logT("InputManager", "No config found at options/input.json, using defaults.");
+			DLog.logT("InputManager", "No config found at options/input.json, using defaults.");
 			// [Fix] If no config exists, save the default one immediately
 			saveMappings();
 			return;
@@ -581,7 +581,7 @@ public class InputManager {
                                 if (key != -1) {
                                     keys.add(key);
                                 } else {
-                                    Debug.logT("InputManager", "Unknown key in config: " + val.asString());
+                                    DLog.logT("InputManager", "Unknown key in config: " + val.asString());
                                 }
                             } else {
                                 keys.add(val.asInt());
@@ -599,7 +599,7 @@ public class InputManager {
                                 if (btn != -1) {
                                     buttons.add(btn);
                                 } else {
-                                    Debug.logT("InputManager", "Unknown controller button in config: " + val.asString());
+                                    DLog.logT("InputManager", "Unknown controller button in config: " + val.asString());
                                 }
                             } else {
                                 buttons.add(val.asInt());
@@ -608,12 +608,12 @@ public class InputManager {
                         controllerMappings.put(action, buttons);
                     }
                 } catch (IllegalArgumentException e) {
-                    Debug.logT("InputManager", "Unknown action in config: " + entry.name());
+                    DLog.logT("InputManager", "Unknown action in config: " + entry.name());
                 }
             }
-            Debug.logT("InputManager", "Mappings loaded.");
+            DLog.logT("InputManager", "Mappings loaded.");
         } catch (Exception e) {
-            Debug.logT("InputManager", "Failed to load mappings: " + e.getMessage());
+            DLog.logT("InputManager", "Failed to load mappings: " + e.getMessage());
             e.printStackTrace();
             setDefaultMappings();
         }
@@ -797,7 +797,7 @@ public class InputManager {
             for (int key : keys) {
                 if (Gdx.input.isKeyJustPressed(key)) {
                     setInputMode(InputMode.KEYBOARD);
-                    Debug.logT("InputManager", "Action JustPressed: " + action + " (Key: " + Input.Keys.toString(key) + ")");
+                    DLog.logT("InputManager", "Action JustPressed: " + action + " (Key: " + Input.Keys.toString(key) + ")");
                     return true;
                 }
             }
@@ -809,7 +809,7 @@ public class InputManager {
             for (int btn : buttons) {
                 if (currentButtons.contains(btn) && !previousButtons.contains(btn)) {
                     setInputMode(InputMode.KEYBOARD);
-                    Debug.logT("InputManager", "Action JustPressed: " + action + " (Btn: " + btn + ")");
+                    DLog.logT("InputManager", "Action JustPressed: " + action + " (Btn: " + btn + ")");
                     return true;
                 }
             }

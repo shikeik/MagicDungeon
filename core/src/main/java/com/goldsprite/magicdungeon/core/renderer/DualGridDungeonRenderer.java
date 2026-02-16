@@ -20,7 +20,7 @@ public class DualGridDungeonRenderer implements Disposable {
     private static final int TILE_SIZE = Constants.TILE_SIZE;
     public static final float DISPLAY_OFFSET = TILE_SIZE / 2f;
 
-    // 0-15 Mask to Atlas Index Mapping
+    // 0-15 掩码到图集索引映射
     private static final int[] MASK_TO_ATLAS_X = {
         -1, 1, 0, 3, 0, 1, 2, 1, 3, 0, 3, 2, 1, 2, 3, 2
     };
@@ -39,7 +39,7 @@ public class DualGridDungeonRenderer implements Disposable {
     }
 
     private void loadResources() {
-        // Load blob tilesets (4x4 tiles per texture, 16x16 pixels each)
+        // 加载 Blob 图集 (每个纹理 4x4 图块, 每个 16x16 像素)
         TextureRegion[] grassBlob = loadBlobTexture("sprites/tilesets/grass_tiles.png");
         TextureRegion[] sandBlob = loadBlobTexture("sprites/tilesets/sand_tiles.png");
         TextureRegion[] dirtBlob = loadBlobTexture("sprites/tilesets/dirt_tiles.png");
@@ -96,19 +96,19 @@ public class DualGridDungeonRenderer implements Disposable {
         } 
         */
 
-        // Layer 0: Dirt (Base layer)
+        // 层 0: 泥土 (基础层)
         if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));
 
-        // Layer 1: Brick (Indoor/Dungeon Floor)
+        // 层 1: 砖块 (室内/地牢地板)
         if (brickBlob != null) layers.add(new LayerConfig(brickBlob, "brick"));
 
-        // Layer 2: Sand (Overlay)
+        // 层 2: 沙子 (覆盖层)
         if (sandBlob != null) layers.add(new LayerConfig(sandBlob, "sand"));
 
-        // Layer 3: Grass (Top layer)
+        // 层 3: 草地 (顶层)
         if (grassBlob != null) layers.add(new LayerConfig(grassBlob, "grass"));
 
-        // Load Decor (Torch, Window)
+        // 加载装饰 (火把, 窗户)
         if (Gdx.files.internal("sprites/tilesets/torch.png").exists()) {
             Texture tex = new Texture(Gdx.files.internal("sprites/tilesets/torch.png"));
             textures.put("sprites/tilesets/torch.png", tex);

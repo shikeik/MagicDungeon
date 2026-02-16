@@ -55,7 +55,7 @@ public class IDEConsole extends VisTable {
 		clearBtn.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				com.goldsprite.gdengine.log.Debug.getLogs().clear();
+				com.goldsprite.gdengine.log.DLog.getLogs().clear();
 				updateLogText();
 			}
 		});
@@ -98,7 +98,7 @@ public class IDEConsole extends VisTable {
 	}
 
 	private void updateLogText() {
-		List<String> logs = com.goldsprite.gdengine.log.Debug.getLogs();
+		List<String> logs = com.goldsprite.gdengine.log.DLog.getLogs();
 		if (logs.isEmpty()) {
 			lastLogLabel.setText("No logs.");
 			logContent.setText("");
