@@ -56,6 +56,7 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.esotericsoftware.spine.Animation;
 import com.goldsprite.magicdungeon.screens.WorldMapScreen;
+import com.goldsprite.magicdungeon.assets.AudioAssets;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -183,8 +184,9 @@ public class GameScreen extends GScreen {
 		getImp().addProcessor(hud.stage);
 
 		// Audio
-		audio = new AudioSystem();
-		audio.playBGM();
+		audio = AudioSystem.getInstance();
+		// Initial Music (Camp)
+		audio.playMusic(AudioAssets.MUSIC_MOUNTAINS);
 
 		// 初始化相机位置
 		updateCamera();
@@ -256,6 +258,7 @@ public class GameScreen extends GScreen {
 		updateCamera();
 
 		if (hud != null) hud.showMessage("回到了营地.");
+		if (audio != null) audio.playMusic(AudioAssets.MUSIC_MOUNTAINS);
 	}
 
 	public void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
@@ -275,6 +278,10 @@ public class GameScreen extends GScreen {
 		updateCamera();
 		
 		hud.showMessage("进入了 " + node.name);
+		if (audio != null) {
+			if (dungeon.level % 5 == 0) audio.playMusic(AudioAssets.MUSIC_TAKE_COVER);
+			else audio.playMusic(AudioAssets.MUSIC_LASER_QUEST);
+		}
 	}
 
 	private void enterDungeon(int level) {
@@ -315,7 +322,19 @@ public class GameScreen extends GScreen {
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
 
-		hud.showMessage("进入了第 " + level + " 层.");
+		updateCamera();
+
+		if (level > prevLevel) {
+			hud.showMessage("Descended to Floor " + level);
+			if (audio != null) {
+				if (level % 5 == 0) audio.playMusic(AudioAssets.MUSIC_TAKE_COVER);
+				else audio.playMusic(AudioAssets.MUSIC_LASER_QUEST);
+			}
+		} else {
+			hud.showMessage("Ascended to Floor " + level);
+			if (audio != null) audio.playLevelUp();
+		}
+
 		if (level > maxDepth) maxDepth = level;
 	}
 
@@ -966,7 +985,7 @@ public class GameScreen extends GScreen {
 				// Restart (Respawn at Camp with reset progress)
 				getScreenManager().playTransition(() -> {
 					isGameOver = false;
-					if (audio != null) audio.playBGM();
+					playCurrentBGM();
 
 					// [修改] 死亡惩罚: 掉级掉装备，而不是重置
 					player.applyDeathPenalty();
@@ -1346,12 +1365,22 @@ public class GameScreen extends GScreen {
 		}
 	}
 
+	private void playCurrentBGM() {
+		if (audio == null) return;
+		if (dungeon.level == 0) {
+			audio.playMusic(AudioAssets.MUSIC_MOUNTAINS);
+		} else {
+			if (dungeon.level % 5 == 0) audio.playMusic(AudioAssets.MUSIC_TAKE_COVER);
+			else audio.playMusic(AudioAssets.MUSIC_LASER_QUEST);
+		}
+	}
+
 	@Override
 	public void show() {
 		super.show();
 		// Resume BGM when screen is shown (if not game over)
-		if (audio != null && !isGameOver) {
-			audio.playBGM();
+		if (!isGameOver) {
+			playCurrentBGM();
 		}
 	}
 

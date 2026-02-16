@@ -29,6 +29,8 @@ import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
 import com.badlogic.gdx.scenes.scene2d.Action;
 import com.goldsprite.magicdungeon.screens.WorldMapScreen;
+import com.goldsprite.magicdungeon.systems.AudioSystem;
+import com.goldsprite.magicdungeon.assets.AudioAssets;
 
 public class MainMenuScreen extends GScreen {
 	private NeonBatch batch;
@@ -80,6 +82,8 @@ public class MainMenuScreen extends GScreen {
 		settingsDialog = new SettingsDialog();
 
 		buildUI();
+		
+		AudioSystem.getInstance().playMusic(AudioAssets.MUSIC_SOLVE_THIS);
 	}
 
 	private void buildUI() {

@@ -6,6 +6,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon.AppConstants;
+import com.goldsprite.magicdungeon.systems.AudioSystem;
 
 public class SettingsManager {
     private static final String SETTINGS_FILE = "settings.json";
@@ -77,12 +78,20 @@ public class SettingsManager {
                 Gdx.graphics.setWindowedMode(1280, 720);
         }
 
-        // TODO: Apply Volume when AudioSystem is ready
+        // Apply Volume
+        try {
+            AudioSystem.getInstance().updateMusicVolume();
+        } catch (Exception e) {
+            DLog.logT("SettingsManager", "AudioSystem not ready yet (ignore if during startup)");
+        }
     }
 
     public float getMusicVolume() { return data.musicVolume; }
     public void setMusicVolume(float v) {
         data.musicVolume = v;
+        try {
+            AudioSystem.getInstance().updateMusicVolume();
+        } catch (Exception ignored) {}
     }
 
     public float getSfxVolume() { return data.sfxVolume; }
