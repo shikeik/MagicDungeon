@@ -147,12 +147,14 @@ public class PolyBatchTestScreen extends GScreen {
 		Vector2 pos = area.localToStageCoordinates(new Vector2(0, 0));
 		float x = pos.x;
 		float y = pos.y;
-		float w = area.getWidth();
-		float h = area.getHeight();
+		float regionW = capeState.knightRegion.getRegionWidth();
+		float regionH = capeState.knightRegion.getRegionHeight();
+		float areaW = area.getWidth();
+		float areaH = area.getHeight();
 
 		// 设置裁剪区域
 		Rectangle scissor = new Rectangle();
-		Rectangle clipBounds = new Rectangle(x, y, w, h);
+		Rectangle clipBounds = new Rectangle(x, y, areaW, areaH);
 		ScissorStack.calculateScissors(uiStage.getCamera(), uiStage.getBatch().getTransformMatrix(), clipBounds, scissor);
 		boolean isScissorsPushed = ScissorStack.pushScissors(scissor);
 
@@ -171,8 +173,8 @@ public class PolyBatchTestScreen extends GScreen {
 			// UI Stage 的 (0,0) 通常在屏幕左下角。
 			// gameArea.localToStageCoordinates(0,0) 返回的是 gameArea 左下角在 Stage 中的位置。
 			// 所以 centerX, centerY 就是 gameArea 的几何中心。
-			float baseX = x + w / 2f;
-			float baseY = y + h / 2f;
+			float baseX = x + areaW / 2f - regionW / 2f;
+			float baseY = y + areaH / 2f - regionH / 2f;
 
 			// 为了解耦，我们最好在 InputHandler 里也动态获取 gameArea 的中心。
 			// 但 InputHandler 访问 UIController 比较容易。
@@ -777,14 +779,22 @@ public class PolyBatchTestScreen extends GScreen {
 
 		private void applyWeightBrush(Vector2 localPos, boolean isEraser) {
 			float radius = uiController.brushRadius;
+			
+			float rawStrength = uiController.brushStrength;
+			// 负值强度意味着反向操作 (擦除/反擦除)
+			if (rawStrength < 0) {
+				isEraser = !isEraser;
+				rawStrength = -rawStrength;
+			}
+			
 			float target = isEraser ? 0f : uiController.brushTargetWeight;
-			float strength = uiController.brushStrength;
+			float strength = rawStrength;
 
 			for (ControlPoint p : capeState.hullPoints) updatePointWeight(p, localPos, radius, target, strength);
 			for (ControlPoint p : capeState.interiorPoints) updatePointWeight(p, localPos, radius, target, strength);
 
 			// 标记权重变更，以便 UIController 刷新显示
-			if (uiController.brushStrength > 0) { // 只有确实刷了才标记? 简单点总是标记吧
+			if (uiController.brushStrength != 0) {
 				capeState.weightChanged = true;
 			}
 		}
@@ -987,7 +997,7 @@ public class PolyBatchTestScreen extends GScreen {
 			t.add(new VisLabel("--- 权重刷设置 ---")).padTop(10).row();
 			addSlider(t, "目标权重", 0, 1, brushTargetWeight, v -> brushTargetWeight = v);
 			addSlider(t, "笔刷半径", 10, 200, brushRadius, v -> brushRadius = v);
-			addSlider(t, "笔刷强度", 0, 1, brushStrength, v -> brushStrength = v);
+			addSlider(t, "笔刷强度", -1, 1, brushStrength, v -> brushStrength = v);
 
 			t.add(new VisLabel("--- 波动参数 ---")).padTop(10).row();
 			addSlider(t, "基础风力", -50, 50, screen.capeState.windStrength, v -> screen.capeState.windStrength = v);

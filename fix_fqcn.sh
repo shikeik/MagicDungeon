@@ -15,8 +15,10 @@ find "$SEARCH_DIR" -name "*.java" -type f | while read -r file; do
     content=$(cat "$file")
 
     # 使用 grep 查找全限定名
-    # 正则表达式修改：去掉 \b，简化匹配
-    fqcns=$(grep -vE "^\s*(import|package)\s+" "$file" | grep -oE "[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+\.[A-Z][a-zA-Z0-9_]*" | sort | uniq)
+    # 排除 import/package 行
+    # 排除以 // 开头的单行注释
+    # 排除以 * 开头的 Javadoc 行
+    fqcns=$(grep -vE "^\s*(import|package|//|\*)" "$file" | grep -oE "[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+\.[A-Z][a-zA-Z0-9_]*" | sort | uniq)
 
     if [ -z "$fqcns" ]; then
         continue
@@ -64,6 +66,22 @@ find "$SEARCH_DIR" -name "*.java" -type f | while read -r file; do
         if [ -n "$conflict_import" ]; then
             echo "  [跳过] $fqcn (存在同名类冲突: $conflict_import)"
             continue
+        fi
+
+        # 检查是否与当前类名冲突
+        # 例如当前类是 public class List，那么不能引入 java.util.List 并使用 List
+        # 简单检查 class/interface/enum 定义
+        is_same_class=$(grep -E "^\s*(public\s+|private\s+|protected\s+)?(class|interface|enum|record)\s+$simple_name\b" "$file")
+        if [ -n "$is_same_class" ]; then
+            echo "  [跳过] $fqcn (与当前类名冲突)"
+            continue
+        fi
+
+        # 检查同包下是否有同名类
+        current_dir=$(dirname "$file")
+        if [ -f "$current_dir/$simple_name.java" ]; then
+             echo "  [跳过] $fqcn (同包下存在同名类: $simple_name.java)"
+             continue
         fi
 
         if [ -n "$has_import" ]; then

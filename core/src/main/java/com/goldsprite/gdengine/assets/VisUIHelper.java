@@ -5,10 +5,12 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.goldsprite.gdengine.PlatformImpl;
@@ -507,6 +509,74 @@ public class VisUIHelper {
 				}
 			}
 		}
+
+		// [新增] 注入全局焦点光标 (Focus Border)
+		injectFocusBorders(skin);
+	}
+
+	private static void injectFocusBorders(Skin skin) {
+		Drawable focusBorder = createFocusBorder();
+		skin.add("focus-border", focusBorder);
+
+		// VisTextButton
+		ObjectMap<String, VisTextButton.VisTextButtonStyle> visTextButtonStyles = skin.getAll(VisTextButton.VisTextButtonStyle.class);
+		if (visTextButtonStyles != null) {
+			for (VisTextButton.VisTextButtonStyle style : visTextButtonStyles.values()) {
+				style.focusBorder = focusBorder;
+			}
+		}
+
+		// VisImageButton
+		ObjectMap<String, VisImageButton.VisImageButtonStyle> visImageButtonStyles = skin.getAll(VisImageButton.VisImageButtonStyle.class);
+		if (visImageButtonStyles != null) {
+			for (VisImageButton.VisImageButtonStyle style : visImageButtonStyles.values()) {
+				style.focusBorder = focusBorder;
+			}
+		}
+
+		// VisImageTextButton
+		ObjectMap<String, VisImageTextButton.VisImageTextButtonStyle> visImageTextButtonStyles = skin.getAll(VisImageTextButton.VisImageTextButtonStyle.class);
+		if (visImageTextButtonStyles != null) {
+			for (VisImageTextButton.VisImageTextButtonStyle style : visImageTextButtonStyles.values()) {
+				style.focusBorder = focusBorder;
+			}
+		}
+
+		// VisCheckBox
+		ObjectMap<String, VisCheckBox.VisCheckBoxStyle> visCheckBoxStyles = skin.getAll(VisCheckBox.VisCheckBoxStyle.class);
+		if (visCheckBoxStyles != null) {
+			for (VisCheckBox.VisCheckBoxStyle style : visCheckBoxStyles.values()) {
+				style.focusBorder = focusBorder;
+			}
+		}
+
+		// VisTextField
+		ObjectMap<String, VisTextField.VisTextFieldStyle> visTextFieldStyles = skin.getAll(VisTextField.VisTextFieldStyle.class);
+		if (visTextFieldStyles != null) {
+			for (VisTextField.VisTextFieldStyle style : visTextFieldStyles.values()) {
+				style.focusBorder = focusBorder;
+			}
+		}
+	}
+
+	private static Drawable createFocusBorder() {
+		int size = 9;
+		int border = 2;
+		Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+		p.setColor(Color.CLEAR);
+		p.fill();
+		p.setColor(new Color(1f, 0.84f, 0f, 0.5f)); // Gold, semi-transparent
+
+		// Draw border
+		p.fillRectangle(0, 0, size, border); // Top
+		p.fillRectangle(0, size - border, size, border); // Bottom
+		p.fillRectangle(0, 0, border, size); // Left
+		p.fillRectangle(size - border, 0, border, size); // Right
+
+		Texture t = new Texture(p);
+		p.dispose();
+
+		return new NinePatchDrawable(new NinePatch(t, 3, 3, 3, 3));
 	}
 
 	private static Drawable createCloseIcon(Color xColor, Color bgColor) {

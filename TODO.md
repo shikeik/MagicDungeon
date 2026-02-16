@@ -56,6 +56,10 @@ ui美化与交互修复完善
 
 - [x] (已提取) Debug改名DLog -> Tasks.md
 
+- [ ] 更换艺术字标题logo MagicDungeon
+
+- [ ] 
+
 #### 大项功能
 
 大世界: 
