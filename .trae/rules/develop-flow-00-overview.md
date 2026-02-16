@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+description: 开发流循环流程
+---
 # 核心循环流程
 
 **1. 任务启动** (Pick)

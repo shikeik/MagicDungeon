@@ -1,5 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
+description: AI 自动开发流程, 当收到用户指令: 拾取任务或拾取任务(自动)时触发
 ---
 # AI 自动开发流程
 

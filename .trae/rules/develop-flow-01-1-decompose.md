@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+description: 任务拆解
+---
 # 阶段 1.5：任务拆解 (Decompose - 可选)
 
 > **触发条件**: 当拾取的任务过于复杂、模糊或预计耗时过长时。
