@@ -262,6 +262,8 @@ public class GameScreen extends GScreen {
 
 		if (hud != null) hud.showMessage("回到了营地.");
 		if (audio != null) audio.playMusic(AudioAssets.MUSIC_QUANTUM);
+		
+		updateHUDDungeonInfo();
 	}
 
 	public void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
@@ -553,6 +555,8 @@ public class GameScreen extends GScreen {
 
 			hud.showMessage("Ascended to Floor " + dungeon.level + "!");
 			audio.playLevelUp();
+			
+			updateHUDDungeonInfo();
 		}
 	}
 
@@ -694,6 +698,16 @@ public class GameScreen extends GScreen {
 		return hud.handleBackKey();
 	}
 
+	private void updateHUDDungeonInfo() {
+		if (hud == null || dungeon == null) return;
+		float difficulty = 1.0f;
+		if (dungeon.level > 0) {
+			difficulty = 1.0f + (dungeon.level - 1) * 0.2f;
+		}
+		String themeName = dungeon.theme != null ? dungeon.theme.name : "未知";
+		hud.updateDungeonInfo(dungeon.level, themeName, difficulty);
+	}
+
 	@Override
 	public void render(float delta) {
 		handleInput(delta);
@@ -720,6 +734,11 @@ public class GameScreen extends GScreen {
 		// Toggle Inventory (Always allowed)
 		if (input.isJustPressed(InputAction.BAG)) {
 			hud.toggleInventory();
+		}
+
+		// Toggle Progress Screen
+		if (input.isJustPressed(InputAction.PROGRESS)) {
+			getScreenManager().setCurScreen(com.goldsprite.magicdungeon.progress.ProgressScreen.class, true);
 		}
 
 		// Save Game
@@ -1089,33 +1108,39 @@ public class GameScreen extends GScreen {
 	private void renderSpineMonster(Monster m, float delta) {
 		SpineState spineState = (SpineState) m.visualState;
 		if (spineState == null) {
-			Skeleton skeleton = new Skeleton(wolfSkeletonData);
-			AnimationStateData stateData = new AnimationStateData(wolfSkeletonData);
-			AnimationState state = new AnimationState(stateData);
+			try {
+				Skeleton skeleton = new Skeleton(wolfSkeletonData);
+				AnimationStateData stateData = new AnimationStateData(wolfSkeletonData);
+				AnimationState state = new AnimationState(stateData);
 
-			// Try to find idle animation
-			String defaultAnim = "idle";
-			if (wolfSkeletonData.findAnimation(defaultAnim) == null) {
-				for(Animation anim : wolfSkeletonData.getAnimations()) {
-					if (anim.getName().toLowerCase().contains("idle") || anim.getName().toLowerCase().contains("stand")) {
-						defaultAnim = anim.getName();
-						break;
+				// Try to find idle animation
+				String defaultAnim = "idle";
+				if (wolfSkeletonData.findAnimation(defaultAnim) == null) {
+					for(Animation anim : wolfSkeletonData.getAnimations()) {
+						if (anim.getName().toLowerCase().contains("idle") || anim.getName().toLowerCase().contains("stand")) {
+							defaultAnim = anim.getName();
+							break;
+						}
+					}
+					if (wolfSkeletonData.findAnimation(defaultAnim) == null && wolfSkeletonData.getAnimations().size > 0) {
+						defaultAnim = wolfSkeletonData.getAnimations().get(0).getName();
 					}
 				}
-				if (wolfSkeletonData.findAnimation(defaultAnim) == null && wolfSkeletonData.getAnimations().size > 0) {
-					defaultAnim = wolfSkeletonData.getAnimations().get(0).getName();
+
+				if (defaultAnim != null && wolfSkeletonData.findAnimation(defaultAnim) != null) {
+					state.setAnimation(0, defaultAnim, true);
 				}
-			}
 
-			if (defaultAnim != null && wolfSkeletonData.findAnimation(defaultAnim) != null) {
-				state.setAnimation(0, defaultAnim, true);
+				spineState = new SpineState();
+				spineState.skeleton = skeleton;
+				spineState.state = state;
+				m.visualState = spineState;
+				spineState.skeleton.setScale(wolfScl, wolfScl);
+			} catch (Exception e) {
+				Gdx.app.error("GameScreen", "Failed to initialize Spine for Wolf", e);
+				wolfSkeletonData = null; // Disable Spine rendering for Wolf globally on error
+				return;
 			}
-
-			spineState = new SpineState();
-			spineState.skeleton = skeleton;
-			spineState.state = state;
-			m.visualState = spineState;
-			spineState.skeleton.setScale(wolfScl, wolfScl);
 		}
 
 		// Position: center bottom
@@ -1338,6 +1363,8 @@ public class GameScreen extends GScreen {
 			} else {
 				visitedLevels = new HashMap<>();
 			}
+
+			updateHUDDungeonInfo();
 
 			// Regenerate world
 			dungeon.generate();

@@ -1,6 +1,8 @@
 package com.goldsprite.gdengine.testing;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.utils.Array;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;

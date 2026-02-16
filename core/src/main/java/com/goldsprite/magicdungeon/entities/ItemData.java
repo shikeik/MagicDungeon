@@ -37,12 +37,12 @@ public enum ItemData {
 	Crystal_Amulet("水晶护身符", ItemType.ACCESSORY, 0, 0, 0, 2, Color.CYAN), // New Mana Regen Item
 
 	// Potions
-	Health_Potion("生命药水", ItemType.POTION, 0, 0, 20, 0, Color.RED),
-	Mana_Potion("魔法药水", ItemType.POTION, 0, 0, 0, 20, Color.BLUE), // Mana potion gives instant mana, treated differently usually, but let's keep consistent signature
-	Elixir("万能药", ItemType.POTION, 0, 0, 50, 50, Color.PURPLE),
+	Health_Potion("生命药水", ItemType.POTION, 0, 0, 20, 0, Color.RED, true),
+	Mana_Potion("魔法药水", ItemType.POTION, 0, 0, 0, 20, Color.BLUE, true),
+	Elixir("万能药", ItemType.POTION, 0, 0, 50, 50, Color.PURPLE, true),
 	
 	// Misc
-	Gold_Coin("金币", ItemType.ETC, 0, 0, 0, 0, Color.YELLOW);
+	Gold_Coin("金币", ItemType.ETC, 0, 0, 0, 0, Color.YELLOW, true);
 
 	public final String name;
 	public final ItemType type;
@@ -51,8 +51,9 @@ public enum ItemData {
 	public final int heal; // HP Regen or Instant Heal
 	public final int manaRegen; // Mana Regen or Instant Mana
 	public final Color color;
+	public final boolean stackable;
 
-	ItemData(String name, ItemType type, int atk, int def, int heal, int manaRegen, Color color) {
+	ItemData(String name, ItemType type, int atk, int def, int heal, int manaRegen, Color color, boolean stackable) {
 		this.name = name;
 		this.type = type;
 		this.atk = atk;
@@ -60,10 +61,16 @@ public enum ItemData {
 		this.heal = heal;
 		this.manaRegen = manaRegen;
 		this.color = color;
+		this.stackable = stackable;
 	}
 
-	// Legacy constructor for compatibility if needed, or just update all enums
+	// Legacy constructor
 	ItemData(String name, ItemType type, int atk, int def, int heal, Color color) {
-		this(name, type, atk, def, heal, 0, color);
+		this(name, type, atk, def, heal, 0, color, false);
+	}
+	
+	// Legacy constructor with mana regen
+	ItemData(String name, ItemType type, int atk, int def, int heal, int manaRegen, Color color) {
+		this(name, type, atk, def, heal, manaRegen, color, false);
 	}
 }

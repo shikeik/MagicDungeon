@@ -4,9 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.magicdungeon.core.screens.GameScreen;
+import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
-import com.goldsprite.magicdungeon.screens.MainMenuScreen;
 
 /**
  * 模拟人类可视化测试流程
@@ -45,7 +45,7 @@ public class HumanSimulatorTest {
         atm.addWait(1.0f);
         atm.addAction("Move Right Stop", () -> InputManager.getInstance().simulateRelease(InputAction.MOVE_RIGHT));
         atm.addWait(0.5f);
-        
+
         // Move Down
         atm.addAction("Move Down Start", () -> InputManager.getInstance().simulatePress(InputAction.MOVE_DOWN));
         atm.addWait(1.0f);
@@ -65,7 +65,7 @@ public class HumanSimulatorTest {
         final float h = Gdx.graphics.getHeight();
         final float cx = w / 2f;
         final float cy = h / 2f;
-        
+
         // 模拟从中心偏左拖动到中心偏右
         atm.add(new AutoTestManager.DragTask(cx - 100, cy, cx + 100, cy, 0.5f));
         atm.addWait(1.0f);

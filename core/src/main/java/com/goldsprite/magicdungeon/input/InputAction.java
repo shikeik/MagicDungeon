@@ -14,6 +14,7 @@ public enum InputAction {
     MAP,        // M / Y
     BAG,        // E / RB
     PAUSE,      // P / Start
+    PROGRESS,   // K / Back
     
     TAB,        // Tab / LT
     QUICK_SLOT, // Q / LB

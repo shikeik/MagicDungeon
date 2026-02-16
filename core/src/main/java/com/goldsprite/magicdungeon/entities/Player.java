@@ -40,11 +40,13 @@ public class Player extends Entity {
 	public Player(int x, int y) {
 		super(x, y, Color.GREEN);
 
-		this.moveTimer = 0;
-		this.moveDelay = 0.12f;
-		this.visualSpeed = Constants.TILE_SIZE / this.moveDelay;
-
 		this.stats = new PlayerStats();
+		
+		this.moveTimer = 0;
+		// Base move delay, will be modified by attackSpeed
+		this.moveDelay = 0.25f; 
+		this.visualSpeed = Constants.TILE_SIZE / 0.12f; // Keep visual speed fast
+
 		this.inventory = new ArrayList<>();
 		this.equipment = new Equipment();
 	}
@@ -110,19 +112,24 @@ public class Player extends Entity {
                         }
                     }
 				}
-				this.moveTimer = this.moveDelay;
+				
+				// Calculate delay based on attack speed
+				// Base 0.25s / speed
+				this.moveTimer = this.moveDelay / this.stats.attackSpeed;
 				return;
 			}
 
 			if (dungeon.isWalkable(nextX, nextY)) {
 				this.x = nextX;
 				this.y = nextY;
-				this.moveTimer = this.moveDelay;
+				// Movement also uses attack speed or separate move speed?
+				// Usually move speed. For now share.
+				this.moveTimer = this.moveDelay / this.stats.attackSpeed;
 				audio.playMove();
 			} else {
 				// Wall bump - Cancelled as per request
 				// triggerBump(dx, dy);
-				this.moveTimer = this.moveDelay;
+				this.moveTimer = this.moveDelay / this.stats.attackSpeed;
 			}
 		}
 	}
@@ -191,62 +198,38 @@ public class Player extends Entity {
 		updateStats();
 		updateVisuals();
 	}
+	
+	private void equipAccessory(InventoryItem item, int slotIndex) {
+		if (slotIndex >= 0 && slotIndex < 3) {
+			if (this.equipment.accessories[slotIndex] == item) {
+				this.equipment.accessories[slotIndex] = null;
+			} else {
+				this.equipment.accessories[slotIndex] = item;
+			}
+			return;
+		}
+		
+		// Auto-equip to first empty or swap?
+		for(int i=0; i<3; i++) {
+			if (this.equipment.accessories[i] == null) {
+				this.equipment.accessories[i] = item;
+				return;
+			}
+		}
+		// Swap first
+		this.equipment.accessories[0] = item;
+	}
 
 	public void updateVisuals() {
 		// Update player texture in TextureManager or notify systems
 		// Since TextureManager is global, we can regenerate the "PLAYER" texture
 		// But "PLAYER" texture is shared. If we have multiple players or want dynamic updates,
 		// we should probably store the texture in the Player entity or update the shared one.
-		// For single player game, updating the global texture is fine.
-		
-		String mainHand = equipment.mainHand != null ? equipment.mainHand.data.name() : null;
-		String offHand = equipment.offHand != null ? equipment.offHand.data.name() : null;
-		String helmet = equipment.helmet != null ? equipment.helmet.data.name() : null;
-		String armor = equipment.armor != null ? equipment.armor.data.name() : null;
-		String boots = equipment.boots != null ? equipment.boots.data.name() : null;
-		
-		Texture newTex = SpriteGenerator.generateCharacterTexture(mainHand, offHand, helmet, armor, boots);
-		TextureManager.getInstance().updateTexture("PLAYER", newTex);
-	}
-
-	private void equipAccessory(InventoryItem item, int slotIndex) {
-		// 0. If slotIndex is valid, use that specific slot
-		if (slotIndex >= 0 && slotIndex < equipment.accessories.length) {
-			// If clicking the same item in the same slot -> Unequip
-			if (equipment.accessories[slotIndex] == item) {
-				equipment.accessories[slotIndex] = null;
-			} else {
-				equipment.accessories[slotIndex] = item;
-			}
-			return;
-		}
-
-		// 1. Check if already equipped (Unequip)
-		for (int i = 0; i < equipment.accessories.length; i++) {
-			if (equipment.accessories[i] == item) {
-				equipment.accessories[i] = null;
-				return;
-			}
-		}
-
-		// 2. Try to fill empty slot
-		for (int i = 0; i < equipment.accessories.length; i++) {
-			if (equipment.accessories[i] == null) {
-				equipment.accessories[i] = item;
-				return;
-			}
-		}
-		// 3. If full, replace the first one
-		equipment.accessories[0] = item;
 	}
 
 	public boolean addItem(InventoryItem newItem) {
-		if (newItem != null && newItem.data != null) {
-			discoveredItems.add(newItem.data.name());
-		}
-
-		// 1. Try to stack if it's a potion
-		if (newItem.data.type == ItemType.POTION) {
+		// 1. Check for stackable items
+		if (newItem.data.stackable) {
 			// Iterate backwards to find stackable item
 			for (int i = inventory.size() - 1; i >= 0; i--) {
 				InventoryItem existing = inventory.get(i);
@@ -313,22 +296,13 @@ public class Player extends Entity {
 		// 1. Level Penalty: Lose 3 levels (min level 1)
 		int targetLevel = Math.max(1, stats.level - 3);
 		
-		// Reset stats to level 1 base
-		stats.level = 1;
+		// Reset stats
+		stats.level = targetLevel;
 		stats.xp = 0;
-		stats.xpToNextLevel = 100;
-		stats.maxHp = 100;
-		stats.hp = 100;
-		stats.maxMana = 50;
-		stats.mana = 50;
+		stats.xpToNextLevel = stats.calculateRequiredXp(targetLevel);
 		
-		// Re-apply level ups to reach targetLevel
-		for (int i = 1; i < targetLevel; i++) {
-			stats.level++;
-			stats.xpToNextLevel = (int) (stats.xpToNextLevel * 1.5f);
-			stats.maxHp += 20;
-			stats.maxMana += 10;
-		}
+		// Recalculate stats for new level
+		stats.recalculateStats();
 		stats.hp = stats.maxHp;
 		stats.mana = stats.maxMana;
 
@@ -341,55 +315,57 @@ public class Player extends Entity {
 			inventory.remove(idx);
 			dropped++;
 		}
-		System.out.println("Death Penalty: Level " + (targetLevel+3) + "->" + targetLevel + ", Dropped " + dropped + " items.");
+		System.out.println("Death Penalty: Level -> " + targetLevel + ", Dropped " + dropped + " items.");
 		
 		updateStats();
 	}
 
 	private void updateStats() {
-		// [Fix] Base attack now includes level bonus to prevent equipment changes from resetting level gains
-		int baseAtk = 5 + (this.stats.level - 1) * 2; 
-		int baseDef = 0; 
+		// Reset to base stats (level based)
+		this.stats.recalculateStats();
+
 		int baseHpRegen = 1; 
 		int baseManaRegen = 1; 
 
 		if (equipment.mainHand != null) {
-			baseAtk += equipment.mainHand.atk;
+			this.stats.atk += equipment.mainHand.atk;
 			baseHpRegen += equipment.mainHand.heal;
 			baseManaRegen += equipment.mainHand.manaRegen;
 		}
 		if (equipment.offHand != null) {
-			baseDef += equipment.offHand.def; // Shields give def, maybe atk?
+			this.stats.def += equipment.offHand.def; 
 			baseHpRegen += equipment.offHand.heal;
 			baseManaRegen += equipment.offHand.manaRegen;
 		}
 		if (equipment.helmet != null) {
-			baseDef += equipment.helmet.def;
+			this.stats.def += equipment.helmet.def;
 			baseHpRegen += equipment.helmet.heal;
 			baseManaRegen += equipment.helmet.manaRegen;
 		}
 		if (equipment.armor != null) {
-			baseDef += equipment.armor.def;
+			this.stats.def += equipment.armor.def;
 			baseHpRegen += equipment.armor.heal;
 			baseManaRegen += equipment.armor.manaRegen;
 		}
 		if (equipment.boots != null) {
-			baseDef += equipment.boots.def;
+			this.stats.def += equipment.boots.def;
 			baseHpRegen += equipment.boots.heal;
 			baseManaRegen += equipment.boots.manaRegen;
 		}
 		
 		for (InventoryItem acc : equipment.accessories) {
 			if (acc != null) {
-				baseAtk += acc.atk;
-				baseDef += acc.def;
+				this.stats.atk += acc.atk;
+				this.stats.def += acc.def;
 				baseHpRegen += acc.heal;
 				baseManaRegen += acc.manaRegen;
 			}
 		}
 
-		this.stats.atk = baseAtk;
-		this.stats.def = baseDef;
+        // Apply Caps
+        this.stats.atk = Math.min(this.stats.atkCap, this.stats.atk);
+        this.stats.def = Math.min(this.stats.defCap, this.stats.def);
+
 		this.stats.hpRegen = baseHpRegen;
 		this.stats.manaRegen = baseManaRegen;
 	}
