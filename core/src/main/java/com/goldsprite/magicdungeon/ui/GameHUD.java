@@ -38,6 +38,9 @@ import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
+import com.goldsprite.gdengine.ui.widget.DrawerPanel;
+import com.goldsprite.gdengine.ui.widget.DrawerPanel.DrawerStyle;
+import com.goldsprite.gdengine.ui.widget.DrawerPanel.Direction;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -72,6 +75,8 @@ public class GameHUD {
 	private VisImage avatarImage;
 	private VisLabel levelBadge;
 	private VisLabel floorLabel;
+	private VisLabel difficultyLabel;
+	private VisLabel themeLabel;
 
 	private VisLabel coinLabel; // New Coin Label
 
@@ -125,6 +130,12 @@ public class GameHUD {
 	private TextureRegionDrawable whiteDrawable;
 	private TextureRegionDrawable logBgDrawable;
 	private TextureRegionDrawable circleDrawable; // New for controller icons
+	private TextureRegionDrawable arrowUpDrawable;
+	private TextureRegionDrawable arrowDownDrawable;
+	private TextureRegionDrawable arrowLeftDrawable;
+	private TextureRegionDrawable arrowRightDrawable;
+	private DrawerStyle drawerStyle;
+	private DrawerPanel miniMapDrawer;
 
 	private Player currentPlayer;
 	private Runnable saveListener;
@@ -1376,6 +1387,10 @@ public class GameHUD {
 		// Or use a root-like table that fills parent?
 		// Let's add directly to stage and set position.
 		stage.addActor(monsterInfoTable);
+		
+		// --- Overlay: Mini Map (Top Right Corner) ---
+		createMiniMap();
+		stage.addActor(miniMapDrawer);
 
 		// --- Overlay: Pause Label ---
 		createPauseLabel();
@@ -1388,6 +1403,32 @@ public class GameHUD {
 
 		// --- Android Controls ---
 		// Moved to VirtualKeyboard system
+	}
+
+	private void createMiniMap() {
+		if (drawerStyle == null) {
+			drawerStyle = new DrawerStyle();
+			drawerStyle.background = logBgDrawable;
+			drawerStyle.arrowUp = arrowUpDrawable;
+			drawerStyle.arrowDown = arrowDownDrawable;
+			drawerStyle.arrowLeft = arrowLeftDrawable;
+			drawerStyle.arrowRight = arrowRightDrawable;
+		}
+
+		VisTable content = new VisTable();
+		content.add(new VisLabel("MiniMap")).center();
+
+		miniMapDrawer = new DrawerPanel(Direction.DOWN, drawerStyle) {
+			@Override
+			public void act(float delta) {
+				super.act(delta);
+				if (getStage() != null) {
+					setPosition(getStage().getWidth() - getWidth() - 10, getStage().getHeight() - getHeight() - 10);
+				}
+			}
+		};
+		
+		miniMapDrawer.setContent(content, 200, 200);
 	}
 
 	private void createAndroidControls() {
@@ -1454,29 +1495,44 @@ public class GameHUD {
 
 	private void initStyles() {
 		// Can be used to init bar styles if shared
+		initDrawerStyle();
+	}
+	
+	private void initDrawerStyle() {
+		drawerStyle = new DrawerStyle();
+		drawerStyle.background = logBgDrawable;
+		drawerStyle.arrowUp = arrowUpDrawable;
+		drawerStyle.arrowDown = arrowDownDrawable;
+		drawerStyle.arrowLeft = arrowLeftDrawable;
+		drawerStyle.arrowRight = arrowRightDrawable;
+		drawerStyle.animDuration = 0.3f;
 	}
 
 	private VisTable createPlayerHud() {
+		// Main Container with border
 		VisTable hud = new VisTable();
+		if (slotBorderDrawable != null) {
+			hud.setBackground(slotBorderDrawable);
+		} else {
+			hud.setBackground(logBgDrawable);
+		}
+		hud.pad(10); // Padding inside border
 
-		// 1. Avatar Area
+		// 1. Avatar + Bars Area (Left)
+		VisTable statsArea = new VisTable();
+		
+		// Avatar Stack
 		Stack avatarStack = new Stack();
-
 		// Avatar Image
-		// Use TextureManager to get the shared "PLAYER" texture which is dynamically updated
 		TextureRegion avatarTex = TextureManager.getInstance().get("PLAYER");
 		if (avatarTex == null) {
-			// Fallback if not loaded yet
 			avatarTex = new TextureRegion(SpriteGenerator.createAvatar());
 		}
-		// Crop initial avatar
 		TextureRegion headRegion = new TextureRegion(avatarTex, 88, 10, 80, 80);
 		avatarImage = new VisImage(new TextureRegionDrawable(headRegion));
-
-		// Frame (Simple border)
 		VisTable frame = new VisTable();
 		frame.add(avatarImage).size(80, 80);
-
+		
 		// Level Badge
 		levelBadge = new VisLabel("Lv1");
 		levelBadge.setColor(Color.YELLOW);
@@ -1484,63 +1540,77 @@ public class GameHUD {
 		VisTable container = new VisTable();
 		VisTable badgeTable = new VisTable();
 		container.add(badgeTable).size(30, 20);
-//		badgeTable.setBackground("window-noborder");
 		badgeTable.bottom().right();
 		badgeTable.add(levelBadge).pad(2);
-
 		avatarStack.add(frame);
 		avatarStack.add(container);
+		
+		statsArea.add(avatarStack).size(80, 80).padRight(10); // Smaller avatar in HUD
 
-		hud.add(avatarStack).size(150, 150).padRight(15);
-
-		// 2. Bars Area
+		// Bars
 		VisTable barsTable = new VisTable();
-
-		// HP Bar
+		// HP
 		SkewBar.BarStyle hpStyle = new SkewBar.BarStyle();
-		hpStyle.gradientStart = Color.valueOf("ff5252"); // Red
-		hpStyle.gradientEnd = Color.valueOf("b71c1c");   // Dark Red
+		hpStyle.gradientStart = Color.valueOf("ff5252");
+		hpStyle.gradientEnd = Color.valueOf("b71c1c");
 		hpStyle.skewDeg = -20f;
 		hpBar = new SkewBar(0, 100, hpStyle);
 		hpLabel = new VisLabel("100/100");
 		hpLabel.setAlignment(Align.center);
 		barsTable.add(createBarWithLabel(hpBar, hpLabel, 200, 20)).padBottom(5).row();
-
-		// Mana Bar
+		// Mana
 		SkewBar.BarStyle mpStyle = new SkewBar.BarStyle();
-		mpStyle.gradientStart = Color.valueOf("40c4ff"); // Light Blue
-		mpStyle.gradientEnd = Color.valueOf("01579b");   // Dark Blue
+		mpStyle.gradientStart = Color.valueOf("40c4ff");
+		mpStyle.gradientEnd = Color.valueOf("01579b");
 		mpStyle.skewDeg = -20f;
 		manaBar = new SkewBar(0, 50, mpStyle);
 		manaLabel = new VisLabel("50/50");
 		manaLabel.setAlignment(Align.center);
 		barsTable.add(createBarWithLabel(manaBar, manaLabel, 200, 20)).padBottom(5).row();
-
-		// XP Bar
+		// XP
 		SkewBar.BarStyle xpStyle = new SkewBar.BarStyle();
-		xpStyle.gradientStart = Color.valueOf("ffd740"); // Amber
-		xpStyle.gradientEnd = Color.valueOf("ff6f00");   // Dark Amber
+		xpStyle.gradientStart = Color.valueOf("ffd740");
+		xpStyle.gradientEnd = Color.valueOf("ff6f00");
 		xpStyle.skewDeg = -20f;
 		xpBar = new SkewBar(0, 100, xpStyle);
 		xpLabel = new VisLabel("0/100");
 		xpLabel.setAlignment(Align.center);
 		barsTable.add(createBarWithLabel(xpBar, xpLabel, 200, 15)).row();
+		
+		statsArea.add(barsTable);
+		
+		hud.add(statsArea).bottom().padRight(20);
 
-		hud.add(barsTable);
-
-		// Quick Slots
+		// 2. Quick Slots (Center)
 		VisTable quickTable = new VisTable();
 		hpQuickSlot = new QuickSlot((item) -> item.data == ItemData.Health_Potion || item.data == ItemData.Elixir);
 		mpQuickSlot = new QuickSlot((item) -> item.data == ItemData.Mana_Potion);
-
 		quickTable.add(hpQuickSlot).size(64,64).pad(5);
 		quickTable.add(mpQuickSlot).size(64,64).pad(5);
+		hud.add(quickTable).bottom().padRight(20);
 
-		hud.add(quickTable).padLeft(20);
-
-		// Floor info
+		// 3. Dungeon Info Drawer (Right)
+		DrawerPanel drawer = new DrawerPanel(Direction.UP, drawerStyle);
+		
+		VisTable infoContent = new VisTable();
+		infoContent.pad(10);
 		floorLabel = new VisLabel("层数 1");
-		hud.add(floorLabel).padLeft(20);
+		infoContent.add(floorLabel).row();
+		infoContent.add(new VisLabel("难度: 普通")).padTop(5).row();
+		infoContent.add(new VisLabel("主题: 森林")).padTop(5).row(); // TODO: Bind to actual theme
+		
+		drawer.setContent(infoContent, 150, 100);
+		
+		// Drawer expands UP, so button is at bottom.
+		// Layout: HUD is at bottom of screen.
+		// If Drawer expands UP, content appears ABOVE button.
+		// Since DrawerPanel handles layout (Content | Button for UP), it works.
+		// We add Drawer to HUD.
+		// BUT: If HUD has fixed height (due to other items), expanding Drawer might push HUD up or clip?
+		// VisTable usually adapts. If HUD is aligned bottom, expanding up increases height.
+		// This is what we want.
+		
+		hud.add(drawer).bottom();
 
 		return hud;
 	}
@@ -1729,6 +1799,35 @@ public class GameHUD {
 		circleTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 		circleDrawable = new TextureRegionDrawable(circleTex);
 		circlePm.dispose();
+
+		// 6. Arrows (for Drawer)
+		Pixmap arrowPm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+		
+		// Up
+		arrowPm.setColor(0,0,0,0); arrowPm.fill();
+		arrowPm.setColor(Color.WHITE);
+		arrowPm.fillTriangle(16, 8, 8, 24, 24, 24);
+		arrowUpDrawable = new TextureRegionDrawable(new Texture(arrowPm));
+		
+		// Down
+		arrowPm.setColor(0,0,0,0); arrowPm.fill();
+		arrowPm.setColor(Color.WHITE);
+		arrowPm.fillTriangle(16, 24, 8, 8, 24, 8);
+		arrowDownDrawable = new TextureRegionDrawable(new Texture(arrowPm));
+		
+		// Left
+		arrowPm.setColor(0,0,0,0); arrowPm.fill();
+		arrowPm.setColor(Color.WHITE);
+		arrowPm.fillTriangle(8, 16, 24, 8, 24, 24);
+		arrowLeftDrawable = new TextureRegionDrawable(new Texture(arrowPm));
+		
+		// Right
+		arrowPm.setColor(0,0,0,0); arrowPm.fill();
+		arrowPm.setColor(Color.WHITE);
+		arrowPm.fillTriangle(24, 16, 8, 8, 8, 24);
+		arrowRightDrawable = new TextureRegionDrawable(new Texture(arrowPm));
+		
+		arrowPm.dispose();
 	}
 
 	private InputManager.InputMode lastInputMode = InputManager.InputMode.MOUSE;
@@ -2209,6 +2308,22 @@ public class GameHUD {
 
 	public void setReturnToCampListener(Runnable listener) {
 		this.returnToCampListener = listener;
+	}
+
+	public void updateDungeonInfo(int floor, String themeName, float difficultyMultiplier) {
+		if (floorLabel != null) {
+			floorLabel.setText("层数 " + floor);
+		}
+		if (themeLabel != null) {
+			themeLabel.setText("主题: " + themeName);
+		}
+		if (difficultyLabel != null) {
+			String diffText = "普通";
+			if (difficultyMultiplier > 2.0f) diffText = "噩梦";
+			else if (difficultyMultiplier > 1.5f) diffText = "困难";
+			
+			difficultyLabel.setText(String.format("难度: %s (%.1fx)", diffText, difficultyMultiplier));
+		}
 	}
 
 	public void showLevelSelection(int maxDepth, Consumer<Integer> onSelect) {
