@@ -67,6 +67,13 @@ public class NeonSkeleton {
 	public void addIKConstraint(NeonIKConstraint ik) {
 		ikConstraints.add(ik);
 	}
+	
+	public NeonIKConstraint findIKConstraint(String name) {
+		for (NeonIKConstraint ik : ikConstraints) {
+			if (ik.name.equals(name)) return ik;
+		}
+		return null;
+	}
 
 	public void updateWorldTransform() {
 		// 1. Apply skeleton transform to root bone

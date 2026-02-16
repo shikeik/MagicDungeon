@@ -6,6 +6,7 @@ import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.magicdungeon.screens.tests.*;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonLayeredMixTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonIKTestScreen;
+import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonHumanDemoScreen;
 
 import java.util.Map;
 
@@ -26,6 +27,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("狼Spine动画测试", SpineTestScreen.class);
 		map.put("Neon分轨混合测试", NeonLayeredMixTestScreen.class);
 		map.put("Neon IK 测试", NeonIKTestScreen.class);
+		map.put("Neon 人体 IK & 分轨演示", NeonHumanDemoScreen.class);
 
 		map.put("临时观测测试(用完即删)", null);
 	}
