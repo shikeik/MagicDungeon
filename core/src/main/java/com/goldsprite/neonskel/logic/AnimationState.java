@@ -2,6 +2,7 @@ package com.goldsprite.neonskel.logic;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.goldsprite.neonskel.data.*;
 import com.goldsprite.neonskel.render.NeonSpriteSkin;
@@ -10,134 +11,228 @@ import com.goldsprite.neonskel.utils.NeonAssetProvider;
 public class AnimationState {
 
 	private final ObjectMap<String, NeonAnimation> animationLibrary = new ObjectMap<>();
-
-	private NeonAnimation currentAnim;
-	private float currentTime = 0f;
-
-	private NeonAnimation prevAnim;
-	private float prevTime = 0f;
-
-	private float mixTimer = 0f;
-	private float mixDuration = 0f;
-	private boolean inTransition = false;
+	
+	// 多轨道支持
+	private final Array<TrackEntry> tracks = new Array<>();
 
 	private float speed = 1.0f;
-	private boolean isPlaying = false;
-
+	
 	public void addAnimation(NeonAnimation anim) {
 		animationLibrary.put(anim.name, anim);
 	}
 
-	public void play(String name) {
-		startAnimation(name, 0f);
+	/** 播放动画 (循环, 轨道0) */
+	public TrackEntry play(String name) {
+		return setAnimation(0, name, true);
+	}
+	
+	/** 播放动画 (指定循环, 轨道0) */
+	public TrackEntry play(String name, boolean loop) {
+		return setAnimation(0, name, loop);
+	}
+	
+	/** 播放一次 (不循环, 轨道0) */
+	public TrackEntry playOnce(String name) {
+		return setAnimation(0, name, false);
 	}
 
-	public void crossFade(String name, float duration) {
-		startAnimation(name, duration);
+	/** 淡入淡出 (循环, 轨道0) */
+	public TrackEntry crossFade(String name, float duration) {
+		return setAnimation(0, name, true, duration);
+	}
+	
+	public TrackEntry setAnimation(int trackIndex, String name, boolean loop) {
+		return setAnimation(trackIndex, name, loop, 0f);
 	}
 
-	private void startAnimation(String name, float transitionTime) {
-		NeonAnimation nextAnim = animationLibrary.get(name);
-		if (nextAnim == null) return;
-		if (currentAnim == nextAnim && isPlaying && currentAnim.looping) return;
-
-		if (transitionTime <= 0 || currentAnim == null) {
-			this.currentAnim = nextAnim;
-			this.currentTime = 0f;
-			this.inTransition = false;
-			this.prevAnim = null;
-		} else {
-			this.prevAnim = this.currentAnim;
-			this.prevTime = this.currentTime;
-			this.currentAnim = nextAnim;
-			this.currentTime = 0f;
-			this.mixDuration = transitionTime;
-			this.mixTimer = 0f;
-			this.inTransition = true;
+	public TrackEntry setAnimation(int trackIndex, String name, boolean loop, float mixDuration) {
+		NeonAnimation anim = animationLibrary.get(name);
+		if (anim == null) return null;
+		
+		// 扩展 tracks 数组
+		while (tracks.size <= trackIndex) {
+			tracks.add(null);
 		}
-		this.isPlaying = true;
+		
+		TrackEntry current = tracks.get(trackIndex);
+		
+		// 如果当前已经在播放同一个动画且正在播放中，且请求也是循环，则不重置
+		if (current != null && current.animation == anim && current.loop == loop && !current.isComplete()) {
+			return current;
+		}
+		
+		TrackEntry entry = new TrackEntry(trackIndex, anim);
+		entry.loop = loop;
+		
+		if (current != null && mixDuration > 0) {
+			entry.mixingFrom = current;
+			entry.mixDuration = mixDuration;
+			entry.mixTime = 0f;
+			entry.mixAlpha = 0f;
+		}
+		
+		tracks.set(trackIndex, entry);
+		return entry;
+	}
+	
+	public void clearTrack(int trackIndex) {
+		if (trackIndex >= 0 && trackIndex < tracks.size) {
+			tracks.set(trackIndex, null);
+		}
+	}
+	
+	public TrackEntry getCurrent(int trackIndex) {
+		if (trackIndex < 0 || trackIndex >= tracks.size) return null;
+		return tracks.get(trackIndex);
 	}
 
 	public void update(float delta) {
-		if (!isPlaying || currentAnim == null) return;
-
 		float dt = delta * speed;
-		currentTime = updateTime(currentAnim, currentTime, dt);
-
-		if (inTransition) {
-			mixTimer += dt;
-			if (prevAnim != null) prevTime = updateTime(prevAnim, prevTime, dt);
-
-			if (mixTimer >= mixDuration) {
-				inTransition = false;
-				prevAnim = null;
+		
+		for (int i = 0; i < tracks.size; i++) {
+			TrackEntry track = tracks.get(i);
+			if (track == null) continue;
+			
+			track.trackTime += dt * track.timeScale;
+			
+			// 处理混合
+			if (track.mixingFrom != null) {
+				track.mixTime += dt;
+				
+				// 更新 mixingFrom 的时间
+				track.mixingFrom.trackTime += dt * track.mixingFrom.timeScale;
+				
+				if (track.mixTime >= track.mixDuration) {
+					track.mixAlpha = 1.0f;
+					track.mixingFrom = null;
+				} else {
+					track.mixAlpha = track.mixTime / track.mixDuration;
+				}
 			}
+			
+			// 如果非循环动画结束，是否自动清除？通常由上层逻辑决定，或者保留最后一帧状态
 		}
-	}
-
-	private float updateTime(NeonAnimation anim, float time, float dt) {
-		time += dt;
-		if (time >= anim.duration) {
-			if (anim.looping) time %= anim.duration;
-			else time = anim.duration;
-		}
-		return time;
 	}
 
 	public void apply(NeonSkeleton skeleton, NeonAssetProvider assets) {
-		if (currentAnim == null) return;
-
-		float alpha = 1.0f;
-		if (inTransition && prevAnim != null) {
-			alpha = mixTimer / mixDuration;
+		for (int i = 0; i < tracks.size; i++) {
+			TrackEntry track = tracks.get(i);
+			if (track == null) continue;
+			
+			applyTrack(track, skeleton, assets);
 		}
-
+	}
+	
+	private void applyTrack(TrackEntry track, NeonSkeleton skeleton, NeonAssetProvider assets) {
+		// 如果混合权重为 0 (完全不显示)，跳过
+		if (track.alpha <= 0) return;
+		
 		// 遍历当前动画的所有时间轴
-		for (NeonTimeline timeline : currentAnim.timelines) {
-
-			// --- 分支 1: 处理浮点数属性 (骨骼) ---
-			if (timeline.property.isFloat()) {
-				NeonBone bone = skeleton.getBone(timeline.boneName);
-				if (bone == null) continue;
-
-				float valCurr = timeline.evaluate(currentTime);
-				float finalVal = valCurr;
-
-				// 混合逻辑 (仅针对 float)
-				if (inTransition && prevAnim != null) {
-					NeonTimeline prevLine = findTimeline(prevAnim, timeline.boneName, timeline.property);
-					if (prevLine != null) {
-						float valPrev = prevLine.evaluate(prevTime);
-						finalVal = MathUtils.lerp(valPrev, valCurr, alpha);
-					}
-				}
-
-				switch (timeline.property) {
-					case X: bone.x = finalVal; break;
-					case Y: bone.y = finalVal; break;
-					case ROTATION: bone.rotation = finalVal; break;
-					case SCALE_X: bone.scaleX = finalVal; break;
-					case SCALE_Y: bone.scaleY = finalVal; break;
+		for (NeonTimeline timeline : track.animation.timelines) {
+			 applyTimeline(timeline, track, skeleton, assets);
+		}
+	}
+	
+	private void applyTimeline(NeonTimeline timeline, TrackEntry track, NeonSkeleton skeleton, NeonAssetProvider assets) {
+		// 1. 计算当前动画的值
+		float time = track.getAnimationTime();
+		
+		// 处理浮点属性 (骨骼变换)
+		if (timeline.property.isFloat()) {
+			NeonBone bone = skeleton.getBone(timeline.boneName);
+			if (bone == null) return;
+			
+			float valCurrent = timeline.evaluate(time);
+			float valTarget = valCurrent;
+			
+			// 2. 处理 Crossfade 混合
+			if (track.mixingFrom != null) {
+				NeonTimeline prevLine = findTimeline(track.mixingFrom.animation, timeline.boneName, timeline.property);
+				if (prevLine != null) {
+					float timePrev = track.mixingFrom.getAnimationTime();
+					float valPrev = prevLine.evaluate(timePrev);
+					valTarget = MathUtils.lerp(valPrev, valCurrent, track.mixAlpha);
 				}
 			}
-			// --- 分支 2: 处理对象属性 (Sprite) ---
-			else if (timeline.property == NeonProperty.SPRITE) {
-				// 获取 Slot 并设置 Skin
-				NeonSlot slot = skeleton.getSlot(timeline.boneName);
-				if (slot != null && slot.skin instanceof NeonSpriteSkin) {
-					Object val = timeline.evaluateObject(currentTime);
-					if (val instanceof String) {
-						// 通过 AssetProvider 查找纹理
-						if (assets != null) {
-							TextureRegion reg = assets.findRegion((String) val);
-							((NeonSpriteSkin) slot.skin).region = reg;
-						}
-					} else if (val instanceof TextureRegion) {
-						((NeonSpriteSkin) slot.skin).region = (TextureRegion) val;
-					}
+			
+			// 3. 应用到骨骼
+			// 如果是轨道 0 (Base Track)，通常是覆盖模式
+			// 如果是轨道 > 0 (Layer Track)，通常是混合模式 (track.alpha)
+			
+			if (track.trackIndex == 0) {
+				// Base track: 直接设置 (如果有 crossfade 已经计算在 valTarget 中)
+				// 但如果 track.alpha < 1 (虽然轨道0通常是1)，也应该混合
+				if (track.alpha >= 1f) {
+					setBoneProperty(bone, timeline.property, valTarget);
+				} else {
+					float currentVal = getBoneProperty(bone, timeline.property);
+					setBoneProperty(bone, timeline.property, MathUtils.lerp(currentVal, valTarget, track.alpha));
 				}
+			} else {
+				// Layer track: 混合当前值
+				float currentVal = getBoneProperty(bone, timeline.property);
+				setBoneProperty(bone, timeline.property, MathUtils.lerp(currentVal, valTarget, track.alpha));
+			}
+		} 
+		// 处理对象属性 (Sprite)
+		else if (timeline.property == NeonProperty.SPRITE) {
+			// Sprite 切换通常不插值，直接在特定时间点切换
+			// 对于混合，通常取 mixAlpha >= 0.5 时的值
+			
+			float applyTime = time;
+			NeonTimeline targetTimeline = timeline;
+			
+			if (track.mixingFrom != null && track.mixAlpha < 0.5f) {
+				// 使用旧动画
+				targetTimeline = findTimeline(track.mixingFrom.animation, timeline.boneName, timeline.property);
+				if (targetTimeline != null) {
+					applyTime = track.mixingFrom.getAnimationTime();
+				} else {
+					// 旧动画没有，使用新的
+					targetTimeline = timeline;
+				}
+			}
+			
+			if (targetTimeline != null) {
+				applySpriteTimeline(targetTimeline, applyTime, skeleton, assets);
 			}
 		}
+	}
+	
+	private void applySpriteTimeline(NeonTimeline timeline, float time, NeonSkeleton skeleton, NeonAssetProvider assets) {
+		NeonSlot slot = skeleton.getSlot(timeline.boneName);
+		if (slot != null && slot.skin instanceof NeonSpriteSkin) {
+			Object val = timeline.evaluateObject(time);
+			if (val instanceof String) {
+				if (assets != null) {
+					TextureRegion reg = assets.findRegion((String) val);
+					((NeonSpriteSkin) slot.skin).region = reg;
+				}
+			} else if (val instanceof TextureRegion) {
+				((NeonSpriteSkin) slot.skin).region = (TextureRegion) val;
+			}
+		}
+	}
+
+	private void setBoneProperty(NeonBone bone, NeonProperty prop, float val) {
+		switch (prop) {
+			case X: bone.x = val; break;
+			case Y: bone.y = val; break;
+			case ROTATION: bone.rotation = val; break;
+			case SCALE_X: bone.scaleX = val; break;
+			case SCALE_Y: bone.scaleY = val; break;
+		}
+	}
+	
+	private float getBoneProperty(NeonBone bone, NeonProperty prop) {
+		switch (prop) {
+			case X: return bone.x;
+			case Y: return bone.y;
+			case ROTATION: return bone.rotation;
+			case SCALE_X: return bone.scaleX;
+			case SCALE_Y: return bone.scaleY;
+		}
+		return 0f;
 	}
 
 	private NeonTimeline findTimeline(NeonAnimation anim, String bone, NeonProperty prop) {
