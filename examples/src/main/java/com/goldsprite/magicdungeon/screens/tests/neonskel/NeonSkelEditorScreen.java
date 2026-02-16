@@ -31,14 +31,27 @@ import com.goldsprite.neonskel.data.*;
 import com.goldsprite.neonskel.logic.AnimationState;
 import com.goldsprite.neonskel.logic.NeonSkeleton;
 import com.goldsprite.neonskel.logic.TrackEntry;
+import com.goldsprite.gdengine.utils.SimpleCameraController;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 
-public class NeonHumanDemoScreen extends GScreen {
+import com.kotcrab.vis.ui.widget.VisScrollPane;
+import com.kotcrab.vis.ui.widget.VisTree;
+import com.kotcrab.vis.ui.widget.VisSelectBox;
+import com.kotcrab.vis.ui.widget.VisTextField;
+import com.kotcrab.vis.ui.util.InputValidator;
+import com.kotcrab.vis.ui.util.Validators;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonWriter;
+
+public class NeonSkelEditorScreen extends GScreen {
 
     private NeonSkeleton skeleton;
     private AnimationState animState;
     private NeonBatch neonBatch;
     private SpriteBatch batch;
     private Stage stage;
+    private SimpleCameraController cameraController;
     
     // UI Components
     private VisTable gameArea;
@@ -70,9 +83,14 @@ public class NeonHumanDemoScreen extends GScreen {
         neonBatch = new NeonBatch();
         stage = new Stage(getUIViewport(), batch);
         
+        // Initialize Camera Controller
+        // GScreen provides 'worldCamera'
+        cameraController = new SimpleCameraController(getWorldCamera());
+        
         if (imp != null) {
             imp.addProcessor(stage);
             imp.addProcessor(new DemoInputHandler());
+            imp.addProcessor(cameraController);
         }
         
         createSkeleton();
@@ -170,7 +188,7 @@ public class NeonHumanDemoScreen extends GScreen {
         rArmIK.setTarget(targetRightHand);
         rArmIK.addBone(skeleton.getBone("r_arm_low"));
         rArmIK.addBone(skeleton.getBone("r_arm_up"));
-        rArmIK.bendPositive = false; // Elbow Left (Back)
+        rArmIK.bendPositive = true; // Fixed: Elbow should bend naturally
         rArmIK.mix = 0.0f;
         skeleton.addIKConstraint(rArmIK);
         
@@ -178,7 +196,7 @@ public class NeonHumanDemoScreen extends GScreen {
         lArmIK.setTarget(targetLeftHand);
         lArmIK.addBone(skeleton.getBone("l_arm_low"));
         lArmIK.addBone(skeleton.getBone("l_arm_up"));
-        lArmIK.bendPositive = false; // Elbow Left (Back)
+        lArmIK.bendPositive = true; // Fixed: Elbow should bend naturally
         lArmIK.mix = 0.0f;
         skeleton.addIKConstraint(lArmIK);
         
@@ -325,135 +343,234 @@ public class NeonHumanDemoScreen extends GScreen {
     }
     
     private void setupUI() {
-        VisTable root = new VisTable();
-        root.setFillParent(true);
-        stage.addActor(root);
-        
-        // Game Area (Left)
         gameArea = new VisTable();
-        gameArea.setTouchable(Touchable.enabled);
-        gameArea.setBackground(VisUI.getSkin().newDrawable("white", new Color(0.15f, 0.15f, 0.15f, 1f)));
+        gameArea.setBackground("border"); // 方便调试看到区域
         
-        // Control Panel (Right)
-        controlPanel = new VisTable(true);
-        controlPanel.setBackground("window");
-        controlPanel.pad(10);
-        
-        buildControlPanel(controlPanel);
-        
-        VisSplitPane split = new VisSplitPane(gameArea, controlPanel, false);
-        split.setSplitAmount(0.7f);
-        split.setMinSplitAmount(0.5f);
-        split.setMaxSplitAmount(0.9f);
-        
-        root.add(split).expand().fill();
+        // 创建 UI 控制器
+        new EditorUI(stage);
     }
     
-    private void buildControlPanel(VisTable panel) {
-        panel.add(new VisLabel("Neon Human Demo")).row();
+    // --- UI Controller ---
+    @SuppressWarnings({"unchecked"})
+    class EditorUI {
+        private VisTable root;
+        private VisTree tree;
+        private VisTable propertiesTable;
+        private VisSelectBox<Mode> modeSelect;
         
-        // Mode Switch
-        VisTable modeTable = new VisTable();
-        final VisTextButton setupBtn = new VisTextButton("Setup", "toggle");
-        final VisTextButton animateBtn = new VisTextButton("Animate", "toggle");
-        ButtonGroup<VisTextButton> modeGroup = new ButtonGroup<>(setupBtn, animateBtn);
-        modeGroup.setMaxCheckCount(1);
-        modeGroup.setMinCheckCount(1);
-        
-        setupBtn.setChecked(currentMode == Mode.SETUP);
-        animateBtn.setChecked(currentMode == Mode.ANIMATE);
-        
-        ChangeListener modeListener = new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                if (setupBtn.isChecked()) {
-                    if (currentMode != Mode.SETUP) {
-                        currentMode = Mode.SETUP;
-                        // Reset to bind pose
-                        createSkeleton(); 
-                        createAnimations(); // Re-bind animations
-                    }
-                } else {
-                    currentMode = Mode.ANIMATE;
-                }
-            }
-        };
-        setupBtn.addListener(modeListener);
-        animateBtn.addListener(modeListener);
-        
-        modeTable.add(setupBtn).width(80).padRight(5);
-        modeTable.add(animateBtn).width(80);
-        panel.add(modeTable).padBottom(10).row();
-        
-        panel.add(new VisLabel("Advanced IK & Mixing")).padBottom(10).row();
-        
-        // Display Options
-        final VisCheckBox gizmoCheck = new VisCheckBox("Show Gizmos", true);
-        gizmoCheck.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                showGizmos = gizmoCheck.isChecked();
-            }
-        });
-        panel.add(gizmoCheck).left().padBottom(10).row();
-        
-        // IK Control
-        panel.add(new VisLabel("--- IK Control ---")).align(Align.left).expandX().fillX().row();
-        
-        handIKCheck = new VisCheckBox("Enable Hand IK", false);
-        handIKCheck.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                float mix = handIKCheck.isChecked() ? 1f : 0f;
-                updateIKMix(mix, "r_arm_ik", "l_arm_ik");
-            }
-        });
-        panel.add(handIKCheck).left().row();
-        
-        legIKCheck = new VisCheckBox("Enable Leg IK", false);
-        legIKCheck.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                float mix = legIKCheck.isChecked() ? 1f : 0f;
-                updateIKMix(mix, "r_leg_ik", "l_leg_ik");
-            }
-        });
-        panel.add(legIKCheck).left().row();
-        
-        // Animation Control
-        panel.add(new VisLabel("--- Animation ---")).align(Align.left).expandX().fillX().padTop(10).row();
-        
-        walkCheck = new VisCheckBox("Play Walk (Base)", true);
-        walkCheck.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                if (walkCheck.isChecked()) {
-                    walkTrack = animState.play("walk", true);
-                } else {
-                    animState.clearTrack(0);
-                    walkTrack = null;
-                }
-            }
-        });
-        panel.add(walkCheck).left().row();
-        
-        waveCheck = new VisCheckBox("Overlay Wave (Track 1)", false);
-        waveCheck.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                if (waveCheck.isChecked()) {
-                    waveTrack = animState.setAnimation(1, "wave", true, 0.5f); // 0.5s fade in
-                } else {
-                    if (waveTrack != null) {
-                        animState.clearTrack(1);
-                        waveTrack = null;
+        public EditorUI(Stage stage) {
+            root = new VisTable();
+            root.setFillParent(true);
+            
+            // Layout: Left (Tree), Center (GameArea), Right (Properties)
+            VisTable leftPanel = new VisTable();
+            leftPanel.add(new VisLabel("Skeleton Tree")).pad(5).row();
+            
+            tree = new VisTree();
+            VisScrollPane treePane = new VisScrollPane(tree);
+            treePane.setFadeScrollBars(false);
+            leftPanel.add(treePane).expand().fill().row();
+            
+            VisTable rightPanel = new VisTable();
+            rightPanel.add(new VisLabel("Mode & Properties")).pad(5).row();
+            
+            modeSelect = new VisSelectBox<>();
+            modeSelect.setItems(Mode.values());
+            modeSelect.setSelected(currentMode);
+            modeSelect.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    if (currentMode != modeSelect.getSelected()) {
+                        currentMode = modeSelect.getSelected();
+                        if (currentMode == Mode.SETUP) {
+                            createSkeleton(); 
+                            createAnimations();
+                            rebuildTree();
+                        }
                     }
                 }
-            }
-        });
-        panel.add(waveCheck).left().row();
+            });
+            
+            rightPanel.add(modeSelect).expandX().fillX().pad(5).row();
+            rightPanel.addSeparator().pad(5).row();
+            
+            addGlobalSettings(rightPanel);
+            rightPanel.addSeparator().pad(5).row();
+            
+            propertiesTable = new VisTable();
+            rightPanel.add(propertiesTable).expand().fill().top();
+            
+            // SplitPane Layout
+            // Left | Center(Game) | Right
+            // Use nested split panes
+            
+            VisSplitPane splitRight = new VisSplitPane(gameArea, rightPanel, false);
+            splitRight.setSplitAmount(0.8f);
+            
+            VisSplitPane splitMain = new VisSplitPane(leftPanel, splitRight, false);
+            splitMain.setSplitAmount(0.2f);
+            
+            root.add(splitMain).expand().fill();
+            
+            stage.addActor(root);
+            
+            rebuildTree();
+            
+            // Tree Selection Listener
+            tree.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    NeonBoneNode node = (NeonBoneNode) tree.getSelection().first();
+                    if(node != null) {
+                        NeonBone bone = node.bone;
+                        // Also update draggingBone to highlight it?
+                        draggingBone = bone;
+                        updateProperties(bone);
+                    }
+                }
+            });
+        }
         
-        panel.add().expand().fill(); // Spacer
+        public void rebuildTree() {
+            tree.clearChildren();
+            if(skeleton != null && skeleton.rootBone != null) {
+                NeonBoneNode rootNode = buildNodeRecursive(skeleton.rootBone);
+                tree.add(rootNode);
+                rootNode.expandAll();
+            }
+        }
+        
+        private NeonBoneNode buildNodeRecursive(final NeonBone bone) {
+            VisLabel label = new VisLabel(bone.name);
+            NeonBoneNode node = new NeonBoneNode(label, bone);
+            
+            for(NeonBone child : bone.children) {
+                node.add(buildNodeRecursive(child));
+            }
+            return node;
+        }
+        
+        // 自定义 Node 类以避免 raw type 警告并正确继承
+        class NeonBoneNode extends VisTree.Node {
+            public final NeonBone bone;
+            
+            public NeonBoneNode(Actor actor, NeonBone bone) {
+                super(actor);
+                this.bone = bone;
+            }
+        }
+        
+        private void addGlobalSettings(VisTable panel) {
+            VisLabel title = new VisLabel("Global Settings");
+            panel.add(title).colspan(2).row();
+            
+            final VisCheckBox gizmoCheck = new VisCheckBox("Show Gizmos");
+            gizmoCheck.setChecked(showGizmos);
+            gizmoCheck.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    showGizmos = gizmoCheck.isChecked();
+                }
+            });
+            panel.add(gizmoCheck).left().colspan(2).row();
+            
+            // Animation Toggles
+            final VisCheckBox walkToggle = new VisCheckBox("Walk Anim");
+            walkToggle.setChecked(true);
+            walkToggle.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                     if (walkToggle.isChecked()) {
+                         walkTrack = animState.play("walk", true);
+                     } else {
+                         animState.clearTrack(0);
+                         walkTrack = null;
+                     }
+                }
+            });
+            panel.add(walkToggle).left().colspan(2).row();
+             
+             final VisCheckBox waveToggle = new VisCheckBox("Wave Anim");
+             waveToggle.setChecked(false);
+             waveToggle.addListener(new ChangeListener() {
+                 @Override
+                 public void changed(ChangeEvent event, Actor actor) {
+                     if (waveToggle.isChecked()) {
+                         waveTrack = animState.setAnimation(1, "wave", true, 0.5f);
+                     } else {
+                         animState.clearTrack(1);
+                         waveTrack = null;
+                     }
+                 }
+             });
+             panel.add(waveToggle).left().colspan(2).row();
+             
+             // IK Toggles
+            final VisCheckBox ikToggle = new VisCheckBox("Enable IK");
+            ikToggle.setChecked(true);
+            ikToggle.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    float mix = ikToggle.isChecked() ? 1f : 0f;
+                    updateIKMix(mix, "r_leg_ik", "l_leg_ik", "r_arm_ik", "l_arm_ik");
+                }
+            });
+            panel.add(ikToggle).left().colspan(2).row();
+            
+            final VisTextButton exportBtn = new VisTextButton("Export JSON (Log)");
+            exportBtn.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    Json json = new Json();
+                    json.setOutputType(JsonWriter.OutputType.json);
+                    json.setUsePrototypes(false);
+                    // 仅打印 rootBone 的结构
+                    System.out.println(json.prettyPrint(skeleton.rootBone));
+                }
+            });
+            panel.add(exportBtn).colspan(2).fillX().padTop(5).row();
+        }
+        
+        public void updateProperties(final NeonBone bone) {
+            propertiesTable.clear();
+            if(bone == null) {
+                propertiesTable.add(new VisLabel("No bone selected"));
+                return;
+            }
+            
+            propertiesTable.add(new VisLabel("Bone: " + bone.name)).colspan(2).row();
+            propertiesTable.addSeparator().colspan(2).pad(5).row();
+            
+            // Properties
+            addFloatInput("X", bone.x, v -> { bone.x = v; skeleton.updateWorldTransform(); });
+            addFloatInput("Y", bone.y, v -> { bone.y = v; skeleton.updateWorldTransform(); });
+            addFloatInput("Rotation", bone.rotation, v -> { bone.rotation = v; skeleton.updateWorldTransform(); });
+            addFloatInput("Length", bone.length, v -> { bone.length = v; });
+            addFloatInput("ScaleX", bone.scaleX, v -> { bone.scaleX = v; skeleton.updateWorldTransform(); });
+            addFloatInput("ScaleY", bone.scaleY, v -> { bone.scaleY = v; skeleton.updateWorldTransform(); });
+        }
+        
+        private void addFloatInput(String label, float value, final FloatConsumer consumer) {
+            propertiesTable.add(new VisLabel(label)).right().padRight(5);
+            final VisTextField field = new VisTextField(String.valueOf(value));
+            field.setTextFieldListener(new VisTextField.TextFieldListener() {
+                @Override
+                public void keyTyped(VisTextField textField, char c) {
+                    try {
+                        float val = Float.parseFloat(textField.getText());
+                        consumer.accept(val);
+                    } catch (NumberFormatException e) {
+                        // Ignore invalid input
+                    }
+                }
+            });
+            propertiesTable.add(field).width(60).row();
+        }
+        
+        // Simple functional interface for Java 7/8 compat (if needed, or use java.util.function)
+        interface FloatConsumer {
+            void accept(float value);
+        }
     }
     
     private void updateIKMix(float mix, String... names) {
@@ -493,6 +610,12 @@ public class NeonHumanDemoScreen extends GScreen {
         float w = area.getWidth();
         float h = area.getHeight();
         
+        // 更新相机视口大小以匹配游戏区域
+        OrthographicCamera cam = getWorldCamera();
+        cam.viewportWidth = w;
+        cam.viewportHeight = h;
+        cam.update();
+
         Rectangle scissor = new Rectangle();
         Rectangle clipBounds = new Rectangle(x, y, w, h);
         ScissorStack.calculateScissors(stage.getCamera(), stage.getBatch().getTransformMatrix(), clipBounds, scissor);
@@ -502,14 +625,17 @@ public class NeonHumanDemoScreen extends GScreen {
                 animState.apply(skeleton, null);
             }
             
-            renderBaseX = x + w / 2f;
-            renderBaseY = y + h / 2f;
-            skeleton.setPosition(renderBaseX, renderBaseY);
+            // 骨骼位置固定在世界原点
+            skeleton.setPosition(0, 0);
             skeleton.updateWorldTransform();
             
-            neonBatch.setProjectionMatrix(stage.getCamera().combined);
+            // 使用世界相机的投影矩阵
+            neonBatch.setProjectionMatrix(cam.combined);
             neonBatch.begin();
             
+            // 绘制网格线作为参考
+            drawGrid(neonBatch);
+
             drawBoneRecursive(skeleton.rootBone);
             
             if (showGizmos) {
@@ -523,6 +649,13 @@ public class NeonHumanDemoScreen extends GScreen {
             
             ScissorStack.popScissors();
         }
+    }
+    
+    private void drawGrid(NeonBatch batch) {
+        // Simple grid
+        Color axisColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+        batch.drawRect(-1000, -1, 2000, 2, 0, 0, axisColor, false); // X Axis
+        batch.drawRect(-1, -1000, 2, 2000, 0, 0, axisColor, false); // Y Axis
     }
     
     private void drawGizmo(NeonBone t, Color color) {
@@ -618,31 +751,167 @@ public class NeonHumanDemoScreen extends GScreen {
     
     // --- Input Handler ---
     class DemoInputHandler extends InputAdapter {
+        
+        private boolean unprojectToWorld(int screenX, int screenY, Vector3 out) {
+            // 1. 获取鼠标在 Stage 上的位置
+            Vector2 stagePos = stage.screenToStageCoordinates(new Vector2(screenX, screenY));
+            
+            // 2. 检查是否在 gameArea 内
+            Vector2 areaPos = gameArea.localToStageCoordinates(new Vector2(0, 0));
+            Rectangle areaRect = new Rectangle(areaPos.x, areaPos.y, gameArea.getWidth(), gameArea.getHeight());
+            if (!areaRect.contains(stagePos)) return false;
+
+            // 3. 转换为世界坐标
+            // 鼠标相对于 gameArea 中心的偏移
+            float centerX = areaPos.x + gameArea.getWidth() / 2f;
+            float centerY = areaPos.y + gameArea.getHeight() / 2f;
+            
+            float dx = stagePos.x - centerX;
+            float dy = stagePos.y - centerY;
+            
+            OrthographicCamera cam = getWorldCamera();
+            float worldX = cam.position.x + dx * cam.zoom;
+            float worldY = cam.position.y + dy * cam.zoom;
+            
+            out.set(worldX, worldY, 0);
+            return true;
+        }
+
         @Override
         public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-            stage.getViewport().unproject(tempVec3.set(screenX, screenY, 0));
+            if (!unprojectToWorld(screenX, screenY, tempVec3)) return false;
+
             // Check targets
             NeonBone[] targets = {targetLeftHand, targetRightHand, targetLeftFoot, targetRightFoot};
             for (NeonBone t : targets) {
                 if (t == null) continue;
                 float dist = Vector2.dst(tempVec3.x, tempVec3.y, t.worldTransform.m02, t.worldTransform.m12);
-                if (dist < 20) {
+                OrthographicCamera cam = getWorldCamera();
+                // 拾取半径随缩放调整，保证视觉上一致
+                if (dist < 20 * cam.zoom) {
                     draggingBone = t;
                     return true;
                 }
             }
+            
+            // 任务2: 配置模式下允许移动任意骨骼
+            if (currentMode == Mode.SETUP) {
+                // 遍历所有骨骼寻找最近的
+                NeonBone bestMatch = null;
+                float minDst = 20 * getWorldCamera().zoom;
+                
+                // 简单的全遍历
+                // 这里我们没有方便的 getAllBones 列表，只能递归或者访问 map values
+                // NeonSkeleton 并没有公开 boneMap.values()，但有 getBone(name)
+                // 我们需要一个遍历所有骨骼的方法。
+                // 暂时只支持 root 下的一级骨骼或者硬编码的几个
+                // 或者我们可以给 NeonSkeleton 加个 getAllBones()
+                
+                // 暂时只处理 targets 以外的骨骼?
+                // 实际上我们可以通过递归 rootBone 来查找
+                bestMatch = findClosestBone(skeleton.rootBone, tempVec3.x, tempVec3.y, minDst);
+                if(bestMatch != null) {
+                    draggingBone = bestMatch;
+                    return true;
+                }
+            }
+            
             return false;
+        }
+        
+        private NeonBone findClosestBone(NeonBone bone, float x, float y, float maxDist) {
+            if(bone == null) return null;
+            NeonBone best = null;
+            float minDist = maxDist;
+            
+            // Check self
+            float d = Vector2.dst(x, y, bone.worldTransform.m02, bone.worldTransform.m12);
+            if(d < minDist) {
+                minDist = d;
+                best = bone;
+            }
+            
+            // Check children
+            for(NeonBone child : bone.children) {
+                NeonBone res = findClosestBone(child, x, y, minDist);
+                if(res != null) {
+                    float dc = Vector2.dst(x, y, res.worldTransform.m02, res.worldTransform.m12);
+                    if(dc < minDist) {
+                        minDist = dc;
+                        best = res;
+                    }
+                }
+            }
+            return best;
         }
 
         @Override
         public boolean touchDragged(int screenX, int screenY, int pointer) {
             if (draggingBone != null) {
-                stage.getViewport().unproject(tempVec3.set(screenX, screenY, 0));
-                // Convert world pos back to local relative to Skeleton Root
-                // Skeleton Root is at (renderBaseX, renderBaseY)
-                // Target bones are direct children of root (in this setup)
-                draggingBone.x = tempVec3.x - renderBaseX;
-                draggingBone.y = tempVec3.y - renderBaseY;
+                if (!unprojectToWorld(screenX, screenY, tempVec3)) return true; // Keep dragging even if out of bounds? Maybe.
+
+                // Task 2 & IK Target Dragging logic
+                // Update bone position
+                
+                if (currentMode == Mode.ANIMATE) {
+                     // In Animate mode, we only drag IK targets (which are usually independent or children of root)
+                     // Assuming they are children of root for now as per setup
+                     draggingBone.x = tempVec3.x;
+                     draggingBone.y = tempVec3.y;
+                } else {
+                    // In Setup mode, we drag bones to change their bind pose (local transform)
+                    // If bone has parent, we need to convert world pos to parent's local space
+                    NeonBone parent = draggingBone.parent;
+                    if (parent != null) {
+                        // Parent world transform
+                        // World = ParentWorld * Local
+                        // Local = ParentWorldInv * World
+                        // We need to invert parent world transform
+                        
+                        // Affine2 inv = new Affine2(parent.worldTransform).inv(); // Affine2 doesn't have easy inv() in LibGDX?
+                        // Matrix3 has inv(). Affine2 is efficient.
+                        // Let's manually calculate or use Matrix4 if needed.
+                        // Affine2: [m00 m01 m02]
+                        //          [m10 m11 m12]
+                        
+                        // Simple approach: unrotate and untranslate
+                        // dx = worldX - parentWorldX
+                        // dy = worldY - parentWorldY
+                        // localX = dx * cos(-ang) - dy * sin(-ang)
+                        // localY = dx * sin(-ang) + dy * cos(-ang)
+                        // This assumes uniform scale. If parent has scale, it's more complex.
+                        
+                        float parentWorldX = parent.worldTransform.m02;
+                        float parentWorldY = parent.worldTransform.m12;
+                        float dx = tempVec3.x - parentWorldX;
+                        float dy = tempVec3.y - parentWorldY;
+                        
+                        // Extract parent world rotation
+                        float parentRot = (float) Math.atan2(parent.worldTransform.m10, parent.worldTransform.m00);
+                        float cos = (float) Math.cos(-parentRot);
+                        float sin = (float) Math.sin(-parentRot);
+                        
+                        // Apply inverse rotation
+                        float localX = dx * cos - dy * sin;
+                        float localY = dx * sin + dy * cos;
+                        
+                        // Apply inverse scale (if any)
+                        // Assuming uniform scale for now or extracting from matrix
+                        float parentScaleX = (float) Math.sqrt(parent.worldTransform.m00 * parent.worldTransform.m00 + parent.worldTransform.m10 * parent.worldTransform.m10);
+                        float parentScaleY = (float) Math.sqrt(parent.worldTransform.m01 * parent.worldTransform.m01 + parent.worldTransform.m11 * parent.worldTransform.m11);
+                        
+                        draggingBone.x = localX / parentScaleX;
+                        draggingBone.y = localY / parentScaleY;
+                        
+                    } else {
+                        // No parent (Root)
+                        draggingBone.x = tempVec3.x;
+                        draggingBone.y = tempVec3.y;
+                    }
+                    
+                    // Update whole skeleton to see changes immediately
+                    skeleton.updateWorldTransform();
+                }
                 return true;
             }
             return false;
