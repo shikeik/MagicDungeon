@@ -20,6 +20,15 @@ public class DLog {
 	public static final String passStr = "Y";
 	public static boolean singleMode = false;
 	public static String singleTag = "Default";
+
+	// [新增] 黑白名单模式控制
+	public static boolean isBlackListMode = true; // 默认黑名单模式
+	public static List<String> blackList = new CopyOnWriteArrayList<>(); // 黑名单列表
+
+	static {
+		blackList.add("拦截");
+	}
+
 	public static String[] showTags = {
 		"Default Y",
 		"拦截 N",
@@ -183,6 +192,14 @@ public class DLog {
 			return !singleTag.equals(tag);
 		}
 
+		// [修改] 黑名单模式逻辑
+		if (isBlackListMode) {
+			// 如果在黑名单中，则拦截 (return true)
+			// 否则放行 (return false)
+			return blackList.contains(tag);
+		}
+
+		// 白名单模式逻辑 (原有)
 		for (String tagInfo : showTags) {
 			String[] splits = tagInfo.split(" ");
 			if (splits.length < 2) continue;
@@ -193,7 +210,7 @@ public class DLog {
 				return !passStr.equals(show);
 		}
 
-		return true;
+		return true; // 白名单模式下，未找到则默认拦截
 	}
 
 	/**
