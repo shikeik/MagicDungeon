@@ -17,3 +17,6 @@ description: 项目全局硬性规则 (始终生效)
 
 3. **代码规范**:
    - **禁止全限定名**: 严禁在代码中直接使用全限定名 (如 `java.util.List`)，必须使用 `import`。
+   - **LibGDX**: 资源对象 (Texture/Batch等) 必须手动 `dispose()`；坐标原点在左下角.
+   - **日志**: 日志用 `DLog.log与logT`。
+   - **代码质量**: 优先复用逻辑 (DRY)，保持简洁；文件 UTF-8 编码。
