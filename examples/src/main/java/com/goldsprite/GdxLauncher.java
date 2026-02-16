@@ -19,22 +19,18 @@ import com.goldsprite.gdengine.web.DocServer;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
-import com.goldsprite.magicdungeon.testing.GameAutoTests;
 import com.kotcrab.vis.ui.VisUI;
 
-import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonSkelEditorScreen;
 import com.goldsprite.magicdungeon.DebugLaunchConfig;
-import com.goldsprite.magicdungeon.testing.NeonSkelEditorAutoTest;
+import com.goldsprite.magicdungeon.testing.IGameAutoTest;
 
-public class GdxLauncher extends Game {int k11;
+public class GdxLauncher extends Game {
 	private Stage toastStage;
 	public DLog debug;
 	private Application.ApplicationType userType;
 
 	// [新增] 标记是否已初始化完成
 	private boolean isInitialized = false;
-
-	boolean enableAutoTests = false; // 是否开启全局自动测试流程
 
 	public GdxLauncher() {
 	}
@@ -74,22 +70,38 @@ public class GdxLauncher extends Game {int k11;
 
 		isInitialized = true;
 
-		// [Global AutoTest]
-		if(enableAutoTests && !DebugLaunchConfig.ENABLE_DIRECT_LAUNCH) GameAutoTests.setup();
-		
-		// [Debug Launch Config]
-		if (DebugLaunchConfig.ENABLE_DIRECT_LAUNCH) {
-			DLog.getInstance().log("调试模式: 直接启动目标场景 -> " + DebugLaunchConfig.TARGET_SCREEN.getSimpleName());
-			sm.setCurScreen(DebugLaunchConfig.TARGET_SCREEN, true);
-			
-			if (DebugLaunchConfig.ENABLE_AUTO_TEST) {
-				DLog.getInstance().log("调试模式: 启用自动测试脚本");
-				// 这里需要判断场景类型来决定启动哪个测试
-				// 暂时简单写死 NeonSkelEditorScreen 的测试
-				if (DebugLaunchConfig.TARGET_SCREEN.getSimpleName().equals("NeonSkelEditorScreen")) {
-					NeonSkelEditorAutoTest.setup();
+		// [Launch Mode Dispatch]
+		switch (DebugLaunchConfig.currentMode) {
+			case NORMAL:
+				// 正常流程，ScreenManager 已配置默认启动屏
+				break;
+
+			case DIRECT_SCENE:
+				if (DebugLaunchConfig.targetScreen != null) {
+					DLog.getInstance().log("启动模式: 直接进入场景 -> " + DebugLaunchConfig.targetScreen.getSimpleName());
+					sm.setCurScreen(DebugLaunchConfig.targetScreen, true);
 				}
-			}
+				break;
+
+			case AUTO_TEST:
+				if (DebugLaunchConfig.targetScreen != null) {
+					DLog.getInstance().log("启动模式: 自动测试 -> 场景: " + DebugLaunchConfig.targetScreen.getSimpleName());
+					sm.setCurScreen(DebugLaunchConfig.targetScreen, true);
+				}
+
+				if (DebugLaunchConfig.autoTestClass != null) {
+					DLog.getInstance().log("启动模式: 自动测试 -> 用例: " + DebugLaunchConfig.autoTestClass.getSimpleName());
+					try {
+						// 使用反射实例化测试类
+						// 注意：测试类必须有无参构造函数
+						com.goldsprite.magicdungeon.testing.IGameAutoTest test = DebugLaunchConfig.autoTestClass.newInstance();
+						test.run();
+					} catch (Exception e) {
+						DLog.logErr("无法实例化测试用例: " + e.getMessage());
+						e.printStackTrace();
+					}
+				}
+				break;
 		}
 	}
 

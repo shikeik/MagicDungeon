@@ -8,11 +8,12 @@ import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonSkelEditorScreen;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import com.kotcrab.vis.ui.widget.VisTree;
-import com.goldsprite.neonskel.data.NeonBone;
 
-public class NeonSkelEditorAutoTest {
+public class NeonSkelEditorAutoTest implements IGameAutoTest {
 
-    public static void setup() {
+    @Override
+    @SuppressWarnings("unchecked")
+    public void run() {
         AutoTestManager.ENABLED = true;
         AutoTestManager atm = AutoTestManager.getInstance();
         atm.log("启动 NeonSkelEditor 自动测试流程...");
@@ -151,3 +152,4 @@ public class NeonSkelEditorAutoTest {
         atm.log("NeonSkelEditor 自动测试流程结束");
     }
 }
+

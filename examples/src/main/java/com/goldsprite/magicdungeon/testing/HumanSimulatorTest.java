@@ -13,9 +13,10 @@ import com.goldsprite.magicdungeon.input.InputManager;
  * 模拟人类可视化测试流程
  * 模拟用户从主菜单进入游戏，移动，操作背包等
  */
-public class HumanSimulatorTest {
+public class HumanSimulatorTest implements IGameAutoTest {
 
-    public static void setup() {
+    @Override
+    public void run() {
         AutoTestManager.ENABLED = true;
         AutoTestManager atm = AutoTestManager.getInstance();
         atm.log("启动模拟人类可视化测试流程...");
@@ -125,7 +126,7 @@ public class HumanSimulatorTest {
         });
     }
     
-    private static void addKeyStroke(AutoTestManager atm, int keycode) {
+    private void addKeyStroke(AutoTestManager atm, int keycode) {
         atm.addAction("Press Key " + Input.Keys.toString(keycode), () -> {
             InputManager.getInstance().simulateKeyPress(keycode);
         });
