@@ -30,7 +30,7 @@ public class GdxLauncher extends Game {int k11;
 	// [新增] 标记是否已初始化完成
 	private boolean isInitialized = false;
 
-	boolean enableAutoTests = false; // 是否开启全局自动测试流程
+	boolean enableAutoTests = true; // 是否开启全局自动测试流程
 
 	public GdxLauncher() {
 	}

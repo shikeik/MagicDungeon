@@ -139,4 +139,46 @@ public class AutoTestManager {
             finished = true;
         }
     }
+
+    public static class DragTask extends TestTask {
+        private float startX, startY, endX, endY, duration;
+        private float timer;
+
+        public DragTask(float startX, float startY, float endX, float endY, float duration) {
+            super("Drag " + startX + "," + startY + " -> " + endX + "," + endY);
+            this.startX = startX;
+            this.startY = startY;
+            this.endX = endX;
+            this.endY = endY;
+            this.duration = duration;
+        }
+
+        @Override
+        public void start() {
+            InputProcessor ip = Gdx.input.getInputProcessor();
+            if (ip != null) {
+                ip.touchDown((int)startX, (int)startY, 0, Input.Buttons.LEFT);
+            }
+        }
+
+        @Override
+        public void update(float delta) {
+            timer += delta;
+            float alpha = Math.min(1, timer / duration);
+            float currentX = startX + (endX - startX) * alpha;
+            float currentY = startY + (endY - startY) * alpha;
+            
+            InputProcessor ip = Gdx.input.getInputProcessor();
+            if (ip != null) {
+                ip.touchDragged((int)currentX, (int)currentY, 0);
+            }
+
+            if (timer >= duration) {
+                if (ip != null) {
+                    ip.touchUp((int)endX, (int)endY, 0, Input.Buttons.LEFT);
+                }
+                finished = true;
+            }
+        }
+    }
 }

@@ -42,6 +42,21 @@ public class InputManager {
     
     // Input Blocking
     private boolean inputBlocked = false;
+    
+    // Simulated Actions
+    private final Set<InputAction> simulatedActions = new HashSet<>();
+    private final Set<InputAction> simulatedJustPressedActions = new HashSet<>();
+
+    public void simulatePress(InputAction action) {
+        if (!simulatedActions.contains(action)) {
+            simulatedJustPressedActions.add(action);
+        }
+        simulatedActions.add(action);
+    }
+    
+    public void simulateRelease(InputAction action) {
+        simulatedActions.remove(action);
+    }
 
     // Startup delay to prevent initial controller drift/noise from locking cursor
     private float startupTimer = 0f;
@@ -644,6 +659,7 @@ public class InputManager {
         mapK(InputAction.MAP, Input.Keys.M, Input.Keys.BUTTON_Y);
         mapK(InputAction.BAG, Input.Keys.E, Input.Keys.BUTTON_R1);
         mapK(InputAction.PAUSE, Input.Keys.P, Input.Keys.BUTTON_START);
+        mapK(InputAction.PROGRESS, Input.Keys.K, Input.Keys.BUTTON_SELECT);
 
         // Shortcuts
         mapK(InputAction.TAB, Input.Keys.TAB, Input.Keys.BUTTON_L2);
@@ -693,6 +709,7 @@ public class InputManager {
         mapC(InputAction.QUICK_SLOT, V_BUTTON_LB); // Quick Slot
         mapC(InputAction.TAB, V_BUTTON_L3);
         mapC(InputAction.PAUSE, V_BUTTON_START);
+        mapC(InputAction.PROGRESS, V_BUTTON_BACK); // Select/Back button for Progress
 
         // D-Pad Movement
         mapC(InputAction.MOVE_UP, V_BUTTON_DPAD_UP, AXIS_LEFT_UP);
@@ -790,6 +807,7 @@ public class InputManager {
 
     public boolean isJustPressed(InputAction action) {
         if (inputBlocked) return false;
+        if (simulatedJustPressedActions.contains(action)) return true;
 
         // Check Keyboard
         List<Integer> keys = keyboardMappings.get(action);
