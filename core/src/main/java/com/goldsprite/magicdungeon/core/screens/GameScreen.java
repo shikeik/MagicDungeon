@@ -265,6 +265,7 @@ public class GameScreen extends GScreen {
 
 	public void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
 		dungeon.level = Math.max(1, node.minLv);
+        dungeon.theme = node.theme;
 		dungeon.generate();
 		
 		player.x = dungeon.startPos.x;

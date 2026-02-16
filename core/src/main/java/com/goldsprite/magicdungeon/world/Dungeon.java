@@ -11,6 +11,7 @@ public class Dungeon {
 	public Tile[][] map;
 	public GridPoint2 startPos;
 	public long globalSeed;
+    public DungeonTheme theme = DungeonTheme.DEFAULT;
 
 	public Dungeon(int width, int height, long globalSeed) {
 		this.width = width;

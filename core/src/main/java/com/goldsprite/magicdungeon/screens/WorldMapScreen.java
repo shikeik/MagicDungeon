@@ -20,6 +20,7 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import com.goldsprite.magicdungeon.core.screens.GameScreen;
+import com.goldsprite.magicdungeon.world.DungeonTheme;
 
 import java.util.function.Consumer;
 
@@ -104,6 +105,7 @@ public class WorldMapScreen extends GScreen {
         
         // 2. 迷雾森林 (Forest) - 左上
         DungeonNode forest = new DungeonNode("forest", "迷雾森林", 0.25f, 0.7f, Color.valueOf("#2e7d32"), 3, 10);
+        forest.theme = DungeonTheme.FOREST;
         forest.unlocked = true;
         forest.setRegion(new float[]{
             -70, -60,
@@ -116,6 +118,7 @@ public class WorldMapScreen extends GScreen {
         
         // 3. 灼热沙漠 (Desert) - 右下
         DungeonNode desert = new DungeonNode("desert", "灼热沙漠", 0.75f, 0.3f, Color.valueOf("#fbc02d"), 10, 20);
+        desert.theme = DungeonTheme.DESERT;
         desert.unlocked = false; // 假设未解锁
         desert.setRegion(new float[]{
             -60, -50,
@@ -128,6 +131,7 @@ public class WorldMapScreen extends GScreen {
         
         // 4. 深渊城堡 (Castle) - 顶部
         DungeonNode castle = new DungeonNode("castle", "深渊城堡", 0.5f, 0.85f, Color.valueOf("#4527a0"), 20, 40);
+        castle.theme = DungeonTheme.CASTLE;
         castle.unlocked = false;
         castle.setRegion(new float[]{
             -50, -50,
@@ -403,6 +407,7 @@ public class WorldMapScreen extends GScreen {
         public float[] regionVertices; // 相对坐标多边形
         public boolean unlocked;
         public int minLv, maxLv;
+        public DungeonTheme theme = DungeonTheme.DEFAULT;
         
         public DungeonNode(String id, String name, float x, float y, Color color, int minLv, int maxLv) {
             this.id = id;
