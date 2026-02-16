@@ -236,9 +236,9 @@ public class MainMenuScreen extends GScreen {
 
 		final long finalSeed = seed;
 		getScreenManager().playTransition(() -> {
-            // [修改] 进入大世界地图选择器，而不是直接进入游戏
-			WorldMapScreen worldScreen = new WorldMapScreen();
-			getScreenManager().setCurScreen(worldScreen);
+            // [修改] 直接进入游戏 (默认为营地)，而不是 WorldMapScreen
+			GameScreen gameScreen = new GameScreen(finalSeed);
+			getScreenManager().setCurScreen(gameScreen);
 		});
 	}
 

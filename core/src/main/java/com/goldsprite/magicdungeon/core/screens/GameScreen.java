@@ -55,6 +55,7 @@ import com.esotericsoftware.spine.SkeletonRenderer;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.esotericsoftware.spine.Animation;
+import com.goldsprite.magicdungeon.screens.WorldMapScreen;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -251,7 +252,29 @@ public class GameScreen extends GScreen {
 		items.clear();
 		chests.clear();
 
+		spawnEntities();
+		updateCamera();
+
 		if (hud != null) hud.showMessage("回到了营地.");
+	}
+
+	private void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
+		dungeon.level = Math.max(1, node.minLv);
+		dungeon.generate();
+		
+		player.x = dungeon.startPos.x;
+		player.y = dungeon.startPos.y;
+		player.visualX = player.x * Constants.TILE_SIZE;
+		player.visualY = player.y * Constants.TILE_SIZE;
+		
+		monsters.clear();
+		items.clear();
+		chests.clear();
+		
+		spawnEntities();
+		updateCamera();
+		
+		hud.showMessage("进入了 " + node.name);
 	}
 
 	private void enterDungeon(int level) {

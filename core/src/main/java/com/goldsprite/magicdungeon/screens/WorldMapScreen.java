@@ -21,7 +21,12 @@ import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import com.goldsprite.magicdungeon.core.screens.GameScreen;
 
+import java.util.function.Consumer;
+
 public class WorldMapScreen extends GScreen {
+
+    // [新增] 调试配置：临时解锁所有区域
+    public static boolean DEBUG_UNLOCK_ALL = false;
 
     private NeonBatch neonBatch;
     private SpriteBatch batch;
@@ -30,9 +35,20 @@ public class WorldMapScreen extends GScreen {
     private DungeonNode hoveredNode = null;
     private float[] backgroundDecorations;
     
+    private Consumer<DungeonNode> onNodeSelected;
+
     // 羊皮卷背景色
     private final Color PAPER_COLOR = Color.valueOf("#f4e4bc");
     private final Color INK_COLOR = Color.valueOf("#4e342e");
+
+    public WorldMapScreen() {
+        this(null);
+    }
+
+    public WorldMapScreen(Consumer<DungeonNode> onNodeSelected) {
+        this.onNodeSelected = onNodeSelected;
+    }
+
     
     @Override
     public void create() {
@@ -244,6 +260,11 @@ public class WorldMapScreen extends GScreen {
             
             // 绘制中心点
             neonBatch.drawCircle(cx, cy, 5, 0, INK_COLOR, 16, true);
+            
+            // [新增] 绘制锁图标 (如果未解锁)
+            if (!node.unlocked && !DEBUG_UNLOCK_ALL) {
+                drawLockIcon(cx, cy);
+            }
         }
         
         neonBatch.end();
@@ -294,6 +315,24 @@ public class WorldMapScreen extends GScreen {
         }
     }
     
+    private void drawLockIcon(float cx, float cy) {
+        // 简单的锁形状
+        float w = 16;
+        float h = 12;
+        float y = cy - 5;
+        
+        // 锁身 (矩形)
+        neonBatch.drawRect(cx - w/2, y, w, h, 0, 0, Color.BLACK, true);
+        
+        // 锁梁 (半圆环)
+        float r = 6;
+        float ly = y + h;
+        neonBatch.drawArc(cx, ly, r, 0, 180, 2, Color.BLACK, 16);
+        
+        // 锁孔
+        neonBatch.drawCircle(cx, y + h/2, 2, 0, Color.WHITE, 8, true);
+    }
+
     private void updateHover() {
         Vector2 mouse = getUIViewport().unproject(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
         hoveredNode = null;
@@ -324,22 +363,27 @@ public class WorldMapScreen extends GScreen {
     }
     
     private void enterDungeon(DungeonNode node) {
-        if (!node.unlocked) {
+        if (!node.unlocked && !DEBUG_UNLOCK_ALL) {
             DLog.log("该区域尚未解锁: " + node.name);
             return;
         }
         
-        DLog.log("进入区域: " + node.name + " (Lv." + node.minLv + "-" + node.maxLv + ")");
+        DLog.log("选择区域: " + node.name + " (Lv." + node.minLv + "-" + node.maxLv + ")");
         
-        // 生成随机种子
-        long seed = (long)(Math.random() * Long.MAX_VALUE);
-        
-        if (screenManager != null) {
-            screenManager.playTransition(() -> {
-                GameScreen gameScreen = new GameScreen(seed);
-                // TODO: 根据 node.id 设置地牢类型/难度
-                screenManager.setCurScreen(gameScreen);
-            });
+        if (onNodeSelected != null) {
+            onNodeSelected.accept(node);
+        } else {
+            // Fallback: 默认行为 (如果需要独立运行)
+            // 生成随机种子
+            long seed = (long)(Math.random() * Long.MAX_VALUE);
+            
+            if (screenManager != null) {
+                screenManager.playTransition(() -> {
+                    GameScreen gameScreen = new GameScreen(seed);
+                    // TODO: 根据 node.id 设置地牢类型/难度
+                    screenManager.setCurScreen(gameScreen);
+                });
+            }
         }
     }
     
@@ -351,14 +395,14 @@ public class WorldMapScreen extends GScreen {
     }
     
     // --- 内部类 ---
-    private static class DungeonNode {
-        String id;
-        String name;
-        float x, y; // 0-1 相对坐标
-        Color regionColor;
-        float[] regionVertices; // 相对坐标多边形
-        boolean unlocked;
-        int minLv, maxLv;
+    public static class DungeonNode {
+        public String id;
+        public String name;
+        public float x, y; // 0-1 相对坐标
+        public Color regionColor;
+        public float[] regionVertices; // 相对坐标多边形
+        public boolean unlocked;
+        public int minLv, maxLv;
         
         public DungeonNode(String id, String name, float x, float y, Color color, int minLv, int maxLv) {
             this.id = id;
