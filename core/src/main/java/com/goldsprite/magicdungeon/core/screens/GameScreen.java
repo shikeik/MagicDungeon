@@ -186,7 +186,7 @@ public class GameScreen extends GScreen {
 		// Audio
 		audio = AudioSystem.getInstance();
 		// Initial Music (Camp)
-		audio.playMusic(AudioAssets.MUSIC_MOUNTAINS);
+		audio.playMusic(AudioAssets.MUSIC_QUANTUM);
 
 		// 初始化相机位置
 		updateCamera();
@@ -258,7 +258,7 @@ public class GameScreen extends GScreen {
 		updateCamera();
 
 		if (hud != null) hud.showMessage("回到了营地.");
-		if (audio != null) audio.playMusic(AudioAssets.MUSIC_MOUNTAINS);
+		if (audio != null) audio.playMusic(AudioAssets.MUSIC_QUANTUM);
 	}
 
 	public void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
@@ -1368,7 +1368,7 @@ public class GameScreen extends GScreen {
 	private void playCurrentBGM() {
 		if (audio == null) return;
 		if (dungeon.level == 0) {
-			audio.playMusic(AudioAssets.MUSIC_MOUNTAINS);
+			audio.playMusic(AudioAssets.MUSIC_QUANTUM);
 		} else {
 			if (dungeon.level % 5 == 0) audio.playMusic(AudioAssets.MUSIC_TAKE_COVER);
 			else audio.playMusic(AudioAssets.MUSIC_LASER_QUEST);
