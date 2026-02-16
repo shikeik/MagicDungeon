@@ -3,18 +3,28 @@ package com.goldsprite.magicdungeon.screens.tests.neonskel;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSlider;
+import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.neonskel.data.*;
 import com.goldsprite.neonskel.logic.AnimationState;
 import com.goldsprite.neonskel.logic.NeonSkeleton;
@@ -24,9 +34,13 @@ public class NeonHumanDemoScreen extends GScreen {
 
     private NeonSkeleton skeleton;
     private AnimationState animState;
-    private ShapeRenderer debugRenderer;
+    private NeonBatch neonBatch;
     private SpriteBatch batch;
     private Stage stage;
+    
+    // UI Components
+    private VisTable gameArea;
+    private VisTable controlPanel;
     
     // IK Targets
     private NeonBone targetLeftHand, targetRightHand;
@@ -37,53 +51,22 @@ public class NeonHumanDemoScreen extends GScreen {
     private Vector3 tempVec3 = new Vector3();
     
     private TrackEntry walkTrack, waveTrack;
+    
+    // Render State
+    private float renderBaseX, renderBaseY;
+    private boolean showGizmos = true;
 
     @Override
     public void create() {
         super.create();
         
         batch = new SpriteBatch();
+        neonBatch = new NeonBatch();
         stage = new Stage(getUIViewport(), batch);
-        debugRenderer = new ShapeRenderer();
         
         if (imp != null) {
-            // Priority: UI > Dragging > Others
             imp.addProcessor(stage);
-            imp.addProcessor(new InputAdapter() {
-                @Override
-                public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                    unproject(screenX, screenY);
-                    // Check targets
-                    NeonBone[] targets = {targetLeftHand, targetRightHand, targetLeftFoot, targetRightFoot};
-                    for (NeonBone t : targets) {
-                        if (t == null) continue;
-                        float dist = Vector2.dst(tempVec3.x, tempVec3.y, t.worldTransform.m02, t.worldTransform.m12);
-                        if (dist < 20) {
-                            draggingBone = t;
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-
-                @Override
-                public boolean touchDragged(int screenX, int screenY, int pointer) {
-                    if (draggingBone != null) {
-                        unproject(screenX, screenY);
-                        // Convert to local space of root (since targets are children of root)
-                        draggingBone.x = tempVec3.x - skeleton.x;
-                        draggingBone.y = tempVec3.y - skeleton.y;
-                        return true;
-                    }
-                    return false;
-                }
-
-                @Override
-                public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-                    draggingBone = null;
-                    return false;
-                }
-            });
+            imp.addProcessor(new DemoInputHandler());
         }
         
         createSkeleton();
@@ -93,11 +76,11 @@ public class NeonHumanDemoScreen extends GScreen {
     
     private void createSkeleton() {
         skeleton = new NeonSkeleton();
-        skeleton.setPosition(600, 300); // Center
+        skeleton.setPosition(0, 0); 
         
         // --- 1. Structure ---
         // Root -> Body (Hip)
-        skeleton.createBone("body", "root", 0, null); // Hip center
+        skeleton.createBone("body", "root", 0, null);
         skeleton.getBone("body").y = 0; 
         
         // Torso -> Head
@@ -105,15 +88,32 @@ public class NeonHumanDemoScreen extends GScreen {
         skeleton.getBone("torso").rotation = 90;
         
         skeleton.createBone("head", "torso", 40, null);
-        skeleton.getBone("head").x = 100; // End of torso
+        skeleton.getBone("head").x = 100;
+        
+        // --- Head Details ---
+        // Jaw
+        skeleton.createBone("jaw", "head", 20, null);
+        skeleton.getBone("jaw").x = 10;
+        skeleton.getBone("jaw").y = -5;
+        skeleton.getBone("jaw").rotation = -30;
+        
+        // Hair (Dense Clusters)
+        // Back hair
+        createHairCluster("hair_back", "head", -10, 10, 180, 8, 5f, 40f);
+        // Bangs
+        createHairCluster("hair_bangs", "head", 30, 15, -45, 5, 8f, 25f);
+        // Side hair
+        createHairCluster("hair_side", "head", 10, 10, -90, 4, 10f, 35f);
         
         // Arms (Right)
         skeleton.createBone("r_arm_up", "torso", 70, null);
-        skeleton.getBone("r_arm_up").x = 90; // Shoulder
-        skeleton.getBone("r_arm_up").rotation = -90; // Down
+        skeleton.getBone("r_arm_up").x = 90;
+        skeleton.getBone("r_arm_up").rotation = -90;
         
         skeleton.createBone("r_arm_low", "r_arm_up", 60, null);
         skeleton.getBone("r_arm_low").x = 70;
+        
+        createHand("r_hand", "r_arm_low");
         
         // Arms (Left)
         skeleton.createBone("l_arm_up", "torso", 70, null);
@@ -123,16 +123,16 @@ public class NeonHumanDemoScreen extends GScreen {
         skeleton.createBone("l_arm_low", "l_arm_up", 60, null);
         skeleton.getBone("l_arm_low").x = 70;
         
+        createHand("l_hand", "l_arm_low");
+        
         // Legs (Right)
         skeleton.createBone("r_leg_up", "body", 80, null);
-        skeleton.getBone("r_leg_up").rotation = -80; // Slightly apart
+        skeleton.getBone("r_leg_up").rotation = -80;
         
         skeleton.createBone("r_leg_low", "r_leg_up", 80, null);
         skeleton.getBone("r_leg_low").x = 80;
         
-        skeleton.createBone("r_foot", "r_leg_low", 20, null);
-        skeleton.getBone("r_foot").x = 80;
-        skeleton.getBone("r_foot").rotation = 90;
+        createFoot("r_foot", "r_leg_low");
         
         // Legs (Left)
         skeleton.createBone("l_leg_up", "body", 80, null);
@@ -141,9 +141,7 @@ public class NeonHumanDemoScreen extends GScreen {
         skeleton.createBone("l_leg_low", "l_leg_up", 80, null);
         skeleton.getBone("l_leg_low").x = 80;
         
-        skeleton.createBone("l_foot", "l_leg_low", 20, null);
-        skeleton.getBone("l_foot").x = 80;
-        skeleton.getBone("l_foot").rotation = 90;
+        createFoot("l_foot", "l_leg_low");
         
         // --- 2. IK Targets ---
         targetRightHand = skeleton.createBone("target_r_hand", "root", 10, null);
@@ -159,34 +157,30 @@ public class NeonHumanDemoScreen extends GScreen {
         targetLeftFoot.x = -40; targetLeftFoot.y = -150;
         
         // --- 3. IK Constraints ---
-        // Right Arm
         NeonIKConstraint rArmIK = new NeonIKConstraint("r_arm_ik");
         rArmIK.setTarget(targetRightHand);
         rArmIK.addBone(skeleton.getBone("r_arm_low"));
         rArmIK.addBone(skeleton.getBone("r_arm_up"));
-        rArmIK.bendPositive = true; // Elbow out
-        rArmIK.mix = 0.0f; // Start with FK
+        rArmIK.bendPositive = true;
+        rArmIK.mix = 0.0f;
         skeleton.addIKConstraint(rArmIK);
         
-        // Left Arm
         NeonIKConstraint lArmIK = new NeonIKConstraint("l_arm_ik");
         lArmIK.setTarget(targetLeftHand);
         lArmIK.addBone(skeleton.getBone("l_arm_low"));
         lArmIK.addBone(skeleton.getBone("l_arm_up"));
-        lArmIK.bendPositive = false; // Elbow out (other side)
+        lArmIK.bendPositive = false;
         lArmIK.mix = 0.0f;
         skeleton.addIKConstraint(lArmIK);
         
-        // Right Leg
         NeonIKConstraint rLegIK = new NeonIKConstraint("r_leg_ik");
         rLegIK.setTarget(targetRightFoot);
         rLegIK.addBone(skeleton.getBone("r_leg_low"));
         rLegIK.addBone(skeleton.getBone("r_leg_up"));
-        rLegIK.bendPositive = true; // Knee forward
+        rLegIK.bendPositive = true;
         rLegIK.mix = 0.0f;
         skeleton.addIKConstraint(rLegIK);
         
-        // Left Leg
         NeonIKConstraint lLegIK = new NeonIKConstraint("l_leg_ik");
         lLegIK.setTarget(targetLeftFoot);
         lLegIK.addBone(skeleton.getBone("l_leg_low"));
@@ -196,6 +190,63 @@ public class NeonHumanDemoScreen extends GScreen {
         skeleton.addIKConstraint(lLegIK);
         
         skeleton.updateWorldTransform();
+    }
+    
+    private void createHand(String name, String parent) {
+        skeleton.createBone(name, parent, 20, null);
+        skeleton.getBone(name).x = 60;
+        
+        createFinger(name + "_thumb", name, 10, -45);
+        createFinger(name + "_index", name, 15, 10);
+        createFinger(name + "_mid", name, 16, 0);
+        createFinger(name + "_ring", name, 15, -10);
+        createFinger(name + "_pinky", name, 12, -20);
+    }
+    
+    private void createFinger(String name, String parent, float length, float rot) {
+        skeleton.createBone(name + "_1", parent, length * 0.5f, null);
+        NeonBone b1 = skeleton.getBone(name + "_1");
+        b1.rotation = rot;
+        b1.x = 20;
+        
+        skeleton.createBone(name + "_2", name + "_1", length * 0.5f, null);
+        skeleton.getBone(name + "_2").x = length * 0.5f;
+    }
+    
+    private void createFoot(String name, String parent) {
+        skeleton.createBone(name, parent, 20, null);
+        skeleton.getBone(name).x = 80;
+        skeleton.getBone(name).rotation = 90;
+        
+        // Heel
+        skeleton.createBone(name + "_heel", name, 10, null);
+        skeleton.getBone(name + "_heel").x = 0;
+        skeleton.getBone(name + "_heel").rotation = 180;
+
+        // Toes
+        skeleton.createBone(name + "_toes", name, 15, null);
+        skeleton.getBone(name + "_toes").x = 20;
+    }
+    
+    private void createHairCluster(String name, String parent, float x, float y, float rot, int strands, float density, float length) {
+        // Cluster Root
+        skeleton.createBone(name + "_root", parent, 0, null);
+        NeonBone root = skeleton.getBone(name + "_root");
+        root.x = x; root.y = y; root.rotation = rot;
+
+        // Strands
+        for (int i = 0; i < strands; i++) {
+            String id = name + "_s" + i;
+            float angleOffset = (i - strands/2f) * density + MathUtils.random(-5f, 5f);
+            
+            skeleton.createBone(id + "_1", name + "_root", length * 0.5f, null);
+            NeonBone b1 = skeleton.getBone(id + "_1");
+            b1.rotation = angleOffset;
+            
+            skeleton.createBone(id + "_2", id + "_1", length * 0.5f, null);
+            skeleton.getBone(id + "_2").x = length * 0.5f;
+            skeleton.getBone(id + "_2").rotation = MathUtils.random(-10f, 10f);
+        }
     }
     
     private void createAnimations() {
@@ -264,34 +315,57 @@ public class NeonHumanDemoScreen extends GScreen {
         walkTrack = animState.play("walk");
     }
     
-    private void unproject(int screenX, int screenY) {
-        stage.getViewport().unproject(tempVec3.set(screenX, screenY, 0));
+    private void setupUI() {
+        VisTable root = new VisTable();
+        root.setFillParent(true);
+        stage.addActor(root);
+        
+        // Game Area (Left)
+        gameArea = new VisTable();
+        gameArea.setTouchable(Touchable.enabled);
+        gameArea.setBackground(VisUI.getSkin().newDrawable("white", new Color(0.15f, 0.15f, 0.15f, 1f)));
+        
+        // Control Panel (Right)
+        controlPanel = new VisTable(true);
+        controlPanel.setBackground("window");
+        controlPanel.pad(10);
+        
+        buildControlPanel(controlPanel);
+        
+        VisSplitPane split = new VisSplitPane(gameArea, controlPanel, false);
+        split.setSplitAmount(0.7f);
+        split.setMinSplitAmount(0.5f);
+        split.setMaxSplitAmount(0.9f);
+        
+        root.add(split).expand().fill();
     }
     
-    private void setupUI() {
-        VisTable table = new VisTable(true);
-        table.setFillParent(true);
-        table.top().right();
+    private void buildControlPanel(VisTable panel) {
+        panel.add(new VisLabel("Neon Human Demo")).row();
+        panel.add(new VisLabel("Advanced IK & Mixing")).padBottom(10).row();
         
-        table.add(new VisLabel("Human Skeleton Demo")).row();
-        table.add(new VisLabel("Drag Green Circles for IK")).row();
+        // Display Options
+        final VisCheckBox gizmoCheck = new VisCheckBox("Show Gizmos", true);
+        gizmoCheck.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showGizmos = gizmoCheck.isChecked();
+            }
+        });
+        panel.add(gizmoCheck).left().padBottom(10).row();
         
         // IK Control
-        table.add(new VisLabel("--- IK Control ---")).row();
+        panel.add(new VisLabel("--- IK Control ---")).align(Align.left).expandX().fillX().row();
         
         final VisCheckBox handIKCheck = new VisCheckBox("Enable Hand IK", false);
         handIKCheck.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                // Not ideal way to access constraints, should have map
-                // But for demo assuming order or references
-                // We didn't save references to constraints in class, let's just toggle all for now or specific
-                // Better to just update mix based on UI
                 float mix = handIKCheck.isChecked() ? 1f : 0f;
                 updateIKMix(mix, "r_arm_ik", "l_arm_ik");
             }
         });
-        table.add(handIKCheck).left().row();
+        panel.add(handIKCheck).left().row();
         
         final VisCheckBox legIKCheck = new VisCheckBox("Enable Leg IK", false);
         legIKCheck.addListener(new ChangeListener() {
@@ -301,10 +375,10 @@ public class NeonHumanDemoScreen extends GScreen {
                 updateIKMix(mix, "r_leg_ik", "l_leg_ik");
             }
         });
-        table.add(legIKCheck).left().row();
+        panel.add(legIKCheck).left().row();
         
         // Animation Control
-        table.add(new VisLabel("--- Animation ---")).row();
+        panel.add(new VisLabel("--- Animation ---")).align(Align.left).expandX().fillX().padTop(10).row();
         
         final VisCheckBox walkCheck = new VisCheckBox("Play Walk (Base)", true);
         walkCheck.addListener(new ChangeListener() {
@@ -318,7 +392,7 @@ public class NeonHumanDemoScreen extends GScreen {
                 }
             }
         });
-        table.add(walkCheck).left().row();
+        panel.add(walkCheck).left().row();
         
         final VisCheckBox waveCheck = new VisCheckBox("Overlay Wave (Track 1)", false);
         waveCheck.addListener(new ChangeListener() {
@@ -328,17 +402,15 @@ public class NeonHumanDemoScreen extends GScreen {
                     waveTrack = animState.setAnimation(1, "wave", true, 0.5f); // 0.5s fade in
                 } else {
                     if (waveTrack != null) {
-                        // Fade out? Current API doesn't support easy fade out clearing
-                        // But we can set alpha to 0 or clear track
                         animState.clearTrack(1);
                         waveTrack = null;
                     }
                 }
             }
         });
-        table.add(waveCheck).left().row();
+        panel.add(waveCheck).left().row();
         
-        stage.addActor(table);
+        panel.add().expand().fill(); // Spacer
     }
     
     private void updateIKMix(float mix, String... names) {
@@ -352,37 +424,14 @@ public class NeonHumanDemoScreen extends GScreen {
 
     @Override
     public void render(float delta) {
-        super.render(delta);
+        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         
-        // Update
-        animState.update(delta);
-        animState.apply(skeleton, null);
-        skeleton.updateWorldTransform();
-        
-        // Render Debug
-        debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-        debugRenderer.begin(ShapeRenderer.ShapeType.Line);
-        
-        drawBoneRecursive(skeleton.rootBone);
-        
-        // Draw Targets
-        debugRenderer.setColor(Color.GREEN);
-        drawTarget(targetRightHand);
-        drawTarget(targetLeftHand);
-        drawTarget(targetRightFoot);
-        drawTarget(targetLeftFoot);
-        
-        debugRenderer.end();
-        
+        // UI Layout Update
         stage.act(delta);
         stage.draw();
-    }
-    
-    private void drawTarget(NeonBone t) {
-        if (t == null) return;
-        float tx = t.worldTransform.m02;
-        float ty = t.worldTransform.m12;
-        debugRenderer.circle(tx, ty, 10);
+        
+        drawSceneInGameArea(delta);
     }
     
     @Override
@@ -390,7 +439,55 @@ public class NeonHumanDemoScreen extends GScreen {
         super.dispose();
         if (batch != null) batch.dispose();
         if (stage != null) stage.dispose();
-        if (debugRenderer != null) debugRenderer.dispose();
+        if (neonBatch != null) neonBatch.dispose();
+    }
+    
+    private void drawSceneInGameArea(float delta) {
+        Actor area = gameArea;
+        Vector2 pos = area.localToStageCoordinates(new Vector2(0, 0));
+        float x = pos.x;
+        float y = pos.y;
+        float w = area.getWidth();
+        float h = area.getHeight();
+        
+        Rectangle scissor = new Rectangle();
+        Rectangle clipBounds = new Rectangle(x, y, w, h);
+        ScissorStack.calculateScissors(stage.getCamera(), stage.getBatch().getTransformMatrix(), clipBounds, scissor);
+        if (ScissorStack.pushScissors(scissor)) {
+            animState.update(delta);
+            animState.apply(skeleton, null);
+            
+            renderBaseX = x + w / 2f;
+            renderBaseY = y + h / 2f;
+            skeleton.setPosition(renderBaseX, renderBaseY);
+            skeleton.updateWorldTransform();
+            
+            neonBatch.setProjectionMatrix(stage.getCamera().combined);
+            neonBatch.begin();
+            
+            drawBoneRecursive(skeleton.rootBone);
+            
+            if (showGizmos) {
+                drawGizmo(targetRightHand, Color.GREEN);
+                drawGizmo(targetLeftHand, Color.GREEN);
+                drawGizmo(targetRightFoot, Color.GREEN);
+                drawGizmo(targetLeftFoot, Color.GREEN);
+            }
+            
+            neonBatch.end();
+            
+            ScissorStack.popScissors();
+        }
+    }
+    
+    private void drawGizmo(NeonBone t, Color color) {
+        if (t == null) return;
+        float tx = t.worldTransform.m02;
+        float ty = t.worldTransform.m12;
+        
+        neonBatch.drawCircle(tx, ty, 8, 2, color, 16, false);
+        neonBatch.drawLine(tx-12, ty, tx+12, ty, 2, color);
+        neonBatch.drawLine(tx, ty-12, tx, ty+12, 2, color);
     }
     
     private void drawBoneRecursive(NeonBone bone) {
@@ -398,18 +495,72 @@ public class NeonHumanDemoScreen extends GScreen {
         
         float x = bone.worldTransform.m02;
         float y = bone.worldTransform.m12;
+        
         float cos = bone.worldTransform.m00;
         float sin = bone.worldTransform.m10;
         float x2 = x + cos * bone.length;
         float y2 = y + sin * bone.length;
         
-        debugRenderer.setColor(Color.WHITE);
-        debugRenderer.line(x, y, x2, y2);
-        debugRenderer.setColor(Color.RED);
-        debugRenderer.circle(x, y, 3);
+        Color color = Color.CYAN;
+        float thickness = 4f;
+        
+        if (bone.name.contains("hair")) {
+            color = Color.MAGENTA;
+            thickness = 2f;
+        } else if (bone.name.contains("finger") || bone.name.contains("toes")) {
+            color = Color.YELLOW;
+            thickness = 2f;
+        }
+        
+        if (bone.length > 0) {
+            neonBatch.drawLine(x, y, x2, y2, thickness, color);
+        }
+        
+        if (showGizmos) {
+            neonBatch.drawCircle(x, y, 3, 0, Color.WHITE, 8, true);
+        }
         
         for (NeonBone child : bone.children) {
             drawBoneRecursive(child);
+        }
+    }
+    
+    // --- Input Handler ---
+    class DemoInputHandler extends InputAdapter {
+        @Override
+        public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+            stage.getViewport().unproject(tempVec3.set(screenX, screenY, 0));
+            // Check targets
+            NeonBone[] targets = {targetLeftHand, targetRightHand, targetLeftFoot, targetRightFoot};
+            for (NeonBone t : targets) {
+                if (t == null) continue;
+                float dist = Vector2.dst(tempVec3.x, tempVec3.y, t.worldTransform.m02, t.worldTransform.m12);
+                if (dist < 20) {
+                    draggingBone = t;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public boolean touchDragged(int screenX, int screenY, int pointer) {
+            if (draggingBone != null) {
+                stage.getViewport().unproject(tempVec3.set(screenX, screenY, 0));
+                // Convert world pos back to local relative to Skeleton Root
+                // Skeleton Root is at (renderBaseX, renderBaseY)
+                // Target bones are direct children of root (in this setup)
+                draggingBone.x = tempVec3.x - renderBaseX;
+                draggingBone.y = tempVec3.y - renderBaseY;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+            draggingBone = null;
+            return false;
         }
     }
 }
