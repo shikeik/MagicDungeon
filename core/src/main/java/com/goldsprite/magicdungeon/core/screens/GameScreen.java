@@ -953,8 +953,8 @@ public class GameScreen extends GScreen {
 					isGameOver = false;
 					if (audio != null) audio.playBGM();
 
-					// Reset Player
-					player = new Player(0, 0);
+					// [修改] 死亡惩罚: 掉级掉装备，而不是重置
+					player.applyDeathPenalty();
 
 					// Reset World History
 					visitedLevels.clear();
@@ -963,7 +963,7 @@ public class GameScreen extends GScreen {
 					// Enter Camp
 					enterCamp(false);
 
-					hud.showMessage("你已复活。一切归零。");
+					hud.showMessage("你已复活。等级和物品已掉落。");
 				});
 			}
 		}, new Runnable() {

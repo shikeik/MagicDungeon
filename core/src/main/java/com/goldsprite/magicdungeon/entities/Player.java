@@ -292,11 +292,49 @@ public class Player extends Entity {
 		}
 	}
 
+	public void applyDeathPenalty() {
+		// 1. Level Penalty: Lose 3 levels (min level 1)
+		int targetLevel = Math.max(1, stats.level - 3);
+		
+		// Reset stats to level 1 base
+		stats.level = 1;
+		stats.xp = 0;
+		stats.xpToNextLevel = 100;
+		stats.maxHp = 100;
+		stats.hp = 100;
+		stats.maxMana = 50;
+		stats.mana = 50;
+		
+		// Re-apply level ups to reach targetLevel
+		for (int i = 1; i < targetLevel; i++) {
+			stats.level++;
+			stats.xpToNextLevel = (int) (stats.xpToNextLevel * 1.5f);
+			stats.maxHp += 20;
+			stats.maxMana += 10;
+		}
+		stats.hp = stats.maxHp;
+		stats.mana = stats.maxMana;
+
+		// 2. Item Penalty: Lose 2-5 random items
+		int dropCount = com.badlogic.gdx.math.MathUtils.random(2, 5);
+		int dropped = 0;
+		for (int i = 0; i < dropCount; i++) {
+			if (inventory.isEmpty()) break;
+			int idx = com.badlogic.gdx.math.MathUtils.random(inventory.size() - 1);
+			inventory.remove(idx);
+			dropped++;
+		}
+		System.out.println("Death Penalty: Level " + (targetLevel+3) + "->" + targetLevel + ", Dropped " + dropped + " items.");
+		
+		updateStats();
+	}
+
 	private void updateStats() {
-		int baseAtk = 5; // Base attack
-		int baseDef = 0; // Base defense
-		int baseHpRegen = 1; // Base HP Regen
-		int baseManaRegen = 1; // Base Mana Regen
+		// [Fix] Base attack now includes level bonus to prevent equipment changes from resetting level gains
+		int baseAtk = 5 + (this.stats.level - 1) * 2; 
+		int baseDef = 0; 
+		int baseHpRegen = 1; 
+		int baseManaRegen = 1; 
 
 		if (equipment.mainHand != null) {
 			baseAtk += equipment.mainHand.atk;
