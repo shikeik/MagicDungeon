@@ -45,15 +45,11 @@ public class DualGridDungeonRenderer implements Disposable {
         TextureRegion[] dirtBlob = loadBlobTexture("sprites/tilesets/dirt_tiles.png");
 
         // For dungeon bricks, prefer the generated one if file is missing or we want dynamic style
-        // But for now, let's check TextureManager for "WALL" which now uses createDungeonWallTileset
+        // FIX: Priority 1 is now Generated, because the 32x file is missing faces (only top).
         TextureRegion[] brickBlob = null;
 
-        // Priority 1: 32x High Res File
-        if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles_32x.png").exists()) {
-             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
-        }
-        // Priority 2: TextureManager (Generated)
-        else if (TextureManager.getInstance().getTile(TileType.Wall) != null) {
+        // Priority 1: TextureManager (Generated - Guaranteed to have faces)
+        if (TextureManager.getInstance().getTile(TileType.Wall) != null) {
              Texture tex = TextureManager.getInstance().getTile(TileType.Wall).getTexture();
              int size = tex.getWidth() / 4;
              TextureRegion[][] split = TextureRegion.split(tex, size, size);
@@ -62,20 +58,32 @@ public class DualGridDungeonRenderer implements Disposable {
                  brickBlob[i] = split[i / 4][i % 4];
              }
         }
+        // Priority 2: 32x High Res File (Fallback, disabled due to issues)
+        else if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles_32x.png").exists()) {
+             // brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
+        }
         // Priority 3: 16x Old File
         else {
              brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
         }
 
-        // Load Dungeon Floor Variations (floor-Sheet.png, 7 variations horizontal)
+        // Load Dungeon Floor Variations
+        // FIX: Generate floors procedurally to avoid misalignment issues with external sheet
         dungeonFloors = new TextureRegion[7];
+        
+        // Generate 7 variations
+        for(int i=0; i<7; i++) {
+            Texture tex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createFloor();
+            textures.put("generated_floor_" + i, tex);
+            dungeonFloors[i] = new TextureRegion(tex);
+        }
+        
+        /* 
+        // Old File Loading Logic (Disabled to fix misalignment)
         String floorSheetPath = "sprites/tilesets/floor-Sheet.png";
-
         if (Gdx.files.internal(floorSheetPath).exists()) {
             Texture tex = new Texture(Gdx.files.internal(floorSheetPath));
             textures.put(floorSheetPath, tex);
-            // Assuming the sheet is horizontal strip with 7 frames
-            // Calculate frame width (Total Width / 7)
             int frameWidth = tex.getWidth() / 7;
             int frameHeight = tex.getHeight();
 
@@ -85,13 +93,8 @@ public class DualGridDungeonRenderer implements Disposable {
                     dungeonFloors[i] = split[0][i];
                 }
             }
-        } else {
-             // Fallback to TextureManager's floor if missing
-             TextureRegion tr = TextureManager.getInstance().getTile(TileType.Floor);
-             if (tr != null) {
-                 for(int i=0; i<7; i++) dungeonFloors[i] = tr;
-             }
-        }
+        } 
+        */
 
         // Layer 0: Dirt (Base layer)
         if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));
