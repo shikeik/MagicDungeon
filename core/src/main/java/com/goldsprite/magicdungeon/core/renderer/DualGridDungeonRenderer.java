@@ -33,82 +33,24 @@ public class DualGridDungeonRenderer implements Disposable {
     private TextureRegion[] dungeonFloors;
     private TextureRegion torchTex;
     private TextureRegion windowTex;
+    
+    // Base blobs that don't change
+    private TextureRegion[] dirtBlob;
+    private TextureRegion[] sandBlob;
+    private TextureRegion[] grassBlob;
+    private com.goldsprite.magicdungeon.world.DungeonTheme currentTheme = null;
 
     public DualGridDungeonRenderer() {
-        loadResources();
+        initBaseResources();
     }
 
-    private void loadResources() {
-        // 加载 Blob 图集 (每个纹理 4x4 图块, 每个 16x16 像素)
-        TextureRegion[] grassBlob = loadBlobTexture("sprites/tilesets/grass_tiles.png");
-        TextureRegion[] sandBlob = loadBlobTexture("sprites/tilesets/sand_tiles.png");
-        TextureRegion[] dirtBlob = loadBlobTexture("sprites/tilesets/dirt_tiles.png");
+    private void initBaseResources() {
+        // Load static blobs
+        grassBlob = loadBlobTexture("sprites/tilesets/grass_tiles.png");
+        sandBlob = loadBlobTexture("sprites/tilesets/sand_tiles.png");
+        dirtBlob = loadBlobTexture("sprites/tilesets/dirt_tiles.png");
 
-        // For dungeon bricks, prefer the generated one if file is missing or we want dynamic style
-        // FIX: Priority 1 is now Generated, because the 32x file is missing faces (only top).
-        TextureRegion[] brickBlob = null;
-
-        // Priority 1: TextureManager (Generated - Guaranteed to have faces)
-        if (TextureManager.getInstance().getTile(TileType.Wall) != null) {
-             Texture tex = TextureManager.getInstance().getTile(TileType.Wall).getTexture();
-             int size = tex.getWidth() / 4;
-             TextureRegion[][] split = TextureRegion.split(tex, size, size);
-             brickBlob = new TextureRegion[16];
-             for (int i = 0; i < 16; i++) {
-                 brickBlob[i] = split[i / 4][i % 4];
-             }
-        }
-        // Priority 2: 32x High Res File (Fallback, disabled due to issues)
-        else if (Gdx.files.internal("sprites/tilesets/dungeon_brick_tiles_32x.png").exists()) {
-             // brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles_32x.png");
-        }
-        // Priority 3: 16x Old File
-        else {
-             brickBlob = loadBlobTexture("sprites/tilesets/dungeon_brick_tiles.png");
-        }
-
-        // Load Dungeon Floor Variations
-        // FIX: Generate floors procedurally to avoid misalignment issues with external sheet
-        dungeonFloors = new TextureRegion[7];
-        
-        // Generate 7 variations
-        for(int i=0; i<7; i++) {
-            Texture tex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createFloor();
-            textures.put("generated_floor_" + i, tex);
-            dungeonFloors[i] = new TextureRegion(tex);
-        }
-        
-        /* 
-        // Old File Loading Logic (Disabled to fix misalignment)
-        String floorSheetPath = "sprites/tilesets/floor-Sheet.png";
-        if (Gdx.files.internal(floorSheetPath).exists()) {
-            Texture tex = new Texture(Gdx.files.internal(floorSheetPath));
-            textures.put(floorSheetPath, tex);
-            int frameWidth = tex.getWidth() / 7;
-            int frameHeight = tex.getHeight();
-
-            TextureRegion[][] split = TextureRegion.split(tex, frameWidth, frameHeight);
-            if (split.length > 0 && split[0].length >= 7) {
-                for (int i = 0; i < 7; i++) {
-                    dungeonFloors[i] = split[0][i];
-                }
-            }
-        } 
-        */
-
-        // 层 0: 泥土 (基础层)
-        if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));
-
-        // 层 1: 砖块 (室内/地牢地板)
-        if (brickBlob != null) layers.add(new LayerConfig(brickBlob, "brick"));
-
-        // 层 2: 沙子 (覆盖层)
-        if (sandBlob != null) layers.add(new LayerConfig(sandBlob, "sand"));
-
-        // 层 3: 草地 (顶层)
-        if (grassBlob != null) layers.add(new LayerConfig(grassBlob, "grass"));
-
-        // 加载装饰 (火把, 窗户)
+        // Load Decor
         if (Gdx.files.internal("sprites/tilesets/torch.png").exists()) {
             Texture tex = new Texture(Gdx.files.internal("sprites/tilesets/torch.png"));
             textures.put("sprites/tilesets/torch.png", tex);
@@ -119,6 +61,56 @@ public class DualGridDungeonRenderer implements Disposable {
             textures.put("sprites/tilesets/wall_window.png", tex);
             windowTex = new TextureRegion(tex);
         }
+    }
+
+    private void updateTheme(com.goldsprite.magicdungeon.world.DungeonTheme theme) {
+        if (currentTheme == theme) return;
+        
+        // Clean up old theme textures
+        if (textures.containsKey("theme_wall")) {
+            textures.get("theme_wall").dispose();
+            textures.remove("theme_wall");
+        }
+        for(int i=0; i<7; i++) {
+            String key = "theme_floor_" + i;
+            if (textures.containsKey(key)) {
+                textures.get(key).dispose();
+                textures.remove(key);
+            }
+        }
+        
+        // 1. Generate Wall (Brick)
+        Texture wallTex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createDungeonWallTileset(
+            theme.primaryColor, theme.secondaryColor
+        );
+        textures.put("theme_wall", wallTex);
+        
+        int size = wallTex.getWidth() / 4;
+        TextureRegion[][] split = TextureRegion.split(wallTex, size, size);
+        TextureRegion[] brickBlob = new TextureRegion[16];
+        for (int i = 0; i < 16; i++) {
+            brickBlob[i] = split[i / 4][i % 4];
+        }
+        
+        // 2. Generate Floors
+        dungeonFloors = new TextureRegion[7];
+        for(int i=0; i<7; i++) {
+            Texture tex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createFloor(
+                theme.floorBase, theme.floorDark, theme.floorHighlight
+            );
+            textures.put("theme_floor_" + i, tex);
+            dungeonFloors[i] = new TextureRegion(tex);
+        }
+        
+        // Rebuild Layers List
+        layers.clear();
+        if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));
+        if (brickBlob != null) layers.add(new LayerConfig(brickBlob, "brick"));
+        if (sandBlob != null) layers.add(new LayerConfig(sandBlob, "sand"));
+        if (grassBlob != null) layers.add(new LayerConfig(grassBlob, "grass"));
+        
+        currentTheme = theme;
+        Gdx.app.log("DualGridDungeonRenderer", "Theme updated to: " + theme.name);
     }
 
     private TextureRegion[] loadBlobTexture(String path) {
@@ -140,6 +132,10 @@ public class DualGridDungeonRenderer implements Disposable {
     }
 
     public void render(NeonBatch batch, Dungeon dungeon) {
+        if (currentTheme != dungeon.theme) {
+            updateTheme(dungeon.theme);
+        }
+
         if (dungeon.level == 0) {
             // === 营地模式 (Level 0) ===
             // 恢复完整的自然地形渲染逻辑

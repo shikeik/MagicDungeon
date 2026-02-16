@@ -104,6 +104,10 @@ public class SpriteGenerator {
 	// --- Tile Generators ---
 
 	public static Texture createDungeonWallTileset() {
+        return createDungeonWallTileset(Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
+    }
+
+    public static Texture createDungeonWallTileset(Color primary, Color secondary) {
 		// 4x4 tiles, 16px each -> 64x64 texture
 		Pixmap p = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
 		p.setColor(0, 0, 0, 0);
@@ -114,10 +118,10 @@ public class SpriteGenerator {
 		int[] MASK_TO_ATLAS_Y = { -1, 3, 0, 0, 2, 0, 3, 1, 3, 1, 2, 0, 2, 2, 1, 1 };
 
 		// Wall Colors
-		Color topColor = Color.valueOf("#555555");
-		Color topHighlight = Color.valueOf("#666666");
-		Color faceColor = Color.valueOf("#3E3E3E"); // Darker for vertical face
-		Color faceShadow = Color.valueOf("#2E2E2E");
+		Color topColor = primary;
+		Color topHighlight = primary.cpy().mul(1.2f, 1.2f, 1.2f, 1f);
+		Color faceColor = secondary; // Darker for vertical face
+		Color faceShadow = secondary.cpy().mul(0.7f, 0.7f, 0.7f, 1f);
 
 		// Iterate through all 16 masks
 		for (int mask = 0; mask < 16; mask++) {
@@ -207,21 +211,23 @@ public class SpriteGenerator {
 	}
 
 	public static Texture createFloor() {
-		Pixmap p = createPixmap();
+		return createFloor(Color.valueOf("#3E3E3E"), Color.valueOf("#2E2E2E"), Color.valueOf("#4E4E4E"));
+	}
 
-		// Base Stone Color (Warm Grey)
-		Color baseColor = Color.valueOf("#3E3E3E");
-		Color darkColor = Color.valueOf("#2E2E2E");
-		Color highlightColor = Color.valueOf("#4E4E4E");
+	public static Texture createFloor(Color baseColor, Color darkColor, Color highlightColor) {
+		int size = 32;
+		Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+		p.setColor(0, 0, 0, 0);
+		p.fill();
 		
-		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, darkColor);
+		drawRect(p, 0, 0, size, size, darkColor);
 
 		// Large Stone Slabs (irregular grid)
 		int rows = 2;
 		int cols = 2;
-		int slabW = TEX_SIZE / cols;
-		int slabH = TEX_SIZE / rows;
-		int gap = 4;
+		int slabW = size / cols;
+		int slabH = size / rows;
+		int gap = 1;
 
 		for (int r = 0; r < rows; r++) {
 			for (int c = 0; c < cols; c++) {
@@ -237,15 +243,15 @@ public class SpriteGenerator {
 				drawRect(p, x, y, w, h, slabColor);
 				
 				// Bevel Highlight (Top/Left)
-				drawRect(p, x, y, w, 4, highlightColor);
-				drawRect(p, x, y, 4, h, highlightColor);
+				drawRect(p, x, y, w, 1, highlightColor);
+				drawRect(p, x, y, 1, h, highlightColor);
 				
 				// Cracks
 				if (MathUtils.randomBoolean(0.3f)) {
 					int cx = x + MathUtils.random(w);
 					int cy = y + MathUtils.random(h);
-					int len = MathUtils.random(10, 30);
-					drawLine(p, cx, cy, cx + len, cy + len, 2, darkColor);
+					int len = MathUtils.random(2, 8);
+					drawLine(p, cx, cy, cx + len, cy + len, 1, darkColor);
 				}
 			}
 		}

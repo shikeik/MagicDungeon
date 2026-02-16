@@ -37,6 +37,10 @@ public class MapGenerator {
 	}
 
 	public GenResult generate(boolean hasUpStairs, RandomXS128 rng) {
+		return generate(hasUpStairs, rng, DungeonTheme.DEFAULT);
+	}
+
+	public GenResult generate(boolean hasUpStairs, RandomXS128 rng, DungeonTheme theme) {
 		Tile[][] map = new Tile[height][width];
 		List<Room> rooms = new ArrayList<>();
 
@@ -122,12 +126,12 @@ public class MapGenerator {
 		}
 
 		// Decorate
-		decorate(map, rooms, rng);
+		decorate(map, rooms, rng, theme);
 
 		return new GenResult(map, start);
 	}
 	
-	private void decorate(Tile[][] map, List<Room> rooms, RandomXS128 rng) {
+	private void decorate(Tile[][] map, List<Room> rooms, RandomXS128 rng, DungeonTheme theme) {
 		// 1. Place Torches and Windows on North Walls
 		for (int y = 1; y < height; y++) {
 			for (int x = 1; x < width - 1; x++) {
@@ -136,9 +140,19 @@ public class MapGenerator {
 					if (map[y-1][x].type == TileType.Floor) {
 						// Random chance
 						float roll = rng.nextFloat();
-						if (roll < 0.15f) { // 15% Torch
+						float torchChance = 0.15f;
+						float windowChance = 0.10f;
+						
+						if (theme == DungeonTheme.FOREST) {
+							torchChance = 0.05f;
+							windowChance = 0.0f;
+						} else if (theme == DungeonTheme.DESERT) {
+							windowChance = 0.2f;
+						}
+
+						if (roll < torchChance) { // Torch
 							map[y][x].type = TileType.Torch;
-						} else if (roll > 0.90f) { // 10% Window
+						} else if (roll > 1.0f - windowChance) { // Window
 							map[y][x].type = TileType.Window;
 						}
 					}
@@ -147,6 +161,9 @@ public class MapGenerator {
 		}
 		
 		// 2. Place Pillars in Rooms
+		TileType roomDecor = TileType.Pillar;
+		if (theme == DungeonTheme.FOREST) roomDecor = TileType.Tree;
+
 		for (Room room : rooms) {
 			if (room.w >= 6 && room.h >= 6) {
 				// Place pillars near corners (inset by 2)
@@ -157,22 +174,22 @@ public class MapGenerator {
 				
 				// Top-Left
 				if (isValidPillarSpot(map, px1, py2)) {
-					map[py2][px1].type = TileType.Pillar;
+					map[py2][px1].type = roomDecor;
 					map[py2][px1].walkable = false;
 				}
 				// Top-Right
 				if (isValidPillarSpot(map, px2, py2)) {
-					map[py2][px2].type = TileType.Pillar;
+					map[py2][px2].type = roomDecor;
 					map[py2][px2].walkable = false;
 				}
 				// Bottom-Left
 				if (isValidPillarSpot(map, px1, py1)) {
-					map[py1][px1].type = TileType.Pillar;
+					map[py1][px1].type = roomDecor;
 					map[py1][px1].walkable = false;
 				}
 				// Bottom-Right
 				if (isValidPillarSpot(map, px2, py1)) {
-					map[py1][px2].type = TileType.Pillar;
+					map[py1][px2].type = roomDecor;
 					map[py1][px2].walkable = false;
 				}
 			}

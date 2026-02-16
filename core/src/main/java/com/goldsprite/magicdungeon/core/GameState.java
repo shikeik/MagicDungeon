@@ -8,6 +8,7 @@ import java.util.Map;
 
 public class GameState {
 	public int dungeonLevel;
+	public String theme;
 	public int maxDepth = 1; // New: Max Depth reached
 	public long seed;
 	public PlayerStats playerStats;

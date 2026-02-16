@@ -27,6 +27,7 @@ public class SaveManager {
 	public static void saveGame(Player player, Dungeon dungeon, List<Monster> monsters, List<Item> items, Map<Integer, LevelState> visitedLevels, int maxDepth) {
 		GameState state = new GameState();
 		state.dungeonLevel = dungeon.level;
+		state.theme = dungeon.theme.name();
 		state.maxDepth = maxDepth;
 		state.seed = dungeon.globalSeed;
 		state.playerStats = player.stats;

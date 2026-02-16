@@ -56,6 +56,7 @@ import com.esotericsoftware.spine.SkeletonRenderer;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.esotericsoftware.spine.Animation;
 import com.goldsprite.magicdungeon.screens.WorldMapScreen;
+import com.goldsprite.magicdungeon.world.DungeonTheme;
 import com.goldsprite.magicdungeon.assets.AudioAssets;
 import com.goldsprite.magicdungeon.vfx.VFXManager;
 
@@ -574,13 +575,35 @@ public class GameScreen extends GScreen {
 			if (pos != null) {
 				if (Math.abs(pos.x - player.x) < 5 && Math.abs(pos.y - player.y) < 5) continue;
 
-				// Varied Monster Types based on Level
-				MonsterType type = MonsterType.Slime;
-				if (dungeon.level >= 2 && monsterRng.nextFloat() < 0.3) type = MonsterType.Bat;
-				if (dungeon.level >= 3 && monsterRng.nextFloat() < 0.3) type = MonsterType.Wolf;
-				if (dungeon.level >= 3 && monsterRng.nextFloat() < 0.3) type = MonsterType.Skeleton;
-				if (dungeon.level >= 5 && monsterRng.nextFloat() < 0.3) type = MonsterType.Orc;
-				if (dungeon.level % 6 == 0 && monsterRng.nextFloat() < 0.3) type = MonsterType.Boss;
+				// Use theme allowed monsters
+				MonsterType[] allowed = dungeon.theme.allowedMonsters;
+				if (allowed == null || allowed.length == 0) {
+					allowed = MonsterType.values();
+				}
+				
+				MonsterType type = allowed[monsterRng.nextInt(allowed.length)];
+				
+				// Handle Boss Logic
+				if (type == MonsterType.Boss) {
+					boolean isBossLevel = (dungeon.level % 6 == 0);
+					if (!isBossLevel) {
+						// Reroll
+						for(int k=0; k<5; k++) {
+							if (type != MonsterType.Boss) break;
+							type = allowed[monsterRng.nextInt(allowed.length)];
+						}
+					} else {
+						// Boss Level: Ensure only 1 boss or rare
+						boolean hasBoss = false;
+						for(Monster m : monsters) if(m.type == MonsterType.Boss) hasBoss = true;
+						if(hasBoss) {
+							for(int k=0; k<5; k++) {
+								if (type != MonsterType.Boss) break;
+								type = allowed[monsterRng.nextInt(allowed.length)];
+							}
+						}
+					}
+				}
 
 				Monster m = new Monster(pos.x, pos.y, type);
 				// Apply difficulty
@@ -1277,6 +1300,18 @@ public class GameScreen extends GScreen {
 			player.stats = state.playerStats;
 			player.inventory = state.inventory;
 			dungeon.level = state.dungeonLevel;
+			
+			// Restore Theme
+			if (state.theme != null) {
+				try {
+					dungeon.theme = DungeonTheme.valueOf(state.theme);
+				} catch (IllegalArgumentException e) {
+					dungeon.theme = DungeonTheme.DEFAULT;
+				}
+			} else {
+				dungeon.theme = DungeonTheme.DEFAULT;
+			}
+
 			if (state.maxDepth > 0) maxDepth = state.maxDepth;
 			else maxDepth = Math.max(1, dungeon.level);
 

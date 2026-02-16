@@ -13,15 +13,20 @@ public class Dungeon {
 	public long globalSeed;
     public DungeonTheme theme = DungeonTheme.DEFAULT;
 
-	public Dungeon(int width, int height, long globalSeed) {
+	public Dungeon(int width, int height, long globalSeed, DungeonTheme theme) {
 		this.width = width;
 		this.height = height;
 		this.level = 1;
 		this.globalSeed = globalSeed;
+        this.theme = theme;
 		this.map = new Tile[height][width];
 		this.startPos = new GridPoint2(0, 0);
 		generate();
 	}
+
+    public Dungeon(int width, int height, long globalSeed) {
+        this(width, height, globalSeed, DungeonTheme.DEFAULT);
+    }
 	
 	private long getLevelSeed() {
 		// 每一层的种子基于全局种子和层数，使用简单的混合算法防止线性相关
@@ -54,7 +59,7 @@ public class Dungeon {
 			
 			MapGenerator generator = new MapGenerator(this.width, this.height);
 			// Always enable up stairs for levels >= 1 (to allow returning to camp from level 1)
-			MapGenerator.GenResult result = generator.generate(true, getMapRNG());
+			MapGenerator.GenResult result = generator.generate(true, getMapRNG(), this.theme);
 			this.map = result.grid;
 			this.startPos = result.start;
 		}
