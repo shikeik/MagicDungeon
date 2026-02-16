@@ -108,6 +108,7 @@ public class GameHUD {
 	private VisTextButton helpBtn;
 	private BaseDialog helpWindow;
 	private ChestDialog chestDialog;
+	private VisTable toolbarTable; // Toolbar table reference
 
 	private Array<VisTextButton> toolbarButtons = new Array<>();
 	private int toolbarFocusIndex = -1;
@@ -1348,12 +1349,12 @@ public class GameHUD {
 		root.top();
 
 		// 1. Toolbar (Top, Full Width)
-		VisTable toolbar = new VisTable();
-		toolbar.setBackground(logBgDrawable); // Optional background
+		toolbarTable = new VisTable();
+		toolbarTable.setBackground(logBgDrawable); // Optional background
 		VisTable buttonGroup = new VisTable();
 		createButtons(buttonGroup);
-		toolbar.add(buttonGroup).growX().right().pad(5);
-		root.add(toolbar).growX().top().row();
+		toolbarTable.add(buttonGroup).growX().right().pad(5);
+		root.add(toolbarTable).growX().top().row();
 
 		// 2. System Log (Top Left, Overlay)
 		// We use a separate container for Log to allow it to be an overlay or just flow.
@@ -1423,7 +1424,9 @@ public class GameHUD {
 			public void act(float delta) {
 				super.act(delta);
 				if (getStage() != null) {
-					setPosition(getStage().getWidth() - getWidth() - 10, getStage().getHeight() - getHeight() - 10);
+					float toolbarH = (toolbarTable != null) ? toolbarTable.getHeight() : 50;
+					// 留有一定右上margin (比如 10), 且在 toolbar 下方
+					setPosition(getStage().getWidth() - getWidth() - 10, getStage().getHeight() - getHeight() - toolbarH - 10);
 				}
 			}
 		};

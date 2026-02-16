@@ -255,6 +255,9 @@ public class InputManager {
      * Must be called once per frame, preferably at start of render()
      */
     public void update() {
+        // Clear simulated just pressed actions from previous frame
+        simulatedJustPressedActions.clear();
+
         // Update startup timer
         if (startupTimer < STARTUP_DELAY) {
             startupTimer += Gdx.graphics.getDeltaTime();
