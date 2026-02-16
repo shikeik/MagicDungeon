@@ -20,8 +20,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 
 		map.put("", null); // 分隔线
 
-		// --- 引擎功能测试 ---
-		map.put("Scroll Layout Test", ScrollLayoutTestScreen.class);
+		// --- 功能测试 ---
 		map.put("测试", TestSelectionScreen.class);
 	}
 }

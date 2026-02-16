@@ -3,14 +3,9 @@ package com.goldsprite.magicdungeon.screens;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 import com.goldsprite.gdengine.testing.AutoTestManager;
-import com.goldsprite.magicdungeon.screens.tests.DualGridDemoScreen;
-import com.goldsprite.magicdungeon.screens.tests.MaterialPreviewScreen;
-import com.goldsprite.magicdungeon.screens.tests.NeonGenTestScreen;
-import com.goldsprite.magicdungeon.screens.tests.TexturePreviewScreen;
-import com.goldsprite.magicdungeon.screens.tests.VisUIDemoScreen;
-import com.goldsprite.magicdungeon.screens.tests.SpineTestScreen;
+import com.goldsprite.magicdungeon.screens.tests.*;
+
 import java.util.Map;
-import com.goldsprite.magicdungeon.screens.tests.PolyBatchTestScreen;
 
 public class TestSelectionScreen extends BaseSelectionScreen {
 	@Override
@@ -18,8 +13,9 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("功能验证", null);
 
 		map.put("多边形绘制器蒙皮渲染测试", PolyBatchTestScreen.class);
+		map.put("控件测试: 自动焦点式滑动布局", ScrollLayoutTestScreen.class);
 		map.put("", null);
-		
+
 		map.put("通用 UI & 皮肤切换演示", VisUIDemoScreen.class);
 		map.put("双网格演示", DualGridDemoScreen.class);
 		map.put("新材质预览", MaterialPreviewScreen.class);
