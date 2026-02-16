@@ -15,10 +15,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.log.DLog;
-import com.kotcrab.vis.ui.Sizes;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
-import com.ray3k.tenpatch.TenPatchDrawable;
 
 public class VisUIHelper {
 	public static BitmapFont cnFont;

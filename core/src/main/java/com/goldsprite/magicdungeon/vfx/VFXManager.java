@@ -4,6 +4,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 
 public class VFXManager {
     private Array<NeonParticle> particles = new Array<>();
@@ -20,7 +22,17 @@ public class VFXManager {
 
     public void render(NeonBatch batch) {
         for (NeonParticle p : particles) {
-            p.render(batch);
+            if (!(p instanceof TextParticle)) {
+                p.render(batch);
+            }
+        }
+    }
+
+    public void renderText(SpriteBatch batch, BitmapFont font) {
+        for (NeonParticle p : particles) {
+            if (p instanceof TextParticle) {
+                ((TextParticle)p).render(batch, font);
+            }
         }
     }
 
@@ -42,6 +54,7 @@ public class VFXManager {
         }
     }
 
-    // 漂浮文字效果 (简单版，用粒子模拟或者直接用字体绘制)
-    // 这里暂时不处理字体，字体通常由 GameHUD 处理
+    public void spawnFloatingText(float x, float y, String text, Color color) {
+        spawn(new TextParticle(x, y, text, color, 1.0f));
+    }
 }

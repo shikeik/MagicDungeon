@@ -11,6 +11,7 @@ import java.util.HashSet;
 import com.badlogic.gdx.graphics.Texture;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
+import com.goldsprite.magicdungeon.vfx.VFXManager;
 
 public class Player extends Entity {
 	public float moveTimer;
@@ -48,7 +49,7 @@ public class Player extends Entity {
 		this.equipment = new Equipment();
 	}
 
-	public void update(float dt, Dungeon dungeon, int dx, int dy, List<Monster> monsters, AudioSystem audio) {
+	public void update(float dt, Dungeon dungeon, int dx, int dy, List<Monster> monsters, AudioSystem audio, VFXManager vfx) {
 		// Regeneration Logic (Every 5 seconds)
 		regenTimer += dt;
 		if (regenTimer >= 5.0f) {
@@ -88,10 +89,26 @@ public class Player extends Entity {
 				audio.playAttack(); // Play attack sound
 				targetMonster.hp -= this.stats.atk;
 				targetMonster.triggerHitFlash(0.2f); // Trigger hit flash
+
+				// VFX
+				if (vfx != null) {
+					vfx.spawnExplosion(targetMonster.visualX + 16, targetMonster.visualY + 16, Color.WHITE, 5);
+					vfx.spawnFloatingText(targetMonster.visualX + 16, targetMonster.visualY + 32, "" + this.stats.atk, Color.WHITE);
+				}
+
 				// Simple knockback/hit effect could be added here
 				if (targetMonster.hp <= 0) {
+                    int oldLevel = this.stats.level;
 					// Monster died - Gain XP
 					this.stats.addXp(10 + targetMonster.maxHp / 2);
+                    
+                    if (this.stats.level > oldLevel) {
+                        audio.playLevelUp();
+                        if (vfx != null) {
+                            vfx.spawnExplosion(this.visualX + 16, this.visualY + 16, Color.GOLD, 30);
+                            vfx.spawnFloatingText(this.visualX + 16, this.visualY + 48, "LEVEL UP!", Color.GOLD);
+                        }
+                    }
 				}
 				this.moveTimer = this.moveDelay;
 				return;

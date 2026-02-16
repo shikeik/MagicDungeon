@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.utils.SimpleCameraController;
@@ -53,7 +54,6 @@ import com.esotericsoftware.spine.SkeletonData;
 import com.esotericsoftware.spine.SkeletonJson;
 import com.esotericsoftware.spine.SkeletonRenderer;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.esotericsoftware.spine.Animation;
 import com.goldsprite.magicdungeon.screens.WorldMapScreen;
 import com.goldsprite.magicdungeon.assets.AudioAssets;
@@ -70,7 +70,6 @@ public class GameScreen extends GScreen {
 	private GameHUD hud;
 	private AudioSystem audio;
 	private NeonBatch batch;
-	private PolygonSpriteBatch polyBatch;
 	private long seed;
     
     private VFXManager vfxManager;
@@ -134,7 +133,6 @@ public class GameScreen extends GScreen {
 	@Override
 	public void create() {
 		batch = new NeonBatch();
-		polyBatch = new PolygonSpriteBatch();
 		dungeonRenderer = new DualGridDungeonRenderer();
         vfxManager = new VFXManager();
 
@@ -927,7 +925,7 @@ public class GameScreen extends GScreen {
         }
 
 		// Update Player
-		player.update(delta, dungeon, dx, dy, monsters, audio);
+		player.update(delta, dungeon, dx, dy, monsters, audio, vfxManager);
 
 
 		// Item Pickup
@@ -941,6 +939,11 @@ public class GameScreen extends GScreen {
 					i--;
 					audio.playItem();
 					hud.showMessage("拾取了 [" + item.item.quality.name + "] " + item.item.data.name + "!");
+                    
+                    if (vfxManager != null) {
+                        vfxManager.spawnFloatingText(player.visualX + 16, player.visualY + 32, item.item.data.name, Color.GREEN);
+                    }
+                    
 					// Update inventory dialog if it's open
 					hud.updateInventory(player);
 				} else {
@@ -959,6 +962,12 @@ public class GameScreen extends GScreen {
 				player.stats.hp -= damage;
 				player.hitFlashTimer = 0.2f; // Trigger red flash
 				hud.showMessage("受到来自 " + m.name + " 的 " + damage + " 点伤害!");
+                
+                if (vfxManager != null) {
+                    vfxManager.spawnExplosion(player.visualX + 16, player.visualY + 16, Color.RED, 10);
+                    vfxManager.spawnFloatingText(player.visualX + 16, player.visualY + 32, "-" + damage, Color.RED);
+                }
+                
 				if (player.stats.hp <= 0) {
 					triggerGameOver();
 				}
@@ -1110,7 +1119,7 @@ public class GameScreen extends GScreen {
 			spineState.skeleton.setColor(Color.WHITE);
 		}
 
-		spineRenderer.draw(polyBatch, spineState.skeleton);
+		spineRenderer.draw(batch, spineState.skeleton);
 		// Reset batch color
 		batch.setColor(Color.WHITE);
 	}
@@ -1239,8 +1248,8 @@ public class GameScreen extends GScreen {
 
 		batch.end();
 
-		polyBatch.setProjectionMatrix(worldCamera.combined);
-		polyBatch.begin();
+		batch.setProjectionMatrix(worldCamera.combined);
+		batch.begin();
 
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
@@ -1250,7 +1259,12 @@ public class GameScreen extends GScreen {
 			}
 		}
 
-		polyBatch.end();
+        // Render VFX Text
+        if (vfxManager != null) {
+             vfxManager.renderText(batch, VisUIHelper.cnFont);
+        }
+
+		batch.end();
 
 		// HUD Render
 		hud.render();
