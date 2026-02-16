@@ -90,4 +90,24 @@ apply from: 'gradle/versioning.gradle'
 apply from: 'gradle/publish-docs.gradle'
 //apply from: 'gradle/publish-template.gradle'
 //
-//apply from: "gradle/publish-executables.gradle"
+// [新增] 引入 jpackage 打包任务 (在 lwjgl3 模块中定义，这里做个别名)
+task oneClickRelease {
+    group = "distribution"
+    description = "一键构建 Jar -> jpackage -> 单文件 Exe (需要配置 Enigma)"
+    
+    // 依赖 lwjgl3 模块的打包任务
+    dependsOn ':lwjgl3:packageSingleExe'
+    
+    doLast {
+        println "--------------------------------------------------"
+        println "🎉 发布流程结束"
+        println "--------------------------------------------------"
+    }
+}
+
+// 别名任务：允许直接使用 gradlew packageSingleExe
+task packageSingleExe {
+    group = "distribution"
+    description = "Package single exe (Alias for :lwjgl3:packageSingleExe)"
+    dependsOn ':lwjgl3:packageSingleExe'
+}

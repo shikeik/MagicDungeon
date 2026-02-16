@@ -113,41 +113,5 @@ if (enableGraalNative == 'true') {
 	apply from: file("nativeimage.gradle")
 }
 
-// exe4j 配置更新任务 (保持不变)
-tasks.register('updateExe4jOptions') {
-	doFirst {
-		def exe4jConfigFile = file("$rootProject.projectDir/outputs/MagicDungeon.exe4j")
-		if (!exe4jConfigFile.exists() || !project.hasProperty("projectVersion")) {
-			println "Exe4j 配置不存在, 跳过exe4j配置更新任务"
-			return
-		}
-		def rootDir = rootProject.rootDir.absolutePath.replace('\\', '/')
-		def outputDir = rootDir + "/outputs"
-		def currentJdkPath = Jvm.current().javaHome.absolutePath.replace("\\", "/")
-		def projectVersion = project.projectVersion
-		def rootProjectName = rootProject.name
-		def newExecutableName = "${rootProjectName}_V${projectVersion}"
-		def newJarName = "${newExecutableName}.jar"
-
-		def content = exe4jConfigFile.getText('UTF-8')
-		def updatedContent = content
-
-		updatedContent = updatedContent.replaceAll(/distributionSourceDir="[^"]*"/) { "distributionSourceDir=\"${outputDir}\"" }
-		updatedContent = updatedContent.replaceAll(/iconFile="[^"]*"/) { "iconFile=\"${rootDir}/assets/icon.ico\"" }
-		updatedContent = updatedContent.replaceAll(/directory location="[^"]*"/) { "directory location=\"${currentJdkPath}\"" }
-		updatedContent = updatedContent.replaceAll(/archive location="[^"]*"/) { "archive location=\"${outputDir}/$newJarName\"" }
-		updatedContent = updatedContent.replaceAll(/application name="[^"]*"/) { "application name=\"${rootProjectName}\"" }
-		updatedContent = updatedContent.replaceAll(/executable name="[^"]*"/) { "executable name=\"${newExecutableName}\"" }
-		updatedContent = updatedContent.replaceAll(/java mainClass="[^"]*"/) { "java mainClass=\"${mainClassName}\"" }
-		updatedContent = updatedContent.replaceAll(/minVersion="[^"]*"/) { "minVersion=\"${jdkVersion}\"" }
-
-		exe4jConfigFile.write(updatedContent, 'UTF-8')
-		println "✅ exe4j配置更新完毕"
-	}
-}
-
-compileJava.dependsOn(updateExe4jOptions)
-jar.dependsOn(updateExe4jOptions)
-
 // [新增] 引入 jpackage 打包任务
 apply from: "${rootProject.projectDir}/gradle/jpackage.gradle"

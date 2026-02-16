@@ -1,17 +1,43 @@
+import org.gradle.internal.jvm.Jvm
+import java.nio.charset.Charset
 
 // jpackage 打包任务配置
 // 放在 lwjgl3/build.gradle 中引用
 
 // 获取 JDK 版本
-def javaVersion = org.gradle.internal.jvm.Jvm.current().javaVersion.majorVersion.toInteger()
+def javaVersion = Jvm.current().javaVersion.majorVersion.toInteger()
 if (javaVersion < 14) {
     logger.warn("⚠️ 当前 JDK 版本为 ${javaVersion}, jpackage 需要 JDK 14+. 任务可能无法运行.")
 }
 
-tasks.register('packageApp', Exec) {
+// 辅助方法：执行命令并处理乱码 (默认使用 GBK 读取 Windows 命令行输出)
+def runCommand(List<String> command, File workingDir, String charset = 'GBK') {
+    // 确保所有参数都是 String 类型，避免 GString 导致的类型不匹配
+    def safeCommand = command.collect { it.toString() }
+    println "Executing: ${safeCommand.join(' ')}"
+    def pb = new ProcessBuilder(safeCommand)
+    pb.directory(workingDir)
+    pb.redirectErrorStream(true)
+    def process = pb.start()
+    process.outputStream.close() // 关闭标准输入，防止进程等待输入
+    
+    try {
+        process.inputStream.eachLine(charset) { line ->
+            println line
+        }
+    } catch (Exception e) {
+        println "Error reading output: ${e.message}"
+    }
+    
+    process.waitFor()
+    if (process.exitValue() != 0) {
+        throw new GradleException("Command failed with exit code ${process.exitValue()}")
+    }
+}
+
+tasks.register('jpackageExe') {
     group = 'distribution'
     description = '使用 jpackage 打包为自带运行时的应用程序镜像 (App Image)'
-    
     dependsOn 'jar'
 
     // 配置路径
@@ -24,8 +50,8 @@ tasks.register('packageApp', Exec) {
     
     // 临时输入目录 (用于隔离 jpackage 输入)
     def stagingDir = file("${project.buildDir}/jpackage-staging")
-    // 输出目录
-    def outputDir = file("${rootDir}/outputs/dist")
+    // 输出目录 (改为 outputs/jpackage/)
+    def outputDir = file("${rootDir}/outputs/jpackage")
     
     // 图标
     def iconPath = "${rootDir}/assets/icon.ico"
@@ -33,8 +59,7 @@ tasks.register('packageApp', Exec) {
     // 主类
     def mainClass = project.mainClassName
 
-    // 准备输入文件
-    doFirst {
+    doLast {
         if (!inputJar.exists()) {
             throw new GradleException("找不到输入 Jar 文件: ${inputJar}\n请确保 jar 任务已成功运行.")
         }
@@ -49,81 +74,204 @@ tasks.register('packageApp', Exec) {
             into stagingDir
         }
         
-        // 清理输出目录
+        // 清理输出目录 (只清理 outputs/jpackage, 避免误删其他构建产物)
         delete outputDir
         
         println "📦 开始使用 jpackage 打包..."
         println "   - 输入 Jar: ${jarName}"
         println "   - 输出目录: ${outputDir}"
         println "   - 主类: ${mainClass}"
-    }
 
-    // jpackage 命令
-    commandLine 'jpackage',
+        // jpackage 命令
+        def cmd = [
+            'jpackage',
             '--type', 'app-image',
-            '--dest', outputDir,
-            '--input', stagingDir,
+            '--dest', outputDir.absolutePath,
+            '--input', stagingDir.absolutePath,
             '--name', appName,
             '--main-jar', jarName,
             '--main-class', mainClass,
             '--icon', iconPath,
             '--java-options', '-Xmx1G -Dfile.encoding=UTF-8',
             '--verbose'
-            
-    doLast {
+        ]
+        
+        // 执行命令 (Windows 下 jpackage 输出通常是 GBK)
+        runCommand(cmd, project.projectDir)
+
         println "✅ 应用程序镜像已生成: ${outputDir}/${appName}"
         println "👉 您可以运行 ${outputDir}/${appName}/${appName}.exe 来启动游戏 (无需已安装的 JRE)"
         println "👉 若需制作单文件 EXE, 请配置 Enigma Virtual Box 并运行 packageSingleExe 任务."
     }
 }
 
-// 尝试注册 Enigma Virtual Box 打包任务
-tasks.register('packageSingleExe', Exec) {
+// 注册 Enigma Virtual Box 打包任务
+tasks.register('packageSingleExe') {
     group = 'distribution'
     description = '使用 Enigma Virtual Box 将 App Image 打包为单文件 Exe (需要配置 enigmavb.path)'
-    dependsOn 'packageApp'
+    dependsOn 'jpackageExe'
     
-    // 尝试从 local.properties 读取路径
-    def evbPath = null
-    def localPropsFile = rootProject.file('local.properties')
-    if (localPropsFile.exists()) {
-        Properties p = new Properties()
-        p.load(new FileInputStream(localPropsFile))
-        evbPath = p.getProperty('enigmavb.path')
-    }
-    
-    // 默认路径尝试
-    if (!evbPath) {
-        def defaultPath = "C:/Program Files (x86)/Enigma Virtual Box/enigmavbconsole.exe"
-        if (file(defaultPath).exists()) {
-            evbPath = defaultPath
+    doLast {
+        // 尝试从 local.properties 读取路径
+        def evbPath = null
+        def localPropsFile = rootProject.file('local.properties')
+        if (localPropsFile.exists()) {
+            Properties p = new Properties()
+            p.load(new FileInputStream(localPropsFile))
+            evbPath = p.getProperty('enigmavb.path')
         }
-    }
+        
+        // 默认路径尝试 (检查常见的安装位置)
+        if (!evbPath) {
+            def possiblePaths = [
+                "${rootProject.projectDir}/tools/EnigmaVirtualBox/enigmavbconsole.exe", // 优先使用项目内嵌工具
+                "C:/Program Files/Enigma Virtual Box/enigmavbconsole.exe",
+                "C:/Program Files (x86)/Enigma Virtual Box/enigmavbconsole.exe",
+                "D:/Program Files/Enigma Virtual Box/enigmavbconsole.exe",
+                "E:/WorkApps/Enigma Virtual Box/enigmavbconsole.exe" // 增加用户日志中的路径
+            ]
+            for (String path : possiblePaths) {
+                if (file(path).exists()) {
+                    evbPath = path
+                    break
+                }
+            }
+        }
 
-    def appName = rootProject.name
-    def distDir = file("${rootProject.projectDir}/outputs/dist/${appName}")
-    def outputExe = "${rootProject.projectDir}/outputs/${appName}_Portable_V${rootProject.findProperty('projectVersion')}.exe"
-    
-    // 检查工具是否存在
-    if (!evbPath || !file(evbPath).exists()) {
-        // 如果找不到工具，使用 echo 打印警告并正常退出 (不阻塞构建，但提示用户)
-        commandLine 'cmd', '/c', 'echo', '⚠️ 未找到 Enigma Virtual Box (enigmavbconsole.exe), 跳过单文件打包.'
-        doLast {
+        def appName = rootProject.name
+        def projectVersion = rootProject.findProperty('projectVersion')
+        // jpackage 输出的目录通常是 outputs/jpackage/${appName}
+        def distDir = file("${rootProject.projectDir}/outputs/jpackage/${appName}")
+        // 单文件输出路径: outputs/${appName}_V${projectVersion}.exe
+        def outputExe = file("${rootProject.projectDir}/outputs/${appName}_V${projectVersion}.exe")
+        
+        // 检查工具是否存在
+        if (!evbPath || !file(evbPath).exists()) {
             println "\n⚠️ [警告] 无法执行单文件打包"
             println "请在 local.properties 中配置 'enigmavb.path' 指向 enigmavbconsole.exe"
-            println "或者将 Enigma Virtual Box 安装到默认路径: C:/Program Files (x86)/Enigma Virtual Box/"
+            println "或者将 Enigma Virtual Box 安装到默认路径: C:/Program Files/Enigma Virtual Box/"
+            return
         }
-    } else {
-        // 如果找到了工具，尝试打包
-        // 注意: 这里假设用户已经配置好了 template.evb 或者我们尝试直接打包 (如果支持的话)
-        // 实际上 EnigmaVB Console 需要项目文件。
-        // 我们这里暂时只打印“工具已找到，但缺少模板”提示，除非我们实现了模板生成。
+
+        // 动态生成 EVB 项目文件
+        // 不再依赖 template.evb 模板，而是根据 jpackage 的输出动态构建 XML
+        println "📝 正在动态生成 Enigma Virtual Box 项目文件..."
         
-        commandLine 'cmd', '/c', 'echo', "✅ 找到 EnigmaVB: ${evbPath}"
-        
-        doLast {
-            println "🚀 单文件打包自动化功能开发中..."
-            println "请手动使用 Enigma Virtual Box 打包目录: ${distDir}"
+        // 定义输入 EXE (jpackage 生成的主程序)
+        def inputExe = new File(distDir, "${appName}.exe")
+        if (!inputExe.exists()) {
+             throw new GradleException("找不到 jpackage 生成的主程序: ${inputExe}")
         }
+
+        // 递归闭包：生成文件列表
+        def generateFiles
+        generateFiles = { builder, File currentDir ->
+            currentDir.eachFile { f ->
+                // 跳过主程序本身，避免作为虚拟文件重复打包
+                if (f.absolutePath == inputExe.absolutePath) return 
+                
+                if (f.isDirectory()) {
+                    builder.File {
+                        Type('3')
+                        Name(f.name)
+                        Action('0')
+                        OverwriteDateTime('False')
+                        OverwriteAttributes('False')
+                        HideFromDialogs('0')
+                        Files {
+                            generateFiles(builder, f)
+                            
+                            // 【修复】处理 .cfg 文件名不匹配问题
+                            // jpackage 生成的 exe 可能会查找 <ExeName>.cfg
+                            // 但我们的单文件 exe 是带版本号的，导致找不到默认的 cfg
+                            // 所以如果目录下存在 appName.cfg，我们额外创建一个 appName_Version.cfg 的映射
+                            if (f.name == 'app') {
+                                def defaultCfg = new File(f, "${appName}.cfg")
+                                if (defaultCfg.exists()) {
+                                    def versionedCfgName = "${appName}_V${projectVersion}.cfg"
+                                    println "   - [Fix] 添加配置文件映射: ${versionedCfgName} -> ${defaultCfg.name}"
+                                    
+                                    builder.File {
+                                        Type('2')
+                                        Name(versionedCfgName) // 虚拟文件名带版本号
+                                        File(defaultCfg.absolutePath) // 指向同一个源文件
+                                        ActiveX('False')
+                                        ActiveXInstall('False')
+                                        Action('0')
+                                        OverwriteDateTime('False')
+                                        OverwriteAttributes('False')
+                                        PassCommandLine('False')
+                                        HideFromDialogs('0')
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    builder.File {
+                        Type('2')
+                        Name(f.name)
+                        File(f.absolutePath)
+                        ActiveX('False')
+                        ActiveXInstall('False')
+                        Action('0')
+                        OverwriteDateTime('False')
+                        OverwriteAttributes('False')
+                        PassCommandLine('False')
+                        HideFromDialogs('0')
+                    }
+                }
+            }
+        }
+        
+        // 保存为临时 evb 文件 (放在根目录)
+        def tempEvb = file("${rootDir}/temp_build.evb")
+        
+        // 使用 withWriter 确保编码正确且自动处理资源释放
+        tempEvb.withWriter('UTF-8') { writer ->
+            // 手动写入 XML 声明 (注意换行符)
+            writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n")
+            
+            // 使用 MarkupBuilder 生成内容
+            def xml = new groovy.xml.MarkupBuilder(writer)
+            
+            // 构建 XML 结构
+            xml.EnigmaVirtualBox {
+                InputFile(inputExe.absolutePath)
+                OutputFile(outputExe.absolutePath)
+                Files {
+                    Enabled('True')
+                    DeleteExtractedOnExit('False')
+                    CompressFiles('False')
+                    Files {
+                        File {
+                            Type('3')
+                            Name('%DEFAULT FOLDER%')
+                            Action('0')
+                            OverwriteDateTime('False')
+                            OverwriteAttributes('False')
+                            HideFromDialogs('0')
+                            Files {
+                                // 递归添加 distDir 下的所有内容
+                                generateFiles(xml, distDir)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        println "   - 临时配置已生成: ${tempEvb}"
+
+        def cmd = [evbPath, tempEvb.absolutePath]
+        
+        // Enigma Console 也是 Windows 程序，通常输出 GBK
+        runCommand(cmd, project.projectDir)
+        
+        // 清理临时文件
+        tempEvb.delete()
+        
+        println "✅ 单文件打包完成！"
+        println "👉 文件已生成: ${outputExe}"
     }
 }
