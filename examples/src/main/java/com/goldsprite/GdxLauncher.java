@@ -30,7 +30,7 @@ public class GdxLauncher extends Game {int k11;
 	// [新增] 标记是否已初始化完成
 	private boolean isInitialized = false;
 
-	boolean enableAutoTests = true; // 是否开启全局自动测试流程
+	boolean enableAutoTests = false; // 是否开启全局自动测试流程
 
 	public GdxLauncher() {
 	}
@@ -61,9 +61,9 @@ public class GdxLauncher extends Game {int k11;
 		// 解决初次进入演示屏手柄无法操作及鼠标锁定后无法解锁的问题
 		ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
 		ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
-        
-        // Catch Android Back Key
-        Gdx.input.setCatchKey(Input.Keys.BACK, true);
+
+		// Catch Android Back Key
+		Gdx.input.setCatchKey(Input.Keys.BACK, true);
 
 		// 确保 toastStage 能接收输入 (插入到最前面)
 		sm.getImp().addProcessor(toastStage);

@@ -2694,6 +2694,26 @@ public class GameHUD {
 	public SkewBar getMonsterHpBar() {
 		return monsterHpBar;
 	}
+	
+	// --- Testing API ---
+	public void simulateInventoryItemClick(int index) {
+		if (inventoryDialog != null && index >= 0 && index < inventoryDialog.inventorySlots.size()) {
+			inventoryDialog.inventorySlots.get(index).simulateClick();
+		}
+	}
+
+	public int getInventoryUIItemCount() {
+		return inventoryDialog != null ? inventoryDialog.inventorySlots.size() : 0;
+	}
+
+	public Vector2 getInventorySlotCenter(int index) {
+		if (inventoryDialog != null && index >= 0 && index < inventoryDialog.inventorySlots.size()) {
+			Actor slot = inventoryDialog.inventorySlots.get(index);
+			Vector2 pos = slot.localToStageCoordinates(new Vector2(slot.getWidth() / 2, slot.getHeight() / 2));
+			return pos;
+		}
+		return null;
+	}
 
 	private class ChestDialog extends BaseDialog {
 		private Chest chest;

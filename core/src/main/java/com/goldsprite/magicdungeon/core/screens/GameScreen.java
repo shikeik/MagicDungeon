@@ -2,9 +2,7 @@ package com.goldsprite.magicdungeon.core.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
@@ -19,12 +17,10 @@ import com.goldsprite.magicdungeon.core.GameState;
 import com.goldsprite.magicdungeon.entities.*;
 import com.goldsprite.magicdungeon.entities.InventoryItem;
 import com.goldsprite.magicdungeon.entities.ItemData;
-import com.goldsprite.magicdungeon.entities.ItemType;
 import com.goldsprite.magicdungeon.systems.AudioSystem;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.ui.GameHUD;
 import com.goldsprite.magicdungeon.utils.Constants;
-import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 import com.goldsprite.magicdungeon.world.Dungeon;
 import com.goldsprite.magicdungeon.world.Tile;
 import com.goldsprite.magicdungeon.world.TileType;
@@ -71,8 +67,9 @@ public class GameScreen extends GScreen {
 	private GameHUD hud;
 	private AudioSystem audio;
 	private NeonBatch batch;
+	private PolygonSpriteBatch polyBatch;
 	private long seed;
-    
+
     private VFXManager vfxManager;
 
 	private int maxDepth = 1;
@@ -105,6 +102,14 @@ public class GameScreen extends GScreen {
 		this.seed = seed;
 	}
 
+	public Player getPlayer() {
+		return player;
+	}
+
+	public GameHUD getHud() {
+		return hud;
+	}
+
 	@Override
 	protected void initViewport() {
 		// 使用 GScreen 的机制，这里设定视口参数
@@ -134,6 +139,7 @@ public class GameScreen extends GScreen {
 	@Override
 	public void create() {
 		batch = new NeonBatch();
+		polyBatch = new PolygonSpriteBatch();
 		dungeonRenderer = new DualGridDungeonRenderer();
         vfxManager = new VFXManager();
 
@@ -262,7 +268,7 @@ public class GameScreen extends GScreen {
 
 		if (hud != null) hud.showMessage("回到了营地.");
 		if (audio != null) audio.playMusic(AudioAssets.MUSIC_QUANTUM);
-		
+
 		updateHUDDungeonInfo();
 	}
 
@@ -270,19 +276,19 @@ public class GameScreen extends GScreen {
 		dungeon.level = Math.max(1, node.minLv);
         dungeon.theme = node.theme;
 		dungeon.generate();
-		
+
 		player.x = dungeon.startPos.x;
 		player.y = dungeon.startPos.y;
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
-		
+
 		monsters.clear();
 		items.clear();
 		chests.clear();
-		
+
 		spawnEntities();
 		updateCamera();
-		
+
 		hud.showMessage("进入了 " + node.name);
 		if (audio != null) {
 			if (dungeon.level % 5 == 0) audio.playMusic(AudioAssets.MUSIC_TAKE_COVER);
@@ -555,7 +561,7 @@ public class GameScreen extends GScreen {
 
 			hud.showMessage("Ascended to Floor " + dungeon.level + "!");
 			audio.playLevelUp();
-			
+
 			updateHUDDungeonInfo();
 		}
 	}
@@ -584,9 +590,9 @@ public class GameScreen extends GScreen {
 				if (allowed == null || allowed.length == 0) {
 					allowed = MonsterType.values();
 				}
-				
+
 				MonsterType type = allowed[monsterRng.nextInt(allowed.length)];
-				
+
 				// Handle Boss Logic
 				if (type == MonsterType.Boss) {
 					boolean isBossLevel = (dungeon.level % 6 == 0);
@@ -801,21 +807,21 @@ public class GameScreen extends GScreen {
 	}
 
 	private void handleCheatInput() {
-		if (Gdx.input.isKeyJustPressed(Input.Keys.GRAVE)) {
+		if (InputManager.getInstance().isKeyJustPressed(Input.Keys.GRAVE)) {
 			// Placeholder
 		}
 
-		if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6) || Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)) {
+		if (InputManager.getInstance().isKeyJustPressed(Input.Keys.NUMPAD_6) || InputManager.getInstance().isKeyJustPressed(Input.Keys.NUM_6)) {
 			cheatCodeBuffer += "6";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
+		} else if (InputManager.getInstance().isKeyJustPressed(Input.Keys.C)) {
 			cheatCodeBuffer += "c";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
+		} else if (InputManager.getInstance().isKeyJustPressed(Input.Keys.H)) {
 			cheatCodeBuffer += "h";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+		} else if (InputManager.getInstance().isKeyJustPressed(Input.Keys.E)) {
 			cheatCodeBuffer += "e";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
+		} else if (InputManager.getInstance().isKeyJustPressed(Input.Keys.A)) {
 			cheatCodeBuffer += "a";
-		} else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+		} else if (InputManager.getInstance().isKeyJustPressed(Input.Keys.T)) {
 			cheatCodeBuffer += "t";
 		}
 
@@ -915,14 +921,14 @@ public class GameScreen extends GScreen {
 				} else if (tile.type == TileType.Dungeon_Entrance) {
 					// Save current progress before switching to World Map
 					SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
-					
+
 					// Switch to WorldMapScreen
 					getScreenManager().playTransition(() -> {
 						WorldMapScreen mapScreen = new WorldMapScreen((node) -> {
 							// Callback when a node is selected
 							getScreenManager().playTransition(() -> {
 								// Create new GameScreen
-								GameScreen gameScreen = new GameScreen(seed); 
+								GameScreen gameScreen = new GameScreen(seed);
 								getScreenManager().setCurScreen(gameScreen);
 								// Load saved state (restore player stats/inventory)
 								gameScreen.loadGame();
@@ -982,11 +988,11 @@ public class GameScreen extends GScreen {
 					i--;
 					audio.playItem();
 					hud.showMessage("拾取了 [" + item.item.quality.name + "] " + item.item.data.name + "!");
-                    
+
                     if (vfxManager != null) {
                         vfxManager.spawnFloatingText(player.visualX + 16, player.visualY + 32, item.item.data.name, Color.GREEN);
                     }
-                    
+
 					// Update inventory dialog if it's open
 					hud.updateInventory(player);
 				} else {
@@ -1005,12 +1011,12 @@ public class GameScreen extends GScreen {
 				player.stats.hp -= damage;
 				player.hitFlashTimer = 0.2f; // Trigger red flash
 				hud.showMessage("受到来自 " + m.name + " 的 " + damage + " 点伤害!");
-                
+
                 if (vfxManager != null) {
                     vfxManager.spawnExplosion(player.visualX + 16, player.visualY + 16, Color.RED, 10);
                     vfxManager.spawnFloatingText(player.visualX + 16, player.visualY + 32, "-" + damage, Color.RED);
                 }
-                
+
 				if (player.stats.hp <= 0) {
 					triggerGameOver();
 				}
@@ -1105,8 +1111,9 @@ public class GameScreen extends GScreen {
 	}
 
 	float wolfScl = 0.75f;
-	private void renderSpineMonster(Monster m, float delta) {
+	private void renderSpineMonster(PolygonSpriteBatch polyBatch, Monster m, float delta) {
 		SpineState spineState = (SpineState) m.visualState;
+
 		if (spineState == null) {
 			try {
 				Skeleton skeleton = new Skeleton(wolfSkeletonData);
@@ -1168,9 +1175,9 @@ public class GameScreen extends GScreen {
 			spineState.skeleton.setColor(Color.WHITE);
 		}
 
-		spineRenderer.draw(batch, spineState.skeleton);
+		spineRenderer.draw(polyBatch, spineState.skeleton);
 		// Reset batch color
-		batch.setColor(Color.WHITE);
+		polyBatch.setColor(Color.WHITE);
 	}
 
 	private void draw(float delta) {
@@ -1286,7 +1293,7 @@ public class GameScreen extends GScreen {
 			batch.setProjectionMatrix(getUICamera().combined);
 			batch.drawRect(0, 0, getViewSize().x, getViewSize().y, 0, 0, new Color(0, 0, 0, 0.5f), true);
 		}
-        
+
         // Update and Render VFX
         if (!isPaused) {
             vfxManager.update(delta);
@@ -1300,13 +1307,16 @@ public class GameScreen extends GScreen {
 		batch.setProjectionMatrix(worldCamera.combined);
 		batch.begin();
 
+		polyBatch.setProjectionMatrix(worldCamera.combined);
+		polyBatch.begin();
 		for (Monster m : monsters) {
 			if (m.hp > 0) {
 				if (m.type == MonsterType.Wolf && wolfSkeletonData != null) {
-					renderSpineMonster(m, delta);
+					renderSpineMonster(polyBatch, m, delta);
 				}
 			}
 		}
+		polyBatch.end();
 
         // Render VFX Text
         if (vfxManager != null) {
@@ -1325,7 +1335,7 @@ public class GameScreen extends GScreen {
 			player.stats = state.playerStats;
 			player.inventory = state.inventory;
 			dungeon.level = state.dungeonLevel;
-			
+
 			// Restore Theme
 			if (state.theme != null) {
 				try {

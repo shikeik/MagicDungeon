@@ -46,6 +46,10 @@ public class InputManager {
     // Simulated Actions
     private final Set<InputAction> simulatedActions = new HashSet<>();
     private final Set<InputAction> simulatedJustPressedActions = new HashSet<>();
+    
+    // Simulated Keys (Raw Keycodes)
+    private final Set<Integer> simulatedKeys = new HashSet<>();
+    private final Set<Integer> simulatedJustPressedKeys = new HashSet<>();
 
     public void simulatePress(InputAction action) {
         if (!simulatedActions.contains(action)) {
@@ -56,6 +60,34 @@ public class InputManager {
     
     public void simulateRelease(InputAction action) {
         simulatedActions.remove(action);
+    }
+    
+    /**
+     * Simulate a raw key press (for cheat codes, text input, etc.)
+     */
+    public void simulateKeyPress(int keycode) {
+        if (!simulatedKeys.contains(keycode)) {
+            simulatedJustPressedKeys.add(keycode);
+        }
+        simulatedKeys.add(keycode);
+    }
+
+    public void simulateKeyRelease(int keycode) {
+        simulatedKeys.remove(keycode);
+    }
+
+    /**
+     * Check if a raw key is just pressed (Real Input OR Simulated)
+     */
+    public boolean isKeyJustPressed(int keycode) {
+        return Gdx.input.isKeyJustPressed(keycode) || simulatedJustPressedKeys.contains(keycode);
+    }
+
+    /**
+     * Check if a raw key is pressed (Real Input OR Simulated)
+     */
+    public boolean isKeyPressed(int keycode) {
+        return Gdx.input.isKeyPressed(keycode) || simulatedKeys.contains(keycode);
     }
 
     // Startup delay to prevent initial controller drift/noise from locking cursor
@@ -257,6 +289,7 @@ public class InputManager {
     public void update() {
         // Clear simulated just pressed actions from previous frame
         simulatedJustPressedActions.clear();
+        simulatedJustPressedKeys.clear();
 
         // Update startup timer
         if (startupTimer < STARTUP_DELAY) {

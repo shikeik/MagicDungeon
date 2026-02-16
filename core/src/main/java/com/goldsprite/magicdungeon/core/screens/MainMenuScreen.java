@@ -3,34 +3,33 @@ package com.goldsprite.magicdungeon.core.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.neonbatch.BloomRenderer;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.magicdungeon.assets.AudioAssets;
 import com.goldsprite.magicdungeon.core.renderer.TitleParallaxRenderer;
 import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
+import com.goldsprite.magicdungeon.input.InputAction;
+import com.goldsprite.magicdungeon.input.InputManager;
+import com.goldsprite.magicdungeon.systems.AudioSystem;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.utils.Constants;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
-import com.badlogic.gdx.math.MathUtils;
-import com.goldsprite.gdengine.neonbatch.BloomRenderer;
-import com.badlogic.gdx.utils.Array;
-import com.goldsprite.magicdungeon.input.InputAction;
-import com.goldsprite.magicdungeon.input.InputManager;
-import com.badlogic.gdx.scenes.scene2d.Action;
-import com.goldsprite.magicdungeon.screens.WorldMapScreen;
-import com.goldsprite.magicdungeon.systems.AudioSystem;
-import com.goldsprite.magicdungeon.assets.AudioAssets;
 
 public class MainMenuScreen extends GScreen {
 	private NeonBatch batch;
@@ -43,15 +42,15 @@ public class MainMenuScreen extends GScreen {
 	private Group menuGroup;
 	private VisTextField seedField;
 	private SettingsDialog settingsDialog;
-	
-	private Array<VisTextButton> menuButtons = new Array<>();
+
+	private final Array<VisTextButton> menuButtons = new Array<>();
 	private int focusedIndex = -1;
 
 	@Override
 	protected void initViewport() {
 		this.viewSizeShort = Constants.VIEWPORT_HEIGHT;
 		this.viewSizeLong = Constants.VIEWPORT_WIDTH;
-		this.uiViewportScale = PlatformImpl.isDesktopUser() ? 1.0f : 1.0f;
+		this.uiViewportScale = 1.0f;
 		super.initViewport();
 	}
 
@@ -66,9 +65,9 @@ public class MainMenuScreen extends GScreen {
 
 	@Override
 	public void create() {
-        // 配置 ScreenManager 的输入钩子
-        ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
-        ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
+		// 配置 ScreenManager 的输入钩子
+		ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
+		ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
 
 		// 1. 初始化渲染器
 		batch = new NeonBatch();
@@ -82,7 +81,7 @@ public class MainMenuScreen extends GScreen {
 		settingsDialog = new SettingsDialog();
 
 		buildUI();
-		
+
 		AudioSystem.getInstance().playMusic(AudioAssets.MUSIC_SOLVE_THIS);
 	}
 
@@ -105,39 +104,39 @@ public class MainMenuScreen extends GScreen {
 		if (menuGroup != null) menuGroup.remove();
 		menuGroup = new Group();
 		stage.addActor(menuGroup);
-		
+
 		menuButtons.clear();
 		focusedIndex = -1;
 
 		// 种子输入区域
- 		VisTable seedTable = new VisTable();
+		VisTable seedTable = new VisTable();
 
 		float targetX = 50; // 距左侧偏移
 		float currentY = 50; // 从相对于中心的顶部开始
- 		float gap = 70;
+		float gap = 70;
 
- 		// 种子组
- 		seedTable.setSize(220, 50);
- 		seedTable.setPosition(targetX, currentY);
+		// 种子组
+		seedTable.setSize(320, 50);
+		seedTable.setPosition(targetX, currentY);
 
- 		seedTable.clearChildren();
- 		seedTable.left();
- 		seedTable.add(new VisLabel("种子: ")).width(50).padRight(5);
- 		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
-	 	seedField.setAlignment(Align.center);
- 		seedTable.add(seedField).expandX().fillX().padRight(5);
- 		VisTextButton randomSeedBtn = new VisTextButton("R");
- 		randomSeedBtn.addListener(new ClickListener() {
- 			@Override
- 			public void clicked(InputEvent event, float x, float y) {
- 				seedField.setText(String.valueOf(MathUtils.random(1000000)));
- 			}
- 		});
- 		seedTable.add(randomSeedBtn).width(30);
+		seedTable.clearChildren();
+		seedTable.left();
+		seedTable.add(new VisLabel("种子: ")).padRight(0);
+		seedField = new VisTextField(String.valueOf(MathUtils.random(100000)));
+		seedField.setAlignment(Align.center);
+		seedTable.add(seedField).expandX().fillX().padRight(5);
+		VisTextButton randomSeedBtn = new VisTextButton("R");
+		randomSeedBtn.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				seedField.setText(String.valueOf(MathUtils.random(1000000)));
+			}
+		});
+		seedTable.add(randomSeedBtn).width(30);
 
- 		menuGroup.addActor(seedTable);
+		menuGroup.addActor(seedTable);
 
- 		currentY -= gap;
+		currentY -= gap;
 
 		// 按钮
 		createMenuButton("开始游戏", targetX, currentY, 0.1f, new ClickListener() {
@@ -200,7 +199,7 @@ public class MainMenuScreen extends GScreen {
 	}
 
 	private void openSettings() {
-		if(stage.getActors().contains(settingsDialog, true)){
+		if (stage.getActors().contains(settingsDialog, true)) {
 			settingsDialog.remove();
 		}
 
@@ -210,11 +209,11 @@ public class MainMenuScreen extends GScreen {
 	private void createMenuButton(String text, float targetX, float targetY, float delay, ClickListener listener) {
 		VisTextButton btn = new VisTextButton(text);
 		btn.addListener(listener);
-		btn.setSize(220, 60);
+		btn.setSize(320, 60);
 		btn.setPosition(targetX, targetY);
 		menuGroup.addActor(btn);
 		btn.addAction(createEntranceAction(delay));
-		
+
 		menuButtons.add(btn);
 	}
 
@@ -240,7 +239,7 @@ public class MainMenuScreen extends GScreen {
 
 		final long finalSeed = seed;
 		getScreenManager().playTransition(() -> {
-            // [修改] 直接进入游戏 (默认为营地)，而不是 WorldMapScreen
+			// [修改] 直接进入游戏 (默认为营地)，而不是 WorldMapScreen
 			GameScreen gameScreen = new GameScreen(finalSeed);
 			getScreenManager().setCurScreen(gameScreen);
 		});
@@ -268,7 +267,7 @@ public class MainMenuScreen extends GScreen {
 		float scl = 1f;
 		bloomRender.captureStart(batch);
 		batch.setProjectionMatrix(getUICamera().combined);
-		renderer.render(batch, delta, getUIViewport().getWorldWidth()*scl, getUIViewport().getWorldHeight()*scl);
+		renderer.render(batch, delta, getUIViewport().getWorldWidth() * scl, getUIViewport().getWorldHeight() * scl);
 		bloomRender.captureEnd();
 		bloomRender.process();
 		bloomRender.render(batch);
@@ -329,7 +328,7 @@ public class MainMenuScreen extends GScreen {
 	public void resize(int width, int height) {
 		super.resize(width, height);
 		updateLayout();
-		bloomRender.resize((int)getViewSize().x, (int)getViewSize().y);
+		bloomRender.resize((int) getViewSize().x, (int) getViewSize().y);
 	}
 
 	@Override
