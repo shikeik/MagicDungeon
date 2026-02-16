@@ -342,21 +342,29 @@ public class NeonSkelEditorScreen extends GScreen {
         walkTrack = animState.play("walk");
     }
     
+    // Expose for testing
+    public EditorUI getEditorUI() {
+        return editorUI;
+    }
+    
+    private EditorUI editorUI;
+    
     private void setupUI() {
         gameArea = new VisTable();
-        gameArea.setBackground("border"); // 方便调试看到区域
+        // gameArea.setBackground("border"); // "border" 不存在, 使用 "white" 并设置颜色
+        gameArea.setBackground(VisUI.getSkin().newDrawable("white", new Color(0.15f, 0.15f, 0.15f, 1f)));
         
         // 创建 UI 控制器
-        new EditorUI(stage);
+        editorUI = new EditorUI(stage);
     }
     
     // --- UI Controller ---
     @SuppressWarnings({"unchecked"})
-    class EditorUI {
-        private VisTable root;
-        private VisTree tree;
-        private VisTable propertiesTable;
-        private VisSelectBox<Mode> modeSelect;
+    public class EditorUI {
+        public VisTable root;
+        public VisTree tree;
+        public VisTable propertiesTable;
+        public VisSelectBox<Mode> modeSelect;
         
         public EditorUI(Stage stage) {
             root = new VisTable();
@@ -553,17 +561,20 @@ public class NeonSkelEditorScreen extends GScreen {
         private void addFloatInput(String label, float value, final FloatConsumer consumer) {
             propertiesTable.add(new VisLabel(label)).right().padRight(5);
             final VisTextField field = new VisTextField(String.valueOf(value));
-            field.setTextFieldListener(new VisTextField.TextFieldListener() {
+            
+            // Use ChangeListener instead of TextFieldListener for better compatibility
+            field.addListener(new ChangeListener() {
                 @Override
-                public void keyTyped(VisTextField textField, char c) {
+                public void changed(ChangeEvent event, Actor actor) {
                     try {
-                        float val = Float.parseFloat(textField.getText());
+                        float val = Float.parseFloat(field.getText());
                         consumer.accept(val);
                     } catch (NumberFormatException e) {
                         // Ignore invalid input
                     }
                 }
             });
+            
             propertiesTable.add(field).width(60).row();
         }
         
