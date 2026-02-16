@@ -18,6 +18,8 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.kotcrab.vis.ui.VisUI;
+import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSlider;
@@ -41,6 +43,7 @@ public class NeonHumanDemoScreen extends GScreen {
     // UI Components
     private VisTable gameArea;
     private VisTable controlPanel;
+    private VisCheckBox walkCheck, waveCheck, handIKCheck, legIKCheck;
     
     // IK Targets
     private NeonBone targetLeftHand, targetRightHand;
@@ -55,6 +58,9 @@ public class NeonHumanDemoScreen extends GScreen {
     // Render State
     private float renderBaseX, renderBaseY;
     private boolean showGizmos = true;
+    
+    public enum Mode { SETUP, ANIMATE }
+    private Mode currentMode = Mode.ANIMATE;
 
     @Override
     public void create() {
@@ -85,7 +91,7 @@ public class NeonHumanDemoScreen extends GScreen {
         
         // Torso -> Head
         skeleton.createBone("torso", "body", 100, null);
-        skeleton.getBone("torso").rotation = 90;
+        skeleton.getBone("torso").rotation = 90; // Up
         
         skeleton.createBone("head", "torso", 40, null);
         skeleton.getBone("head").x = 100;
@@ -97,35 +103,38 @@ public class NeonHumanDemoScreen extends GScreen {
         skeleton.getBone("jaw").y = -5;
         skeleton.getBone("jaw").rotation = -30;
         
-        // Hair (Dense Clusters)
-        // Back hair
-        createHairCluster("hair_back", "head", -10, 10, 180, 8, 5f, 40f);
-        // Bangs
-        createHairCluster("hair_bangs", "head", 30, 15, -45, 5, 8f, 25f);
-        // Side hair
-        createHairCluster("hair_side", "head", 10, 10, -90, 4, 10f, 35f);
+        // Hair (Fan Distribution from Top of Head)
+        // Head tip is at (40, 0) in local space
+        float headTipX = 40;
         
-        // Arms (Right)
+        // Back hair (Fan: 160-220 deg relative to head)
+        createHairCluster("hair_back", "head", headTipX, 0, 180, 8, 10f, 50f);
+        // Top/Front hair (Fan: 60-120 deg)
+        createHairCluster("hair_top", "head", headTipX, 5, 90, 6, 15f, 30f);
+        // Bangs (Front: 30-60 deg)
+        createHairCluster("hair_bangs", "head", headTipX-5, 10, 45, 5, 10f, 25f);
+        
+        // Arms (Right - Front)
         skeleton.createBone("r_arm_up", "torso", 70, null);
         skeleton.getBone("r_arm_up").x = 90;
-        skeleton.getBone("r_arm_up").rotation = -90;
+        skeleton.getBone("r_arm_up").rotation = -110; // Down-Right
         
         skeleton.createBone("r_arm_low", "r_arm_up", 60, null);
         skeleton.getBone("r_arm_low").x = 70;
         
         createHand("r_hand", "r_arm_low");
         
-        // Arms (Left)
+        // Arms (Left - Back)
         skeleton.createBone("l_arm_up", "torso", 70, null);
         skeleton.getBone("l_arm_up").x = 90;
-        skeleton.getBone("l_arm_up").rotation = -90;
+        skeleton.getBone("l_arm_up").rotation = -70; // Down-Left (Back)
         
         skeleton.createBone("l_arm_low", "l_arm_up", 60, null);
         skeleton.getBone("l_arm_low").x = 70;
         
         createHand("l_hand", "l_arm_low");
         
-        // Legs (Right)
+        // Legs (Right - Front)
         skeleton.createBone("r_leg_up", "body", 80, null);
         skeleton.getBone("r_leg_up").rotation = -80;
         
@@ -134,7 +143,7 @@ public class NeonHumanDemoScreen extends GScreen {
         
         createFoot("r_foot", "r_leg_low");
         
-        // Legs (Left)
+        // Legs (Left - Back)
         skeleton.createBone("l_leg_up", "body", 80, null);
         skeleton.getBone("l_leg_up").rotation = -100;
         
@@ -161,7 +170,7 @@ public class NeonHumanDemoScreen extends GScreen {
         rArmIK.setTarget(targetRightHand);
         rArmIK.addBone(skeleton.getBone("r_arm_low"));
         rArmIK.addBone(skeleton.getBone("r_arm_up"));
-        rArmIK.bendPositive = true;
+        rArmIK.bendPositive = false; // Elbow Left (Back)
         rArmIK.mix = 0.0f;
         skeleton.addIKConstraint(rArmIK);
         
@@ -169,7 +178,7 @@ public class NeonHumanDemoScreen extends GScreen {
         lArmIK.setTarget(targetLeftHand);
         lArmIK.addBone(skeleton.getBone("l_arm_low"));
         lArmIK.addBone(skeleton.getBone("l_arm_up"));
-        lArmIK.bendPositive = false;
+        lArmIK.bendPositive = false; // Elbow Left (Back)
         lArmIK.mix = 0.0f;
         skeleton.addIKConstraint(lArmIK);
         
@@ -177,7 +186,7 @@ public class NeonHumanDemoScreen extends GScreen {
         rLegIK.setTarget(targetRightFoot);
         rLegIK.addBone(skeleton.getBone("r_leg_low"));
         rLegIK.addBone(skeleton.getBone("r_leg_up"));
-        rLegIK.bendPositive = true;
+        rLegIK.bendPositive = true; // Knee Forward (Right)
         rLegIK.mix = 0.0f;
         skeleton.addIKConstraint(rLegIK);
         
@@ -185,7 +194,7 @@ public class NeonHumanDemoScreen extends GScreen {
         lLegIK.setTarget(targetLeftFoot);
         lLegIK.addBone(skeleton.getBone("l_leg_low"));
         lLegIK.addBone(skeleton.getBone("l_leg_up"));
-        lLegIK.bendPositive = true;
+        lLegIK.bendPositive = true; // Knee Forward (Right)
         lLegIK.mix = 0.0f;
         skeleton.addIKConstraint(lLegIK);
         
@@ -342,6 +351,40 @@ public class NeonHumanDemoScreen extends GScreen {
     
     private void buildControlPanel(VisTable panel) {
         panel.add(new VisLabel("Neon Human Demo")).row();
+        
+        // Mode Switch
+        VisTable modeTable = new VisTable();
+        final VisTextButton setupBtn = new VisTextButton("Setup", "toggle");
+        final VisTextButton animateBtn = new VisTextButton("Animate", "toggle");
+        ButtonGroup<VisTextButton> modeGroup = new ButtonGroup<>(setupBtn, animateBtn);
+        modeGroup.setMaxCheckCount(1);
+        modeGroup.setMinCheckCount(1);
+        
+        setupBtn.setChecked(currentMode == Mode.SETUP);
+        animateBtn.setChecked(currentMode == Mode.ANIMATE);
+        
+        ChangeListener modeListener = new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (setupBtn.isChecked()) {
+                    if (currentMode != Mode.SETUP) {
+                        currentMode = Mode.SETUP;
+                        // Reset to bind pose
+                        createSkeleton(); 
+                        createAnimations(); // Re-bind animations
+                    }
+                } else {
+                    currentMode = Mode.ANIMATE;
+                }
+            }
+        };
+        setupBtn.addListener(modeListener);
+        animateBtn.addListener(modeListener);
+        
+        modeTable.add(setupBtn).width(80).padRight(5);
+        modeTable.add(animateBtn).width(80);
+        panel.add(modeTable).padBottom(10).row();
+        
         panel.add(new VisLabel("Advanced IK & Mixing")).padBottom(10).row();
         
         // Display Options
@@ -357,7 +400,7 @@ public class NeonHumanDemoScreen extends GScreen {
         // IK Control
         panel.add(new VisLabel("--- IK Control ---")).align(Align.left).expandX().fillX().row();
         
-        final VisCheckBox handIKCheck = new VisCheckBox("Enable Hand IK", false);
+        handIKCheck = new VisCheckBox("Enable Hand IK", false);
         handIKCheck.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -367,7 +410,7 @@ public class NeonHumanDemoScreen extends GScreen {
         });
         panel.add(handIKCheck).left().row();
         
-        final VisCheckBox legIKCheck = new VisCheckBox("Enable Leg IK", false);
+        legIKCheck = new VisCheckBox("Enable Leg IK", false);
         legIKCheck.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -380,7 +423,7 @@ public class NeonHumanDemoScreen extends GScreen {
         // Animation Control
         panel.add(new VisLabel("--- Animation ---")).align(Align.left).expandX().fillX().padTop(10).row();
         
-        final VisCheckBox walkCheck = new VisCheckBox("Play Walk (Base)", true);
+        walkCheck = new VisCheckBox("Play Walk (Base)", true);
         walkCheck.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -394,7 +437,7 @@ public class NeonHumanDemoScreen extends GScreen {
         });
         panel.add(walkCheck).left().row();
         
-        final VisCheckBox waveCheck = new VisCheckBox("Overlay Wave (Track 1)", false);
+        waveCheck = new VisCheckBox("Overlay Wave (Track 1)", false);
         waveCheck.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -454,8 +497,10 @@ public class NeonHumanDemoScreen extends GScreen {
         Rectangle clipBounds = new Rectangle(x, y, w, h);
         ScissorStack.calculateScissors(stage.getCamera(), stage.getBatch().getTransformMatrix(), clipBounds, scissor);
         if (ScissorStack.pushScissors(scissor)) {
-            animState.update(delta);
-            animState.apply(skeleton, null);
+            if (currentMode == Mode.ANIMATE) {
+                animState.update(delta);
+                animState.apply(skeleton, null);
+            }
             
             renderBaseX = x + w / 2f;
             renderBaseY = y + h / 2f;
@@ -493,30 +538,76 @@ public class NeonHumanDemoScreen extends GScreen {
     private void drawBoneRecursive(NeonBone bone) {
         if (bone.name.startsWith("target")) return;
         
-        float x = bone.worldTransform.m02;
-        float y = bone.worldTransform.m12;
-        
-        float cos = bone.worldTransform.m00;
-        float sin = bone.worldTransform.m10;
-        float x2 = x + cos * bone.length;
-        float y2 = y + sin * bone.length;
-        
         Color color = Color.CYAN;
-        float thickness = 4f;
+        float thickness = 10f; // Body parts width
         
         if (bone.name.contains("hair")) {
             color = Color.MAGENTA;
             thickness = 2f;
         } else if (bone.name.contains("finger") || bone.name.contains("toes")) {
             color = Color.YELLOW;
-            thickness = 2f;
+            thickness = 4f;
+        } else if (bone.name.contains("hand") || bone.name.contains("foot")) {
+            thickness = 6f;
         }
         
         if (bone.length > 0) {
-            neonBatch.drawLine(x, y, x2, y2, thickness, color);
+            if (thickness <= 2f) {
+                // Draw line for hair
+                float x = bone.worldTransform.m02;
+                float y = bone.worldTransform.m12;
+                float cos = bone.worldTransform.m00;
+                float sin = bone.worldTransform.m10;
+                float x2 = x + cos * bone.length;
+                float y2 = y + sin * bone.length;
+                neonBatch.drawLine(x, y, x2, y2, thickness, color);
+            } else {
+                // Draw hollow rect
+                float w = thickness;
+                float l = bone.length;
+                float halfW = w / 2f;
+                
+                // 4 Local corners: (0, -halfW), (l, -halfW), (l, halfW), (0, halfW)
+                float[] lx = {0, l, l, 0};
+                float[] ly = {-halfW, -halfW, halfW, halfW};
+                
+                float[] verts = new float[8];
+                float m00 = bone.worldTransform.m00;
+                float m01 = bone.worldTransform.m01;
+                float m02 = bone.worldTransform.m02;
+                float m10 = bone.worldTransform.m10;
+                float m11 = bone.worldTransform.m11;
+                float m12 = bone.worldTransform.m12;
+                
+                for(int i=0; i<4; i++) {
+                    verts[i*2] = m00 * lx[i] + m01 * ly[i] + m02;
+                    verts[i*2+1] = m10 * lx[i] + m11 * ly[i] + m12;
+                }
+                
+                neonBatch.drawPolygon(verts, 2f, color, false);
+                
+                if (bone.name.equals("head")) {
+                     // Draw head oval
+                     float cx = l * 0.5f;
+                     float cy = 0;
+                     
+                     // Transform (cx, cy) to world
+                     float wx = m00 * cx + m01 * cy + m02;
+                     float wy = m10 * cx + m11 * cy + m12;
+                     
+                     float rotRad = (float)Math.atan2(m10, m00);
+                     float rotDeg = rotRad * MathUtils.radiansToDegrees;
+                     
+                     // Oval size: width=30, height=40 (along bone)
+                     // Since bone is X-axis, "width" in drawOval corresponds to X-axis if rot=0
+                     neonBatch.drawOval(wx, wy, l, l*0.8f, rotDeg, 2f, color, 20, false);
+                }
+            }
         }
         
         if (showGizmos) {
+            float x = bone.worldTransform.m02;
+            float y = bone.worldTransform.m12;
             neonBatch.drawCircle(x, y, 3, 0, Color.WHITE, 8, true);
         }
         
