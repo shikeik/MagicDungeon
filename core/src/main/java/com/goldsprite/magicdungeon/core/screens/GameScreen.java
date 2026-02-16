@@ -57,6 +57,7 @@ import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.esotericsoftware.spine.Animation;
 import com.goldsprite.magicdungeon.screens.WorldMapScreen;
 import com.goldsprite.magicdungeon.assets.AudioAssets;
+import com.goldsprite.magicdungeon.vfx.VFXManager;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -71,6 +72,8 @@ public class GameScreen extends GScreen {
 	private NeonBatch batch;
 	private PolygonSpriteBatch polyBatch;
 	private long seed;
+    
+    private VFXManager vfxManager;
 
 	private int maxDepth = 1;
 
@@ -133,6 +136,7 @@ public class GameScreen extends GScreen {
 		batch = new NeonBatch();
 		polyBatch = new PolygonSpriteBatch();
 		dungeonRenderer = new DualGridDungeonRenderer();
+        vfxManager = new VFXManager();
 
 		// Spine Init
 		spineRenderer = new SkeletonRenderer();
@@ -1224,6 +1228,14 @@ public class GameScreen extends GScreen {
 			batch.setProjectionMatrix(getUICamera().combined);
 			batch.drawRect(0, 0, getViewSize().x, getViewSize().y, 0, 0, new Color(0, 0, 0, 0.5f), true);
 		}
+        
+        // Update and Render VFX
+        if (!isPaused) {
+            vfxManager.update(delta);
+        }
+        // Use world camera for VFX
+        batch.setProjectionMatrix(worldCamera.combined);
+        vfxManager.render(batch);
 
 		batch.end();
 

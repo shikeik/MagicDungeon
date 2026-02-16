@@ -46,11 +46,7 @@ ui美化与交互修复完善
 
 - 项目全量ui的焦点光标化
 
-- 更换艺术字标题logo MagicDungeon
-
-- singleExe直接发布到outputs/<项目名>_V<版本号>.exe
-  - template.evb位于/tools/EnigmaVirtualBox/template.evb
-  - 在任务执行到使用template.evb时, 动态替换其输入/输出路径为/outputs/根的对应绝对路径, 还有所有资源文件的路径也是要替换, 输出路径按格式outputs/<项目名>_V<版本号>.exe 保持以往规则这样
+- 羊皮卷进地图的设计有问题, 不能转screen, 应该只是重载地图到不同地牢或营地而已, 现在羊皮卷
 
 #### 大项功能
 
