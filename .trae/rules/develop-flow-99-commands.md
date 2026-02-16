@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+description: 常用命令速查
+---
 # 常用命令速查
 
 | 动作 | 命令 | 说明 |

@@ -878,11 +878,11 @@ public class GameScreen extends GScreen {
 							getScreenManager().playTransition(() -> {
 								// Create new GameScreen
 								GameScreen gameScreen = new GameScreen(seed); 
+								getScreenManager().setCurScreen(gameScreen);
 								// Load saved state (restore player stats/inventory)
 								gameScreen.loadGame();
 								// Enter specific dungeon node (override level/generation)
 								gameScreen.enterDungeonFromMap(node);
-								getScreenManager().setCurScreen(gameScreen);
 							});
 						});
 						getScreenManager().setCurScreen(mapScreen);

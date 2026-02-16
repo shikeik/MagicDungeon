@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+description: 阶段3：实现与验证规则
+---
 # 第三阶段：实现与验证 (Do & Check)
 
 1.  **实现变更**:

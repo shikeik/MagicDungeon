@@ -36,8 +36,8 @@ android {
 		minSdkVersion 26
 		//noinspection OldTargetApi
 		targetSdkVersion 34
-		versionCode 10
-		versionName "0.8.20"//aide+无法使用gradle变量故保持0.1.0
+		versionCode 11
+		versionName "0.8.21"//aide+无法使用gradle变量故保持0.1.0
 		multiDexEnabled true
 	}
 	compileOptions {

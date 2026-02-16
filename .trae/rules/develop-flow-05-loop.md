@@ -1,3 +1,7 @@
+---
+alwaysApply: false
+description: 阶段5：清理与循环规则
+---
 # 第五阶段：清理与循环 (Loop)
 
 1.  **清理交付**:
