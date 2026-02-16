@@ -258,7 +258,7 @@ public class GameScreen extends GScreen {
 		if (hud != null) hud.showMessage("回到了营地.");
 	}
 
-	private void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
+	public void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
 		dungeon.level = Math.max(1, node.minLv);
 		dungeon.generate();
 		
@@ -849,9 +849,24 @@ public class GameScreen extends GScreen {
 					}
 					handledInteract = true;
 				} else if (tile.type == TileType.Dungeon_Entrance) {
-					// Show Level Selection
-					hud.showLevelSelection(maxDepth, (level) -> {
-						getScreenManager().playTransition(() -> enterDungeon(level));
+					// Save current progress before switching to World Map
+					SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
+					
+					// Switch to WorldMapScreen
+					getScreenManager().playTransition(() -> {
+						WorldMapScreen mapScreen = new WorldMapScreen((node) -> {
+							// Callback when a node is selected
+							getScreenManager().playTransition(() -> {
+								// Create new GameScreen
+								GameScreen gameScreen = new GameScreen(seed); 
+								// Load saved state (restore player stats/inventory)
+								gameScreen.loadGame();
+								// Enter specific dungeon node (override level/generation)
+								gameScreen.enterDungeonFromMap(node);
+								getScreenManager().setCurScreen(gameScreen);
+							});
+						});
+						getScreenManager().setCurScreen(mapScreen);
 					});
 					handledInteract = true;
 				}
