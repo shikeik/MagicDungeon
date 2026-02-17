@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.screens.tests;
+package com.goldsprite.magicdungeon.tests;
 
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;

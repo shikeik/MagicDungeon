@@ -1296,9 +1296,7 @@ public class GameScreen extends GScreen {
 
 		batch.end();
 
-		batch.setProjectionMatrix(worldCamera.combined);
-		batch.begin();
-
+		// Render Spine Monsters (PolyBatch)
 		polyBatch.setProjectionMatrix(worldCamera.combined);
 		polyBatch.begin();
 		for (Monster m : monsters) {
@@ -1310,11 +1308,12 @@ public class GameScreen extends GScreen {
 		}
 		polyBatch.end();
 
-        // Render VFX Text
+        // Render VFX Text (Batch)
+		batch.setProjectionMatrix(worldCamera.combined);
+		batch.begin();
         if (vfxManager != null) {
              vfxManager.renderText(batch, VisUIHelper.cnFont);
         }
-
 		batch.end();
 
 		// HUD Render

@@ -87,8 +87,7 @@ public class GameHUD implements Disposable {
 	private QuickSlot mpQuickSlot;
 
 	// System Log
-	private VisLabel msgLabel;
-	private List<String> logMessages = new ArrayList<>();
+	private CombatLogUI combatLog;
 
 	// Monster Info
 	private VisTable monsterInfoTable;
@@ -1361,20 +1360,14 @@ public class GameHUD implements Disposable {
 		// 2. System Log (Top Left, Overlay)
 		// We use a separate container for Log to allow it to be an overlay or just flow.
 		// Since root is table based, we can put it in the next row, left aligned.
-		VisTable logContainer = new VisTable();
-		logContainer.setBackground(logBgDrawable);
-		msgLabel = new VisLabel("欢迎来到地下城", "small");
-		msgLabel.setFontScale(0.8f);
-		msgLabel.setWrap(true);
-		msgLabel.setAlignment(Align.topLeft);
-		logContainer.add(msgLabel).width(500).pad(10).top().left();
+		combatLog = new CombatLogUI(logBgDrawable);
 
 		// Add Log to root (Left aligned, expand Y to push bottom HUD down, but don't take all space)
 		// Actually, we want log to be top-left, but not push other things too much.
 		// Let's use an intermediate table for the "Middle" area
 		VisTable middleTable = new VisTable();
 		middleTable.top().left();
-		middleTable.add(logContainer).top().left().pad(10);
+		middleTable.add(combatLog).top().left().pad(10);
 		root.add(middleTable).expand().fill().row();
 
 		// 3. Bottom Area: Player HUD
@@ -2154,17 +2147,12 @@ public class GameHUD implements Disposable {
 		if (inventoryDialog.getParent() != null) inventoryDialog.remove();
 		if (helpWindow.getParent() != null) helpWindow.remove();
 		hideMonsterInfo();
-		logMessages.clear();
-		msgLabel.setText("");
+		combatLog.clearLog();
 		setPaused(false);
 	}
 
 	public void showMessage(String msg) {
-		logMessages.add(msg);
-		if (logMessages.size() > 8) {
-			logMessages.remove(0);
-		}
-		msgLabel.setText(String.join("\n", logMessages));
+		combatLog.showMessage(msg);
 	}
 
 	public void showGameOver(Runnable onRestart, Runnable onQuit) {

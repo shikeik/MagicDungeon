@@ -211,7 +211,7 @@ public class SpriteGenerator {
 	}
 
 	public static Texture createFloor() {
-		return createFloor(Color.valueOf("#3E3E3E"), Color.valueOf("#2E2E2E"), Color.valueOf("#4E4E4E"));
+		return createFloor(com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE, com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK, com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
 	}
 
 	public static Texture createFloor(Color baseColor, Color darkColor, Color highlightColor) {
@@ -566,8 +566,8 @@ public class SpriteGenerator {
 		Pixmap p = createPixmap();
 
 		// Colors
-		Color skin = Color.valueOf("#ffccaa");
-		Color pantsColor = Color.valueOf("#8d6e63"); // Brown Pants
+		Color skin = com.goldsprite.magicdungeon.assets.ThemeConfig.SKIN_DEFAULT;
+		Color pantsColor = com.goldsprite.magicdungeon.assets.ThemeConfig.PANTS_BROWN;
 		
 		// 1. Body Base (Legs, Torso, Head, Arms)
 		drawBodyBase(p, skin, pantsColor);

@@ -28,7 +28,7 @@ public class VFXManager {
         }
     }
 
-    public void renderText(SpriteBatch batch, BitmapFont font) {
+    public void renderText(com.badlogic.gdx.graphics.g2d.Batch batch, BitmapFont font) {
         for (NeonParticle p : particles) {
             if (p instanceof TextParticle) {
                 ((TextParticle)p).render(batch, font);

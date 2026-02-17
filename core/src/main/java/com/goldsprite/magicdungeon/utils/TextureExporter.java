@@ -22,12 +22,15 @@ public class TextureExporter {
         Gdx.app.postRunnable(new Runnable() {
             @Override
             public void run() {
+                FrameBuffer fbo = null;
+                SpriteBatch batch = null;
+                Pixmap pixmap = null;
                 try {
                     int w = texture.getWidth();
                     int h = texture.getHeight();
 
                     // 1. Create FrameBuffer
-                    FrameBuffer fbo = new FrameBuffer(Pixmap.Format.RGBA8888, w, h, false);
+                    fbo = new FrameBuffer(Pixmap.Format.RGBA8888, w, h, false);
 
                     // 2. Begin FBO
                     fbo.begin();
@@ -37,29 +40,17 @@ public class TextureExporter {
                     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
                     // 4. Draw Texture to FBO
-                    // Note: FrameBuffer coordinates are usually y-up, same as batch.
-                    // But ScreenUtils.getFrameBufferPixmap reads from bottom-up or top-down depending on system?
-                    // Usually batch.draw(tex, 0, 0) draws at bottom-left.
-                    // But texture coordinates in FBO might be flipped when read back?
-                    // Let's draw it normally first.
-
-                    SpriteBatch batch = new SpriteBatch();
+                    batch = new SpriteBatch();
                     // Set projection matrix to match FBO size (0,0 bottom-left)
                     batch.getProjectionMatrix().setToOrtho2D(0, 0, w, h);
 
                     batch.begin();
-                    // Draw texture flipping Y because FrameBuffer textures are often flipped in memory when read back?
-                    // Actually, if we draw it normally (0,0), it appears at bottom-left.
-                    // ScreenUtils.getFrameBufferPixmap reads pixels.
-                    // If result is flipped, we can flip pixmap.
-                    // The user reported images are upside down. So we need to flip Y.
                     // batch.draw(texture, x, y, width, height, srcX, srcY, srcWidth, srcHeight, flipX, flipY)
                     batch.draw(texture, 0, 0, w, h, 0, 0, w, h, false, true);
                     batch.end();
 
                     // 5. Read Pixmap from FBO
-                    // ScreenUtils.getFrameBufferPixmap gets pixels from current bound framebuffer
-                    Pixmap pixmap = ScreenUtils.getFrameBufferPixmap(0, 0, w, h);
+                    pixmap = ScreenUtils.getFrameBufferPixmap(0, 0, w, h);
 
                     // 6. End FBO
                     fbo.end();
@@ -72,13 +63,12 @@ public class TextureExporter {
                     PixmapIO.writePNG(file, pixmap);
                     Gdx.app.log("TextureExporter", "Exported texture via FBO to: " + file.file().getAbsolutePath());
 
-                    // Cleanup
-                    batch.dispose();
-                    fbo.dispose();
-                    pixmap.dispose();
-
                 } catch (Exception e) {
                     Gdx.app.error("TextureExporter", "Failed to export texture: " + filename, e);
+                } finally {
+                    if (batch != null) batch.dispose();
+                    if (fbo != null) fbo.dispose();
+                    if (pixmap != null) pixmap.dispose();
                 }
             }
         });

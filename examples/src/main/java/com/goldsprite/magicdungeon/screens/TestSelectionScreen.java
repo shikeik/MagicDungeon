@@ -7,6 +7,7 @@ import com.goldsprite.magicdungeon.screens.tests.*;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonLayeredMixTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonIKTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonSkelEditorScreen;
+import com.goldsprite.magicdungeon.tests.ScrollLayoutTestScreen;
 
 import java.util.Map;
 
