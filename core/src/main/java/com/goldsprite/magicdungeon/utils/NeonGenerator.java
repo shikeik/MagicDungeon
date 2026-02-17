@@ -68,16 +68,16 @@ public class NeonGenerator {
 
         // Setup Projection
         projectionMatrix.setToOrtho2D(0, 0, width, height);
-        
+
         TextureRegion region = null;
 
         try {
             frameBuffer.begin();
-            
+
             // [Fix] 必须手动设置 Viewport，否则默认使用 FBO 全尺寸 (例如 512x512)，导致小尺寸生成 (例如 128x128) 被拉伸到全 FBO，
             // 进而导致 extractTextureRegion 只截取了内容的左下角 (看起来是放大了且偏了)。
             Gdx.gl.glViewport(0, 0, width, height);
-            
+
             // Clear with transparent
             ScreenUtils.clear(0, 0, 0, 0);
 
@@ -85,10 +85,10 @@ public class NeonGenerator {
             batch.begin();
             drawer.accept(batch);
             batch.end();
-            
+
             // Extract BEFORE ending FrameBuffer
             region = extractTextureRegion(width, height);
-            
+
         } catch (Exception e) {
             DLog.logErr("NeonGenerator", "Error during generation: " + e.getMessage());
             e.printStackTrace();
@@ -108,16 +108,16 @@ public class NeonGenerator {
         // ScreenUtils.getFrameBufferPixmap 读取的是当前绑定的 FB
         // 注意：getFrameBufferPixmap 读取的是 (x, y, w, h)，其中 x,y 是左下角。
         // 因为我们上面设置了 Viewport (0,0,w,h)，所以内容就在 (0,0,w,h) 区域。
-        Pixmap pixmap = ScreenUtils.getFrameBufferPixmap(0, 0, width, height);
-        
+        Pixmap pixmap = Pixmap.createFromFrameBuffer(0, 0, width, height);
+		pixmap.setFilter(Pixmap.Filter.NearestNeighbour);
         // 生成 Texture
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
-        
+
         // 创建 Region 并翻转 Y (因为 OpenGL 纹理坐标 Y 向上，而通常 TextureRegion 期望 Y 向下匹配屏幕/UI)
         TextureRegion region = new TextureRegion(texture);
-        region.flip(false, true); 
-        
+        region.flip(false, true);
+
         return region;
     }
 

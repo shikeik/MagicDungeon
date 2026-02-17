@@ -144,7 +144,7 @@ public class NeonGenTestScreen extends GScreen {
             }
         });
         seedTable.add(seedField).expandX().fillX();
-        
+
         VisTextButton randBtn = new VisTextButton("R");
         randBtn.addListener(new ChangeListener() {
             @Override
@@ -362,7 +362,7 @@ public class NeonGenTestScreen extends GScreen {
                 info += "Display: " + (int)displayScale + "px\n";
             }
         }
-        
+
         infoLabel.setText(info);
     }
 

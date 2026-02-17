@@ -51,11 +51,11 @@ public class NeonSpriteGenerator {
     private static void drawCharacterImpl(NeonBatch batch, String mainHand, String offHand, String helmet, String armor, String boots) {
         // Use REF_SIZE for all coordinate calculations
         float size = REF_SIZE;
-        
+
         // Colors
         Color skin = Color.valueOf("#ffccaa");
         Color legsColor = Color.valueOf("#8d6e63");
-        
+
         // 1. Legs
         drawRectPix(batch, size, 90, 180, 25, 60, legsColor);
         drawRectPix(batch, size, 141, 180, 25, 60, legsColor);
@@ -94,7 +94,7 @@ public class NeonSpriteGenerator {
 
             drawRectPix(batch, size, 80, 110, 96, 70, darkArmor); // Chest Plate Detail
             drawRectPix(batch, size, 118, 110, 20, 70, gold); // Center strip
-            
+
             // Belt
             drawRectPix(batch, size, 70, 180, 116, 15, Color.valueOf("#3e2723"));
             drawRectPix(batch, size, 118, 180, 20, 15, Color.GOLD);
@@ -120,20 +120,20 @@ public class NeonSpriteGenerator {
         int headX = 128 - headW/2;
         int headY = 36;
         drawRectPix(batch, size, headX, headY, headW, headH, skin);
-        
+
         // Face (Simple)
         drawRectPix(batch, size, headX + 15, headY + 25, 10, 10, Color.BLACK); // Eyes
         drawRectPix(batch, size, headX + headW - 25, headY + 25, 10, 10, Color.BLACK);
-        
+
         // Helmet
         if (helmet != null) {
             Color helmColor = Color.valueOf("#607d8b");
             Color helmDark = Color.valueOf("#455a64");
-            
+
             drawRectPix(batch, size, headX - 5, headY - 10, headW + 10, 30, helmColor); // Top
             drawRectPix(batch, size, headX - 5, headY + 20, 10, 50, helmColor); // Sides
             drawRectPix(batch, size, headX + headW - 5, headY + 20, 10, 50, helmColor);
-            
+
             // Horns?
             drawRectPix(batch, size, headX - 15, headY - 20, 10, 40, Color.WHITE);
             drawRectPix(batch, size, headX + headW + 5, headY - 20, 10, 40, Color.WHITE);
@@ -141,7 +141,7 @@ public class NeonSpriteGenerator {
             // Hair
             drawRectPix(batch, size, headX, headY, headW, 15, Color.BROWN);
         }
-        
+
         // Weapons
         if (mainHand != null) {
             // Sword
