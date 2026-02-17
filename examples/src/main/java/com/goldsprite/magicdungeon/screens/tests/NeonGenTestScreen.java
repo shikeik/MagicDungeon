@@ -24,6 +24,11 @@ import com.goldsprite.magicdungeon.utils.NeonTileGenerator;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
+import com.badlogic.gdx.utils.Scaling;
+import com.badlogic.gdx.utils.TimeUtils;
+import com.badlogic.gdx.math.MathUtils;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
+
 public class NeonGenTestScreen extends GScreen {
 
     private NeonBatch neonBatch;
@@ -38,7 +43,7 @@ public class NeonGenTestScreen extends GScreen {
     // Settings
     public enum Mode { LIVE_VECTOR, BAKED_TEXTURE }
     private Mode currentMode = Mode.LIVE_VECTOR;
-    
+
     public enum GeneratorType { CHARACTER, WALL, FLOOR, ITEM }
     private GeneratorType currentType = GeneratorType.CHARACTER;
 
@@ -46,6 +51,12 @@ public class NeonGenTestScreen extends GScreen {
     private String itemName = "Health Potion";
     private boolean stretchToFill = false;
     private float displayScale = 256f; // Pixel size for long edge in Fixed mode
+    private long currentSeed = 12345;
+
+    // Auto Refresh
+    private boolean dirty = true;
+    private float timeSinceLastRegen = 0;
+    private static final float REGEN_INTERVAL = 1f / 30f;
 
     // UI
     private VisTable gameArea;
@@ -63,7 +74,12 @@ public class NeonGenTestScreen extends GScreen {
         if(imp != null) imp.addProcessor(stage);
 
         setupUI();
+        // Initial regen
         regenerate();
+    }
+
+    private void markDirty() {
+        dirty = true;
     }
 
     private void setupUI() {
@@ -73,9 +89,9 @@ public class NeonGenTestScreen extends GScreen {
 
         // 1. Control Panel (Right)
         VisTable controls = new VisTable(true);
-        controls.setBackground("window");
-        controls.add(new VisLabel("Neon Generator")).pad(10).row();
-        controls.addSeparator().padBottom(10).fillX();
+        // controls.setBackground("window"); // Removed background as requested
+        controls.add(new VisLabel("Neon Generator")).pad(10).expandX().row();
+        controls.addSeparator().padBottom(10).expandX().fillX();
 
         // Item Name Input
         final VisTable itemInputTable = new VisTable(true);
@@ -86,7 +102,7 @@ public class NeonGenTestScreen extends GScreen {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 itemName = nameField.getText();
-                regenerate();
+                markDirty();
             }
         });
         itemInputTable.add(nameField).expandX().fillX();
@@ -106,13 +122,41 @@ public class NeonGenTestScreen extends GScreen {
                 else if (currentType == GeneratorType.WALL) generateSize = 64;
                 else if (currentType == GeneratorType.FLOOR) generateSize = 32;
                 else if (currentType == GeneratorType.ITEM) generateSize = 256;
-                
+
                 itemInputTable.setVisible(currentType == GeneratorType.ITEM);
-                regenerate();
+                markDirty();
             }
         });
         controls.add(typeSelect).expandX().fillX().row();
+
+        // Seed
+        VisTable seedTable = new VisTable(true);
+        seedTable.add(new VisLabel("Seed:")).left();
+        final VisTextField seedField = new VisTextField(String.valueOf(currentSeed));
+        seedField.setTextFieldFilter(new VisTextField.TextFieldFilter.DigitsOnlyFilter());
+        seedField.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                try {
+                    currentSeed = Long.parseLong(seedField.getText());
+                    markDirty();
+                } catch (NumberFormatException ignored) {}
+            }
+        });
+        seedTable.add(seedField).expandX().fillX();
         
+        VisTextButton randBtn = new VisTextButton("R");
+        randBtn.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                currentSeed = MathUtils.random.nextLong();
+                seedField.setText(String.valueOf(currentSeed));
+                markDirty();
+            }
+        });
+        seedTable.add(randBtn);
+        controls.add(seedTable).expandX().fillX().row();
+
         controls.add(itemInputTable).expandX().fillX().row();
 
         // Mode Select
@@ -124,41 +168,34 @@ public class NeonGenTestScreen extends GScreen {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 currentMode = modeSelect.getSelected();
+                // No need to regen, just render mode change
             }
         });
         controls.add(modeSelect).expandX().fillX().row();
 
-        controls.addSeparator().pad(10).fillX();
+        controls.addSeparator().pad(10).expandX().fillX();
 
         // Generation Settings
         controls.add(new VisLabel("Generation Size:")).left();
         final VisLabel sizeLabel = new VisLabel(String.valueOf(generateSize));
-        VisSlider sizeSlider = new VisSlider(32, 512, 32, false);
+        VisSlider sizeSlider = new VisSlider(16, 512, 16, false);
         sizeSlider.setValue(generateSize);
         sizeSlider.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 generateSize = (int) sizeSlider.getValue();
                 sizeLabel.setText(String.valueOf(generateSize));
+                markDirty();
             }
         });
         controls.add(sizeLabel).width(40);
         controls.row();
         controls.add(sizeSlider).colspan(2).fillX().padBottom(10).row();
 
-        VisTextButton regenBtn = new VisTextButton("Regenerate / Bake");
-        regenBtn.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                regenerate();
-            }
-        });
-        controls.add(regenBtn).colspan(2).fillX().padBottom(20).row();
-
         // Preview Settings
         controls.add(new VisLabel("Preview Settings")).colspan(2).left().row();
-        
-        final VisCheckBox stretchCheck = new VisCheckBox("Stretch to Fill");
+
+        final VisCheckBox stretchCheck = new VisCheckBox("Stretch (Fit)");
         stretchCheck.setChecked(stretchToFill);
         stretchCheck.addListener(new ChangeListener() {
             @Override
@@ -170,28 +207,37 @@ public class NeonGenTestScreen extends GScreen {
 
         controls.add(new VisLabel("Fixed Size:")).left();
         final VisLabel scaleLabel = new VisLabel(String.valueOf((int)displayScale));
-        VisSlider scaleSlider = new VisSlider(64, 1024, 64, false);
+        VisSlider scaleSlider = new VisSlider(0, 1024, 64, false);
         scaleSlider.setValue(displayScale);
         scaleSlider.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 displayScale = scaleSlider.getValue();
-                scaleLabel.setText(String.valueOf((int)displayScale));
+                if (displayScale == 0) {
+                    scaleLabel.setText("Original");
+                } else {
+                    scaleLabel.setText(String.valueOf((int)displayScale));
+                }
             }
         });
-        controls.add(scaleLabel).width(40).row();
+        controls.add(scaleLabel).width(60).row();
         controls.add(scaleSlider).colspan(2).fillX().row();
 
-        controls.addSeparator().pad(10).fillX();
-        
+        controls.addSeparator().pad(10).expandX().fillX();
+
         infoLabel = new VisLabel("");
         controls.add(infoLabel).colspan(2).left().growY().top();
+
+        // Wrap controls in HoverFocusScrollPane
+        HoverFocusScrollPane scrollPane = new HoverFocusScrollPane(controls);
+        scrollPane.setFlickScroll(false); // Disable flick to prevent conflict with sliders
+        scrollPane.setFadeScrollBars(false);
 
         // 2. Game Area (Left)
         gameArea = new VisTable();
         gameArea.setBackground(VisUI.getSkin().newDrawable("white", new Color(0.2f, 0.2f, 0.2f, 1f)));
 
-        VisSplitPane split = new VisSplitPane(gameArea, controls, false);
+        VisSplitPane split = new VisSplitPane(gameArea, scrollPane, false);
         split.setSplitAmount(0.7f);
         split.setMaxSplitAmount(0.85f);
         split.setMinSplitAmount(0.15f);
@@ -206,59 +252,63 @@ public class NeonGenTestScreen extends GScreen {
         }
         try {
             frameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, generateSize, generateSize, false);
-            
+
             fbCamera.setToOrtho(false, generateSize, generateSize);
             fbCamera.update();
-            
+
             frameBuffer.begin();
             ScreenUtils.clear(0, 0, 0, 0);
             Gdx.gl.glViewport(0, 0, generateSize, generateSize);
-            
+
             neonBatch.setProjectionMatrix(fbCamera.combined);
             neonBatch.begin();
             drawContent(neonBatch, generateSize, generateSize);
             neonBatch.end();
-            
+
             frameBuffer.end();
-            
+
             Texture tex = frameBuffer.getColorBufferTexture();
             tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-            
+
             bakedRegion = new TextureRegion(tex);
-            bakedRegion.flip(false, true); 
-            
+            bakedRegion.flip(false, true);
+
         } catch (Exception e) {
             Gdx.app.error("NeonGen", "Generation failed", e);
         }
     }
 
     private void drawContent(NeonBatch batch, float w, float h) {
+        // Set deterministic random seed
+        MathUtils.random.setSeed(currentSeed);
+
         // Since the generators auto-scale based on a single "size" parameter (assuming square),
         // we need to handle non-square aspect ratios here if w != h.
         // But the generators take a single float size.
         // If we want to stretch, we can scale the batch matrix.
         // The generators draw to "size" x "size".
-        
+
         // Strategy:
         // Pass 'w' as the size.
         // If h != w, apply a scale on Y axis: scaleY = h / w.
-        
+
         float size = w;
         float scaleY = h / w;
-        
+
         if (scaleY != 1f) {
             batch.getTransformMatrix().scale(1f, scaleY, 1f);
+            batch.setTransformMatrix(batch.getTransformMatrix()); // Flush matrix
         }
-        
+
         try {
             if (currentType == GeneratorType.CHARACTER) {
                 NeonSpriteGenerator.drawCharacter(batch, size, "Sword", null, "Helmet", "Armor", "Boots");
             } else if (currentType == GeneratorType.WALL) {
                 NeonTileGenerator.drawWallTileset(batch, size, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
             } else if (currentType == GeneratorType.FLOOR) {
-                NeonTileGenerator.drawFloor(batch, size, 
-                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE, 
-                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK, 
+                NeonTileGenerator.drawFloor(batch, size,
+                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE,
+                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK,
                     com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
             } else if (currentType == GeneratorType.ITEM) {
                 NeonItemGenerator.drawItem(batch, size, itemName);
@@ -266,6 +316,7 @@ public class NeonGenTestScreen extends GScreen {
         } finally {
             if (scaleY != 1f) {
                 batch.getTransformMatrix().scale(1f, 1f/scaleY, 1f);
+                batch.setTransformMatrix(batch.getTransformMatrix()); // Reset matrix
             }
         }
     }
@@ -275,14 +326,25 @@ public class NeonGenTestScreen extends GScreen {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // Auto Refresh Logic
+        timeSinceLastRegen += delta;
+        if (dirty && timeSinceLastRegen >= REGEN_INTERVAL) {
+            regenerate();
+            timeSinceLastRegen = 0;
+            dirty = false;
+        }
+
         stage.act(delta);
         stage.draw();
 
         drawSceneInGameArea();
-        
+
         updateInfo();
+
+        // Restore random state to avoid side effects
+        MathUtils.random.setSeed(TimeUtils.nanoTime());
     }
-    
+
     private void updateInfo() {
         String info = "Info:\n";
         info += "Mode: " + currentMode + "\n";
@@ -291,9 +353,16 @@ public class NeonGenTestScreen extends GScreen {
             info += "Rendering: Vector (Lossless)\n";
         } else {
             info += "Rendering: Texture (Pixels)\n";
-            info += "Stretch: " + stretchToFill + "\n";
-            if (!stretchToFill) info += "Display: " + (int)displayScale + "px\n";
         }
+        info += "Stretch: " + (stretchToFill ? "Fit" : "Fixed") + "\n";
+        if (!stretchToFill) {
+            if (displayScale == 0) {
+                info += "Display: Original (" + generateSize + "px)\n";
+            } else {
+                info += "Display: " + (int)displayScale + "px\n";
+            }
+        }
+        
         infoLabel.setText(info);
     }
 
@@ -307,55 +376,66 @@ public class NeonGenTestScreen extends GScreen {
         Rectangle scissor = new Rectangle();
         Rectangle clipBounds = new Rectangle(x, y, w, h);
         ScissorStack.calculateScissors(stage.getCamera(), stage.getBatch().getTransformMatrix(), clipBounds, scissor);
-        
+
         if (ScissorStack.pushScissors(scissor)) {
+            float cx, cy, cw, ch;
+
             if (currentMode == Mode.LIVE_VECTOR) {
-                float cx, cy, cw, ch;
-                
                 if (stretchToFill) {
-                    cx = x; cy = y; cw = w; ch = h;
+                    // Fit to gameArea while maintaining aspect ratio (Square assumption for generators)
+                    Vector2 scaled = Scaling.fit.apply(generateSize, generateSize, w, h);
+                    cw = scaled.x;
+                    ch = scaled.y;
                 } else {
-                    float size = displayScale;
-                    // Center
-                    cw = size; ch = size;
-                    cx = x + (w - cw) / 2;
-                    cy = y + (h - ch) / 2;
+                    float size = (displayScale == 0) ? generateSize : displayScale;
+                    cw = size;
+                    ch = size;
                 }
-                
+                cx = x + (w - cw) / 2;
+                cy = y + (h - ch) / 2;
+
                 neonBatch.setProjectionMatrix(stage.getCamera().combined);
                 neonBatch.begin();
-                
+
                 // Move to position
                 neonBatch.getTransformMatrix().idt().translate(cx, cy, 0);
-                
+                neonBatch.setTransformMatrix(neonBatch.getTransformMatrix()); // Flush matrix
+
                 drawContent(neonBatch, cw, ch);
-                
+
                 neonBatch.getTransformMatrix().idt();
+                neonBatch.setTransformMatrix(neonBatch.getTransformMatrix()); // Reset matrix
                 neonBatch.end();
-                
+
             } else {
                 if (bakedRegion != null) {
-                    float cx, cy, cw, ch;
+                    float regionW = bakedRegion.getRegionWidth();
+                    float regionH = bakedRegion.getRegionHeight();
+
                     if (stretchToFill) {
-                        cx = x; cy = y; cw = w; ch = h;
+                        Vector2 scaled = Scaling.fit.apply(regionW, regionH, w, h);
+                        cw = scaled.x;
+                        ch = scaled.y;
                     } else {
-                        float ratio = (float)bakedRegion.getRegionWidth() / bakedRegion.getRegionHeight();
+                        // Use displayScale but keep aspect ratio
+                        float size = (displayScale == 0) ? generateSize : displayScale;
+                        float ratio = regionW / regionH;
                         if (ratio >= 1) {
-                            cw = displayScale; ch = displayScale / ratio;
+                            cw = size; ch = size / ratio;
                         } else {
-                            ch = displayScale; cw = displayScale * ratio;
+                            ch = size; cw = size * ratio;
                         }
-                        cx = x + (w - cw) / 2;
-                        cy = y + (h - ch) / 2;
                     }
-                    
+                    cx = x + (w - cw) / 2;
+                    cy = y + (h - ch) / 2;
+
                     batch.setProjectionMatrix(stage.getCamera().combined);
                     batch.begin();
                     batch.draw(bakedRegion, cx, cy, cw, ch);
                     batch.end();
                 }
             }
-            
+
             ScissorStack.popScissors();
         }
     }

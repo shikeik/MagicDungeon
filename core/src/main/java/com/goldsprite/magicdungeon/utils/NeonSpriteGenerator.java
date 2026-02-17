@@ -38,6 +38,7 @@ public class NeonSpriteGenerator {
         float scale = size / REF_SIZE;
         if (scale != 1f) {
             batch.getTransformMatrix().scale(scale, scale, 1f);
+            batch.setTransformMatrix(batch.getTransformMatrix());
         }
 
         try {

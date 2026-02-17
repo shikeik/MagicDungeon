@@ -37,6 +37,7 @@ public class NeonTileGenerator {
         float scale = size / REF_SIZE_WALL;
         if (scale != 1f) {
             batch.getTransformMatrix().scale(scale, scale, 1f);
+            batch.setTransformMatrix(batch.getTransformMatrix());
         }
 
         try {
@@ -87,11 +88,15 @@ public class NeonTileGenerator {
     }
 
     public static void drawFloor(NeonBatch batch, float size, Color base, Color dark, Color highlight) {
-        Matrix4 oldTransform = batch.getTransformMatrix().cpy();
         float scale = size / REF_SIZE_FLOOR;
-        if (scale != 1f) {
-            batch.getTransformMatrix().scale(scale, scale, 1f);
+        if (scale == 1f) {
+            drawFloorImpl(batch, base, dark, highlight);
+            return;
         }
+
+        Matrix4 oldTransform = batch.getTransformMatrix().cpy();
+        batch.getTransformMatrix().scale(scale, scale, 1f);
+        batch.setTransformMatrix(batch.getTransformMatrix());
 
         try {
             drawFloorImpl(batch, base, dark, highlight);
