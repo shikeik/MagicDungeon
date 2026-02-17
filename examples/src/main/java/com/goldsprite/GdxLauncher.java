@@ -94,7 +94,7 @@ public class GdxLauncher extends Game {
 					try {
 						// 使用反射实例化测试类
 						// 注意：测试类必须有无参构造函数
-						com.goldsprite.magicdungeon.testing.IGameAutoTest test = DebugLaunchConfig.autoTestClass.newInstance();
+						IGameAutoTest test = DebugLaunchConfig.autoTestClass.newInstance();
 						test.run();
 					} catch (Exception e) {
 						DLog.logErr("无法实例化测试用例: " + e.getMessage());

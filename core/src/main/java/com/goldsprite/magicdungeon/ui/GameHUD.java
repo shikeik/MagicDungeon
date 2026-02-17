@@ -62,6 +62,7 @@ import com.badlogic.gdx.utils.Array;
 import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
 
 import com.badlogic.gdx.utils.Disposable;
+import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
 
 public class GameHUD implements Disposable {
 	public Stage stage;
@@ -211,7 +212,7 @@ public class GameHUD implements Disposable {
 			String armor = player.equipment.armor != null ? player.equipment.armor.data.name() : null;
 			String boots = player.equipment.boots != null ? player.equipment.boots.data.name() : null;
 
-			TextureRegion region = com.goldsprite.magicdungeon.utils.NeonSpriteGenerator.generateCharacterRegion(mainHand, offHand, helmet, armor, boots);
+			TextureRegion region = NeonSpriteGenerator.generateCharacterRegion(mainHand, offHand, helmet, armor, boots);
 			avatarImage.setDrawable(new TextureRegionDrawable(region));
 		}
 	}

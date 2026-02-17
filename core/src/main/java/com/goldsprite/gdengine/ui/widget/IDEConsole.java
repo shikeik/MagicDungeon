@@ -9,6 +9,7 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import java.util.List;
 import com.badlogic.gdx.utils.Align;
+import com.goldsprite.gdengine.log.DLog;
 
 public class IDEConsole extends VisTable {
 
@@ -55,7 +56,7 @@ public class IDEConsole extends VisTable {
 		clearBtn.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				com.goldsprite.gdengine.log.DLog.getLogs().clear();
+				DLog.getLogs().clear();
 				updateLogText();
 			}
 		});
@@ -98,7 +99,7 @@ public class IDEConsole extends VisTable {
 	}
 
 	private void updateLogText() {
-		List<String> logs = com.goldsprite.gdengine.log.DLog.getLogs();
+		List<String> logs = DLog.getLogs();
 		if (logs.isEmpty()) {
 			lastLogLabel.setText("No logs.");
 			logContent.setText("");

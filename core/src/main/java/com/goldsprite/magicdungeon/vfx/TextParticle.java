@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.badlogic.gdx.graphics.g2d.Batch;
 
 public class TextParticle extends NeonParticle {
     public String text;
@@ -21,7 +22,7 @@ public class TextParticle extends NeonParticle {
         // Do nothing for NeonBatch
     }
 
-    public void render(com.badlogic.gdx.graphics.g2d.Batch batch, BitmapFont font) {
+    public void render(Batch batch, BitmapFont font) {
         float alpha = life / maxLife;
         // 保持原来的颜色，只修改透明度 (注意：font.setColor 会修改全局状态，最好存一下或者确保之后重置)
         // 但这里为了性能，假设外部会重置

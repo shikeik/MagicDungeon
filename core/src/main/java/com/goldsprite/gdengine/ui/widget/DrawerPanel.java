@@ -17,6 +17,7 @@ import com.kotcrab.vis.ui.widget.VisImageButton;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.world.TileType;
+import com.badlogic.gdx.scenes.scene2d.Action;
 
 /**
  * 抽屉式面板组件
@@ -199,7 +200,7 @@ public class DrawerPanel extends VisTable {
             // We need to animate the pref size of the cell?
             // Cell.size(w, h) sets min, pref, max.
             
-            this.addAction(new com.badlogic.gdx.scenes.scene2d.Action() {
+            this.addAction(new Action() {
                 float time = 0;
                 float duration = style.animDuration;
                 float startVal = expanded ? 0 : 1; // 0 to 1 if expanding

@@ -29,6 +29,7 @@ import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.magicdungeon.utils.NeonGenerator;
+import com.goldsprite.magicdungeon.assets.ThemeConfig;
 
 public class NeonGenTestScreen extends GScreen {
 
@@ -268,9 +269,9 @@ public class NeonGenTestScreen extends GScreen {
                 NeonTileGenerator.drawWallTileset(batch, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
             } else if (currentType == GeneratorType.FLOOR) {
                 NeonTileGenerator.drawFloor(batch, 
-                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE,
-                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK,
-                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
+                    ThemeConfig.FLOOR_BASE,
+                    ThemeConfig.FLOOR_DARK,
+                    ThemeConfig.FLOOR_HIGHLIGHT);
             } else if (currentType == GeneratorType.ITEM) {
                 NeonItemGenerator.drawItem(batch, itemName);
             }

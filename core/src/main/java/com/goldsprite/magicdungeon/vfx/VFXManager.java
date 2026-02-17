@@ -6,6 +6,7 @@ import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.Batch;
 
 public class VFXManager {
     private Array<NeonParticle> particles = new Array<>();
@@ -28,7 +29,7 @@ public class VFXManager {
         }
     }
 
-    public void renderText(com.badlogic.gdx.graphics.g2d.Batch batch, BitmapFont font) {
+    public void renderText(Batch batch, BitmapFont font) {
         for (NeonParticle p : particles) {
             if (p instanceof TextParticle) {
                 ((TextParticle)p).render(batch, font);

@@ -8,6 +8,7 @@ import com.goldsprite.magicdungeon.core.screens.GameScreen;
 import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
+import com.badlogic.gdx.math.Vector2;
 
 /**
  * 模拟人类可视化测试流程
@@ -97,8 +98,8 @@ public class HumanSimulatorTest implements IGameAutoTest {
              if (ScreenManager.getInstance().getCurScreen() instanceof GameScreen) {
                 GameScreen gs = (GameScreen) ScreenManager.getInstance().getCurScreen();
                 // Convert Stage coordinates (Y-up) to Screen coordinates (Y-down) for DragTask
-                com.badlogic.gdx.math.Vector2 p1 = gs.getHud().getInventorySlotCenter(1);
-                com.badlogic.gdx.math.Vector2 p2 = gs.getHud().getInventorySlotCenter(2);
+                Vector2 p1 = gs.getHud().getInventorySlotCenter(1);
+                Vector2 p2 = gs.getHud().getInventorySlotCenter(2);
                 
                 if (p1 != null && p2 != null) {
                     float h = Gdx.graphics.getHeight();

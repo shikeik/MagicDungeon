@@ -8,6 +8,7 @@ import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonSkelEditorScreen;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import com.kotcrab.vis.ui.widget.VisTree;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 
 public class NeonSkelEditorAutoTest implements IGameAutoTest {
 
@@ -31,7 +32,7 @@ public class NeonSkelEditorAutoTest implements IGameAutoTest {
             VisSelectBox<NeonSkelEditorScreen.Mode> modeSelect = screen.getEditorUI().modeSelect;
             modeSelect.setSelected(NeonSkelEditorScreen.Mode.SETUP);
             // 触发事件
-            modeSelect.fire(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent());
+            modeSelect.fire(new ChangeListener.ChangeEvent());
         });
 
         atm.add(new AutoTestManager.AssertTask("Assert Mode is SETUP", () -> {
@@ -45,7 +46,7 @@ public class NeonSkelEditorAutoTest implements IGameAutoTest {
             NeonSkelEditorScreen screen = (NeonSkelEditorScreen) ScreenManager.getInstance().getCurScreen();
             VisSelectBox<NeonSkelEditorScreen.Mode> modeSelect = screen.getEditorUI().modeSelect;
             modeSelect.setSelected(NeonSkelEditorScreen.Mode.ANIMATE);
-            modeSelect.fire(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent());
+            modeSelect.fire(new ChangeListener.ChangeEvent());
         });
         
         atm.addWait(0.5f);
@@ -102,14 +103,14 @@ public class NeonSkelEditorAutoTest implements IGameAutoTest {
                         field.getTextFieldListener().keyTyped(field, 'x'); // Trigger update
                     } else {
                         // 如果没有 Listener, 尝试触发 ChangeEvent
-                        field.fire(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent());
+                        field.fire(new ChangeListener.ChangeEvent());
                     }
                     */
                     // VisTextField has no public getTextFieldListener().
                     // We must rely on firing events.
                     // But setText() doesn't fire ChangeEvent automatically in VisUI?
                     // Let's fire it manually.
-                    field.fire(new com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent());
+                    field.fire(new ChangeListener.ChangeEvent());
                     
                     // Also try to simulate key typed if ChangeEvent is not enough
                     // But we don't have access to the listener easily.

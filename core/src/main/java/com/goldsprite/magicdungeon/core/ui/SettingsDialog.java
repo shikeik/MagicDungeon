@@ -17,6 +17,7 @@ import com.badlogic.gdx.controllers.ControllerAdapter;
 import com.badlogic.gdx.controllers.ControllerListener;
 import com.badlogic.gdx.controllers.Controllers;
 import com.kotcrab.vis.ui.widget.*;
+import com.goldsprite.gdengine.log.DLog;
 
 public class SettingsDialog extends BaseDialog {
 	private final SettingsManager settings;
@@ -225,7 +226,7 @@ public class SettingsDialog extends BaseDialog {
 			@Override
 			public boolean buttonDown(Controller controller, int buttonCode) {
 				if(!isKeyboard) {
-					com.goldsprite.gdengine.log.DLog.logT("Settings", "正在重新绑定手柄按键: " + buttonCode);
+					DLog.logT("Settings", "正在重新绑定手柄按键: " + buttonCode);
 					inputManager.rebindController(action, buttonCode);
 					updateButtonLabel();
 					close();
@@ -246,7 +247,7 @@ public class SettingsDialog extends BaseDialog {
 					 }
 
 					 if(virtualCode != -1) {
-						com.goldsprite.gdengine.log.DLog.logT("Settings", "正在重新绑定手柄摇杆: " + virtualCode);
+						DLog.logT("Settings", "正在重新绑定手柄摇杆: " + virtualCode);
 						inputManager.rebindController(action, virtualCode);
 						updateButtonLabel();
 						close();
@@ -287,7 +288,7 @@ public class SettingsDialog extends BaseDialog {
 					if (isKeyboard) {
 						// 有效按键
 						String msg = "正在重绑定 " + action + " 为 " + Input.Keys.toString(keycode);
-						com.goldsprite.gdengine.log.DLog.logT("Settings", msg);
+						DLog.logT("Settings", msg);
 						inputManager.rebindKeyboard(action, keycode);
 						updateButtonLabel();
 						close();

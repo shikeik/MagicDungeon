@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
+import com.goldsprite.magicdungeon.assets.ThemeConfig;
 
 public class SpriteGenerator {
 	// High resolution texture size
@@ -213,7 +214,7 @@ public class SpriteGenerator {
 	}
 
 	public static TextureRegion createFloor() {
-		return createFloor(com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE, com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK, com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
+		return createFloor(ThemeConfig.FLOOR_BASE, ThemeConfig.FLOOR_DARK, ThemeConfig.FLOOR_HIGHLIGHT);
 	}
 
 	public static TextureRegion createFloor(Color baseColor, Color darkColor, Color highlightColor) {
@@ -568,8 +569,8 @@ public class SpriteGenerator {
 		Pixmap p = createPixmap();
 
 		// Colors
-		Color skin = com.goldsprite.magicdungeon.assets.ThemeConfig.SKIN_DEFAULT;
-		Color pantsColor = com.goldsprite.magicdungeon.assets.ThemeConfig.PANTS_BROWN;
+		Color skin = ThemeConfig.SKIN_DEFAULT;
+		Color pantsColor = ThemeConfig.PANTS_BROWN;
 
 		// 1. Body Base (Legs, Torso, Head, Arms)
 		drawBodyBase(p, skin, pantsColor);

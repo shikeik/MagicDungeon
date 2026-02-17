@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.goldsprite.magicdungeon.assets.TextureManager;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 import com.goldsprite.magicdungeon.vfx.VFXManager;
+import com.badlogic.gdx.math.MathUtils;
 
 public class Player extends Entity {
 	public float moveTimer;
@@ -307,11 +308,11 @@ public class Player extends Entity {
 		stats.mana = stats.maxMana;
 
 		// 2. Item Penalty: Lose 2-5 random items
-		int dropCount = com.badlogic.gdx.math.MathUtils.random(2, 5);
+		int dropCount = MathUtils.random(2, 5);
 		int dropped = 0;
 		for (int i = 0; i < dropCount; i++) {
 			if (inventory.isEmpty()) break;
-			int idx = com.badlogic.gdx.math.MathUtils.random(inventory.size() - 1);
+			int idx = MathUtils.random(inventory.size() - 1);
 			inventory.remove(idx);
 			dropped++;
 		}

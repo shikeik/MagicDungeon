@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.goldsprite.magicdungeon.utils.SpriteGenerator;
+import com.goldsprite.magicdungeon.world.DungeonTheme;
 
 public class DualGridDungeonRenderer implements Disposable {
     private static final int TILE_SIZE = Constants.TILE_SIZE;
@@ -37,7 +39,7 @@ public class DualGridDungeonRenderer implements Disposable {
     private TextureRegion[] dirtBlob;
     private TextureRegion[] sandBlob;
     private TextureRegion[] grassBlob;
-    private com.goldsprite.magicdungeon.world.DungeonTheme currentTheme = null;
+    private DungeonTheme currentTheme = null;
 
     public DualGridDungeonRenderer() {
         initBaseResources();
@@ -64,7 +66,7 @@ public class DualGridDungeonRenderer implements Disposable {
         }
     }
 
-    private void updateTheme(com.goldsprite.magicdungeon.world.DungeonTheme theme) {
+    private void updateTheme(DungeonTheme theme) {
         if (currentTheme == theme) return;
 
         // Clean up old theme textures
@@ -81,7 +83,7 @@ public class DualGridDungeonRenderer implements Disposable {
         }
 
         // 1. Generate Wall (Brick)
-        TextureRegion wallTex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createDungeonWallTileset(
+        TextureRegion wallTex = SpriteGenerator.createDungeonWallTileset(
             theme.primaryColor, theme.secondaryColor
         );
         regions.put("theme_wall", wallTex);
@@ -96,7 +98,7 @@ public class DualGridDungeonRenderer implements Disposable {
         // 2. Generate Floors
         dungeonFloors = new TextureRegion[7];
         for(int i=0; i<7; i++) {
-            TextureRegion region = com.goldsprite.magicdungeon.utils.SpriteGenerator.createFloor(
+            TextureRegion region = SpriteGenerator.createFloor(
                 theme.floorBase, theme.floorDark, theme.floorHighlight
             );
             regions.put("theme_floor_" + i, region);

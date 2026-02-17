@@ -56,6 +56,7 @@ import com.goldsprite.magicdungeon.world.DungeonTheme;
 import com.goldsprite.magicdungeon.assets.AudioAssets;
 import com.goldsprite.magicdungeon.assets.SpineManager;
 import com.goldsprite.magicdungeon.vfx.VFXManager;
+import com.goldsprite.magicdungeon.progress.ProgressScreen;
 
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
@@ -736,7 +737,7 @@ public class GameScreen extends GScreen {
 
 		// Toggle Progress Screen
 		if (input.isJustPressed(InputAction.PROGRESS)) {
-			getScreenManager().setCurScreen(com.goldsprite.magicdungeon.progress.ProgressScreen.class, true);
+			getScreenManager().setCurScreen(ProgressScreen.class, true);
 		}
 
 		// Save Game
