@@ -71,7 +71,7 @@ public class NeonBatch extends BaseShapeBatch {
 		verts[0] = x1; verts[1] = y1;
 		verts[2] = x2; verts[3] = y2;
 		verts[4] = x3; verts[5] = y3;
-		
+
 		if (filled) pathFill(verts, 3, color);
 		else pathStroke(verts, 3, lineWidth, true, color);
 	}
@@ -175,13 +175,13 @@ public class NeonBatch extends BaseShapeBatch {
 	 */
 	public void drawOval(float x, float y, float width, float height, float rotationDeg, float lineWidth, Color color, int segments, boolean filled) {
 		if (segments < 3) return;
-		
+
 		//处理空心厚度修正
 		float w = filled ? width : width - lineWidth;
 		float h = filled ? height : height - lineWidth;
 		float halfW = w / 2;
 		float halfH = h / 2;
-		
+
 		float[] verts = getBuffer(segments);
 		float angleStep = 360f / segments;
 		float rotRad = rotationDeg * MathUtils.degreesToRadians;
@@ -192,12 +192,12 @@ public class NeonBatch extends BaseShapeBatch {
 			float rad = i * angleStep * MathUtils.degreesToRadians;
 			float lx = MathUtils.cos(rad) * halfW;
 			float ly = MathUtils.sin(rad) * halfH;
-			
+
 			// Rotate and translate
 			verts[i * 2] = x + (lx * cosRot - ly * sinRot);
 			verts[i * 2 + 1] = y + (lx * sinRot + ly * cosRot);
 		}
-		
+
 		drawPolygon(verts, segments, lineWidth, color, filled);
 	}
 
@@ -353,6 +353,102 @@ public class NeonBatch extends BaseShapeBatch {
 	 */
 	public void drawTriangleStrip(float[] vertices, float[] colors, int count) {
 		super.drawTriangleStrip(vertices, colors, count);
+	}
+
+	// ==========================================================
+	// 5. 新增的高级渐变 API (Gradient & Glow)
+	// ==========================================================
+
+	/**
+	 * [新增] 绘制任意三点渐变三角形
+	 */
+	public void drawGradientTriangle(float x1, float y1, Color c1, float x2, float y2, Color c2, float x3, float y3, Color c3) {
+		drawSolidTriangle(x1, y1, c1.toFloatBits(), x2, y2, c2.toFloatBits(), x3, y3, c3.toFloatBits());
+	}
+
+	/**
+	 * [新增] 垂直线性渐变矩形 (Top -> Bottom)
+	 */
+	public void drawVerticalGradientRect(float x, float y, float width, float height, Color bottomColor, Color topColor) {
+		float cBot = bottomColor.toFloatBits();
+		float cTop = topColor.toFloatBits();
+		// Tri 1: BL, TL, TR
+		drawSolidTriangle(x, y, cBot, x, y + height, cTop, x + width, y + height, cTop);
+		// Tri 2: BL, TR, BR
+		drawSolidTriangle(x, y, cBot, x + width, y + height, cTop, x + width, y, cBot);
+	}
+
+	/**
+	 * [新增] 水平三色渐变 (Left -> Center -> Right)
+	 * 适合做柱状体体积感或反光高光
+	 */
+	public void drawHorizontalGradientRect(float x, float y, float width, float height, Color left, Color center, Color right) {
+		float cL = left.toFloatBits();
+		float cC = center.toFloatBits();
+		float cR = right.toFloatBits();
+		float midX = x + width / 2;
+
+		// Left half
+		drawSolidTriangle(x, y, cL, x, y + height, cL, midX, y + height, cC);
+		drawSolidTriangle(x, y, cL, midX, y + height, cC, midX, y, cC);
+
+		// Right half
+		drawSolidTriangle(midX, y, cC, midX, y + height, cC, x + width, y + height, cR);
+		drawSolidTriangle(midX, y, cC, x + width, y + height, cR, x + width, y, cR);
+	}
+
+	/**
+	 * [新增] 径向渐变圆形 (Center -> Edge)
+	 * 制造球体效果的核心
+	 * @param centerColor 中心点颜色 (高光)
+	 * @param edgeColor 边缘颜色 (阴影)
+	 */
+	public void drawRadialGradientCircle(float x, float y, float radius, Color centerColor, Color edgeColor, int segments) {
+		float[] verts = getBuffer(segments);
+		float angleStep = 360f / segments;
+		for (int i = 0; i < segments; i++) {
+			float rad = i * angleStep * MathUtils.degreesToRadians;
+			verts[i * 2] = x + MathUtils.cos(rad) * radius;
+			verts[i * 2 + 1] = y + MathUtils.sin(rad) * radius;
+		}
+		pathFillRadialGradient(x, y, verts, segments, centerColor.toFloatBits(), edgeColor.toFloatBits());
+	}
+
+	/**
+	 * [新增] 渐变描边圆形 (支持羽化/发光)
+	 * @param width 线宽
+	 * @param innerColor 线条内侧颜色
+	 * @param outerColor 线条外侧颜色 (设为 alpha=0 可做发光/抗锯齿)
+	 */
+	public void drawCircleGradientStroke(float x, float y, float radius, float width, Color innerColor, Color outerColor, int segments) {
+		float[] verts = getBuffer(segments);
+		float angleStep = 360f / segments;
+		for (int i = 0; i < segments; i++) {
+			float rad = i * angleStep * MathUtils.degreesToRadians;
+			verts[i * 2] = x + MathUtils.cos(rad) * radius;
+			verts[i * 2 + 1] = y + MathUtils.sin(rad) * radius;
+		}
+		// 使用闭合的渐变描边
+		pathStrokeGradient(verts, segments, width, true, innerColor.toFloatBits(), outerColor.toFloatBits());
+	}
+
+	/**
+	 * [新增] 绘制羽化抗锯齿的多边形 (Smooth Polygon)
+	 * 自动叠加一层填充和一层透明渐变描边
+	 * @param featherWidth 羽化边缘的宽度 (通常 1.0~2.0)
+	 */
+	public void drawSmoothPolygon(float[] vertices, int count, Color color, float featherWidth) {
+		// 1. 实心填充
+		pathFill(vertices, count, color);
+
+		// 2. 透明边缘描边 (Inner=Color, Outer=Transparent)
+		// 注意：这需要创建一个临时的透明色，稍微有点 GC，高性能场景建议缓存颜色对象
+		float cBits = color.toFloatBits();
+		Color cTransparent = color.cpy(); // 建议外部缓存传入以优化
+		cTransparent.a = 0f;
+		float cTransBits = cTransparent.toFloatBits();
+
+		pathStrokeGradient(vertices, count, featherWidth, true, cBits, cTransBits);
 	}
 
 	// --- 内部辅助 ---

@@ -2,8 +2,8 @@ package com.goldsprite.magicdungeon.screens;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
-import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.magicdungeon.screens.tests.*;
+import com.goldsprite.magicdungeon.screens.tests.neondrawer.NeonDrawerTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonLayeredMixTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonIKTestScreen;
 import com.goldsprite.magicdungeon.screens.tests.neonskel.NeonSkelEditorScreen;
@@ -18,6 +18,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 
 		map.put("多边形绘制器蒙皮渲染测试", PolyBatchTestScreen.class);
 		map.put("控件测试: 自动焦点式滑动布局", ScrollLayoutTestScreen.class);
+		map.put("NeonDrawer新演示", NeonDrawerTestScreen.class);
 		map.put("", null);
 
 		map.put("通用 UI & 皮肤切换演示", VisUIDemoScreen.class);

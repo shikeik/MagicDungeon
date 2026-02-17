@@ -33,13 +33,13 @@ public class BaseShapeBatch extends SpriteBatch{
 		pixmap.setColor(Color.WHITE);
 		pixmap.fill();
 		Texture texture = new Texture(pixmap);
-		texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+		// [修改建议] Linear 滤波能让羽化效果更平滑，如果追求极致像素风可改回 Nearest
+		texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 		blankRegion = new TextureRegion(texture);
 		whiteU = blankRegion.getU();
 		whiteV = blankRegion.getV();
 		pixmap.dispose();
 	}
-
 
 	// [新增] 暴露白纹理供高级自定义绘制使用
 	public TextureRegion getBlankRegion() {
@@ -90,6 +90,26 @@ public class BaseShapeBatch extends SpriteBatch{
 		}
 	}
 
+	// [新增 API] 径向渐变填充 (Radial Gradient Fill)
+	// 适用于球体、发光中心等效果
+	// centerColor: 中心点颜色, edgeColor: 边缘点颜色
+	protected void pathFillRadialGradient(float centerX, float centerY, float[] vertices, int count, float centerColorBits, float edgeColorBits) {
+		if (count < 2) return;
+		for (int i = 0; i < count - 1; i++) {
+			drawSolidTriangle(
+				centerX, centerY, centerColorBits,      // 中心点
+				vertices[i * 2], vertices[i * 2 + 1], edgeColorBits, // P1
+				vertices[(i + 1) * 2], vertices[(i + 1) * 2 + 1], edgeColorBits // P2
+			);
+		}
+		// 处理首尾闭合 (如果是圆)
+		drawSolidTriangle(
+			centerX, centerY, centerColorBits,
+			vertices[(count - 1) * 2], vertices[(count - 1) * 2 + 1], edgeColorBits,
+			vertices[0], vertices[1], edgeColorBits
+		);
+	}
+
 	// --- 核心算法 2: 描边 (Stroke) ---
 
 	/**
@@ -100,10 +120,16 @@ public class BaseShapeBatch extends SpriteBatch{
 	 * @param isClosed 是否闭合 (首尾相连)
 	 */
 	protected void pathStroke(float[] vertices, int count, float width, boolean isClosed, Color color) {
+		// 复用原来的逻辑，只需将颜色转为 floatBits 并传入单色版本
+		pathStrokeGradient(vertices, count, width, isClosed, color.toFloatBits(), color.toFloatBits());
+	}
+
+	// [新增/重构 API] 支持双色渐变的描边 (用于羽化、发光、立体边框)
+	// innerColor: 线条内侧颜色, outerColor: 线条外侧颜色
+	protected void pathStrokeGradient(float[] vertices, int count, float width, boolean isClosed, float innerColorBits, float outerColorBits) {
 		if (count < 2) return;
 
 		float halfWidth = width * 0.5f;
-		float colorBits = color.toFloatBits();
 
 		// 缓存上一个断面的内外点
 		float prevOuterX = 0, prevOuterY = 0, prevInnerX = 0, prevInnerY = 0;
@@ -169,7 +195,8 @@ public class BaseShapeBatch extends SpriteBatch{
 
 			// 3. 缝合 (Strip Generation)
 			if (i > 0) {
-				drawQuadStrip(prevOuterX, prevOuterY, currOuterX, currOuterY, currInnerX, currInnerY, prevInnerX, prevInnerY, colorBits);
+				// [关键修改] 传入外侧和内侧颜色
+				drawQuadStrip(prevOuterX, prevOuterY, currOuterX, currOuterY, currInnerX, currInnerY, prevInnerX, prevInnerY, outerColorBits, innerColorBits);
 			}
 
 			// 更新缓存
@@ -179,7 +206,7 @@ public class BaseShapeBatch extends SpriteBatch{
 
 		// 4. 处理最后的闭合缝隙 (Last -> First)
 		if (isClosed) {
-			drawQuadStrip(prevOuterX, prevOuterY, firstOuterX, firstOuterY, firstInnerX, firstInnerY, prevInnerX, prevInnerY, colorBits);
+			drawQuadStrip(prevOuterX, prevOuterY, firstOuterX, firstOuterY, firstInnerX, firstInnerY, prevInnerX, prevInnerY, outerColorBits, innerColorBits);
 		}
 	}
 
@@ -223,27 +250,39 @@ public class BaseShapeBatch extends SpriteBatch{
 
 	// --- 底层 Vertex 提交 (画四边形和三角形) ---
 
-	// 画两个三角形组成的四边形 (Strip)
-	private void drawQuadStrip(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float colorBits) {
-		// Tri 1: 1-2-3 (TopRight Triangle)
-		drawSolidTriangle(x1, y1, x2, y2, x3, y3, colorBits);
-		// Tri 2: 1-3-4 (BottomLeft Triangle)
-		drawSolidTriangle(x1, y1, x3, y3, x4, y4, colorBits);
+	// [旧 API] 单色四边形带 (保留兼容)
+	protected void drawQuadStrip(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float colorBits) {
+		drawQuadStrip(x1, y1, x2, y2, x3, y3, x4, y4, colorBits, colorBits);
 	}
 
-	// 直接向 Batch 提交三角形顶点
-	private void drawSolidTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float colorBits) {
+	// [新增 API] 双色四边形带 (用于渐变描边)
+	// 顺序: 1(Outer), 2(Outer), 3(Inner), 4(Inner)
+	protected void drawQuadStrip(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float colorOuter, float colorInner) {
+		// Tri 1: 1-2-3 (Outer-Outer-Inner)
+		drawSolidTriangle(x1, y1, colorOuter, x2, y2, colorOuter, x3, y3, colorInner);
+		// Tri 2: 1-3-4 (Outer-Inner-Inner)
+		drawSolidTriangle(x1, y1, colorOuter, x3, y3, colorInner, x4, y4, colorInner);
+	}
+
+	// [旧 API] 单色三角形 (保留兼容)
+	protected void drawSolidTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float colorBits) {
+		drawSolidTriangle(x1, y1, colorBits, x2, y2, colorBits, x3, y3, colorBits);
+	}
+
+	// [新增 API] 三色三角形 (用于自由渐变)
+	protected void drawSolidTriangle(float x1, float y1, float c1, float x2, float y2, float c2, float x3, float y3, float c3) {
 		// 构造4个顶点 (SpriteBatch 需要 4 个顶点画两个三角，这里我们通过退化第4个点画一个三角)
 		float[] vArr = tempVerts; // 复用数组
+		int idx = 0;
 
 		// V1
-		vArr[0] = x1; vArr[1] = y1; vArr[2] = colorBits; vArr[3] = whiteU; vArr[4] = whiteV;
+		vArr[idx++] = x1; vArr[idx++] = y1; vArr[idx++] = c1; vArr[idx++] = whiteU; vArr[idx++] = whiteV;
 		// V2
-		vArr[5] = x2; vArr[6] = y2; vArr[7] = colorBits; vArr[8] = whiteU; vArr[9] = whiteV;
+		vArr[idx++] = x2; vArr[idx++] = y2; vArr[idx++] = c2; vArr[idx++] = whiteU; vArr[idx++] = whiteV;
 		// V3
-		vArr[10] = x3; vArr[11] = y3; vArr[12] = colorBits; vArr[13] = whiteU; vArr[14] = whiteV;
+		vArr[idx++] = x3; vArr[idx++] = y3; vArr[idx++] = c3; vArr[idx++] = whiteU; vArr[idx++] = whiteV;
 		// V4 (Repeat V3) -> Degenerate
-		vArr[15] = x3; vArr[16] = y3; vArr[17] = colorBits; vArr[18] = whiteU; vArr[19] = whiteV;
+		vArr[idx++] = x3; vArr[idx++] = y3; vArr[idx++] = c3; vArr[idx++] = whiteU; vArr[idx++] = whiteV;
 
 		draw(blankRegion.getTexture(), vArr, 0, 20);
 	}
@@ -254,7 +293,7 @@ public class BaseShapeBatch extends SpriteBatch{
 		for (int i = 0; i < count - 2; i++) {
 			// 构成三角形: (i, i+1, i+2)
 			int idx1 = i, idx2 = i + 1, idx3 = i + 2;
-			// 简单的交替绕序处理（虽然 Batch 默认不开剔除，为了规范还是写一下）
+			// 简单的交替绕序处理
 			if (i % 2 != 0) { int tmp = idx2; idx2 = idx3; idx3 = tmp; } // Swap to maintain winding
 
 			drawSolidTriangle(
@@ -264,14 +303,4 @@ public class BaseShapeBatch extends SpriteBatch{
 			);
 		}
 	}
-
-	private void drawSolidTriangle(float x1, float y1, float c1, float x2, float y2, float c2, float x3, float y3, float c3) {
-		float[] vArr = tempVerts;
-		vArr[0] = x1; vArr[1] = y1; vArr[2] = c1; vArr[3] = whiteU; vArr[4] = whiteV;
-		vArr[5] = x2; vArr[6] = y2; vArr[7] = c2; vArr[8] = whiteU; vArr[9] = whiteV;
-		vArr[10]= x3; vArr[11]= y3; vArr[12]= c3; vArr[13]= whiteU; vArr[14]= whiteV;
-		vArr[15]= x3; vArr[16]= y3; vArr[17]= c3; vArr[18]= whiteU; vArr[19]= whiteV;
-		draw(blankRegion.getTexture(), vArr, 0, 20);
-	}
 }
-
