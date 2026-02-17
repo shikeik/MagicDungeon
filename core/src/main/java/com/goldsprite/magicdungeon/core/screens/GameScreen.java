@@ -54,6 +54,7 @@ import com.esotericsoftware.spine.Animation;
 import com.goldsprite.magicdungeon.screens.WorldMapScreen;
 import com.goldsprite.magicdungeon.world.DungeonTheme;
 import com.goldsprite.magicdungeon.assets.AudioAssets;
+import com.goldsprite.magicdungeon.assets.SpineManager;
 import com.goldsprite.magicdungeon.vfx.VFXManager;
 
 public class GameScreen extends GScreen {
@@ -86,7 +87,6 @@ public class GameScreen extends GScreen {
 
 	// Spine Resources
 	private SkeletonRenderer spineRenderer;
-	private TextureAtlas wolfAtlas;
 	private SkeletonData wolfSkeletonData;
 
 	private static class SpineState {
@@ -147,17 +147,9 @@ public class GameScreen extends GScreen {
 		spineRenderer = new SkeletonRenderer();
 		spineRenderer.setPremultipliedAlpha(false);
 
-		try {
-			if (Gdx.files.internal("spines/wolf/exports/spine_108_02.atlas").exists()) {
-				wolfAtlas = new TextureAtlas(Gdx.files.internal("spines/wolf/exports/spine_108_02.atlas"));
-				SkeletonJson json = new SkeletonJson(wolfAtlas);
-				json.setScale(1.0f); // Default scale
-				wolfSkeletonData = json.readSkeletonData(Gdx.files.internal("spines/wolf/exports/spine_108_02.json"));
-			} else {
-				Gdx.app.error("GameScreen", "Wolf spine atlas not found!");
-			}
-		} catch (Exception e) {
-			Gdx.app.error("GameScreen", "Failed to load Wolf Spine", e);
+		wolfSkeletonData = SpineManager.getInstance().get("Wolf");
+		if (wolfSkeletonData == null) {
+			Gdx.app.error("GameScreen", "Wolf spine data not found!");
 		}
 
 		System.out.println("GameScreen Constructor Started");
@@ -1497,7 +1489,6 @@ public class GameScreen extends GScreen {
 		if (batch != null) batch.dispose();
 		if (polyBatch != null) polyBatch.dispose();
 		if (dungeonRenderer != null) dungeonRenderer.dispose();
-		if (wolfAtlas != null) wolfAtlas.dispose();
 		if (hud != null) hud.dispose();
 		if (audio != null) {
 			audio.stopBGM();

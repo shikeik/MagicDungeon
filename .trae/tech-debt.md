@@ -1,9 +1,9 @@
 # 技术债与优化清单 (Tech Debt & Optimization Backlog)
 
 > 本文件用于记录代码审查中发现的非阻断性问题、重构计划及性能优化点。
-> **P0 级严重问题请直接修复，不要记录在此。**
 
 ## 待处理 (Pending)
+### 严重问题 (P0)
 
 ### 高优先级 (High Priority - P1)
 - [x] [P1] Core: GameScreen 资源释放缺失
@@ -17,10 +17,6 @@
   - 完成日期: 2026-02-17
 
 ### 中优先级 (Medium Priority - P2)
-- [ ] [P2] Assets: Spine 资源加载硬编码
-  - 详情: `GameScreen.create()` 中直接加载 `spines/wolf/exports/spine_108_02.atlas`，路径硬编码且未通过 `AssetManager` 或统一的 Loader 管理，导致资源重复加载和管理困难。
-  - 提出日期: 2026-02-17
-
 - [ ] [P2] World: WorldMapScreen 地图节点数据硬编码
   - 详情: `initNodes()` 方法中硬编码了所有地牢节点的坐标、颜色、名称等数据。建议提取到 JSON/XML 配置文件或专门的数据类中。
   - 提出日期: 2026-02-17
@@ -30,7 +26,18 @@
   - 提出日期: 2026-02-17
 
 ### 低优先级 (Low Priority - P3)
-*(暂无)*
+- [ ] [P3] Core: GameScreen CameraController 逻辑待完善
+  - 详情: `GameScreen.initViewport` 中 `SimpleCameraController` 的 activationCondition 有个 TODO 需要实现 (仅在光标落在 UI 区域外时激活)。
+  - 提出日期: 2026-02-17
+
+- [ ] [P3] VFX: VFXManager 缺少清理方法
+  - 详情: `VFXManager` 维护了粒子列表，建议添加 `dispose()` 或 `clear()` 方法以便在场景切换时彻底清理引用。
+  - 提出日期: 2026-02-17
 
 ## 已完成 (Completed)
+- [x] [P2] Assets: Spine 资源加载硬编码
+  - 详情: `GameScreen.create()` 中直接加载 `spines/wolf/exports/spine_108_02.atlas`，路径硬编码且未通过 `AssetManager` 或统一的 Loader 管理，导致资源重复加载和管理困难。
+  - 提出日期: 2026-02-17
+  - 完成日期: 2026-02-17
+
 *(暂无)*

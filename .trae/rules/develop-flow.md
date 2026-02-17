@@ -13,7 +13,7 @@ description: AI 自动开发流程入口
 *   **指令 "拾取任务" / "开发"**:
     -> **[ 功能开发流 (Feature Flow) ](flow-feature.md)**
 
-*   **指令 "代码审查" / "优化" / "清理技术债"**:
+*   **指令 "优化任务"**:
     -> **[ 技术债优化流 (Optimization Flow) ](flow-optimization.md)**
 
 ## 1. 常用资源
