@@ -76,22 +76,71 @@ public class NeonItemGenerator {
         Color liquid = Color.RED;
         if (name.contains("Mana") || name.contains("魔法")) liquid = Color.BLUE;
         if (name.contains("Elixir") || name.contains("万能")) liquid = Color.PURPLE;
+        Color glass = new Color(1, 1, 1, 0.3f);
+        Color cork = Color.valueOf("#8d6e63");
 
-        // Body: 128, 170, 70 -> Circle Center Y (Top-Left) = 170
-        // Bottom-Left Y = 256 - 170 = 86
-        drawCircleNorm(batch, 128*S, 86*S, 70*S, liquid);
+        // High Quality Flask Shape
+        // Bulbous bottom, tapered neck
         
-        // Neck: 108, 60, 40, 110 -> Y=256-60-110=86
-        drawRectNorm(batch, 108*S, 86*S, 40*S, 110*S, liquid.cpy().mul(0.8f));
+        float cx = 128 * S;
+        float bottomY = 50 * S;
+        float bulbR = 70 * S;
+        float neckW = 40 * S;
+        float neckH = 60 * S;
+        float lipW = 50 * S;
+        float lipH = 15 * S;
         
-        // Rim: 100, 50, 56, 15 -> Y=256-50-15=191
-        drawRectNorm(batch, 100*S, 191*S, 56*S, 15*S, Color.valueOf("#cccccc"));
+        // 1. Liquid (Inner Bulb)
+        // Fill a bit less than full bulb
+        float liquidLevel = bottomY + bulbR * 1.2f; // Slightly above center
+        batch.drawCircle(cx, bottomY + bulbR, bulbR - 4*S, 0, liquid, 32, true);
         
-        // Cork: 113, 30, 30, 20 -> Y=256-30-20=206
-        drawRectNorm(batch, 113*S, 206*S, 30*S, 20*S, Color.valueOf("#8d6e63"));
+        // Liquid Surface (Ellipse?)
+        // batch.drawOval(cx, liquidLevel, bulbR*1.8f, 20*S, 0, 0, liquid.cpy().mul(1.2f), 32, true);
 
-        // Highlight: 150, 150, 10 -> Center Y=256-150=106
-        drawCircleNorm(batch, 150*S, 106*S, 10*S, new Color(1f, 1f, 1f, 0.4f));
+        // 2. Glass Bottle Outline
+        // Bulb
+        batch.drawCircle(cx, bottomY + bulbR, bulbR, 4*S, glass, 32, false);
+        
+        // Neck (Trapezoid connecting to bulb)
+        float neckBaseY = bottomY + bulbR * 1.5f; // Where neck starts blending
+        // Actually, let's just draw a rect for neck and blend it
+        float neckY = bottomY + bulbR * 1.6f;
+        float[] neckPoly = new float[] {
+             cx - neckW/2, neckY,
+             cx + neckW/2, neckY,
+             cx + neckW/2, neckY + neckH,
+             cx - neckW/2, neckY + neckH
+        };
+        batch.drawPolygon(neckPoly, 4, 4*S, glass, false);
+        
+        // Lip
+        float lipY = neckY + neckH;
+        batch.drawRect(cx - lipW/2, lipY, lipW, lipH, 0, 4*S, glass, false);
+        
+        // 3. Cork
+        float corkW_bot = 30 * S;
+        float corkW_top = 35 * S;
+        float corkH = 25 * S;
+        float[] corkPoly = new float[] {
+            cx - corkW_bot/2, lipY + lipH,
+            cx + corkW_bot/2, lipY + lipH,
+            cx + corkW_top/2, lipY + lipH + corkH,
+            cx - corkW_top/2, lipY + lipH + corkH
+        };
+        batch.drawPolygon(corkPoly, 4, 0, cork, true);
+
+        // 4. Highlights / Reflections
+        // Curved highlight on bulb
+        batch.drawArc(cx - 20*S, bottomY + bulbR + 20*S, bulbR * 0.7f, 120, 40, 6*S, new Color(1,1,1,0.6f), 16);
+        // Dot highlight
+        batch.drawCircle(cx + 30*S, bottomY + bulbR + 30*S, 8*S, 0, new Color(1,1,1,0.8f), 8, true);
+        
+        // Bubbles inside
+        if (MathUtils.randomBoolean(0.7f)) {
+             batch.drawCircle(cx - 10*S, bottomY + bulbR - 20*S, 5*S, 0, new Color(1,1,1,0.3f), 8, true);
+             batch.drawCircle(cx + 20*S, bottomY + bulbR, 3*S, 0, new Color(1,1,1,0.3f), 8, true);
+        }
     }
 
     private static void drawSword(NeonBatch batch, String name) {

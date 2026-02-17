@@ -67,154 +67,175 @@ public class NeonSpriteGenerator {
     }
 
     private static void drawCharacterImpl(NeonBatch batch, String mainHand, String offHand, String helmet, String armor, String boots) {
-        // Colors
-        Color skin = Color.valueOf("#ffccaa");
-        Color legsColor = Color.valueOf("#8d6e63");
+        // High Quality Character (Viking / Warrior Style)
+        // Body Proportions: 
+        // Head: 64x64
+        // Body: 80x80
+        // Legs: 40x50
 
-        // 转换公式:
-        // Old (Top-Left Origin): x, y, w, h
-        // New (Bottom-Left Origin, 0~1): 
-        // X = x * S
-        // Y = (REF_SIZE - y - h) * S  (将 Top Y 转换为 Bottom Y)
-        // W = w * S
-        // H = h * S
+        // Center X = 128
+        float cx = 128 * S;
+        float groundY = 16 * S; // Feet on ground
 
-        // 1. Legs
-        // L: 90, 180, 25, 60 -> Y=(256-180-60)=16
-        drawRectNorm(batch, 90*S, 16*S, 25*S, 60*S, legsColor);
-        // R: 141, 180, 25, 60
-        drawRectNorm(batch, 141*S, 16*S, 25*S, 60*S, legsColor);
-
-        // 2. Boots
-        if (boots != null) {
-            Color bootsColor = Color.valueOf("#3E2723");
-            float bootY_top = 215;
-            float bootW = 65;
-            float bootH = 45;
-            // Y = 256 - 215 - 45 = -4. (超出底部，截断)
-            // 实际上我们允许绘制在负坐标，视口会裁切
-            float bootY_bot = (REF_SIZE - bootY_top - bootH); 
-            
-            drawRectNorm(batch, 53*S, bootY_bot*S, bootW*S, bootH*S, bootsColor);
-            drawRectNorm(batch, 138*S, bootY_bot*S, bootW*S, bootH*S, bootsColor);
-
-            // Boot Detail
-            Color bootLight = bootsColor.cpy().mul(1.2f);
-            // Soles: y + h - 10 (Top system) -> Lower in visual (Higher Y value)
-            // Old: y = bootY + bootH - 10 = 215 + 45 - 10 = 250.
-            // Old H = 10.
-            // New Y = 256 - 250 - 10 = -4.
-            float soleY_top = bootY_top + bootH - 10;
-            float soleY_bot = REF_SIZE - soleY_top - 10;
-            drawRectNorm(batch, 53*S, soleY_bot*S, bootW*S, 10*S, Color.BLACK); 
-            drawRectNorm(batch, 138*S, soleY_bot*S, bootW*S, 10*S, Color.BLACK);
-            
-            // Highlights: y + 5 (Top system) -> Higher in visual (Lower Y value)
-            // Old: y = 215 + 5 = 220. H=20.
-            // New Y = 256 - 220 - 20 = 16.
-            float highY_top = bootY_top + 5;
-            float highY_bot = REF_SIZE - highY_top - 20;
-            drawRectNorm(batch, (53 + 5)*S, highY_bot*S, 10*S, 20*S, bootLight); 
-            drawRectNorm(batch, (138 + 5)*S, highY_bot*S, 10*S, 20*S, bootLight);
-        } else {
-            // Default Feet (Small shoes)
-            Color shoeColor = Color.valueOf("#5d4037");
-            // 90, 230, 25, 10 -> Y=256-230-10=16
-            drawRectNorm(batch, 90*S, 16*S, 25*S, 10*S, shoeColor);
-            drawRectNorm(batch, 141*S, 16*S, 25*S, 10*S, shoeColor);
-        }
-
-        // 3. Body & Armor
-        if (armor != null) {
-            Color armorColor = Color.valueOf("#2196F3");
-            Color darkArmor = Color.valueOf("#1565C0");
-            Color gold = Color.GOLD;
-
-            // Main Chest: 70, 100, 116, 90 -> Y=256-100-90=66
-            drawRectNorm(batch, 70*S, 66*S, 116*S, 90*S, armorColor);
-            // Shoulder Pads: 50, 90, 30, 40 -> Y=256-90-40=126
-            drawRectNorm(batch, 50*S, 126*S, 30*S, 40*S, darkArmor);
-            // 176, 90, 30, 40 -> Y=126
-            drawRectNorm(batch, 176*S, 126*S, 30*S, 40*S, darkArmor);
-
-            // Chest Plate Detail: 80, 110, 96, 70 -> Y=256-110-70=76
-            drawRectNorm(batch, 80*S, 76*S, 96*S, 70*S, darkArmor);
-            // Center strip: 118, 110, 20, 70 -> Y=76
-            drawRectNorm(batch, 118*S, 76*S, 20*S, 70*S, gold);
-
-            // Belt: 70, 180, 116, 15 -> Y=256-180-15=61
-            drawRectNorm(batch, 70*S, 61*S, 116*S, 15*S, Color.valueOf("#3e2723"));
-            // 118, 180, 20, 15 -> Y=61
-            drawRectNorm(batch, 118*S, 61*S, 20*S, 15*S, Color.GOLD);
-        } else {
-            // Default Tunic
-            Color tunicColor = Color.valueOf("#4caf50");
-            // 75, 100, 106, 90 -> Y=256-100-90=66
-            drawRectNorm(batch, 75*S, 66*S, 106*S, 90*S, tunicColor);
-            // Belt: 75, 180, 106, 10 -> Y=256-180-10=66
-            drawRectNorm(batch, 75*S, 66*S, 106*S, 10*S, Color.valueOf("#3e2723"));
-        }
-
-        // Arms
-        Color armColor = armor != null ? Color.valueOf("#1565C0") : skin;
-        // Left: 40, 100, 25, 70 -> Y=256-100-70=86
-        drawRectNorm(batch, 40*S, 86*S, 25*S, 70*S, armColor);
-        // Right: 191, 100, 25, 70 -> Y=86
-        drawRectNorm(batch, 191*S, 86*S, 25*S, 70*S, armColor);
+        // --- 1. Legs (Thicker, separated) ---
+        Color pantsColor = Color.valueOf("#5d4037");
+        // Left Leg
+        float legW = 30 * S;
+        float legH = 50 * S;
+        float legGap = 10 * S;
         
-        // Hands
-        // 40, 170, 25, 25 -> Y=256-170-25=61
-        drawRectNorm(batch, 40*S, 61*S, 25*S, 25*S, skin);
-        // 191, 170, 25, 25 -> Y=61
-        drawRectNorm(batch, 191*S, 61*S, 25*S, 25*S, skin);
+        // Left Leg: x = cx - gap/2 - w
+        drawRectNorm(batch, cx - legGap/2 - legW, groundY, legW, legH, pantsColor);
+        // Right Leg
+        drawRectNorm(batch, cx + legGap/2, groundY, legW, legH, pantsColor);
 
-        // 4. Head
-        float headW = 76;
-        float headH = 64;
-        float headX = 128 - headW/2;
-        float headY = 36; // Top Y
-        // New Y = 256 - 36 - 64 = 156
-        float headY_bot = REF_SIZE - headY - headH;
-        drawRectNorm(batch, headX*S, headY_bot*S, headW*S, headH*S, skin);
-
-        // Face (Simple)
-        // Eyes: x+15, y+25, 10, 10
-        // New Y = 256 - (36+25) - 10 = 256 - 61 - 10 = 185
-        float eyesY_bot = REF_SIZE - (headY + 25) - 10;
-        drawRectNorm(batch, (headX + 15)*S, eyesY_bot*S, 10*S, 10*S, Color.BLACK);
-        drawRectNorm(batch, (headX + headW - 25)*S, eyesY_bot*S, 10*S, 10*S, Color.BLACK);
-
-        // Helmet
-        if (helmet != null) {
-            Color helmColor = Color.valueOf("#607d8b");
-            // Top: headX-5, headY-10, headW+10, 30
-            // Y = 256 - (36-10) - 30 = 256 - 26 - 30 = 200
-            drawRectNorm(batch, (headX - 5)*S, 200*S, (headW + 10)*S, 30*S, helmColor);
-            
-            // Sides: headX-5, headY+20, 10, 50
-            // Y = 256 - (36+20) - 50 = 256 - 56 - 50 = 150
-            drawRectNorm(batch, (headX - 5)*S, 150*S, 10*S, 50*S, helmColor);
-            drawRectNorm(batch, (headX + headW - 5)*S, 150*S, 10*S, 50*S, helmColor);
-
-            // Horns: headX-15, headY-20, 10, 40
-            // Y = 256 - (36-20) - 40 = 256 - 16 - 40 = 200
-            drawRectNorm(batch, (headX - 15)*S, 200*S, 10*S, 40*S, Color.WHITE);
-            drawRectNorm(batch, (headX + headW + 5)*S, 200*S, 10*S, 40*S, Color.WHITE);
-        } else {
-            // Hair: headX, headY, headW, 15
-            // Y = 256 - 36 - 15 = 205
-            drawRectNorm(batch, headX*S, 205*S, headW*S, 15*S, Color.BROWN);
+        // Boots (if present)
+        if (boots != null) {
+            Color bootColor = Color.valueOf("#3e2723");
+            float bootH = 20 * S;
+            // Left Boot
+            drawRectNorm(batch, cx - legGap/2 - legW - 5*S, groundY, legW + 10*S, bootH, bootColor);
+            // Right Boot
+            drawRectNorm(batch, cx + legGap/2 - 5*S, groundY, legW + 10*S, bootH, bootColor);
         }
 
-        // Weapons
+        // --- 2. Body / Armor (Trapezoid shape for chest) ---
+        float bodyY = groundY + legH;
+        float bodyW_bot = 70 * S;
+        float bodyW_top = 90 * S;
+        float bodyH = 80 * S;
+        
+        Color armorColor = (armor != null) ? Color.GRAY : Color.valueOf("#a1887f"); // Metal or Leather
+        if (armor != null && armor.contains("Leather")) armorColor = Color.valueOf("#5d4037");
+
+        // Trapezoid Body
+        float[] bodyPoly = new float[] {
+            cx - bodyW_bot/2, bodyY,          // BL
+            cx + bodyW_bot/2, bodyY,          // BR
+            cx + bodyW_top/2, bodyY + bodyH,  // TR
+            cx - bodyW_top/2, bodyY + bodyH   // TL
+        };
+        batch.drawPolygon(bodyPoly, 4, 0, armorColor, true);
+
+        // Armor Detail (Cross or Plate)
+        if (armor != null) {
+            batch.drawRect(cx - 10*S, bodyY + 20*S, 20*S, 40*S, 0, 0, Color.DARK_GRAY, true);
+            batch.drawRect(cx - 30*S, bodyY + 35*S, 60*S, 10*S, 0, 0, Color.DARK_GRAY, true);
+        } else {
+            // Belt
+            batch.drawRect(cx - bodyW_bot/2 - 5*S, bodyY, bodyW_bot + 10*S, 15*S, 0, 0, Color.valueOf("#3e2723"), true);
+            // Buckle
+            batch.drawRect(cx - 8*S, bodyY, 16*S, 15*S, 0, 0, Color.GOLD, true);
+        }
+
+        // --- 3. Head (Rounder) ---
+        float headY = bodyY + bodyH - 5*S; // Slight overlap
+        float headSize = 60 * S;
+        Color skinColor = Color.valueOf("#ffccaa");
+        
+        // Head Base (Rounded Rect or Circle)
+        // Using circle for top part, rect for jaw
+        // Rect part
+        drawRectNorm(batch, cx - headSize/2, headY, headSize, headSize*0.6f, skinColor);
+        // Top circle part
+        // batch.drawCircle(cx, headY + headSize*0.6f, headSize/2, 0, skinColor, 16, true);
+        // Let's just use a rounded rect approximation: a rect + circle on top
+        drawRectNorm(batch, cx - headSize/2, headY, headSize, headSize/2, skinColor);
+        batch.drawCircle(cx, headY + headSize/2, headSize/2, 0, skinColor, 16, true);
+
+        // Face Features
+        float eyeY = headY + headSize * 0.4f;
+        float eyeX_L = cx - 12 * S;
+        float eyeX_R = cx + 12 * S;
+        
+        // Eyes (Black dots)
+        batch.drawCircle(eyeX_L, eyeY, 4*S, 0, Color.BLACK, 8, true);
+        batch.drawCircle(eyeX_R, eyeY, 4*S, 0, Color.BLACK, 8, true);
+        
+        // Mouth (Line)
+        batch.drawLine(cx - 5*S, headY + 15*S, cx + 5*S, headY + 15*S, 2*S, Color.valueOf("#d84315"));
+
+        // --- 4. Helmet (Viking Style) ---
+        if (helmet != null) {
+            Color helmColor = Color.GRAY;
+            float helmY = headY + headSize * 0.4f; // Sits lower on head
+            
+            // Helmet Dome (Half Circle)
+            batch.drawSector(cx, helmY, headSize*0.6f, 0, 180, helmColor, 16);
+            
+            // Rim
+            batch.drawRect(cx - headSize*0.6f, helmY, headSize*1.2f, 8*S, 0, 0, Color.LIGHT_GRAY, true);
+            
+            // Nose Guard
+            batch.drawRect(cx - 4*S, helmY - 15*S, 8*S, 20*S, 0, 0, Color.LIGHT_GRAY, true);
+
+            // Horns (Triangles)
+            Color hornColor = Color.WHITE;
+            // Left Horn
+            float hx = cx - headSize*0.5f;
+            float hy = helmY + 10*S;
+            // Pointing up-left
+            float[] hornL = new float[] {
+                hx, hy,
+                hx - 10*S, hy + 5*S,
+                hx - 25*S, hy + 40*S // Tip
+            };
+            batch.drawPolygon(hornL, 3, 0, hornColor, true);
+
+            // Right Horn
+            hx = cx + headSize*0.5f;
+            float[] hornR = new float[] {
+                hx, hy,
+                hx + 10*S, hy + 5*S,
+                hx + 25*S, hy + 40*S // Tip
+            };
+            batch.drawPolygon(hornR, 3, 0, hornColor, true);
+        } else {
+            // Hair (Brown, messy)
+            Color hairColor = Color.valueOf("#5d4037");
+            // Top hair
+            batch.drawSector(cx, headY + headSize*0.5f, headSize*0.55f, 0, 180, hairColor, 16);
+            // Sideburns
+            drawRectNorm(batch, cx - headSize/2 - 2*S, headY, 10*S, headSize*0.6f, hairColor);
+            drawRectNorm(batch, cx + headSize/2 - 8*S, headY, 10*S, headSize*0.6f, hairColor);
+        }
+
+        // --- 5. Weapons ---
+        // Draw weapons *in front* of body? Or hand placement?
+        // Let's draw them at the sides for now, maybe slightly angled.
+        
         if (mainHand != null) {
-            // Sword
-            // Blade: 10, 130, 20, 100 -> Y=256-130-100=26
-            drawRectNorm(batch, 10*S, 26*S, 20*S, 100*S, Color.GRAY);
-            // Guard: 5, 230, 30, 10 -> Y=256-230-10=16
-            drawRectNorm(batch, 5*S, 16*S, 30*S, 10*S, Color.DARK_GRAY);
-            // Hilt: 12, 240, 16, 30 -> Y=256-240-30=-14
-            drawRectNorm(batch, 12*S, -14*S, 16*S, 30*S, Color.valueOf("#5d4037"));
+            // Right Hand (Screen Left side relative to body? No, Right hand is usually User's Right)
+            // Let's put Main Hand on Right (cx + bodyW)
+            float handX = cx + bodyW_top/2 + 10*S;
+            float handY = bodyY + bodyH * 0.6f;
+            
+            // Sword pointing up
+            Color blade = Color.LIGHT_GRAY;
+            Color hilt = Color.valueOf("#3e2723");
+            
+            // Handle
+            batch.drawRect(handX - 2*S, handY - 10*S, 4*S, 20*S, 0, 0, hilt, true);
+            // Guard
+            batch.drawRect(handX - 10*S, handY + 10*S, 20*S, 4*S, 0, 0, hilt, true);
+            // Blade (Triangle-ish)
+            float[] swordPoly = new float[] {
+                handX - 6*S, handY + 14*S, // BL
+                handX + 6*S, handY + 14*S, // BR
+                handX, handY + 80*S        // Tip
+            };
+            batch.drawPolygon(swordPoly, 3, 0, blade, true);
+        }
+
+        if (offHand != null) {
+            // Left Hand (Shield?)
+            float handX = cx - bodyW_top/2 - 10*S;
+            float handY = bodyY + bodyH * 0.5f;
+            
+            // Round Shield
+            batch.drawCircle(handX, handY, 30*S, 0, Color.valueOf("#5d4037"), 16, true); // Wood
+            batch.drawCircle(handX, handY, 8*S, 0, Color.GRAY, 8, true); // Boss
+            batch.drawRect(handX - 25*S, handY - 2*S, 50*S, 4*S, 0, 0, Color.GRAY, true); // Metal rim?
         }
     }
 

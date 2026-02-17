@@ -250,9 +250,7 @@ public class NeonGenTestScreen extends GScreen {
     private void regenerate() {
         // Use the centralized NeonGenerator logic to ensure consistency
         // Note: NeonGenerator.generate returns a TextureRegion that is ready to draw (upright)
-        bakedRegion = NeonGenerator.getInstance().generate(generateSize, generateSize, batch -> {
-            drawContent(batch);
-        });
+        bakedRegion = NeonGenerator.getInstance().generate(generateSize, generateSize, this::drawContent);
     }
 
     private void drawContent(NeonBatch batch) {
@@ -268,7 +266,7 @@ public class NeonGenTestScreen extends GScreen {
             } else if (currentType == GeneratorType.WALL) {
                 NeonTileGenerator.drawWallTileset(batch, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
             } else if (currentType == GeneratorType.FLOOR) {
-                NeonTileGenerator.drawFloor(batch, 
+                NeonTileGenerator.drawFloor(batch,
                     ThemeConfig.FLOOR_BASE,
                     ThemeConfig.FLOOR_DARK,
                     ThemeConfig.FLOOR_HIGHLIGHT);
