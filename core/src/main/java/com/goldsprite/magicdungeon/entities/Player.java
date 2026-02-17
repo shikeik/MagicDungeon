@@ -8,20 +8,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
-import com.badlogic.gdx.graphics.Texture;
-import com.goldsprite.magicdungeon.assets.TextureManager;
-import com.goldsprite.magicdungeon.utils.SpriteGenerator;
+
 import com.goldsprite.magicdungeon.vfx.VFXManager;
 import com.badlogic.gdx.math.MathUtils;
 
 public class Player extends Entity {
 	public float moveTimer;
 	public float moveDelay;
-	
+
 	private float regenTimer = 0;
-	
+
 	public long coins = 0;
-	
+
 	public Set<String> discoveredItems = new HashSet<>();
 
 	// Stats
@@ -42,10 +40,10 @@ public class Player extends Entity {
 		super(x, y, Color.GREEN);
 
 		this.stats = new PlayerStats();
-		
+
 		this.moveTimer = 0;
 		// Base move delay, will be modified by attackSpeed
-		this.moveDelay = 0.25f; 
+		this.moveDelay = 0.25f;
 		this.visualSpeed = Constants.TILE_SIZE / 0.12f; // Keep visual speed fast
 
 		this.inventory = new ArrayList<>();
@@ -104,7 +102,7 @@ public class Player extends Entity {
                     int oldLevel = this.stats.level;
 					// Monster died - Gain XP
 					this.stats.addXp(10 + targetMonster.maxHp / 2);
-                    
+
                     if (this.stats.level > oldLevel) {
                         audio.playLevelUp();
                         if (vfx != null) {
@@ -113,7 +111,7 @@ public class Player extends Entity {
                         }
                     }
 				}
-				
+
 				// Calculate delay based on attack speed
 				// Base 0.25s / speed
 				this.moveTimer = this.moveDelay / this.stats.attackSpeed;
@@ -199,7 +197,7 @@ public class Player extends Entity {
 		updateStats();
 		updateVisuals();
 	}
-	
+
 	private void equipAccessory(InventoryItem item, int slotIndex) {
 		if (slotIndex >= 0 && slotIndex < 3) {
 			if (this.equipment.accessories[slotIndex] == item) {
@@ -209,7 +207,7 @@ public class Player extends Entity {
 			}
 			return;
 		}
-		
+
 		// Auto-equip to first empty or swap?
 		for(int i=0; i<3; i++) {
 			if (this.equipment.accessories[i] == null) {
@@ -240,13 +238,13 @@ public class Player extends Entity {
 				}
 			}
 		}
-		
+
 		// 2. Add to new slot if space available
 		if (inventory.size() < Constants.MAX_INVENTORY_SLOTS) {
 			inventory.add(newItem);
 			return true;
 		}
-		
+
 		// 3. Inventory full
 		return false;
 	}
@@ -266,12 +264,12 @@ public class Player extends Entity {
 				}
 			}
 		}
-		
+
 		// Calculate Price
 		// Base value * quality
 		int price = item.getValue();
 		this.coins += price * item.count;
-		
+
 		this.inventory.remove(item);
 		updateStats();
 		updateVisuals();
@@ -286,7 +284,7 @@ public class Player extends Entity {
 		} else if (item.heal > 0) {
 			this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + item.heal);
 		}
-		
+
 		item.count--;
 		if (item.count <= 0) {
 			this.inventory.remove(item);
@@ -296,12 +294,12 @@ public class Player extends Entity {
 	public void applyDeathPenalty() {
 		// 1. Level Penalty: Lose 3 levels (min level 1)
 		int targetLevel = Math.max(1, stats.level - 3);
-		
+
 		// Reset stats
 		stats.level = targetLevel;
 		stats.xp = 0;
 		stats.xpToNextLevel = stats.calculateRequiredXp(targetLevel);
-		
+
 		// Recalculate stats for new level
 		stats.recalculateStats();
 		stats.hp = stats.maxHp;
@@ -317,7 +315,7 @@ public class Player extends Entity {
 			dropped++;
 		}
 		System.out.println("Death Penalty: Level -> " + targetLevel + ", Dropped " + dropped + " items.");
-		
+
 		updateStats();
 	}
 
@@ -325,8 +323,8 @@ public class Player extends Entity {
 		// Reset to base stats (level based)
 		this.stats.recalculateStats();
 
-		int baseHpRegen = 1; 
-		int baseManaRegen = 1; 
+		int baseHpRegen = 1;
+		int baseManaRegen = 1;
 
 		if (equipment.mainHand != null) {
 			this.stats.atk += equipment.mainHand.atk;
@@ -334,7 +332,7 @@ public class Player extends Entity {
 			baseManaRegen += equipment.mainHand.manaRegen;
 		}
 		if (equipment.offHand != null) {
-			this.stats.def += equipment.offHand.def; 
+			this.stats.def += equipment.offHand.def;
 			baseHpRegen += equipment.offHand.heal;
 			baseManaRegen += equipment.offHand.manaRegen;
 		}
@@ -353,7 +351,7 @@ public class Player extends Entity {
 			baseHpRegen += equipment.boots.heal;
 			baseManaRegen += equipment.boots.manaRegen;
 		}
-		
+
 		for (InventoryItem acc : equipment.accessories) {
 			if (acc != null) {
 				this.stats.atk += acc.atk;

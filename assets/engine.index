@@ -59,7 +59,7 @@ com.goldsprite.magicdungeon.systems.AudioSystem
 com.goldsprite.magicdungeon.systems.SaveManager
 com.goldsprite.magicdungeon.ui.GameHUD
 com.goldsprite.magicdungeon.utils.Constants
-com.goldsprite.magicdungeon.utils.SpriteGenerator
+com.goldsprite.magicdungeon.utils.texturegenerator.SpriteGenerator
 com.goldsprite.magicdungeon.world.Dungeon
 com.goldsprite.magicdungeon.world.MapGenerator
 com.goldsprite.magicdungeon.world.Tile

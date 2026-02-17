@@ -23,19 +23,17 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
-import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.goldsprite.gdengine.ui.widget.SkewBar;
 import com.goldsprite.magicdungeon.assets.TextureManager;
-import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import com.goldsprite.magicdungeon.entities.*;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
-import com.goldsprite.magicdungeon.utils.SpriteGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.SpriteGenerator;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 import com.goldsprite.gdengine.ui.widget.DrawerPanel;
@@ -43,7 +41,6 @@ import com.goldsprite.gdengine.ui.widget.DrawerPanel.DrawerStyle;
 import com.goldsprite.gdengine.ui.widget.DrawerPanel.Direction;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -62,7 +59,7 @@ import com.badlogic.gdx.utils.Array;
 import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
 
 import com.badlogic.gdx.utils.Disposable;
-import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonSpriteGenerator;
 
 public class GameHUD implements Disposable {
 	public Stage stage;
@@ -1384,7 +1381,7 @@ public class GameHUD implements Disposable {
 		// Or use a root-like table that fills parent?
 		// Let's add directly to stage and set position.
 		stage.addActor(monsterInfoTable);
-		
+
 		// --- Overlay: Mini Map (Top Right Corner) ---
 		createMiniMap();
 		stage.addActor(miniMapDrawer);
@@ -1426,7 +1423,7 @@ public class GameHUD implements Disposable {
 				}
 			}
 		};
-		
+
 		miniMapDrawer.setContent(content, 200, 200);
 	}
 
@@ -1496,7 +1493,7 @@ public class GameHUD implements Disposable {
 		// Can be used to init bar styles if shared
 		initDrawerStyle();
 	}
-	
+
 	private void initDrawerStyle() {
 		drawerStyle = new DrawerStyle();
 		drawerStyle.background = logBgDrawable;
@@ -1519,7 +1516,7 @@ public class GameHUD implements Disposable {
 
 		// 1. Avatar + Bars Area (Left)
 		VisTable statsArea = new VisTable();
-		
+
 		// Avatar Stack
 		Stack avatarStack = new Stack();
 		// Avatar Image
@@ -1531,7 +1528,7 @@ public class GameHUD implements Disposable {
 		avatarImage = new VisImage(new TextureRegionDrawable(headRegion));
 		VisTable frame = new VisTable();
 		frame.add(avatarImage).size(80, 80);
-		
+
 		// Level Badge
 		levelBadge = new VisLabel("Lv1");
 		levelBadge.setColor(Color.YELLOW);
@@ -1543,7 +1540,7 @@ public class GameHUD implements Disposable {
 		badgeTable.add(levelBadge).pad(2);
 		avatarStack.add(frame);
 		avatarStack.add(container);
-		
+
 		statsArea.add(avatarStack).size(80, 80).padRight(10); // Smaller avatar in HUD
 
 		// Bars
@@ -1575,9 +1572,9 @@ public class GameHUD implements Disposable {
 		xpLabel = new VisLabel("0/100");
 		xpLabel.setAlignment(Align.center);
 		barsTable.add(createBarWithLabel(xpBar, xpLabel, 200, 15)).row();
-		
+
 		statsArea.add(barsTable);
-		
+
 		hud.add(statsArea).bottom().padRight(20);
 
 		// 2. Quick Slots (Center)
@@ -1590,16 +1587,16 @@ public class GameHUD implements Disposable {
 
 		// 3. Dungeon Info Drawer (Right)
 		DrawerPanel drawer = new DrawerPanel(Direction.UP, drawerStyle);
-		
+
 		VisTable infoContent = new VisTable();
 		infoContent.pad(10);
 		floorLabel = new VisLabel("层数 1");
 		infoContent.add(floorLabel).row();
 		infoContent.add(new VisLabel("难度: 普通")).padTop(5).row();
 		infoContent.add(new VisLabel("主题: 森林")).padTop(5).row(); // TODO: Bind to actual theme
-		
+
 		drawer.setContent(infoContent, 150, 100);
-		
+
 		// Drawer expands UP, so button is at bottom.
 		// Layout: HUD is at bottom of screen.
 		// If Drawer expands UP, content appears ABOVE button.
@@ -1608,7 +1605,7 @@ public class GameHUD implements Disposable {
 		// BUT: If HUD has fixed height (due to other items), expanding Drawer might push HUD up or clip?
 		// VisTable usually adapts. If HUD is aligned bottom, expanding up increases height.
 		// This is what we want.
-		
+
 		hud.add(drawer).bottom();
 
 		return hud;
@@ -1801,31 +1798,31 @@ public class GameHUD implements Disposable {
 
 		// 6. Arrows (for Drawer)
 		Pixmap arrowPm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
-		
+
 		// Up
 		arrowPm.setColor(0,0,0,0); arrowPm.fill();
 		arrowPm.setColor(Color.WHITE);
 		arrowPm.fillTriangle(16, 8, 8, 24, 24, 24);
 		arrowUpDrawable = new TextureRegionDrawable(new Texture(arrowPm));
-		
+
 		// Down
 		arrowPm.setColor(0,0,0,0); arrowPm.fill();
 		arrowPm.setColor(Color.WHITE);
 		arrowPm.fillTriangle(16, 24, 8, 8, 24, 8);
 		arrowDownDrawable = new TextureRegionDrawable(new Texture(arrowPm));
-		
+
 		// Left
 		arrowPm.setColor(0,0,0,0); arrowPm.fill();
 		arrowPm.setColor(Color.WHITE);
 		arrowPm.fillTriangle(8, 16, 24, 8, 24, 24);
 		arrowLeftDrawable = new TextureRegionDrawable(new Texture(arrowPm));
-		
+
 		// Right
 		arrowPm.setColor(0,0,0,0); arrowPm.fill();
 		arrowPm.setColor(Color.WHITE);
 		arrowPm.fillTriangle(24, 16, 8, 8, 8, 24);
 		arrowRightDrawable = new TextureRegionDrawable(new Texture(arrowPm));
-		
+
 		arrowPm.dispose();
 	}
 
@@ -2315,7 +2312,7 @@ public class GameHUD implements Disposable {
 			String diffText = "普通";
 			if (difficultyMultiplier > 2.0f) diffText = "噩梦";
 			else if (difficultyMultiplier > 1.5f) diffText = "困难";
-			
+
 			difficultyLabel.setText(String.format("难度: %s (%.1fx)", diffText, difficultyMultiplier));
 		}
 	}
@@ -2688,7 +2685,7 @@ public class GameHUD implements Disposable {
 	public SkewBar getMonsterHpBar() {
 		return monsterHpBar;
 	}
-	
+
 	// --- Testing API ---
 	public void simulateInventoryItemClick(int index) {
 		if (inventoryDialog != null && index >= 0 && index < inventoryDialog.inventorySlots.size()) {

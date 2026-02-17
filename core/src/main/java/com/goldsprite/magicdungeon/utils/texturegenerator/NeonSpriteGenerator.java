@@ -1,14 +1,13 @@
-package com.goldsprite.magicdungeon.utils;
+package com.goldsprite.magicdungeon.utils.texturegenerator;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Matrix4;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 
 /**
  * Neon 风格精灵生成器
  * 替代原有的 SpriteGenerator，使用 NeonBatch 进行矢量绘制
- * 
+ *
  * [Refactor]
  * 1. 坐标系改为 y-up (左下角为 0,0)
  * 2. 坐标单位改为 0.0~1.0 标准化坐标
@@ -32,7 +31,7 @@ public class NeonSpriteGenerator {
      */
     public static TextureRegion generateCharacterRegion(String mainHand, String offHand, String helmet, String armor, String boots) {
         // 大小仅影响 FBO 分辨率，不影响绘制逻辑 (都是 0~1)
-        int size = 256; 
+        int size = 256;
         return NeonGenerator.getInstance().generate(size, size, batch -> {
             drawCharacter(batch, mainHand, offHand, helmet, armor, boots);
         });
@@ -60,7 +59,7 @@ public class NeonSpriteGenerator {
         // 所以我们直接绘制 0~1 即可。
         drawCharacterImpl(batch, mainHand, offHand, helmet, armor, boots);
     }
-    
+
     // 重载一个方便的入口
     public static void drawCharacter(NeonBatch batch, String mainHand, String offHand, String helmet, String armor, String boots) {
         drawCharacterImpl(batch, mainHand, offHand, helmet, armor, boots);
@@ -68,7 +67,7 @@ public class NeonSpriteGenerator {
 
     private static void drawCharacterImpl(NeonBatch batch, String mainHand, String offHand, String helmet, String armor, String boots) {
         // High Quality Character (Viking / Warrior Style)
-        // Body Proportions: 
+        // Body Proportions:
         // Head: 64x64
         // Body: 80x80
         // Legs: 40x50
@@ -83,7 +82,7 @@ public class NeonSpriteGenerator {
         float legW = 30 * S;
         float legH = 50 * S;
         float legGap = 10 * S;
-        
+
         // Left Leg: x = cx - gap/2 - w
         drawRectNorm(batch, cx - legGap/2 - legW, groundY, legW, legH, pantsColor);
         // Right Leg
@@ -104,7 +103,7 @@ public class NeonSpriteGenerator {
         float bodyW_bot = 70 * S;
         float bodyW_top = 90 * S;
         float bodyH = 80 * S;
-        
+
         Color armorColor = (armor != null) ? Color.GRAY : Color.valueOf("#a1887f"); // Metal or Leather
         if (armor != null && armor.contains("Leather")) armorColor = Color.valueOf("#5d4037");
 
@@ -132,7 +131,7 @@ public class NeonSpriteGenerator {
         float headY = bodyY + bodyH - 5*S; // Slight overlap
         float headSize = 60 * S;
         Color skinColor = Color.valueOf("#ffccaa");
-        
+
         // Head Base (Rounded Rect or Circle)
         // Using circle for top part, rect for jaw
         // Rect part
@@ -147,11 +146,11 @@ public class NeonSpriteGenerator {
         float eyeY = headY + headSize * 0.4f;
         float eyeX_L = cx - 12 * S;
         float eyeX_R = cx + 12 * S;
-        
+
         // Eyes (Black dots)
         batch.drawCircle(eyeX_L, eyeY, 4*S, 0, Color.BLACK, 8, true);
         batch.drawCircle(eyeX_R, eyeY, 4*S, 0, Color.BLACK, 8, true);
-        
+
         // Mouth (Line)
         batch.drawLine(cx - 5*S, headY + 15*S, cx + 5*S, headY + 15*S, 2*S, Color.valueOf("#d84315"));
 
@@ -159,13 +158,13 @@ public class NeonSpriteGenerator {
         if (helmet != null) {
             Color helmColor = Color.GRAY;
             float helmY = headY + headSize * 0.4f; // Sits lower on head
-            
+
             // Helmet Dome (Half Circle)
             batch.drawSector(cx, helmY, headSize*0.6f, 0, 180, helmColor, 16);
-            
+
             // Rim
             batch.drawRect(cx - headSize*0.6f, helmY, headSize*1.2f, 8*S, 0, 0, Color.LIGHT_GRAY, true);
-            
+
             // Nose Guard
             batch.drawRect(cx - 4*S, helmY - 15*S, 8*S, 20*S, 0, 0, Color.LIGHT_GRAY, true);
 
@@ -203,17 +202,17 @@ public class NeonSpriteGenerator {
         // --- 5. Weapons ---
         // Draw weapons *in front* of body? Or hand placement?
         // Let's draw them at the sides for now, maybe slightly angled.
-        
+
         if (mainHand != null) {
             // Right Hand (Screen Left side relative to body? No, Right hand is usually User's Right)
             // Let's put Main Hand on Right (cx + bodyW)
             float handX = cx + bodyW_top/2 + 10*S;
             float handY = bodyY + bodyH * 0.6f;
-            
+
             // Sword pointing up
             Color blade = Color.LIGHT_GRAY;
             Color hilt = Color.valueOf("#3e2723");
-            
+
             // Handle
             batch.drawRect(handX - 2*S, handY - 10*S, 4*S, 20*S, 0, 0, hilt, true);
             // Guard
@@ -231,7 +230,7 @@ public class NeonSpriteGenerator {
             // Left Hand (Shield?)
             float handX = cx - bodyW_top/2 - 10*S;
             float handY = bodyY + bodyH * 0.5f;
-            
+
             // Round Shield
             batch.drawCircle(handX, handY, 30*S, 0, Color.valueOf("#5d4037"), 16, true); // Wood
             batch.drawCircle(handX, handY, 8*S, 0, Color.GRAY, 8, true); // Boss

@@ -5,11 +5,11 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Disposable;
 import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.MonsterType;
-import com.goldsprite.magicdungeon.utils.NeonItemGenerator;
-import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
-import com.goldsprite.magicdungeon.utils.NeonTileGenerator;
-import com.goldsprite.magicdungeon.utils.SpriteGenerator;
-import com.goldsprite.magicdungeon.utils.TextureExporter;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonItemGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonSpriteGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonTileGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.SpriteGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.TextureExporter;
 import com.goldsprite.magicdungeon.world.TileType;
 
 import java.util.HashMap;

@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.goldsprite.magicdungeon.utils.SpriteGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.SpriteGenerator;
 import com.goldsprite.magicdungeon.world.DungeonTheme;
 
 public class DualGridDungeonRenderer implements Disposable {

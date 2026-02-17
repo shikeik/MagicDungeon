@@ -1,15 +1,14 @@
-package com.goldsprite.magicdungeon.utils;
+package com.goldsprite.magicdungeon.utils.texturegenerator;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 
 /**
  * Neon 风格物品生成器
  * 替代 SpriteGenerator 中的 createItem 和 drawItemToPixmap
- * 
+ *
  * [Refactor]
  * 1. 坐标系改为 y-up (左下角为 0,0)
  * 2. 坐标单位改为 0.0~1.0 标准化坐标
@@ -20,7 +19,7 @@ public class NeonItemGenerator {
     private static final float REF_SIZE = 256f;
 
     public static TextureRegion createItemRegion(String name) {
-        int size = 256; 
+        int size = 256;
         return NeonGenerator.getInstance().generate(size, size, batch -> {
             drawItem(batch, name);
         });
@@ -33,7 +32,7 @@ public class NeonItemGenerator {
     public static void drawItem(NeonBatch batch, float size, String name) {
         drawItem(batch, name);
     }
-    
+
     public static void drawItem(NeonBatch batch, String name) {
         drawItemImpl(batch, name);
     }
@@ -81,7 +80,7 @@ public class NeonItemGenerator {
 
         // High Quality Flask Shape
         // Bulbous bottom, tapered neck
-        
+
         float cx = 128 * S;
         float bottomY = 50 * S;
         float bulbR = 70 * S;
@@ -89,19 +88,19 @@ public class NeonItemGenerator {
         float neckH = 60 * S;
         float lipW = 50 * S;
         float lipH = 15 * S;
-        
+
         // 1. Liquid (Inner Bulb)
         // Fill a bit less than full bulb
         float liquidLevel = bottomY + bulbR * 1.2f; // Slightly above center
         batch.drawCircle(cx, bottomY + bulbR, bulbR - 4*S, 0, liquid, 32, true);
-        
+
         // Liquid Surface (Ellipse?)
         // batch.drawOval(cx, liquidLevel, bulbR*1.8f, 20*S, 0, 0, liquid.cpy().mul(1.2f), 32, true);
 
         // 2. Glass Bottle Outline
         // Bulb
         batch.drawCircle(cx, bottomY + bulbR, bulbR, 4*S, glass, 32, false);
-        
+
         // Neck (Trapezoid connecting to bulb)
         float neckBaseY = bottomY + bulbR * 1.5f; // Where neck starts blending
         // Actually, let's just draw a rect for neck and blend it
@@ -113,11 +112,11 @@ public class NeonItemGenerator {
              cx - neckW/2, neckY + neckH
         };
         batch.drawPolygon(neckPoly, 4, 4*S, glass, false);
-        
+
         // Lip
         float lipY = neckY + neckH;
         batch.drawRect(cx - lipW/2, lipY, lipW, lipH, 0, 4*S, glass, false);
-        
+
         // 3. Cork
         float corkW_bot = 30 * S;
         float corkW_top = 35 * S;
@@ -135,7 +134,7 @@ public class NeonItemGenerator {
         batch.drawArc(cx - 20*S, bottomY + bulbR + 20*S, bulbR * 0.7f, 120, 40, 6*S, new Color(1,1,1,0.6f), 16);
         // Dot highlight
         batch.drawCircle(cx + 30*S, bottomY + bulbR + 30*S, 8*S, 0, new Color(1,1,1,0.8f), 8, true);
-        
+
         // Bubbles inside
         if (MathUtils.randomBoolean(0.7f)) {
              batch.drawCircle(cx - 10*S, bottomY + bulbR - 20*S, 5*S, 0, new Color(1,1,1,0.3f), 8, true);
@@ -149,16 +148,16 @@ public class NeonItemGenerator {
         if (name.contains("Rusty") || name.contains("生锈")) bladeColor = Color.valueOf("#8d6e63");
 
         // Handle: 60, 200, 24, 16 -> Y=256-200-16=40
-        drawRectNorm(batch, 60*S, 40*S, 24*S, 16*S, Color.valueOf("#3e2723"), 45); 
-        
+        drawRectNorm(batch, 60*S, 40*S, 24*S, 16*S, Color.valueOf("#3e2723"), 45);
+
         // Blade: 60, 200 to 200, 60
         // Y1 = 256-200=56, Y2 = 256-60=196
         drawLineNorm(batch, 60*S, 56*S, 200*S, 196*S, 20*S, bladeColor);
-        
+
         // Guard: 50, 190 to 90, 230
         // Y1 = 256-190=66, Y2 = 256-230=26
         drawLineNorm(batch, 50*S, 66*S, 90*S, 26*S, 8*S, Color.valueOf("#5d4037"));
-        
+
         // Hilt: 30, 230 to 50, 210
         // Y1 = 256-230=26, Y2 = 256-210=46
         drawLineNorm(batch, 30*S, 26*S, 50*S, 46*S, 8*S, Color.valueOf("#3e2723"));
@@ -181,7 +180,7 @@ public class NeonItemGenerator {
         drawRectNorm(batch, 45*S, 71*S, bThick*S, 140*S, border);
         // Right: 201, 45, 10, 140 -> Y=71
         drawRectNorm(batch, 201*S, 71*S, bThick*S, 140*S, border);
-        
+
         // 128, 230 -> Y=256-230=26
         drawCircleNorm(batch, 128*S, 26*S, 10*S, border);
         // 128, 120 -> Y=256-120=136
@@ -271,7 +270,7 @@ public class NeonItemGenerator {
     private static void drawRing(NeonBatch batch, String name) {
         // 128, 128 -> Y=128
         drawCircleNorm(batch, 128*S, 128*S, 40*S, Color.GOLD);
-        drawCircleNorm(batch, 128*S, 128*S, 30*S, Color.BLACK); 
+        drawCircleNorm(batch, 128*S, 128*S, 30*S, Color.BLACK);
         // 128, 88 -> Y=256-88=168
         drawCircleNorm(batch, 128*S, 168*S, 16*S, Color.RED);
     }
@@ -320,7 +319,7 @@ public class NeonItemGenerator {
     private static void drawCircleNorm(NeonBatch batch, float cx, float cy, float r, Color color) {
         batch.drawCircle(cx, cy, r, 0, color, 32, true);
     }
-    
+
     private static void drawLineNorm(NeonBatch batch, float x1, float y1, float x2, float y2, float width, Color color) {
         batch.drawLine(x1, y1, x2, y2, width, color);
     }

@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.utils;
+package com.goldsprite.magicdungeon.utils.texturegenerator;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;

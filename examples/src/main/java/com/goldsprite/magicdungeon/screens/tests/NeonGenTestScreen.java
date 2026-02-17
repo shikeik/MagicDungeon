@@ -4,31 +4,27 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
-import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
-import com.goldsprite.magicdungeon.utils.NeonItemGenerator;
-import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
-import com.goldsprite.magicdungeon.utils.NeonTileGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonItemGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonSpriteGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonTileGenerator;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.math.MathUtils;
-import com.goldsprite.magicdungeon.utils.NeonGenerator;
+import com.goldsprite.magicdungeon.utils.texturegenerator.NeonGenerator;
 import com.goldsprite.magicdungeon.assets.ThemeConfig;
 
 public class NeonGenTestScreen extends GScreen {
