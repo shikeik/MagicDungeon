@@ -47,7 +47,7 @@ public class SpineTestScreen extends GScreen {
         atlas = new TextureAtlas(Gdx.files.internal(atlasPath));
         SkeletonJson json = new SkeletonJson(atlas);
         // Scale note: standard pixel art often needs scaling. Assuming 1:1 for now or adjust based on TILE_SIZE.
-        json.setScale(1.0f);
+        json.setScale(4.0f);
 
         SkeletonData skeletonData = json.readSkeletonData(Gdx.files.internal(jsonPath));
 

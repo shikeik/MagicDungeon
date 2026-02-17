@@ -115,13 +115,13 @@ public class NeonGenerator {
         pixmap.dispose();
 
         // 创建 Region
-        // 由于我们在 FBO 中使用 y-up (左下角原点) 绘制，
-        // 并且 Texture 本身也是 y-up 存储的 (GL标准)，
-        // 所以 TextureRegion 不需要翻转，默认就是正立的。
-        TextureRegion region = new TextureRegion(texture);
-        // [Fix] 移除所有 flip。
-        // FBO (y-up) -> Texture (y-up) -> Region (y-up) -> Batch Draw (y-up) = Upright.
-        region.flip(false, false);
+		TextureRegion region = new TextureRegion(texture);
+        // 由于 createFromFrameBuffer 读取的像素数据是 Y-down (第0行是FBO底部)，
+        // 而 Texture 默认 V=0 对应数据头。
+        // SpriteBatch 绘制时，V=0 对应矩形顶部。
+        // 所以必须翻转 Y 轴，让 V=0 对应数据尾 (FBO顶部)，
+        // 这样 SpriteBatch 绘制矩形顶部时，采样到的才是 FBO 的顶部内容。
+        region.flip(false, true);
 
         return region;
     }
