@@ -24,11 +24,18 @@ public class NeonSpriteGenerator {
     /**
      * 生成带装备的角色纹理
      */
-    public static Texture generateCharacterTexture(String mainHand, String offHand, String helmet, String armor, String boots) {
+    public static TextureRegion generateCharacterRegion(String mainHand, String offHand, String helmet, String armor, String boots) {
         int size = 256; // High res
-        TextureRegion region = NeonGenerator.getInstance().generate(size, size, batch -> {
+        return NeonGenerator.getInstance().generate(size, size, batch -> {
             drawCharacter(batch, size, mainHand, offHand, helmet, armor, boots);
         });
+    }
+
+    /**
+     * 生成带装备的角色纹理 (Texture 包装)
+     */
+    public static Texture generateCharacterTexture(String mainHand, String offHand, String helmet, String armor, String boots) {
+        TextureRegion region = generateCharacterRegion(mainHand, offHand, helmet, armor, boots);
         return region == null ? null : region.getTexture();
     }
 
@@ -152,7 +159,8 @@ public class NeonSpriteGenerator {
     }
 
     private static void drawRectPix(NeonBatch batch, float totalSize, float x, float y, float w, float h, Color color) {
+        // NeonBatch.drawRect rotates around center.
         // Signature: drawRect(x, y, width, height, rotationDeg, lineWidth, color, filled)
-        batch.drawRect(x, totalSize - y - h, w, h, 0, 0, color, true);
+        batch.drawRect(x, y, w, h, 0, 0, color, true);
     }
 }

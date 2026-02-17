@@ -18,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.goldsprite.magicdungeon.utils.NeonItemGenerator;
 import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
 import com.goldsprite.magicdungeon.utils.NeonTileGenerator;
@@ -27,7 +28,7 @@ import com.kotcrab.vis.ui.widget.*;
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.math.MathUtils;
-import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
+import com.goldsprite.magicdungeon.utils.NeonGenerator;
 
 public class NeonGenTestScreen extends GScreen {
 
@@ -36,7 +37,6 @@ public class NeonGenTestScreen extends GScreen {
     private Stage stage;
 
     // Preview Data
-    private FrameBuffer frameBuffer;
     private TextureRegion bakedRegion;
     private OrthographicCamera fbCamera;
 
@@ -247,35 +247,11 @@ public class NeonGenTestScreen extends GScreen {
     }
 
     private void regenerate() {
-        if (frameBuffer != null) {
-            frameBuffer.dispose();
-        }
-        try {
-            frameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, generateSize, generateSize, false);
-
-            fbCamera.setToOrtho(false, generateSize, generateSize);
-            fbCamera.update();
-
-            frameBuffer.begin();
-            ScreenUtils.clear(0, 0, 0, 0);
-            Gdx.gl.glViewport(0, 0, generateSize, generateSize);
-
-            neonBatch.setProjectionMatrix(fbCamera.combined);
-            neonBatch.begin();
-            drawContent(neonBatch, generateSize, generateSize);
-            neonBatch.end();
-
-            frameBuffer.end();
-
-            Texture tex = frameBuffer.getColorBufferTexture();
-            tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-
-            bakedRegion = new TextureRegion(tex);
-            bakedRegion.flip(false, true);
-
-        } catch (Exception e) {
-            Gdx.app.error("NeonGen", "Generation failed", e);
-        }
+        // Use the centralized NeonGenerator logic to ensure consistency
+        // Note: NeonGenerator.generate returns a TextureRegion that is ready to draw (upright)
+        bakedRegion = NeonGenerator.getInstance().generate(generateSize, generateSize, batch -> {
+            drawContent(batch, generateSize, generateSize);
+        });
     }
 
     private void drawContent(NeonBatch batch, float w, float h) {
@@ -295,6 +271,24 @@ public class NeonGenTestScreen extends GScreen {
         float size = w;
         float scaleY = h / w;
 
+
+        // NeonGenerator 的生成器代码是基于 "y-down" 逻辑编写的 (例如 y=0 是头，y=256 是脚)。
+        // 这种数据在 "y-down" 的投影矩阵下 (如 FBO) 能正确生成 "头在上，脚在下" 的纹理。
+        //
+        // 然而，NeonGenTestScreen 的 Stage 使用的是默认的 "y-up" 坐标系 (0,0 在左下角)。
+        // 如果直接在 y-up 坐标系中绘制 y-down 数据:
+        // - y=0 (头) 会出现在屏幕底部。
+        // - y=256 (脚) 会出现在屏幕顶部。
+        // 这会导致图像倒立。
+        //
+        // 为了在 y-up 视口中正确预览 y-down 数据，我们需要翻转 Y 轴。
+        // scale(1, -1) 将坐标系 Y 轴反转，使得 y 增加的方向变为向下。
+        // 同时我们需要将原点移动到绘制区域的左上角 (cx, cy + ch)，因为在反转后的坐标系中，y=0 对应原点。
+        // 
+        // 变换过程:
+        // 1. translate(cx, cy + ch, 0): 将原点移到目标区域的左上角。
+        // 2. scale(1f, -1f, 1f): 翻转 Y 轴，使得正 Y 向下。
+        // 结果: 绘制 y=0 (头) -> 落在 (cx, cy + ch) 即左上角。
         if (scaleY != 1f) {
             batch.getTransformMatrix().scale(1f, scaleY, 1f);
             batch.setTransformMatrix(batch.getTransformMatrix()); // Flush matrix
@@ -397,8 +391,9 @@ public class NeonGenTestScreen extends GScreen {
                 neonBatch.setProjectionMatrix(stage.getCamera().combined);
                 neonBatch.begin();
 
-                // Move to position
-                neonBatch.getTransformMatrix().idt().translate(cx, cy, 0);
+                // Move to position (Top-Left of the area) and flip Y to match "Top-Left" data coordinates
+                // See drawContent() for detailed explanation of why scale(1, -1) is needed.
+                neonBatch.getTransformMatrix().idt().translate(cx, cy + ch, 0).scale(1f, -1f, 1f);
                 neonBatch.setTransformMatrix(neonBatch.getTransformMatrix()); // Flush matrix
 
                 drawContent(neonBatch, cw, ch);
@@ -446,6 +441,11 @@ public class NeonGenTestScreen extends GScreen {
         if (batch != null) batch.dispose();
         if (neonBatch != null) neonBatch.dispose();
         if (stage != null) stage.dispose();
-        if (frameBuffer != null) frameBuffer.dispose();
+        // bakedRegion uses texture from NeonGenerator (managed there) or needs dispose?
+        // NeonGenerator reuses FBO, but generate returns a new Texture from Pixmap.
+        // So we own the texture in bakedRegion.
+        if (bakedRegion != null && bakedRegion.getTexture() != null) {
+            bakedRegion.getTexture().dispose();
+        }
     }
 }

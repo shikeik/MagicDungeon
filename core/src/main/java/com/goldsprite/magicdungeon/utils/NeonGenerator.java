@@ -67,7 +67,13 @@ public class NeonGenerator {
         if (frameBuffer == null) return null;
 
         // Setup Projection
-        projectionMatrix.setToOrtho2D(0, 0, width, height);
+        // 使用 yDown=true (0在顶部，y向下增加)。
+        // 这与生成器数据的逻辑一致 (例如 y=0 是头，y=256 是脚)。
+        // 这样在 FBO 纹理中，头会出现在纹理的顶部 (高 V 值? 不，通常 FBO 纹理坐标系原点在左下)。
+        // 如果 y-down 投影将 (0,0) 映射到 NDC (-1, 1) [Top-Left]，
+        // 则 y=0 (头) 对应屏幕 Top，也就是纹理的 "Top" (v=1, 假设标准纹理坐标)。
+        // 所以生成的纹理内容是正立的 (头在 v=1)。
+        projectionMatrix.setToOrtho(0, width, height, 0, 0, 1);
 
         TextureRegion region = null;
 
@@ -116,6 +122,8 @@ public class NeonGenerator {
 
         // 创建 Region 并翻转 Y (因为 OpenGL 纹理坐标 Y 向上，而通常 TextureRegion 期望 Y 向下匹配屏幕/UI)
         TextureRegion region = new TextureRegion(texture);
+        // [Fix] NeonSpriteGenerator 生成的已经是正的 (FBO Upright)，所以不需要翻转。
+        // 如果翻转，反而会导致倒置。
         region.flip(false, true);
 
         return region;

@@ -15,11 +15,15 @@ public class NeonItemGenerator {
 
     private static final float REF_SIZE = 256f;
 
-    public static Texture createItem(String name) {
+    public static TextureRegion createItemRegion(String name) {
         int size = 256; 
-        TextureRegion region = NeonGenerator.getInstance().generate(size, size, batch -> {
+        return NeonGenerator.getInstance().generate(size, size, batch -> {
             drawItem(batch, size, name);
         });
+    }
+
+    public static Texture createItem(String name) {
+        TextureRegion region = createItemRegion(name);
         return region == null ? null : region.getTexture();
     }
 
@@ -223,22 +227,18 @@ public class NeonItemGenerator {
     }
 
     private static void drawRectPix(NeonBatch batch, float totalSize, float x, float y, float w, float h, Color color, float rotationDeg) {
-        float glY = totalSize - y - h;
         // NeonBatch.drawRect rotates around center.
         // Signature: drawRect(x, y, width, height, rotationDeg, lineWidth, color, filled)
-        batch.drawRect(x, glY, w, h, rotationDeg, 0, color, true);
+        batch.drawRect(x, y, w, h, rotationDeg, 0, color, true);
     }
 
     private static void drawCirclePix(NeonBatch batch, float totalSize, float cx, float cy, float r, Color color) {
-        float glCy = totalSize - cy;
         // Signature: drawCircle(x, y, radius, lineWidth, color, segments, filled)
-        batch.drawCircle(cx, glCy, r, 0, color, 32, true);
+        batch.drawCircle(cx, cy, r, 0, color, 32, true);
     }
     
     private static void drawLinePix(NeonBatch batch, float totalSize, float x1, float y1, float x2, float y2, float width, Color color) {
-        float glY1 = totalSize - y1;
-        float glY2 = totalSize - y2;
         // Signature: drawLine(x1, y1, x2, y2, width, color)
-        batch.drawLine(x1, glY1, x2, glY2, width, color);
+        batch.drawLine(x1, y1, x2, y2, width, color);
     }
 }

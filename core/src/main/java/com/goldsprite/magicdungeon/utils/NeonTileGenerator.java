@@ -171,6 +171,6 @@ public class NeonTileGenerator {
         // Convert Top-Left (x, y) to Bottom-Left (GL_X, GL_Y)
         // GL_Y = totalSize - y - h
         // Signature: drawRect(x, y, width, height, rotationDeg, lineWidth, color, filled)
-        batch.drawRect(x, totalSize - y - h, w, h, 0, 0, color, true);
+        batch.drawRect(x, y, w, h, 0, 0, color, true);
     }
 }
