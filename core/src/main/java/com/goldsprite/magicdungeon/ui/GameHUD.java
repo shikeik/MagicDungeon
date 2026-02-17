@@ -61,7 +61,9 @@ import com.goldsprite.magicdungeon.utils.Constants;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
 
-public class GameHUD {
+import com.badlogic.gdx.utils.Disposable;
+
+public class GameHUD implements Disposable {
 	public Stage stage;
 	private NeonBatch neonBatch;
 
@@ -2681,11 +2683,14 @@ public class GameHUD {
 	}
 
 	public void dispose() {
-		stage.dispose();
+		if (stage != null) stage.dispose();
+		if (neonBatch != null) neonBatch.dispose();
 		if (slotBgTexture != null) slotBgTexture.dispose();
 		if (slotBorderTexture != null) slotBorderTexture.dispose();
 		if (whiteTexture != null) whiteTexture.dispose();
-		if (logBgDrawable != null) logBgDrawable.getRegion().getTexture().dispose();
+		if (logBgDrawable != null && logBgDrawable.getRegion() != null && logBgDrawable.getRegion().getTexture() != null) {
+			logBgDrawable.getRegion().getTexture().dispose();
+		}
 		// Avatar texture is managed by SpriteGenerator? No, createAvatar creates new Texture.
 		// Should dispose avatarImage texture if possible.
 	}

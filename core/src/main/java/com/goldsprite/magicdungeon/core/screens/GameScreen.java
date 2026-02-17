@@ -1495,6 +1495,7 @@ public class GameScreen extends GScreen {
 	@Override
 	public void dispose() {
 		if (batch != null) batch.dispose();
+		if (polyBatch != null) polyBatch.dispose();
 		if (dungeonRenderer != null) dungeonRenderer.dispose();
 		if (wolfAtlas != null) wolfAtlas.dispose();
 		if (hud != null) hud.dispose();
