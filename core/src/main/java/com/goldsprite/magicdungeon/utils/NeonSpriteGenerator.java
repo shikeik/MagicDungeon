@@ -29,7 +29,7 @@ public class NeonSpriteGenerator {
         return region == null ? null : region.getTexture();
     }
 
-    private static void drawCharacter(NeonBatch batch, float size, String mainHand, String offHand, String helmet, String armor, String boots) {
+    public static void drawCharacter(NeonBatch batch, float size, String mainHand, String offHand, String helmet, String armor, String boots) {
         // Colors
         Color skin = Color.valueOf("#ffccaa");
         Color legsColor = Color.valueOf("#8d6e63");

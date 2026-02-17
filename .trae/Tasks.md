@@ -9,10 +9,16 @@
 > 主题: 将程序化纹理生成全面迁移至 NeonBatch 矢量绘图，提升视觉质量。
 > 设计文档: [.trae/documents/designs/35_Neon生成与艺术化升级计划.md]
 
-### Phase 1: 基础设施 (In Progress)
+### Phase 1: 基础设施 (Completed)
 - [x] 修复 `NeonGenTestScreen` 闪退问题
-- [ ] 验证 `NeonBatch` 描边与渐变能力 (参考设计文档 2.2)
-- [ ] 实现 `NeonGenerator` 基类框架
+- [x] 验证 `NeonBatch` 描边与渐变能力 (参考设计文档 2.2)
+- [x] 实现 `NeonGenerator` 基类框架
+
+### Phase 1.5: 工具链优化 (Completed)
+- [x] 重构 `NeonGenTestScreen` UI (参考编辑器布局)
+    - [x] 实现左右分栏 (工作区/控制面板)
+    - [x] 实现模式切换 (Live Vector / Baked Texture)
+    - [x] 实现烘焙纹理预览参数调节 (拉伸/定长)
 
 ### Phase 2: 核心迁移
 - [ ] 重写 `createPlayer` (支持纸娃娃)
