@@ -211,7 +211,7 @@ public class GameHUD implements Disposable {
 			String armor = player.equipment.armor != null ? player.equipment.armor.data.name() : null;
 			String boots = player.equipment.boots != null ? player.equipment.boots.data.name() : null;
 
-			Texture tex = SpriteGenerator.generateCharacterTexture(mainHand, offHand, helmet, armor, boots);
+			Texture tex = com.goldsprite.magicdungeon.utils.NeonSpriteGenerator.generateCharacterTexture(mainHand, offHand, helmet, armor, boots);
 			avatarImage.setDrawable(new TextureRegionDrawable(new TextureRegion(tex)));
 		}
 	}

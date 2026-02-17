@@ -62,7 +62,8 @@ public class TextureManager implements Disposable {
 		checkAndGenerate(TileType.Window.name(), () -> SpriteGenerator.createWindow());
 		
 		// Player
-		checkAndGenerate("PLAYER", () -> SpriteGenerator.createPlayer());
+		// [修改] 切换到 NeonSpriteGenerator
+		checkAndGenerate("PLAYER", () -> com.goldsprite.magicdungeon.utils.NeonSpriteGenerator.createPlayer());
 		
 		// Monsters
 		for (MonsterType type : MonsterType.values()) {

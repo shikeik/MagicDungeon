@@ -95,7 +95,7 @@ public class VisUIHelper {
 				mainSkin.add("window-noborder", new TextureRegionDrawable(ColorTextureUtils.createColorTexture(new Color(0,0,0,0.5f))));
 			}
 			if (!mainSkin.has("window-bg", Drawable.class)) {
-				mainSkin.add("window-bg", "window-ten");
+				mainSkin.add("window-bg", "window");
 			}
 
 		} catch (Exception e) {

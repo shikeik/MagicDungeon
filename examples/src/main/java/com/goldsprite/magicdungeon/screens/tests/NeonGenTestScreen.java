@@ -64,7 +64,7 @@ public class NeonGenTestScreen extends ExampleGScreen {
 
         // 1. Controls (Top Left)
         VisTable controls = new VisTable();
-        controls.setBackground("window-bg");
+        controls.setBackground("list");
         controls.pad(10);
 
         controls.add(new VisLabel("Gen Size:")).padRight(5);
@@ -139,7 +139,14 @@ public class NeonGenTestScreen extends ExampleGScreen {
         }
 
         // --- FrameBuffer Generation ---
-        if (frameBuffer != null) frameBuffer.dispose();
+        if (frameBuffer != null) {
+            frameBuffer.dispose();
+            frameBuffer = null;
+        }
+
+        // Safety check for targetSize
+        if (targetSize <= 0) targetSize = 64;
+        if (targetSize > 4096) targetSize = 4096;
 
         try {
             frameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888, targetSize, targetSize, false);
@@ -151,36 +158,45 @@ public class NeonGenTestScreen extends ExampleGScreen {
         fbCamera.setToOrtho(false, targetSize, targetSize);
         fbCamera.update();
 
-        frameBuffer.begin();
-        ScreenUtils.clear(0, 0, 0, 0); // Transparent clear
+        try {
+            frameBuffer.begin();
+            ScreenUtils.clear(0, 0, 0, 0); // Transparent clear
 
-        neonBatch.setProjectionMatrix(fbCamera.combined);
-        neonBatch.begin();
+            neonBatch.setProjectionMatrix(fbCamera.combined);
+            neonBatch.begin();
 
-        // Draw Content at target resolution
-        drawPlayer(neonBatch, targetSize);
+            // Draw Content at target resolution
+            drawPlayer(neonBatch, targetSize);
 
-        neonBatch.end();
-        frameBuffer.end();
+            neonBatch.end();
+            frameBuffer.end();
 
-        Texture tex = frameBuffer.getColorBufferTexture();
-        tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            Texture tex = frameBuffer.getColorBufferTexture();
+            tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
-        // Flip Y because FrameBuffer is upside down
-        resultRegion = new TextureRegion(tex);
-        resultRegion.flip(false, true);
+            // Flip Y because FrameBuffer is upside down
+            resultRegion = new TextureRegion(tex);
+            resultRegion.flip(false, true);
 
-        TextureRegionDrawable drawable = new TextureRegionDrawable(resultRegion);
+            TextureRegionDrawable drawable = new TextureRegionDrawable(resultRegion);
 
-        if (previewImage != null) {
-            previewImage.setDrawable(drawable);
-            previewImage.setSize(previewLayoutSize, previewLayoutSize);
-        }
+            if (previewImage != null) {
+                previewImage.setDrawable(drawable);
+                previewImage.setSize(previewLayoutSize, previewLayoutSize);
+            }
 
-        if (actualImage != null) {
-            actualImage.setDrawable(drawable);
-            // For actual size, we set the actor size to texture size
-            actualImage.setSize(targetSize, targetSize);
+            if (actualImage != null) {
+                actualImage.setDrawable(drawable);
+                // For actual size, we set the actor size to texture size
+                actualImage.setSize(targetSize, targetSize);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (neonBatch.isDrawing()) neonBatch.end();
+            // Try to end framebuffer if possible (unsafe to check 'isDrawing' equivalent easily without reflection or tracking)
+            // But usually exceptions happen inside neonBatch calls.
+            // We just ensure we don't crash the whole app.
+            try { frameBuffer.end(); } catch(Exception ex) {}
         }
     }
 
@@ -255,6 +271,40 @@ public class NeonGenTestScreen extends ExampleGScreen {
         drawRectPix(batch, size, 128 + 8, eyeY, 12, 12, Color.BLACK);
         drawRectPix(batch, size, 128 - 18, eyeY + 2, 4, 4, Color.WHITE);
         drawRectPix(batch, size, 128 + 10, eyeY + 2, 4, 4, Color.WHITE);
+
+        // === 6. NeonBatch 新特性验证 (Overlay) ===
+        
+        // 6.1 验证 drawTriangleStrip (渐变三角形带) - 绘制一个飘带
+        float[] ribbonVerts = new float[] {
+            10, 10,
+            30, 40,
+            50, 10,
+            70, 40,
+            90, 10
+        };
+        float[] ribbonColors = new float[] {
+            Color.RED.toFloatBits(),
+            Color.ORANGE.toFloatBits(),
+            Color.YELLOW.toFloatBits(),
+            Color.GREEN.toFloatBits(),
+            Color.CYAN.toFloatBits()
+        };
+        // 缩放到当前 size (假设 ribbonVerts 是基于 100x100 的)
+        float s = size / 100f;
+        for(int i=0; i<ribbonVerts.length; i++) ribbonVerts[i] *= s;
+        
+        batch.drawTriangleStrip(ribbonVerts, ribbonColors, 5);
+
+        // 6.2 验证 drawSkewGradientRect - 绘制 HP Bar 风格
+        // 在头顶画一个血条
+        float barW = size * 0.8f;
+        float barH = size * 0.1f;
+        float barX = (size - barW) / 2;
+        float barY = size * 0.9f;
+        batch.drawSkewGradientRect(barX, barY, barW, barH, size * 0.05f, Color.RED, Color.ORANGE);
+        
+        // 6.3 验证描边 (Stroke) - 画一个圆圈在脚下
+        batch.drawCircle(size/2, size*0.1f, size*0.3f, 2f, Color.CYAN, 32, false);
     }
 
     /**
@@ -297,27 +347,34 @@ public class NeonGenTestScreen extends ExampleGScreen {
 
         @Override
         public void draw(Batch sb, float parentAlpha) {
-            sb.end(); // Pause Stage batch
+            try {
+                sb.end(); // Pause Stage batch
 
-            // Setup NeonBatch
-            neonBatch.setProjectionMatrix(stage.getViewport().getCamera().combined);
-            neonBatch.begin();
+                // Setup NeonBatch
+                neonBatch.setProjectionMatrix(stage.getViewport().getCamera().combined);
+                neonBatch.begin();
 
-            // [核心修复] 使用更稳健的坐标获取方式
-            Vector2 pos = localToStageCoordinates(new Vector2(0, 0));
+                // [核心修复] 使用更稳健的坐标获取方式
+                Vector2 pos = localToStageCoordinates(new Vector2(0, 0));
 
-            // Translate to Actor's position
-            neonBatch.getTransformMatrix().idt().translate(pos.x, pos.y, 0);
+                // Translate to Actor's position
+                neonBatch.getTransformMatrix().idt().translate(pos.x, pos.y, 0);
 
-            // Draw using Actor's width as the scale
-            // 这样无论 previewLayoutSize 是多少，都会完整绘制出 Player
-            drawPlayer(neonBatch, getWidth());
+                // Draw using Actor's width as the scale
+                // 这样无论 previewLayoutSize 是多少，都会完整绘制出 Player
+                drawPlayer(neonBatch, getWidth());
 
-            // Reset
-            neonBatch.getTransformMatrix().idt();
-            neonBatch.end();
-
-            sb.begin(); // Resume Stage batch
+                // Reset
+                neonBatch.getTransformMatrix().idt();
+                neonBatch.end();
+            } catch (Exception e) {
+                e.printStackTrace();
+                // Ensure batch is ended if it was begun
+                if (neonBatch.isDrawing()) neonBatch.end();
+            } finally {
+                // Always resume stage batch
+                sb.begin();
+            }
         }
     }
 }
