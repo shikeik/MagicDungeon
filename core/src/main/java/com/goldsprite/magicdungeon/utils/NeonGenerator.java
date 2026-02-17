@@ -67,21 +67,17 @@ public class NeonGenerator {
         if (frameBuffer == null) return null;
 
         // Setup Projection
-        // 使用 yDown=true (0在顶部，y向下增加)。
-        // 这与生成器数据的逻辑一致 (例如 y=0 是头，y=256 是脚)。
-        // 这样在 FBO 纹理中，头会出现在纹理的顶部 (高 V 值? 不，通常 FBO 纹理坐标系原点在左下)。
-        // 如果 y-down 投影将 (0,0) 映射到 NDC (-1, 1) [Top-Left]，
-        // 则 y=0 (头) 对应屏幕 Top，也就是纹理的 "Top" (v=1, 假设标准纹理坐标)。
-        // 所以生成的纹理内容是正立的 (头在 v=1)。
-        projectionMatrix.setToOrtho(0, width, height, 0, 0, 1);
+        // 使用标准化正交投影 (0~1)。
+        // 原点 (0,0) 在左下角，(1,1) 在右上角。
+        // 这意味着所有绘制指令都应该使用 0.0~1.0 的归一化坐标。
+        projectionMatrix.setToOrtho2D(0, 0, 1, 1);
 
         TextureRegion region = null;
 
         try {
             frameBuffer.begin();
 
-            // [Fix] 必须手动设置 Viewport，否则默认使用 FBO 全尺寸 (例如 512x512)，导致小尺寸生成 (例如 128x128) 被拉伸到全 FBO，
-            // 进而导致 extractTextureRegion 只截取了内容的左下角 (看起来是放大了且偏了)。
+            // [Fix] 设置 Viewport 为 FBO 的实际大小，确保投影正确映射到纹理像素
             Gdx.gl.glViewport(0, 0, width, height);
 
             // Clear with transparent
@@ -111,20 +107,21 @@ public class NeonGenerator {
      */
     private TextureRegion extractTextureRegion(int width, int height) {
         // 方法 A: 读取像素生成新 Texture (CPU heavy, but safe)
-        // ScreenUtils.getFrameBufferPixmap 读取的是当前绑定的 FB
-        // 注意：getFrameBufferPixmap 读取的是 (x, y, w, h)，其中 x,y 是左下角。
-        // 因为我们上面设置了 Viewport (0,0,w,h)，所以内容就在 (0,0,w,h) 区域。
+        // ScreenUtils.getFrameBufferPixmap 读取的是当前绑定的 FB (左下角原点)
         Pixmap pixmap = Pixmap.createFromFrameBuffer(0, 0, width, height);
 		pixmap.setFilter(Pixmap.Filter.NearestNeighbour);
         // 生成 Texture
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
 
-        // 创建 Region 并翻转 Y (因为 OpenGL 纹理坐标 Y 向上，而通常 TextureRegion 期望 Y 向下匹配屏幕/UI)
+        // 创建 Region
+        // 由于我们在 FBO 中使用 y-up (左下角原点) 绘制，
+        // 并且 Texture 本身也是 y-up 存储的 (GL标准)，
+        // 所以 TextureRegion 不需要翻转，默认就是正立的。
         TextureRegion region = new TextureRegion(texture);
-        // [Fix] NeonSpriteGenerator 生成的已经是正的 (FBO Upright)，所以不需要翻转。
-        // 如果翻转，反而会导致倒置。
-        region.flip(false, true);
+        // [Fix] 移除所有 flip。
+        // FBO (y-up) -> Texture (y-up) -> Region (y-up) -> Batch Draw (y-up) = Upright.
+        region.flip(false, false);
 
         return region;
     }

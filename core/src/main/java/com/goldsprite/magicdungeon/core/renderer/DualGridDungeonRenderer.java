@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.goldsprite.magicdungeon.assets.TextureManager;
 
 public class DualGridDungeonRenderer implements Disposable {
     private static final int TILE_SIZE = Constants.TILE_SIZE;
@@ -29,11 +28,11 @@ public class DualGridDungeonRenderer implements Disposable {
     };
 
     private List<LayerConfig> layers = new ArrayList<>();
-    private Map<String, Texture> textures = new HashMap<>();
+    private Map<String, TextureRegion> regions = new HashMap<>();
     private TextureRegion[] dungeonFloors;
     private TextureRegion torchTex;
     private TextureRegion windowTex;
-    
+
     // Base blobs that don't change
     private TextureRegion[] dirtBlob;
     private TextureRegion[] sandBlob;
@@ -53,62 +52,64 @@ public class DualGridDungeonRenderer implements Disposable {
         // Load Decor
         if (Gdx.files.internal("sprites/tilesets/torch.png").exists()) {
             Texture tex = new Texture(Gdx.files.internal("sprites/tilesets/torch.png"));
-            textures.put("sprites/tilesets/torch.png", tex);
-            torchTex = new TextureRegion(tex);
+            TextureRegion tr = new TextureRegion(tex);
+            regions.put("sprites/tilesets/torch.png", tr);
+            torchTex = tr;
         }
         if (Gdx.files.internal("sprites/tilesets/wall_window.png").exists()) {
             Texture tex = new Texture(Gdx.files.internal("sprites/tilesets/wall_window.png"));
-            textures.put("sprites/tilesets/wall_window.png", tex);
-            windowTex = new TextureRegion(tex);
+            TextureRegion tr = new TextureRegion(tex);
+            regions.put("sprites/tilesets/wall_window.png", tr);
+            windowTex = tr;
         }
     }
 
     private void updateTheme(com.goldsprite.magicdungeon.world.DungeonTheme theme) {
         if (currentTheme == theme) return;
-        
+
         // Clean up old theme textures
-        if (textures.containsKey("theme_wall")) {
-            textures.get("theme_wall").dispose();
-            textures.remove("theme_wall");
+        if (regions.containsKey("theme_wall")) {
+            regions.get("theme_wall").getTexture().dispose();
+            regions.remove("theme_wall");
         }
         for(int i=0; i<7; i++) {
             String key = "theme_floor_" + i;
-            if (textures.containsKey(key)) {
-                textures.get(key).dispose();
-                textures.remove(key);
+            if (regions.containsKey(key)) {
+                regions.get(key).getTexture().dispose();
+                regions.remove(key);
             }
         }
-        
+
         // 1. Generate Wall (Brick)
-        Texture wallTex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createDungeonWallTileset(
+        TextureRegion wallTex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createDungeonWallTileset(
             theme.primaryColor, theme.secondaryColor
         );
-        textures.put("theme_wall", wallTex);
-        
-        int size = wallTex.getWidth() / 4;
-        TextureRegion[][] split = TextureRegion.split(wallTex, size, size);
+        regions.put("theme_wall", wallTex);
+
+        int size = wallTex.getRegionWidth() / 4;
+        TextureRegion[][] split = wallTex.split(size, size);
         TextureRegion[] brickBlob = new TextureRegion[16];
         for (int i = 0; i < 16; i++) {
             brickBlob[i] = split[i / 4][i % 4];
         }
-        
+
         // 2. Generate Floors
         dungeonFloors = new TextureRegion[7];
         for(int i=0; i<7; i++) {
-            Texture tex = com.goldsprite.magicdungeon.utils.SpriteGenerator.createFloor(
+            TextureRegion region = com.goldsprite.magicdungeon.utils.SpriteGenerator.createFloor(
                 theme.floorBase, theme.floorDark, theme.floorHighlight
             );
-            textures.put("theme_floor_" + i, tex);
-            dungeonFloors[i] = new TextureRegion(tex);
+            regions.put("theme_floor_" + i, region);
+            dungeonFloors[i] = new TextureRegion(region);
         }
-        
+
         // Rebuild Layers List
         layers.clear();
         if (dirtBlob != null) layers.add(new LayerConfig(dirtBlob, "dirt"));
         if (brickBlob != null) layers.add(new LayerConfig(brickBlob, "brick"));
         if (sandBlob != null) layers.add(new LayerConfig(sandBlob, "sand"));
         if (grassBlob != null) layers.add(new LayerConfig(grassBlob, "grass"));
-        
+
         currentTheme = theme;
         Gdx.app.log("DualGridDungeonRenderer", "Theme updated to: " + theme.name);
     }
@@ -120,7 +121,7 @@ public class DualGridDungeonRenderer implements Disposable {
         }
 
         Texture tex = new Texture(Gdx.files.internal(path));
-        textures.put(path, tex);
+        regions.put(path, new TextureRegion(tex));
 
         int size = tex.getWidth() / 4;
         TextureRegion[][] split = TextureRegion.split(tex, size, size);
@@ -267,10 +268,12 @@ public class DualGridDungeonRenderer implements Disposable {
 
     @Override
     public void dispose() {
-        for (Texture tex : textures.values()) {
-            tex.dispose();
+        for (TextureRegion region : regions.values()) {
+            if (region.getTexture() != null) {
+                region.getTexture().dispose();
+            }
         }
-        textures.clear();
+        regions.clear();
         layers.clear();
     }
 }

@@ -3,6 +3,7 @@ package com.goldsprite.magicdungeon.utils;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 
 public class SpriteGenerator {
@@ -21,6 +22,10 @@ public class SpriteGenerator {
 		texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 		pixmap.dispose();
 		return texture;
+	}
+
+	private static TextureRegion toTextureRegion(Pixmap pixmap) {
+		return new TextureRegion(toTexture(pixmap));
 	}
 
 	// --- Helper Drawing Methods ---
@@ -71,13 +76,13 @@ public class SpriteGenerator {
 		}
 	}
 
-	public static Texture createQualityStar() {
+	public static TextureRegion createQualityStar() {
 		Pixmap p = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
 		p.setColor(0, 0, 0, 0);
 		p.fill();
 
 		p.setColor(Color.WHITE);
-		
+
 		// Draw a 4-pointed star
 		int c = 32;
 		int r = 32;
@@ -95,24 +100,21 @@ public class SpriteGenerator {
 		p.fillTriangle(c, c, c, c - w, c + r, c); // Right-Top part
 		p.fillTriangle(c, c, c, c + w, c + r, c); // Right-Bottom part
 
-		Texture t = new Texture(p);
-		t.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-		p.dispose();
-		return t;
+		return toTextureRegion(p);
 	}
 
 	// --- Tile Generators ---
 
-	public static Texture createDungeonWallTileset() {
+	public static TextureRegion createDungeonWallTileset() {
         return createDungeonWallTileset(Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
     }
 
-    public static Texture createDungeonWallTileset(Color primary, Color secondary) {
+    public static TextureRegion createDungeonWallTileset(Color primary, Color secondary) {
 		// 4x4 tiles, 16px each -> 64x64 texture
 		Pixmap p = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
 		p.setColor(0, 0, 0, 0);
 		p.fill();
-		
+
 		// Dual Grid Mask to Atlas Mapping (From DualGridDungeonRenderer)
 		int[] MASK_TO_ATLAS_X = { -1, 1, 0, 3, 0, 1, 2, 1, 3, 0, 3, 2, 1, 2, 3, 2 };
 		int[] MASK_TO_ATLAS_Y = { -1, 3, 0, 0, 2, 0, 3, 1, 3, 1, 2, 0, 2, 2, 1, 1 };
@@ -127,13 +129,13 @@ public class SpriteGenerator {
 		for (int mask = 0; mask < 16; mask++) {
 			int atlasX = MASK_TO_ATLAS_X[mask];
 			int atlasY = MASK_TO_ATLAS_Y[mask];
-			
+
 			if (atlasX == -1 || atlasY == -1) continue;
 
 			// Target Tile Position in Pixmap
 			int tx = atlasX * 16;
 			int ty = atlasY * 16;
-			
+
 			// Decode Mask: TL, TR, BL, BR
 			// Mask bits: TL=8, TR=4, BL=2, BR=1
 			boolean tl = (mask & 8) != 0;
@@ -142,17 +144,17 @@ public class SpriteGenerator {
 			boolean br = (mask & 1) != 0;
 
 			// Draw Quadrants (8x8 each)
-			
+
 			// --- Top-Left Quadrant ---
 			if (tl) {
 				drawWallTop(p, tx, ty, 8, 8, topColor, topHighlight);
 			}
-			
+
 			// --- Top-Right Quadrant ---
 			if (tr) {
 				drawWallTop(p, tx + 8, ty, 8, 8, topColor, topHighlight);
 			}
-			
+
 			// --- Bottom-Left Quadrant ---
 			if (bl) {
 				// Wall Top (Front) obscures everything
@@ -163,7 +165,7 @@ public class SpriteGenerator {
 					drawWallFace(p, tx, ty + 8, 8, 8, faceColor, faceShadow);
 				}
 			}
-			
+
 			// --- Bottom-Right Quadrant ---
 			if (br) {
 				drawWallTop(p, tx + 8, ty + 8, 8, 8, topColor, topHighlight);
@@ -174,8 +176,8 @@ public class SpriteGenerator {
 				}
 			}
 		}
-		
-		return toTexture(p);
+
+		return toTextureRegion(p);
 	}
 
 	private static void drawWallTop(Pixmap p, int x, int y, int w, int h, Color color, Color highlight) {
@@ -210,16 +212,16 @@ public class SpriteGenerator {
 		p.drawLine(x, y, x+w, y);
 	}
 
-	public static Texture createFloor() {
+	public static TextureRegion createFloor() {
 		return createFloor(com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE, com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK, com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
 	}
 
-	public static Texture createFloor(Color baseColor, Color darkColor, Color highlightColor) {
+	public static TextureRegion createFloor(Color baseColor, Color darkColor, Color highlightColor) {
 		int size = 32;
 		Pixmap p = new Pixmap(size, size, Pixmap.Format.RGBA8888);
 		p.setColor(0, 0, 0, 0);
 		p.fill();
-		
+
 		drawRect(p, 0, 0, size, size, darkColor);
 
 		// Large Stone Slabs (irregular grid)
@@ -241,11 +243,11 @@ public class SpriteGenerator {
 				Color slabColor = new Color(baseColor).mul(shade, shade, shade, 1f);
 
 				drawRect(p, x, y, w, h, slabColor);
-				
+
 				// Bevel Highlight (Top/Left)
 				drawRect(p, x, y, w, 1, highlightColor);
 				drawRect(p, x, y, 1, h, highlightColor);
-				
+
 				// Cracks
 				if (MathUtils.randomBoolean(0.3f)) {
 					int cx = x + MathUtils.random(w);
@@ -257,14 +259,14 @@ public class SpriteGenerator {
 		}
 
 		applyNoise(p, 0.05f);
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
-	public static Texture createPillar() {
+	public static TextureRegion createPillar() {
 		Pixmap p = createPixmap();
-		
+
 		// Transparent Background
-		
+
 		// Pillar Dimensions
 		int w = 64; // relatively thin
 		int h = 180;
@@ -284,20 +286,20 @@ public class SpriteGenerator {
 		drawRect(p, x, y + 20, w/3, h - 40, shadow);
 		drawRect(p, x + w/3, y + 20, w/3, h - 40, stoneColor);
 		drawRect(p, x + 2*w/3, y + 20, w/3, h - 40, shadow);
-		
+
 		// Capital (Top)
 		drawRect(p, x - 10, y, w + 20, 20, highlight);
 		drawRect(p, x - 5, y + 20, w + 10, 5, shadow);
 
 		// Cracks / Moss
 		applyNoise(p, 0.1f);
-		
-		return toTexture(p);
+
+		return toTextureRegion(p);
 	}
 
-	public static Texture createTorch() {
+	public static TextureRegion createTorch() {
 		Pixmap p = createPixmap();
-		
+
 		// Torch Holder (Wood/Metal)
 		int w = 20;
 		int h = 60;
@@ -306,39 +308,39 @@ public class SpriteGenerator {
 
 		drawRect(p, x, y, w, h, Color.valueOf("#4A3B2A")); // Wood
 		drawRect(p, x-5, y, w+10, 10, Color.GRAY); // Metal ring top
-		
+
 		// Fire
 		int fx = TEX_SIZE / 2;
 		int fy = y - 20;
 		drawGradientCircle(p, fx, fy, 25, Color.YELLOW, Color.ORANGE);
 		drawGradientCircle(p, fx, fy - 10, 15, Color.WHITE, Color.YELLOW);
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
-	public static Texture createWindow() {
+	public static TextureRegion createWindow() {
 		Pixmap p = createPixmap();
-		
+
 		// Frame
 		int w = 80;
 		int h = 100;
 		int x = (TEX_SIZE - w) / 2;
 		int y = (TEX_SIZE - h) / 2;
-		
+
 		Color frameColor = Color.valueOf("#333333");
 		drawRect(p, x, y, w, h, frameColor);
-		
+
 		// Bars
 		drawRect(p, x + w/3, y, 4, h, Color.BLACK);
 		drawRect(p, x + 2*w/3, y, 4, h, Color.BLACK);
-		
+
 		// Background (Dark Blue/Black)
 		drawRect(p, x+4, y+4, w-8, h-8, Color.valueOf("#111122"));
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
-	public static Texture createStairs(boolean up) {
+	public static TextureRegion createStairs(boolean up) {
 		Pixmap p = createPixmap();
 
 		// Unify Color: Stone Grey Style for both
@@ -404,15 +406,15 @@ public class SpriteGenerator {
 			}
 		}
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
 	// For compatibility if needed, though we should update calls
-	public static Texture createStairs() {
+	public static TextureRegion createStairs() {
 		return createStairs(false); // Default to down
 	}
 
-	public static Texture createDoor() {
+	public static TextureRegion createDoor() {
 		Pixmap p = createPixmap();
 
 		// Frame
@@ -430,49 +432,49 @@ public class SpriteGenerator {
 		drawCircle(p, 40, TEX_SIZE / 2, 12, Color.GOLD);
 		drawCircle(p, 40, TEX_SIZE / 2, 8, Color.YELLOW);
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
-	public static Texture createTree() {
+	public static TextureRegion createTree() {
 		Pixmap p = createPixmap();
-		
+
 		// Grass Background
 		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#4caf50"));
-		
+
 		// Tree Trunk
 		drawRect(p, 110, 150, 36, 106, Color.valueOf("#5d4037"));
-		
+
 		// Leaves (Cluster of circles)
 		Color leaves = Color.valueOf("#2e7d32");
 		Color lightLeaves = Color.valueOf("#43a047");
-		
+
 		// Bottom Layer
 		drawCircle(p, 80, 160, 40, leaves);
 		drawCircle(p, 176, 160, 40, leaves);
 		drawCircle(p, 128, 160, 45, leaves);
-		
+
 		// Middle Layer
 		drawCircle(p, 60, 100, 40, leaves);
 		drawCircle(p, 196, 100, 40, leaves);
 		drawCircle(p, 128, 90, 50, leaves);
-		
+
 		// Top Layer
 		drawCircle(p, 128, 50, 40, leaves);
-		
+
 		// Highlights
 		drawCircle(p, 110, 40, 20, lightLeaves);
 		drawCircle(p, 150, 80, 20, lightLeaves);
 		drawCircle(p, 70, 90, 15, lightLeaves);
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
-	public static Texture createGrass() {
+	public static TextureRegion createGrass() {
 		Pixmap p = createPixmap();
-		
+
 		// Base Green
 		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#4caf50"));
-		
+
 		// Grass blades / Texture
 		p.setColor(Color.valueOf("#388e3c"));
 		for(int i=0; i<300; i++) {
@@ -481,7 +483,7 @@ public class SpriteGenerator {
 			int h = MathUtils.random(4, 10);
 			p.drawLine(x, y, x, y - h);
 		}
-		
+
 		// Flowers
 		for(int i=0; i<10; i++) {
 			int x = MathUtils.random(20, TEX_SIZE-20);
@@ -490,15 +492,15 @@ public class SpriteGenerator {
 			drawCircle(p, x, y, 3, flowerColor);
 		}
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
-	public static Texture createSand() {
+	public static TextureRegion createSand() {
 		Pixmap p = createPixmap();
-		
+
 		// Base Sand
 		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#fff59d"));
-		
+
 		// Grain
 		p.setColor(Color.valueOf("#fbc02d"));
 		for(int i=0; i<500; i++) {
@@ -506,45 +508,45 @@ public class SpriteGenerator {
 			int y = MathUtils.random(TEX_SIZE);
 			p.drawPixel(x, y);
 		}
-		
-		return toTexture(p);
+
+		return toTextureRegion(p);
 	}
 
-	public static Texture createStonePath() {
+	public static TextureRegion createStonePath() {
 		Pixmap p = createPixmap();
-		
+
 		// Base Dirt/Grass
 		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#795548")); // Brown dirt
-		
+
 		// Stones
 		Color stoneColor = Color.GRAY;
 		Color highlight = Color.LIGHT_GRAY;
-		
+
 		for(int i=0; i<10; i++) {
 			int w = MathUtils.random(40, 70);
 			int h = MathUtils.random(30, 60);
 			int x = MathUtils.random(0, TEX_SIZE - w);
 			int y = MathUtils.random(0, TEX_SIZE - h);
-			
+
 			drawRect(p, x, y, w, h, stoneColor);
 			drawRect(p, x+2, y+2, w-4, h-4, highlight);
 		}
-		
-		return toTexture(p);
+
+		return toTextureRegion(p);
 	}
 
-	public static Texture createDungeonEntrance() {
+	public static TextureRegion createDungeonEntrance() {
 		Pixmap p = createPixmap();
-		
+
 		// Base Grass
 		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#4caf50"));
-		
+
 		// Stone Structure
 		drawRect(p, 20, 20, TEX_SIZE-40, TEX_SIZE-40, Color.DARK_GRAY);
-		
+
 		// Dark Entrance (Stairs Down)
 		drawRect(p, 60, 60, TEX_SIZE-120, TEX_SIZE-100, Color.BLACK);
-		
+
 		// Archway / Portal effect
 		p.setColor(Color.PURPLE);
 		for(int i=0; i<20; i++) {
@@ -552,26 +554,26 @@ public class SpriteGenerator {
 			int y = MathUtils.random(60, TEX_SIZE-60);
 			p.fillCircle(x, y, MathUtils.random(2, 5));
 		}
-		
-		return toTexture(p);
+
+		return toTextureRegion(p);
 	}
 
 	// --- Character Generators ---
 
-	public static Texture createPlayer() {
+	public static TextureRegion createPlayer() {
 		return generateCharacterTexture(null, null, null, null, null);
 	}
 
-	public static Texture generateCharacterTexture(String mainHand, String offHand, String helmet, String armor, String boots) {
+	public static TextureRegion generateCharacterTexture(String mainHand, String offHand, String helmet, String armor, String boots) {
 		Pixmap p = createPixmap();
 
 		// Colors
 		Color skin = com.goldsprite.magicdungeon.assets.ThemeConfig.SKIN_DEFAULT;
 		Color pantsColor = com.goldsprite.magicdungeon.assets.ThemeConfig.PANTS_BROWN;
-		
+
 		// 1. Body Base (Legs, Torso, Head, Arms)
 		drawBodyBase(p, skin, pantsColor);
-		
+
 		// 2. Boots
 		if (boots != null) {
 			drawBoots(p, boots);
@@ -579,7 +581,7 @@ public class SpriteGenerator {
 			// Default Shoes/Feet
 			drawDefaultFeet(p);
 		}
-		
+
 		// 3. Armor (Body)
 		if (armor != null) {
 			drawArmor(p, armor);
@@ -587,48 +589,48 @@ public class SpriteGenerator {
 			// Default Tunic
 			drawDefaultTunic(p);
 		}
-		
+
 		// 4. Head / Helmet
 		// Draw Face first
 		drawFace(p, 128, 68); // Center X, Face Y
-		
+
 		if (helmet != null) {
 			drawHelmet(p, helmet);
 		} else {
 			// Default Hair
 			drawHair(p);
 		}
-		
+
 		// 5. Weapons
 		if (mainHand != null) {
 			// Draw Main Hand (Right Hand -> Screen Left)
 			drawWeapon(p, mainHand, true);
 		}
-		
+
 		if (offHand != null) {
 			// Draw Off Hand (Left Hand -> Screen Right)
 			drawWeapon(p, offHand, false);
 		}
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
 	private static void drawBodyBase(Pixmap p, Color skin, Color pants) {
 		// Legs
 		drawRect(p, 90, 180, 25, 60, pants);
 		drawRect(p, 141, 180, 25, 60, pants);
-		
+
 		// Torso (Skin/Undershirt)
 		drawRect(p, 70, 100, 116, 90, skin);
-		
+
 		// Arms
 		drawRect(p, 40, 100, 25, 70, skin); // Left Arm
 		drawRect(p, 191, 100, 25, 70, skin); // Right Arm
-		
+
 		// Hands
 		drawRect(p, 40, 170, 25, 25, skin); // Left Hand
 		drawRect(p, 191, 170, 25, 25, skin); // Right Hand
-		
+
 		// Head Base
 		int headW = 76;
 		int headH = 64;
@@ -636,13 +638,13 @@ public class SpriteGenerator {
 		int headY = 36;
 		drawRect(p, headX, headY, headW, headH, skin);
 	}
-	
+
 	private static void drawDefaultFeet(Pixmap p) {
 		Color shoes = Color.valueOf("#3E2723");
 		drawRect(p, 90, 230, 25, 10, shoes);
 		drawRect(p, 141, 230, 25, 10, shoes);
 	}
-	
+
 	private static void drawDefaultTunic(Pixmap p) {
 		// Simple Shirt
 		Color shirt = Color.valueOf("#a1887f");
@@ -651,7 +653,7 @@ public class SpriteGenerator {
 		drawRect(p, 70, 180, 116, 15, Color.valueOf("#3e2723"));
 		drawRect(p, 118, 180, 20, 15, Color.GOLD);
 	}
-	
+
 	private static void drawHair(Pixmap p) {
 		Color hair = Color.valueOf("#5d4037");
 		int headX = 128 - 38;
@@ -672,77 +674,77 @@ public class SpriteGenerator {
 	private static void drawBoots(Pixmap p, String name) {
 		Pixmap itemP = createPixmap();
 		drawBootsIcon(itemP, name);
-		
+
 		// Icon Boots: ~50x100 each. Y range 80-180.
 		// Character Legs: ~25x60 each. Y range 180-240.
-		
+
 		// Left Boot
 		// Source: x=60, y=80, w=50, h=100
 		// Dest: x=88, y=180, w=30, h=60 (Covering leg + foot)
 		p.drawPixmap(itemP, 60, 80, 50, 100, 88, 180, 30, 60);
-		
+
 		// Right Boot
 		// Source: x=140, y=80, w=50, h=100
 		// Dest: x=138, y=180, w=30, h=60
 		p.drawPixmap(itemP, 140, 80, 50, 100, 138, 180, 30, 60);
-		
+
 		itemP.dispose();
 	}
-	
+
 	private static void drawArmor(Pixmap p, String name) {
 		Pixmap itemP = createPixmap();
 		drawArmorIcon(itemP, name);
-		
+
 		// Character Torso: x=70, y=100, w=116, h=90
 		// We want to fit the armor onto this torso.
 		// Previous implementation drew full 256x256 shifted by 40y.
 		// New implementation: Scale and position to fit torso with offset/stretch control.
-		
+
 		// Source Region (Approximate the armor part of the icon)
 		// Armor Icon usually fills 60-196 X, 60-190 Y.
 		int srcX = 50;
 		int srcY = 50;
 		int srcW = 156;
 		int srcH = 150;
-		
+
 		// Target Region (Covering Torso)
 		// Center X = 128. Torso W = 116.
 		// We make armor slightly wider to cover edges.
-		int dstW = 130; 
+		int dstW = 130;
 		int dstH = 110;
 		int dstX = 128 - dstW/2;
 		int dstY = 90; // Slightly above torso start (100)
-		
+
 		// Apply Offset & Stretch (Configuration placeholders)
 		int offsetX = 0;
 		int offsetY = 0;
 		float scaleX = 1.0f;
 		float scaleY = 1.0f;
-		
+
 		dstX += offsetX;
 		dstY += offsetY;
 		dstW = (int)(dstW * scaleX);
 		dstH = (int)(dstH * scaleY);
-		
+
 		p.drawPixmap(itemP, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
-		
+
 		itemP.dispose();
 	}
-	
+
 	private static void drawHelmet(Pixmap p, String name) {
 		Pixmap itemP = createPixmap();
 		drawHelmetIcon(itemP, name);
-		
+
 		// Icon Helmet: Circle centered at 128,128, R=70. Bounds approx 58,58,140,140.
 		// Character Head: 128,36. W=76, H=64.
 		// We need to scale down the helmet significantly and move it up.
-		
+
 		// Source Region (The Helmet Dome + Guard)
 		int srcX = 50;
 		int srcY = 50;
 		int srcW = 156;
 		int srcH = 130;
-		
+
 		// Dest Region (Covering Head)
 		// Head center X=128. Head Top Y=36.
 		// Let's target a box slightly larger than the head.
@@ -750,21 +752,21 @@ public class SpriteGenerator {
 		int dstH = 80;
 		int dstX = 128 - dstW/2;
 		int dstY = 10; // Moved up from 20 to 10 (higher on texture/screen?) - Pixmap 0,0 is Top-Left. So 10 is higher.
-		
+
 		p.drawPixmap(itemP, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
-		
+
 		itemP.dispose();
 	}
-	
+
 	private static void drawWeapon(Pixmap p, String name, boolean isMainHand) {
 		Pixmap itemP = createPixmap();
 		drawItemToPixmap(itemP, name);
-		
+
 		// Hand Positions (Adjusted to be closer to body center)
 		// Body Hands are at ~52 (Left) and ~203 (Right)
 		int handX = isMainHand ? 52 : 203; // Screen X
 		int handY = 160; // Moved down from 140
-		
+
 		if (name.contains("Shield") || name.contains("盾")) {
 			// Shield: Center on hand, scale down
 			int size = 96; // Larger shield (was 64)
@@ -775,34 +777,34 @@ public class SpriteGenerator {
 			// Weapon (Sword, Axe, etc.)
 			float scale = 0.6f; // Larger scale (was 0.4f)
 			int targetSize = (int)(256 * scale);
-			
+
 			// Adjust overlap to pull weapon inward
-			int overlap = 30; 
-			
+			int overlap = 30;
+
 			if (isMainHand) {
 				// Mirror for Main Hand (Left Side of Screen)
 				Pixmap flipped = flipPixmap(itemP);
-				
+
 				// Handle in Flipped Image:
 				// Original Handle X ~ 60. Flipped X = 196.
 				// We want Flipped Handle (196*scale, 200*scale) to align with Hand (handX, handY).
-				
+
 				int destX = (int)(handX - 196 * scale) + overlap; // Pull right
 				int destY = (int)(handY - 200 * scale);
-				
+
 				p.drawPixmap(flipped, 0, 0, 256, 256, destX, destY, targetSize, targetSize);
 				flipped.dispose();
 			} else {
 				// Off Hand (Right Side of Screen)
 				// Handle X ~ 60.
-				
+
 				int destX = (int)(handX - 60 * scale) - overlap; // Pull left
 				int destY = (int)(handY - 200 * scale);
-				
+
 				p.drawPixmap(itemP, 0, 0, 256, 256, destX, destY, targetSize, targetSize);
 			}
 		}
-		
+
 		itemP.dispose();
 	}
 
@@ -810,7 +812,7 @@ public class SpriteGenerator {
 		int w = src.getWidth();
 		int h = src.getHeight();
 		Pixmap flipped = new Pixmap(w, h, src.getFormat());
-		
+
 		for (int y = 0; y < h; y++) {
 			for (int x = 0; x < w; x++) {
 				flipped.drawPixel(w - 1 - x, y, src.getPixel(x, y));
@@ -819,12 +821,12 @@ public class SpriteGenerator {
 		return flipped;
 	}
 
-	public static Texture createAvatar() {
+	public static TextureRegion createAvatar() {
 		// Just reuse the new generator with no equipment
 		return generateCharacterTexture(null, null, null, null, null);
 	}
 
-	public static Texture createMonster(String type) {
+	public static TextureRegion createMonster(String type) {
 		Pixmap p = createPixmap();
 
 		if (type.equals("Slime")) {
@@ -868,7 +870,7 @@ public class SpriteGenerator {
 			// Spine & Ribs (Detailed)
 			// Spine
 			drawRect(p, 120, 100, 16, 100, Color.valueOf("#dddddd"));
-			
+
 			// Ribs (Curved look via rects)
 			for(int i=0; i<4; i++) {
 				int ribY = 110 + i*18;
@@ -876,7 +878,7 @@ public class SpriteGenerator {
 				int ribX = 128 - ribW/2;
 				drawRect(p, ribX, ribY, ribW, 8, Color.valueOf("#eeeeee"));
 			}
-			
+
 			// Arms (Bone segments)
 			// Left Arm
 			drawRect(p, 80, 110, 10, 40, Color.valueOf("#eeeeee")); // Upper
@@ -899,7 +901,7 @@ public class SpriteGenerator {
 			drawRect(p, 136, 210, 12, 40, Color.valueOf("#eeeeee"));
 			drawCircle(p, 142, 250, 6, Color.valueOf("#dddddd"));
 			drawRect(p, 136, 250, 10, 40, Color.valueOf("#eeeeee"));
-			
+
 			// Feet (Bigger - match player)
 			drawRect(p, 100, 280, 25, 15, Color.valueOf("#aaaaaa")); // Left
 			drawRect(p, 130, 280, 25, 15, Color.valueOf("#aaaaaa")); // Right
@@ -914,7 +916,7 @@ public class SpriteGenerator {
 			// Legs
 			drawRect(p, 90, 180, 30, 60, leather);
 			drawRect(p, 136, 180, 30, 60, leather);
-			
+
 			// Body (Muscular)
 			drawRect(p, 70, 90, 116, 100, skin);
 			// Pecs/Abs definition
@@ -928,7 +930,7 @@ public class SpriteGenerator {
 			// Arms (Big)
 			drawRect(p, 30, 90, 35, 90, skin); // Left
 			drawRect(p, 191, 90, 35, 90, skin); // Right
-			
+
 			// Armor: Shoulder Pad (One side)
 			drawRect(p, 180, 80, 50, 40, metal);
 			drawRect(p, 190, 90, 10, 10, Color.RED); // Spike?
@@ -942,16 +944,16 @@ public class SpriteGenerator {
 			int headH = 80;
 			int headX = 128 - headW/2;
 			int headY = 20;
-			
+
 			drawRect(p, headX, headY, headW, headH, skin);
-			
+
 			// Jaw (Big)
 			drawRect(p, headX - 5, headY + 50, headW + 10, 40, skin);
-			
+
 			// Tusks
 			drawRect(p, headX + 10, headY + 70, 15, 30, Color.valueOf("#fffde7"));
 			drawRect(p, headX + headW - 25, headY + 70, 15, 30, Color.valueOf("#fffde7"));
-			
+
 			// Eyes (Red, small)
 			drawRect(p, headX + 10, headY + 30, 20, 10, Color.RED);
 			drawRect(p, headX + headW - 30, headY + 30, 20, 10, Color.RED);
@@ -978,12 +980,12 @@ public class SpriteGenerator {
 
 		} else if (type.equals("Boss")) {
 			// DRAGON (Full Body Boss)
-			
+
 			// Wings (Big, back)
 			p.setColor(Color.valueOf("#b71c1c")); // Dark Red
 			p.fillTriangle(128, 80, 10, 0, 80, 140);
 			p.fillTriangle(128, 80, 246, 0, 176, 140);
-			
+
 			// Tail (Curved behind)
 			p.setColor(Color.valueOf("#d32f2f"));
 			// Simple representation: thick line
@@ -996,14 +998,14 @@ public class SpriteGenerator {
 
 			// Main torso (Upright)
 			drawRect(p, 80, 80, 96, 140, bodyColor);
-			
+
 			// Legs
 			drawRect(p, 70, 200, 40, 50, bodyColor);
 			drawRect(p, 146, 200, 40, 50, bodyColor);
 			// Claws
 			drawRect(p, 60, 240, 50, 10, Color.BLACK);
 			drawRect(p, 146, 240, 50, 10, Color.BLACK);
-			
+
 			// Arms
 			drawRect(p, 40, 100, 30, 80, bodyColor);
 			drawRect(p, 186, 100, 30, 80, bodyColor);
@@ -1047,13 +1049,13 @@ public class SpriteGenerator {
 			drawRect(p, 164, headY + 20, 4, 15, Color.BLACK);
 		}
 
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
-	public static Texture createItem(String name) {
+	public static TextureRegion createItem(String name) {
 		Pixmap p = createPixmap();
 		drawItemToPixmap(p, name);
-		return toTexture(p);
+		return toTextureRegion(p);
 	}
 
 	private static void drawItemToPixmap(Pixmap p, String name) {
@@ -1222,7 +1224,7 @@ public class SpriteGenerator {
 		 // Left Blade (Curved)
 		 // Draw using triangles/rects to simulate curve
 		 p.setColor(metal);
-		 p.fillTriangle(cx - 15, cy - 15, cx - 15, cy + 15, cx - 70, cy); 
+		 p.fillTriangle(cx - 15, cy - 15, cx - 15, cy + 15, cx - 70, cy);
 		 p.fillTriangle(cx - 15, cy - 25, cx - 60, cy - 40, cx - 15, cy);
 		 p.fillTriangle(cx - 15, cy + 25, cx - 60, cy + 40, cx - 15, cy);
 		 // Edge
@@ -1255,7 +1257,7 @@ public class SpriteGenerator {
 		 for(int i=0; i<20; i++) {
 			 drawCircle(p, 80 + i*5, 200 - i*7, 8, Color.valueOf("#5d4037"));
 		 }
-		 
+
 		 // Magic Aura (Outer Glow)
 		 p.setBlending(Pixmap.Blending.SourceOver);
 		 drawGradientCircle(p, 180, 60, 60, new Color(0, 1, 1, 0), new Color(0, 1, 1, 0.3f));
@@ -1286,7 +1288,7 @@ public class SpriteGenerator {
 		 drawLine(p, 200, 80, 190, 70, 6, Color.GOLD);
 		 drawLine(p, 160, 40, 170, 50, 6, Color.GOLD);
 		 drawLine(p, 200, 40, 190, 50, 6, Color.GOLD);
-		 
+
 		 // Particles
 		 for(int i=0; i<10; i++) {
 			 int px = 180 + (int)(Math.random()*60 - 30);
@@ -1339,13 +1341,13 @@ public class SpriteGenerator {
 		p.setBlending(Pixmap.Blending.None);
 		p.fillRectangle(50, 160, 156, 60);
 		p.setBlending(Pixmap.Blending.SourceOver);
-		
+
 		// Rim/Guard
 		drawRect(p, 50, 150, 156, 20, trim);
-		
+
 		// Top Spike or Decoration
 		drawRect(p, 123, 40, 10, 30, trim);
-		
+
 		if(isIron) {
 			// Visor slit
 			drawRect(p, 126, 100, 4, 50, Color.BLACK);
@@ -1362,7 +1364,7 @@ public class SpriteGenerator {
 		drawRect(p, 60, 80, 50, 100, c); // Leg
 		drawRect(p, 40, 160, 70, 40, c); // Foot (Moved left to point outward)
 		drawRect(p, 60, 80, 50, 10, trim); // Top Trim
-		
+
 		// Right Boot (Right side of icon) - Points Right (Outward)
 		drawRect(p, 140, 80, 50, 100, c);
 		drawRect(p, 140, 160, 70, 40, c); // Foot (Points right)
@@ -1382,7 +1384,7 @@ public class SpriteGenerator {
 		Color gemColor = Color.RED;
 		if(name.contains("Blue") || name.contains("蓝")) gemColor = Color.BLUE;
 		if(name.contains("Green") || name.contains("绿")) gemColor = Color.GREEN;
-		
+
 		drawRect(p, 118, 170, 20, 30, Color.GOLD); // Setting
 		drawCircle(p, 128, 185, 12, gemColor); // Gem
 	}
@@ -1395,7 +1397,7 @@ public class SpriteGenerator {
 		p.setColor(0,0,0,0);
 		p.fillCircle(128, 128, 45);
 		p.setBlending(Pixmap.Blending.SourceOver);
-		
+
 		// Decoration
 		drawCircle(p, 128, 68, 8, Color.RED);
 		drawCircle(p, 128, 188, 8, Color.RED);
@@ -1472,15 +1474,15 @@ public class SpriteGenerator {
 			// Stomach (Segmented)
 			drawRect(p, 75, 145, 106, 25, base);
 			drawRect(p, 75, 175, 106, 20, base);
-			
+
 			// Straps / Belts
 			drawRect(p, 60, 100, 136, 10, trim); // Chest strap
 			drawRect(p, 120, 60, 16, 140, trim); // Center vertical strap
-			
+
 			// Shoulders (Rounded)
 			drawCircle(p, 60, 70, 25, trim);
 			drawCircle(p, 196, 70, 25, trim);
-			
+
 			// Studs (Gold/Brass)
 			p.setColor(Color.valueOf("#ffd54f"));
 			for(int i=0; i<3; i++) {
@@ -1489,23 +1491,23 @@ public class SpriteGenerator {
 						drawCircle(p, 80 + j*48, 80 + i*40, 5, Color.valueOf("#ffd54f"));
 				}
 			}
-			
+
 		} else {
 			// Plate Mail (Segmented)
 			// Gorget (Neck)
 			drawRect(p, 100, 50, 56, 20, trim);
-			
+
 			// Breastplate
 			drawRect(p, 60, 70, 136, 70, base);
 			// Highlight curve
 			p.setColor(highlight);
 			p.fillTriangle(60, 70, 196, 70, 128, 140);
-			
+
 			// Plackart (Stomach plates) - Overlapping
 			drawRect(p, 70, 145, 116, 20, base);
 			drawRect(p, 75, 165, 106, 20, base);
 			drawRect(p, 80, 185, 96, 20, base);
-			
+
 			// Pauldrons (Shoulders) - Large, layered
 			// Left
 			drawCircle(p, 50, 70, 30, trim);
@@ -1513,7 +1515,7 @@ public class SpriteGenerator {
 			// Right
 			drawCircle(p, 206, 70, 30, trim);
 			drawCircle(p, 206, 70, 20, base);
-			
+
 			// Trim / Edges
 			drawRect(p, 126, 70, 4, 70, trim); // Center line
 			// Rivets

@@ -250,68 +250,31 @@ public class NeonGenTestScreen extends GScreen {
         // Use the centralized NeonGenerator logic to ensure consistency
         // Note: NeonGenerator.generate returns a TextureRegion that is ready to draw (upright)
         bakedRegion = NeonGenerator.getInstance().generate(generateSize, generateSize, batch -> {
-            drawContent(batch, generateSize, generateSize);
+            drawContent(batch);
         });
     }
 
-    private void drawContent(NeonBatch batch, float w, float h) {
+    private void drawContent(NeonBatch batch) {
         // Set deterministic random seed
         MathUtils.random.setSeed(currentSeed);
 
-        // Since the generators auto-scale based on a single "size" parameter (assuming square),
-        // we need to handle non-square aspect ratios here if w != h.
-        // But the generators take a single float size.
-        // If we want to stretch, we can scale the batch matrix.
-        // The generators draw to "size" x "size".
-
-        // Strategy:
-        // Pass 'w' as the size.
-        // If h != w, apply a scale on Y axis: scaleY = h / w.
-
-        float size = w;
-        float scaleY = h / w;
-
-
-        // NeonGenerator 的生成器代码是基于 "y-down" 逻辑编写的 (例如 y=0 是头，y=256 是脚)。
-        // 这种数据在 "y-down" 的投影矩阵下 (如 FBO) 能正确生成 "头在上，脚在下" 的纹理。
-        //
-        // 然而，NeonGenTestScreen 的 Stage 使用的是默认的 "y-up" 坐标系 (0,0 在左下角)。
-        // 如果直接在 y-up 坐标系中绘制 y-down 数据:
-        // - y=0 (头) 会出现在屏幕底部。
-        // - y=256 (脚) 会出现在屏幕顶部。
-        // 这会导致图像倒立。
-        //
-        // 为了在 y-up 视口中正确预览 y-down 数据，我们需要翻转 Y 轴。
-        // scale(1, -1) 将坐标系 Y 轴反转，使得 y 增加的方向变为向下。
-        // 同时我们需要将原点移动到绘制区域的左上角 (cx, cy + ch)，因为在反转后的坐标系中，y=0 对应原点。
-        // 
-        // 变换过程:
-        // 1. translate(cx, cy + ch, 0): 将原点移到目标区域的左上角。
-        // 2. scale(1f, -1f, 1f): 翻转 Y 轴，使得正 Y 向下。
-        // 结果: 绘制 y=0 (头) -> 落在 (cx, cy + ch) 即左上角。
-        if (scaleY != 1f) {
-            batch.getTransformMatrix().scale(1f, scaleY, 1f);
-            batch.setTransformMatrix(batch.getTransformMatrix()); // Flush matrix
-        }
+        // 生成器现在使用 0~1 标准化坐标，无需传递尺寸或处理缩放/翻转。
+        // 外部通过矩阵控制最终大小。
 
         try {
             if (currentType == GeneratorType.CHARACTER) {
-                NeonSpriteGenerator.drawCharacter(batch, size, "Sword", null, "Helmet", "Armor", "Boots");
+                NeonSpriteGenerator.drawCharacter(batch, "Sword", null, "Helmet", "Armor", "Boots");
             } else if (currentType == GeneratorType.WALL) {
-                NeonTileGenerator.drawWallTileset(batch, size, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
+                NeonTileGenerator.drawWallTileset(batch, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
             } else if (currentType == GeneratorType.FLOOR) {
-                NeonTileGenerator.drawFloor(batch, size,
+                NeonTileGenerator.drawFloor(batch, 
                     com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE,
                     com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK,
                     com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
             } else if (currentType == GeneratorType.ITEM) {
-                NeonItemGenerator.drawItem(batch, size, itemName);
+                NeonItemGenerator.drawItem(batch, itemName);
             }
         } finally {
-            if (scaleY != 1f) {
-                batch.getTransformMatrix().scale(1f, 1f/scaleY, 1f);
-                batch.setTransformMatrix(batch.getTransformMatrix()); // Reset matrix
-            }
         }
     }
 
@@ -391,12 +354,19 @@ public class NeonGenTestScreen extends GScreen {
                 neonBatch.setProjectionMatrix(stage.getCamera().combined);
                 neonBatch.begin();
 
-                // Move to position (Top-Left of the area) and flip Y to match "Top-Left" data coordinates
-                // See drawContent() for detailed explanation of why scale(1, -1) is needed.
-                neonBatch.getTransformMatrix().idt().translate(cx, cy + ch, 0).scale(1f, -1f, 1f);
+                // 使用矩阵将 0~1 的绘制指令缩放到目标尺寸
+                // 现在的生成器产生的是正立的 0~1 坐标 (y-up)
+                // 我们的 Stage 也是 y-up
+                // 所以只需要 Translate 到位置，然后 Scale 到目标大小即可，不需要翻转
+                neonBatch.getTransformMatrix().idt()
+                    .translate(cx, cy, 0)
+                    .scale(cw, ch, 1f); // Scale 0~1 to cw,ch
                 neonBatch.setTransformMatrix(neonBatch.getTransformMatrix()); // Flush matrix
 
-                drawContent(neonBatch, cw, ch);
+                // 注意：drawContent 不再需要传入宽高进行内部计算，
+                // 因为生成器内部使用标准化坐标。
+                // 我们只需要调用生成方法即可。
+                drawContent(neonBatch);
 
                 neonBatch.getTransformMatrix().idt();
                 neonBatch.setTransformMatrix(neonBatch.getTransformMatrix()); // Reset matrix
