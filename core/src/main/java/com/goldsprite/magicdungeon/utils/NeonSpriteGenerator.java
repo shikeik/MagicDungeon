@@ -3,6 +3,7 @@ package com.goldsprite.magicdungeon.utils;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Matrix4;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 
 /**
@@ -10,6 +11,8 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
  * 替代原有的 SpriteGenerator，使用 NeonBatch 进行矢量绘制
  */
 public class NeonSpriteGenerator {
+
+    private static final float REF_SIZE = 256f;
 
     /**
      * 生成 Player 纹理 (Neon 风格)
@@ -22,7 +25,7 @@ public class NeonSpriteGenerator {
      * 生成带装备的角色纹理
      */
     public static Texture generateCharacterTexture(String mainHand, String offHand, String helmet, String armor, String boots) {
-        int size = 128; // 使用 128x128 提高清晰度
+        int size = 256; // High res
         TextureRegion region = NeonGenerator.getInstance().generate(size, size, batch -> {
             drawCharacter(batch, size, mainHand, offHand, helmet, armor, boots);
         });
@@ -30,6 +33,24 @@ public class NeonSpriteGenerator {
     }
 
     public static void drawCharacter(NeonBatch batch, float size, String mainHand, String offHand, String helmet, String armor, String boots) {
+        // Auto-scale to fit size if different from REF_SIZE
+        Matrix4 oldTransform = batch.getTransformMatrix().cpy();
+        float scale = size / REF_SIZE;
+        if (scale != 1f) {
+            batch.getTransformMatrix().scale(scale, scale, 1f);
+        }
+
+        try {
+            drawCharacterImpl(batch, mainHand, offHand, helmet, armor, boots);
+        } finally {
+            batch.setTransformMatrix(oldTransform);
+        }
+    }
+
+    private static void drawCharacterImpl(NeonBatch batch, String mainHand, String offHand, String helmet, String armor, String boots) {
+        // Use REF_SIZE for all coordinate calculations
+        float size = REF_SIZE;
+        
         // Colors
         Color skin = Color.valueOf("#ffccaa");
         Color legsColor = Color.valueOf("#8d6e63");
@@ -98,61 +119,39 @@ public class NeonSpriteGenerator {
         int headX = 128 - headW/2;
         int headY = 36;
         drawRectPix(batch, size, headX, headY, headW, headH, skin);
-
-        // Face Details
-        int eyeY = headY + 30;
-        drawRectPix(batch, size, 128 - 20, eyeY, 12, 12, Color.BLACK);
-        drawRectPix(batch, size, 128 + 8, eyeY, 12, 12, Color.BLACK);
-        drawRectPix(batch, size, 128 - 18, eyeY + 2, 4, 4, Color.WHITE);
-        drawRectPix(batch, size, 128 + 10, eyeY + 2, 4, 4, Color.WHITE);
-
-        // 5. Helmet or Hair
+        
+        // Face (Simple)
+        drawRectPix(batch, size, headX + 15, headY + 25, 10, 10, Color.BLACK); // Eyes
+        drawRectPix(batch, size, headX + headW - 25, headY + 25, 10, 10, Color.BLACK);
+        
+        // Helmet
         if (helmet != null) {
-            Color helmetColor = Color.valueOf("#CFD8DC");
-            Color darkHelmet = Color.valueOf("#90A4AE");
+            Color helmColor = Color.valueOf("#607d8b");
+            Color helmDark = Color.valueOf("#455a64");
             
-            drawRectPix(batch, size, headX - 5, headY - 10, headW + 10, 30, helmetColor); // Top Dome
-            drawRectPix(batch, size, headX - 5, headY + 10, 15, headH, darkHelmet); // Sides
-            drawRectPix(batch, size, headX + headW - 10, headY + 10, 15, headH, darkHelmet);
-            drawRectPix(batch, size, 128 - 5, headY - 20, 10, 20, Color.RED); // Crest
+            drawRectPix(batch, size, headX - 5, headY - 10, headW + 10, 30, helmColor); // Top
+            drawRectPix(batch, size, headX - 5, headY + 20, 10, 50, helmColor); // Sides
+            drawRectPix(batch, size, headX + headW - 5, headY + 20, 10, 50, helmColor);
+            
+            // Horns?
+            drawRectPix(batch, size, headX - 15, headY - 20, 10, 40, Color.WHITE);
+            drawRectPix(batch, size, headX + headW + 5, headY - 20, 10, 40, Color.WHITE);
         } else {
             // Hair
-            Color hairColor = Color.valueOf("#5d4037");
-            drawRectPix(batch, size, headX, headY, headW, 20, hairColor); // Top
-            drawRectPix(batch, size, headX - 5, headY, 10, 50, hairColor); // Sideburns
-            drawRectPix(batch, size, headX + headW - 5, headY, 10, 50, hairColor);
+            drawRectPix(batch, size, headX, headY, headW, 15, Color.BROWN);
         }
         
-        // 6. Weapons
+        // Weapons
         if (mainHand != null) {
-            // Simple Sword in Right Hand (Screen Left)
-            // Hand at 40, 170
-            // Blade
-            Color blade = Color.LIGHT_GRAY;
-            // Angle it? drawRectPix handles upright.
-            // Let's draw it upright for now
-            drawRectPix(batch, size, 40 + 5, 170 - 60, 15, 60, blade);
-            // Hilt
-            drawRectPix(batch, size, 30, 170, 35, 10, Color.valueOf("#5d4037"));
+            // Sword
+            drawRectPix(batch, size, 10, 130, 20, 100, Color.GRAY); // Blade
+            drawRectPix(batch, size, 5, 230, 30, 10, Color.DARK_GRAY); // Guard
+            drawRectPix(batch, size, 12, 240, 16, 30, Color.valueOf("#5d4037")); // Hilt
         }
-        
-        // 7. Neon 增强: 增加一点描边和光效，体现矢量优势
-        batch.drawCircle(size/2, size * 0.1f, size * 0.35f, 2f, new Color(0, 1, 1, 0.3f), 32, false);
     }
 
-    /**
-     * 辅助方法：使用 256x256 的 Pixmap 坐标系进行绘制，内部自动转为 UV 并应用到当前 size
-     * Pixmap 坐标: (0,0) 在左上角, Y 向下
-     * Neon 坐标: (0,0) 在左下角, Y 向上
-     */
-    private static void drawRectPix(NeonBatch batch, float size, float px, float py, float w, float h, Color color) {
-        float base = 256f;
-        float u = px / base;
-        // Y 轴翻转核心逻辑
-        float v = 1.0f - (py + h) / base;
-        float uw = w / base;
-        float vh = h / base;
-
-        batch.drawRect(u * size, v * size, uw * size, vh * size, 0, 0, color, true);
+    private static void drawRectPix(NeonBatch batch, float totalSize, float x, float y, float w, float h, Color color) {
+        // Signature: drawRect(x, y, width, height, rotationDeg, lineWidth, color, filled)
+        batch.drawRect(x, totalSize - y - h, w, h, 0, 0, color, true);
     }
 }

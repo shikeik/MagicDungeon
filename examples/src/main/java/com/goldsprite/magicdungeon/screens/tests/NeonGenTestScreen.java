@@ -18,7 +18,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
-import com.goldsprite.magicdungeon.assets.ThemeConfig;
 import com.goldsprite.magicdungeon.utils.NeonItemGenerator;
 import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
 import com.goldsprite.magicdungeon.utils.NeonTileGenerator;
@@ -78,7 +77,7 @@ public class NeonGenTestScreen extends GScreen {
         controls.add(new VisLabel("Neon Generator")).pad(10).row();
         controls.addSeparator().padBottom(10).fillX();
 
-        // Item Name Input (Created first for reference, added later)
+        // Item Name Input
         final VisTable itemInputTable = new VisTable(true);
         itemInputTable.add(new VisLabel("Item Name:")).left();
         final VisTextField nameField = new VisTextField(itemName);
@@ -103,20 +102,17 @@ public class NeonGenTestScreen extends GScreen {
             public void changed(ChangeEvent event, Actor actor) {
                 currentType = typeSelect.getSelected();
                 // Update default size based on type
-                if (currentType == GeneratorType.CHARACTER) generateSize = 128;
+                if (currentType == GeneratorType.CHARACTER) generateSize = 256;
                 else if (currentType == GeneratorType.WALL) generateSize = 64;
                 else if (currentType == GeneratorType.FLOOR) generateSize = 32;
-                else if (currentType == GeneratorType.ITEM) generateSize = 128;
+                else if (currentType == GeneratorType.ITEM) generateSize = 256;
                 
                 itemInputTable.setVisible(currentType == GeneratorType.ITEM);
-                
-                // Refresh UI if needed (slider value)
                 regenerate();
             }
         });
         controls.add(typeSelect).expandX().fillX().row();
         
-        // Add Item Input Table
         controls.add(itemInputTable).expandX().fillX().row();
 
         // Mode Select
@@ -136,9 +132,9 @@ public class NeonGenTestScreen extends GScreen {
 
         // Generation Settings
         controls.add(new VisLabel("Generation Size:")).left();
+        final VisLabel sizeLabel = new VisLabel(String.valueOf(generateSize));
         VisSlider sizeSlider = new VisSlider(32, 512, 32, false);
         sizeSlider.setValue(generateSize);
-        final VisLabel sizeLabel = new VisLabel(String.valueOf(generateSize));
         sizeSlider.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -173,9 +169,9 @@ public class NeonGenTestScreen extends GScreen {
         controls.add(stretchCheck).colspan(2).left().row();
 
         controls.add(new VisLabel("Fixed Size:")).left();
+        final VisLabel scaleLabel = new VisLabel(String.valueOf((int)displayScale));
         VisSlider scaleSlider = new VisSlider(64, 1024, 64, false);
         scaleSlider.setValue(displayScale);
-        final VisLabel scaleLabel = new VisLabel(String.valueOf((int)displayScale));
         scaleSlider.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -195,7 +191,6 @@ public class NeonGenTestScreen extends GScreen {
         gameArea = new VisTable();
         gameArea.setBackground(VisUI.getSkin().newDrawable("white", new Color(0.2f, 0.2f, 0.2f, 1f)));
 
-        // Split Pane
         VisSplitPane split = new VisSplitPane(gameArea, controls, false);
         split.setSplitAmount(0.7f);
         split.setMaxSplitAmount(0.85f);
@@ -206,7 +201,6 @@ public class NeonGenTestScreen extends GScreen {
     }
 
     private void regenerate() {
-        // Only needed for Baked mode or to update generation parameters
         if (frameBuffer != null) {
             frameBuffer.dispose();
         }
@@ -218,11 +212,11 @@ public class NeonGenTestScreen extends GScreen {
             
             frameBuffer.begin();
             ScreenUtils.clear(0, 0, 0, 0);
+            Gdx.gl.glViewport(0, 0, generateSize, generateSize);
             
             neonBatch.setProjectionMatrix(fbCamera.combined);
             neonBatch.begin();
-            // Call the shared drawing logic
-            drawContent(neonBatch, generateSize);
+            drawContent(neonBatch, generateSize, generateSize);
             neonBatch.end();
             
             frameBuffer.end();
@@ -231,27 +225,48 @@ public class NeonGenTestScreen extends GScreen {
             tex.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
             
             bakedRegion = new TextureRegion(tex);
-            bakedRegion.flip(false, true); // FB flip
+            bakedRegion.flip(false, true); 
             
         } catch (Exception e) {
             Gdx.app.error("NeonGen", "Generation failed", e);
         }
     }
 
-    private void drawContent(NeonBatch batch, float size) {
-        if (currentType == GeneratorType.CHARACTER) {
-            NeonSpriteGenerator.drawCharacter(batch, size, "Sword", null, "Helmet", "Armor", "Boots");
-        } else if (currentType == GeneratorType.WALL) {
-            // Use default colors from SpriteGenerator logic
-            NeonTileGenerator.drawWallTileset(batch, size, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
-        } else if (currentType == GeneratorType.FLOOR) {
-            // Use default colors
-            NeonTileGenerator.drawFloor(batch, size, 
-                com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE, 
-                com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK, 
-                com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
-        } else if (currentType == GeneratorType.ITEM) {
-            NeonItemGenerator.drawItem(batch, size, itemName);
+    private void drawContent(NeonBatch batch, float w, float h) {
+        // Since the generators auto-scale based on a single "size" parameter (assuming square),
+        // we need to handle non-square aspect ratios here if w != h.
+        // But the generators take a single float size.
+        // If we want to stretch, we can scale the batch matrix.
+        // The generators draw to "size" x "size".
+        
+        // Strategy:
+        // Pass 'w' as the size.
+        // If h != w, apply a scale on Y axis: scaleY = h / w.
+        
+        float size = w;
+        float scaleY = h / w;
+        
+        if (scaleY != 1f) {
+            batch.getTransformMatrix().scale(1f, scaleY, 1f);
+        }
+        
+        try {
+            if (currentType == GeneratorType.CHARACTER) {
+                NeonSpriteGenerator.drawCharacter(batch, size, "Sword", null, "Helmet", "Armor", "Boots");
+            } else if (currentType == GeneratorType.WALL) {
+                NeonTileGenerator.drawWallTileset(batch, size, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
+            } else if (currentType == GeneratorType.FLOOR) {
+                NeonTileGenerator.drawFloor(batch, size, 
+                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE, 
+                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK, 
+                    com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
+            } else if (currentType == GeneratorType.ITEM) {
+                NeonItemGenerator.drawItem(batch, size, itemName);
+            }
+        } finally {
+            if (scaleY != 1f) {
+                batch.getTransformMatrix().scale(1f, 1f/scaleY, 1f);
+            }
         }
     }
 
@@ -289,42 +304,20 @@ public class NeonGenTestScreen extends GScreen {
         float w = gameArea.getWidth();
         float h = gameArea.getHeight();
 
-        // Update Camera for Live view (use screen coordinates)
-        OrthographicCamera cam = getWorldCamera(); // From GScreen
-        // GScreen.worldCamera usually follows some logic, but here we want UI-like behavior in the game area
-        // Let's just use stage's camera combined matrix but mapped to our drawing
-        
         Rectangle scissor = new Rectangle();
         Rectangle clipBounds = new Rectangle(x, y, w, h);
         ScissorStack.calculateScissors(stage.getCamera(), stage.getBatch().getTransformMatrix(), clipBounds, scissor);
         
         if (ScissorStack.pushScissors(scissor)) {
-            // Draw Grid Background
-            batch.setProjectionMatrix(stage.getCamera().combined);
-            batch.begin();
-            // We could draw a checkerboard here if needed
-            batch.end();
-
             if (currentMode == Mode.LIVE_VECTOR) {
-                // Live Vector: Draw to fit the area
-                float drawSize = Math.min(w, h);
-                if (!stretchToFill) {
-                    // Use displayScale if not stretch
-                    drawSize = displayScale;
-                } else {
-                    // If stretch, fill the smallest dimension to keep aspect ratio 1:1 (since character is 1:1)
-                    // Or stretch to fill W/H?
-                    // User said "stretch to fill drawing area". If area is rectangular, square character will distort.
-                    // Usually "Stretch" means filling bounds.
-                    // Let's assume square logic for character but fit to bounds.
-                }
-                
-                // Calculate position to center
                 float cx, cy, cw, ch;
+                
                 if (stretchToFill) {
-                    cx = x; cy = y; cw = w; ch = h; // Distort
+                    cx = x; cy = y; cw = w; ch = h;
                 } else {
-                    cw = drawSize; ch = drawSize;
+                    float size = displayScale;
+                    // Center
+                    cw = size; ch = size;
                     cx = x + (w - cw) / 2;
                     cy = y + (h - ch) / 2;
                 }
@@ -332,39 +325,20 @@ public class NeonGenTestScreen extends GScreen {
                 neonBatch.setProjectionMatrix(stage.getCamera().combined);
                 neonBatch.begin();
                 
-                // NeonBatch coordinates: 0,0 at bottom-left of drawing area
-                // We need to translate or set matrix
-                // drawCharacter expects (0,0) to be bottom-left of the "size" box
-                
-                // Apply transform
+                // Move to position
                 neonBatch.getTransformMatrix().idt().translate(cx, cy, 0);
                 
-                // If stretchToFill is true and w!=h, we need non-uniform scale?
-                // drawCharacter takes a single 'size' float. It assumes square.
-                // To support non-square stretch, we need to scale the matrix.
-                if (stretchToFill && w != h) {
-                    float sX = w / h; // Normalize to H
-                    // This is getting complicated. drawCharacter uses `size` for both dims.
-                    // Let's pass `size=1` and scale via matrix.
-                    neonBatch.getTransformMatrix().idt().translate(cx, cy, 0).scale(w, h, 1);
-                    drawContent(neonBatch, 1f);
-                } else {
-                    // Uniform
-                    drawContent(neonBatch, cw);
-                }
+                drawContent(neonBatch, cw, ch);
                 
-                neonBatch.getTransformMatrix().idt(); // Reset
+                neonBatch.getTransformMatrix().idt();
                 neonBatch.end();
                 
             } else {
-                // Baked Texture
                 if (bakedRegion != null) {
                     float cx, cy, cw, ch;
                     if (stretchToFill) {
                         cx = x; cy = y; cw = w; ch = h;
                     } else {
-                        // Maintain Aspect Ratio of the TEXTURE (which is square)
-                        // Scale based on displayScale (long edge)
                         float ratio = (float)bakedRegion.getRegionWidth() / bakedRegion.getRegionHeight();
                         if (ratio >= 1) {
                             cw = displayScale; ch = displayScale / ratio;
