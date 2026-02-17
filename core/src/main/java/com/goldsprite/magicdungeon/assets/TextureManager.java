@@ -72,7 +72,14 @@ public class TextureManager implements Disposable {
 
 		// Monsters
 		for (MonsterType type : MonsterType.values()) {
-			checkAndGenerate(type.name(), () -> SpriteGenerator.createMonster(type.name()));
+			// [Integration] 尝试使用 NeonSpriteGenerator (针对 Boss/Dragon)
+			TextureRegion region = NeonSpriteGenerator.createMonster(type.name);
+			if (region != null) {
+				checkAndGenerate(type.name(), () -> region);
+			} else {
+				// 回退到旧的生成器
+				checkAndGenerate(type.name(), () -> SpriteGenerator.createMonster(type.name()));
+			}
 		}
 
 		// Items
@@ -97,13 +104,33 @@ public class TextureManager implements Disposable {
 		TextureRegion produce();
 	}
 
+	// [Refactor] 修改方法签名以支持 Lambda 中包含逻辑判断
+	// 原来的 TextureProducer 接口方法是 TextureRegion produce();
+	// 但我们需要能在 checkAndGenerate 外部先判断，或者让 producer 可以返回 null (虽然 checkAndGenerate 已经做了 null 检查)
+	// 实际上上面的修改 loop 中已经处理了 null 逻辑，这里只需稍微调整 checkAndGenerate 即可。
+	// 但为了更清晰，我们可以在这里直接接受 TextureRegion 参数的重载？
+	// 不，保持原样即可，我们在 loop 里做的逻辑是：
+	/*
+		TextureRegion region = NeonSpriteGenerator.createMonster(type.name);
+		if (region != null) {
+			checkAndGenerate(type.name(), () -> region);
+		} else {
+			checkAndGenerate(type.name(), () -> SpriteGenerator.createMonster(type.name()));
+		}
+	*/
+	// 这样是没问题的。
+	
 	private void checkAndGenerate(String key, TextureProducer producer) {
 		String lowerKey = key.toLowerCase();
 		if (!regionCache.containsKey(lowerKey)) {
 			TextureRegion region = producer.produce();
+			
+			// 如果 producer 返回 null，则不缓存
+			if (region == null) return;
 
 			// DEBUG: Export generated textures to disk for inspection
 			// This helps user to see what procedural textures look like
+			// [Fix] 只有在非 null 时才导出
 			TextureExporter.exportToDisk(region.getTexture(), lowerKey);
 
 			managedTextures.add(region.getTexture());
