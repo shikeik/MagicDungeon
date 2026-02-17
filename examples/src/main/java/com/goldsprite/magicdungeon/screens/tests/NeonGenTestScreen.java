@@ -18,7 +18,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.magicdungeon.assets.ThemeConfig;
+import com.goldsprite.magicdungeon.utils.NeonItemGenerator;
 import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
+import com.goldsprite.magicdungeon.utils.NeonTileGenerator;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
@@ -37,7 +40,11 @@ public class NeonGenTestScreen extends GScreen {
     public enum Mode { LIVE_VECTOR, BAKED_TEXTURE }
     private Mode currentMode = Mode.LIVE_VECTOR;
     
+    public enum GeneratorType { CHARACTER, WALL, FLOOR, ITEM }
+    private GeneratorType currentType = GeneratorType.CHARACTER;
+
     private int generateSize = 128;
+    private String itemName = "Health Potion";
     private boolean stretchToFill = false;
     private float displayScale = 256f; // Pixel size for long edge in Fixed mode
 
@@ -70,6 +77,47 @@ public class NeonGenTestScreen extends GScreen {
         controls.setBackground("window");
         controls.add(new VisLabel("Neon Generator")).pad(10).row();
         controls.addSeparator().padBottom(10).fillX();
+
+        // Item Name Input (Created first for reference, added later)
+        final VisTable itemInputTable = new VisTable(true);
+        itemInputTable.add(new VisLabel("Item Name:")).left();
+        final VisTextField nameField = new VisTextField(itemName);
+        nameField.setMessageText("Enter item name...");
+        nameField.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                itemName = nameField.getText();
+                regenerate();
+            }
+        });
+        itemInputTable.add(nameField).expandX().fillX();
+        itemInputTable.setVisible(currentType == GeneratorType.ITEM);
+
+        // Generator Select
+        controls.add(new VisLabel("Type:")).left();
+        final VisSelectBox<GeneratorType> typeSelect = new VisSelectBox<>();
+        typeSelect.setItems(GeneratorType.values());
+        typeSelect.setSelected(currentType);
+        typeSelect.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                currentType = typeSelect.getSelected();
+                // Update default size based on type
+                if (currentType == GeneratorType.CHARACTER) generateSize = 128;
+                else if (currentType == GeneratorType.WALL) generateSize = 64;
+                else if (currentType == GeneratorType.FLOOR) generateSize = 32;
+                else if (currentType == GeneratorType.ITEM) generateSize = 128;
+                
+                itemInputTable.setVisible(currentType == GeneratorType.ITEM);
+                
+                // Refresh UI if needed (slider value)
+                regenerate();
+            }
+        });
+        controls.add(typeSelect).expandX().fillX().row();
+        
+        // Add Item Input Table
+        controls.add(itemInputTable).expandX().fillX().row();
 
         // Mode Select
         controls.add(new VisLabel("Mode:")).left();
@@ -174,7 +222,7 @@ public class NeonGenTestScreen extends GScreen {
             neonBatch.setProjectionMatrix(fbCamera.combined);
             neonBatch.begin();
             // Call the shared drawing logic
-            NeonSpriteGenerator.drawCharacter(neonBatch, generateSize, "Sword", null, "Helmet", "Armor", "Boots");
+            drawContent(neonBatch, generateSize);
             neonBatch.end();
             
             frameBuffer.end();
@@ -187,6 +235,23 @@ public class NeonGenTestScreen extends GScreen {
             
         } catch (Exception e) {
             Gdx.app.error("NeonGen", "Generation failed", e);
+        }
+    }
+
+    private void drawContent(NeonBatch batch, float size) {
+        if (currentType == GeneratorType.CHARACTER) {
+            NeonSpriteGenerator.drawCharacter(batch, size, "Sword", null, "Helmet", "Armor", "Boots");
+        } else if (currentType == GeneratorType.WALL) {
+            // Use default colors from SpriteGenerator logic
+            NeonTileGenerator.drawWallTileset(batch, size, Color.valueOf("#555555"), Color.valueOf("#3E3E3E"));
+        } else if (currentType == GeneratorType.FLOOR) {
+            // Use default colors
+            NeonTileGenerator.drawFloor(batch, size, 
+                com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_BASE, 
+                com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_DARK, 
+                com.goldsprite.magicdungeon.assets.ThemeConfig.FLOOR_HIGHLIGHT);
+        } else if (currentType == GeneratorType.ITEM) {
+            NeonItemGenerator.drawItem(batch, size, itemName);
         }
     }
 
@@ -282,10 +347,10 @@ public class NeonGenTestScreen extends GScreen {
                     // This is getting complicated. drawCharacter uses `size` for both dims.
                     // Let's pass `size=1` and scale via matrix.
                     neonBatch.getTransformMatrix().idt().translate(cx, cy, 0).scale(w, h, 1);
-                    NeonSpriteGenerator.drawCharacter(neonBatch, 1f, "Sword", null, "Helmet", "Armor", "Boots");
+                    drawContent(neonBatch, 1f);
                 } else {
                     // Uniform
-                    NeonSpriteGenerator.drawCharacter(neonBatch, cw, "Sword", null, "Helmet", "Armor", "Boots");
+                    drawContent(neonBatch, cw);
                 }
                 
                 neonBatch.getTransformMatrix().idt(); // Reset

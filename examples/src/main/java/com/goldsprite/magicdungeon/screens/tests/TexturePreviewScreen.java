@@ -1,119 +1,170 @@
 package com.goldsprite.magicdungeon.screens.tests;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.ScreenUtils;
-import com.goldsprite.gdengine.assets.FontUtils;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Scaling;
 import com.goldsprite.gdengine.screens.GScreen;
-import com.goldsprite.magicdungeon.entities.ItemData;
-import com.goldsprite.magicdungeon.entities.MonsterType;
-import com.goldsprite.magicdungeon.world.TileType;
+import com.goldsprite.magicdungeon.assets.TextureManager;
+import com.kotcrab.vis.ui.VisUI;
+import com.kotcrab.vis.ui.widget.VisImage;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisScrollPane;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextField;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
-import com.goldsprite.gdengine.utils.SimpleCameraController;
-import com.goldsprite.magicdungeon.assets.TextureManager;
 import java.util.Map;
 
+/**
+ * 纹理预览与浏览场景
+ * 使用 VisUI ScrollPane 展示所有加载的纹理，支持搜索过滤
+ */
 public class TexturePreviewScreen extends GScreen {
-	private SpriteBatch batch;
-	private OrthographicCamera camera;
-	private Viewport viewport;
-	private BitmapFont font;
+    private Stage stage;
+    private VisTable contentTable;
+    private VisTextField filterField;
+    private List<Map.Entry<String, TextureRegion>> allEntries;
 
-	private List<PreviewItem> previews;
-	private static final int GRID_SIZE = 128;
-	private static final int PADDING = 20;
+    @Override
+    public void create() {
+        if (!VisUI.isLoaded()) VisUI.load();
 
-	private static class PreviewItem {
-		TextureRegion texture;
-		String name;
-		int x, y;
+        stage = new Stage(getUIViewport());
+        if (imp != null) imp.addProcessor(stage);
 
-		public PreviewItem(TextureRegion texture, String name, int x, int y) {
-			this.texture = texture;
-			this.name = name;
-			this.x = x;
-			this.y = y;
-		}
-	}
+        // Load Data
+        TextureManager tm = TextureManager.getInstance();
+        allEntries = new ArrayList<>(tm.getAllTextures().entrySet());
+        // Sort by Name
+        Collections.sort(allEntries, new Comparator<Map.Entry<String, TextureRegion>>() {
+            @Override
+            public int compare(Map.Entry<String, TextureRegion> o1, Map.Entry<String, TextureRegion> o2) {
+                return o1.getKey().compareToIgnoreCase(o2.getKey());
+            }
+        });
 
-	@Override
-	public void create() {
-		batch = new SpriteBatch();
-		camera = new OrthographicCamera();
-		viewport = new ExtendViewport(1280, 720, camera); // Use ExtendViewport to prevent stretching
-		viewport.apply(true);
+        buildUI();
+        rebuildContent();
+    }
 
-		font = FontUtils.generate(14, 3);
-		font.setColor(Color.WHITE);
+    private void buildUI() {
+        VisTable root = new VisTable();
+        root.setFillParent(true);
+        root.setBackground("window-bg");
 
-		previews = new ArrayList<>();
-		int col = 0;
-		int row = 0;
-		int startX = 50;
-		int startY = 0; // Will be set in resize or dynamic
-		// Let's keep fixed layout but center camera initially
+        // Top Bar: Title + Search
+        VisTable topBar = new VisTable(true);
+        topBar.add(new VisLabel("Texture Registry")).padRight(20);
+        
+        topBar.add(new VisLabel("Search:"));
+        filterField = new VisTextField("");
+        filterField.setMessageText("Filter by name...");
+        filterField.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                rebuildContent();
+            }
+        });
+        topBar.add(filterField).width(300);
+        
+        root.add(topBar).pad(10).fillX().row();
 
-		// Use TextureManager
-		TextureManager tm = TextureManager.getInstance();
+        // Content Area
+        contentTable = new VisTable();
+        contentTable.top().left();
+        
+        VisScrollPane scroll = new VisScrollPane(contentTable);
+        scroll.setFlickScroll(true);
+        scroll.setFadeScrollBars(false);
+        scroll.setScrollingDisabled(true, false); // Horizontal disabled, Vertical enabled
 
-		// Iterate all textures
-		for (Map.Entry<String, TextureRegion> entry : tm.getAllTextures().entrySet()) {
-			if (col >= 6) { col = 0; row++; }
-			addPreview(entry.getValue(), entry.getKey(), col++, row);
-		}
+        root.add(scroll).expand().fill();
 
-		// Camera Controller
-		SimpleCameraController controller = new SimpleCameraController(camera);
-		controller.setCoordinateMapper((x, y) -> viewport.unproject(new Vector2(x, y)));
-		getImp().addProcessor(controller);
-	}
+        stage.addActor(root);
+    }
 
-	private void addPreview(TextureRegion tex, String name, int col, int row) {
-		// Calculate position based on grid
-		int x = 50 + col * (GRID_SIZE + PADDING);
-		int y = -50 - row * (GRID_SIZE + PADDING + 30); // Grow downwards
-		previews.add(new PreviewItem(tex, name, x, y));
-	}
+    private void rebuildContent() {
+        contentTable.clear();
+        String filter = filterField.getText().toLowerCase();
+        
+        // Calculate columns based on screen width approx?
+        // Let's assume fixed item width ~150px
+        float screenW = stage.getWidth();
+        int itemW = 160;
+        int maxCols = Math.max(1, (int)(screenW / itemW));
+        // Or just use flow layout by row wrap? 
+        // VisTable doesn't support automatic flow layout easily without calculation.
+        // We stick to manual grid.
+        
+        int cols = 0;
+        
+        int count = 0;
+        for (Map.Entry<String, TextureRegion> entry : allEntries) {
+            String name = entry.getKey();
+            if (!filter.isEmpty() && !name.toLowerCase().contains(filter)) continue;
+            
+            TextureRegion reg = entry.getValue();
+            
+            // Create Cell
+            VisTable cell = new VisTable();
+            cell.setBackground("button"); // Frame
+            
+            // Image (Max 128x128)
+            VisImage img = new VisImage(new TextureRegionDrawable(reg));
+            img.setScaling(Scaling.fit);
+            cell.add(img).size(128, 128).pad(5).row();
+            
+            // Label
+            String dims = reg.getRegionWidth() + "x" + reg.getRegionHeight();
+            VisLabel lbl = new VisLabel(name + "\n" + dims);
+            lbl.setAlignment(Align.center);
+            lbl.setWrap(true);
+            lbl.setFontScale(0.8f); // Slightly smaller font
+            
+            cell.add(lbl).width(130).pad(5).growY();
+            
+            contentTable.add(cell).width(150).pad(5).top();
+            
+            cols++;
+            count++;
+            if (cols >= maxCols) {
+                contentTable.row();
+                cols = 0;
+            }
+        }
+        
+        // Fill empty cells to keep alignment if needed? Not necessary for top-left alignment.
+        if (count == 0) {
+            contentTable.add(new VisLabel("No textures found matching filter.")).pad(20);
+        }
+    }
 
-	@Override
-	public void render(float delta) {
-		ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
+    @Override
+    public void render(float delta) {
+        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		viewport.apply();
-		camera.update();
-		batch.setProjectionMatrix(camera.combined);
+        stage.act(delta);
+        stage.draw();
+    }
 
-		batch.begin();
-		for (PreviewItem item : previews) {
-			batch.draw(item.texture, item.x, item.y, GRID_SIZE, GRID_SIZE);
-			font.draw(batch, item.name, item.x, item.y - 10);
-		}
-		batch.end();
+    @Override
+    public void resize(int width, int height) {
+        stage.getViewport().update(width, height, true);
+        rebuildContent(); // Re-layout for new width
+    }
 
-		// HUD
-		batch.setProjectionMatrix(batch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
-		batch.begin();
-		font.draw(batch, "Texture Preview Mode - Drag to Pan, Scroll to Zoom, ESC to Exit", 20, Gdx.graphics.getHeight() - 20);
-		batch.end();
-	}
-
-	@Override
-	public void resize(int width, int height) {
-		viewport.update(width, height);
-		// Reset camera position if needed or keep user position
-	}
-
-	// ... (dispose)
+    @Override
+    public void dispose() {
+        if (stage != null) stage.dispose();
+    }
 }

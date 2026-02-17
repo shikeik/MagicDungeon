@@ -20,10 +20,23 @@
     - [x] 实现模式切换 (Live Vector / Baked Texture)
     - [x] 实现烘焙纹理预览参数调节 (拉伸/定长)
 
-### Phase 2: 核心迁移
-- [ ] 重写 `createPlayer` (支持纸娃娃)
-- [ ] 重写 Tiles 生成 (Floor, Wall)
-- [ ] 重写 Items 生成
+### Phase 2: 核心迁移 (Completed)
+- [x] 重写 `createPlayer` (支持纸娃娃)
+- [x] 重写 Tiles 生成 (Floor, Wall)
+- [x] 重写 Items 生成 (Potion, Sword, Shield, Armor, Boots, Coin)
+
+## 更新清单 (2026-02-17)
+1. **NeonTileGenerator**:
+   - 实现基于 NeonBatch 的矢量地砖生成 (Floor, Wall Tileset)。
+   - 保持原有 Dual Grid 自动平铺逻辑兼容性。
+2. **NeonItemGenerator**:
+   - 实现矢量化物品图标生成 (Potion, Sword, Shield, Armor, Boots, Coin)。
+   - 支持旋转、缩放和图层叠加，提升图标清晰度。
+3. **NeonGenTestScreen**:
+   - 增加 Generator Type 选择器 (Character, Wall, Floor, Item)。
+   - 增加 Item Name 输入框用于测试不同物品生成。
+4. **TextureManager**:
+   - 全面迁移 Player, Wall, Floor, Items 至 Neon 生成管线。
 
 ## 待拾取
 

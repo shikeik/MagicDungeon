@@ -5,6 +5,9 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Disposable;
 import com.goldsprite.magicdungeon.entities.ItemData;
 import com.goldsprite.magicdungeon.entities.MonsterType;
+import com.goldsprite.magicdungeon.utils.NeonItemGenerator;
+import com.goldsprite.magicdungeon.utils.NeonSpriteGenerator;
+import com.goldsprite.magicdungeon.utils.NeonTileGenerator;
 import com.goldsprite.magicdungeon.utils.SpriteGenerator;
 import com.goldsprite.magicdungeon.utils.TextureExporter;
 import com.goldsprite.magicdungeon.world.TileType;
@@ -43,8 +46,10 @@ public class TextureManager implements Disposable {
 		// 2. Generate Missing Textures (Fallback)
 		
 		// Tiles
-		checkAndGenerate(TileType.Wall.name(), () -> SpriteGenerator.createDungeonWallTileset());
-		checkAndGenerate(TileType.Floor.name(), () -> SpriteGenerator.createFloor());
+		// [修改] 切换到 NeonTileGenerator
+		checkAndGenerate(TileType.Wall.name(), () -> NeonTileGenerator.createDungeonWallTileset(ThemeConfig.WALL_TOP, ThemeConfig.WALL_FACE));
+		checkAndGenerate(TileType.Floor.name(), () -> NeonTileGenerator.createFloor(ThemeConfig.FLOOR_BASE, ThemeConfig.FLOOR_DARK, ThemeConfig.FLOOR_HIGHLIGHT));
+		
 		checkAndGenerate(TileType.Door.name(), () -> SpriteGenerator.createDoor());
 		checkAndGenerate(TileType.Stairs_Down.name(), () -> SpriteGenerator.createStairs(false));
 		checkAndGenerate(TileType.Stairs_Up.name(), () -> SpriteGenerator.createStairs(true));
@@ -63,7 +68,7 @@ public class TextureManager implements Disposable {
 		
 		// Player
 		// [修改] 切换到 NeonSpriteGenerator
-		checkAndGenerate("PLAYER", () -> com.goldsprite.magicdungeon.utils.NeonSpriteGenerator.createPlayer());
+		checkAndGenerate("PLAYER", () -> NeonSpriteGenerator.createPlayer());
 		
 		// Monsters
 		for (MonsterType type : MonsterType.values()) {
@@ -71,8 +76,9 @@ public class TextureManager implements Disposable {
 		}
 		
 		// Items
+		// [修改] 切换到 NeonItemGenerator
 		for (ItemData item : ItemData.values()) {
-			checkAndGenerate(item.name(), () -> SpriteGenerator.createItem(item.name));
+			checkAndGenerate(item.name(), () -> NeonItemGenerator.createItem(item.name));
 		}
 	}
 
