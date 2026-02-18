@@ -58,6 +58,10 @@ import com.goldsprite.magicdungeon.assets.SpineManager;
 import com.goldsprite.magicdungeon.vfx.VFXManager;
 import com.goldsprite.magicdungeon.progress.ProgressScreen;
 
+import com.goldsprite.magicdungeon.world.data.GameMapData;
+import com.goldsprite.magicdungeon.world.data.MapEntityData;
+import com.goldsprite.magicdungeon.world.data.MapItemData;
+
 public class GameScreen extends GScreen {
 	private Dungeon dungeon;
 	private DualGridDungeonRenderer dungeonRenderer;
@@ -560,10 +564,47 @@ public class GameScreen extends GScreen {
 	}
 
 	private void spawnEntities() {
-		if (dungeon.level == 0) return;
+        monsters.clear();
+        items.clear();
 
-		monsters.clear();
-		items.clear();
+        // 1. Load from Data (Editor generated)
+        if (dungeon.loadedMapData != null) {
+            GameMapData data = dungeon.loadedMapData;
+            
+            // Spawn Monsters
+            if (data.entities != null) {
+                for(MapEntityData ed : data.entities) {
+                    try {
+                        MonsterType type = MonsterType.valueOf(ed.type);
+                        Monster m = new Monster(ed.x, ed.y, type);
+                        m.visualX = ed.x * Constants.TILE_SIZE;
+                        m.visualY = ed.y * Constants.TILE_SIZE;
+                        monsters.add(m);
+                    } catch(Exception e) {
+                         Gdx.app.error("GameScreen", "Failed to spawn entity: " + ed.type);
+                    }
+                }
+            }
+            
+            // Spawn Items
+            if (data.items != null) {
+                for(MapItemData id : data.items) {
+                     try {
+                        ItemData iData = ItemData.valueOf(id.itemId);
+                        InventoryItem ii = new InventoryItem(iData);
+                        Item item = new Item(id.x, id.y, ii);
+                        item.visualX = id.x * Constants.TILE_SIZE;
+                        item.visualY = id.y * Constants.TILE_SIZE;
+                        items.add(item);
+                     } catch(Exception e) {
+                        Gdx.app.error("GameScreen", "Failed to spawn item: " + id.itemId);
+                     }
+                }
+            }
+            return;
+        }
+
+		if (dungeon.level == 0) return;
 
 		// Difficulty Multiplier
 		float difficulty = 1.0f + (dungeon.level - 1) * 0.2f; // 20% harder per level

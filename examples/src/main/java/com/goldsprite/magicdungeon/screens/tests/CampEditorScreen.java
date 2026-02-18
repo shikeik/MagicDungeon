@@ -50,6 +50,13 @@ import com.goldsprite.magicdungeon.world.TileType;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonWriter;
+import com.goldsprite.magicdungeon.world.data.GameMapData;
+import com.goldsprite.magicdungeon.world.data.MapEntityData;
+import com.goldsprite.magicdungeon.world.data.MapItemData;
+import com.goldsprite.magicdungeon.world.DungeonTheme;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -274,6 +281,15 @@ public class CampEditorScreen extends GScreen {
 
         // Settings (Bottom)
         toolsContent.add(new VisLabel("--- Settings ---")).padTop(20).row();
+        
+        // Save Button
+        VisTextButton btnSave = new VisTextButton("Save Map");
+        btnSave.addListener(new ChangeListener() {
+            @Override public void changed(ChangeEvent event, Actor actor) { 
+                saveMap();
+            }
+        });
+        toolsContent.add(btnSave).fillX().pad(10).row();
         
         // Grid Toggle
         VisCheckBox cbGrid = new VisCheckBox("Show Grid", true);
@@ -520,8 +536,8 @@ public class CampEditorScreen extends GScreen {
             
             // 1. 地图渲染 (Multi-Layer)
             for (Tile[][] layer : mapLayers) {
-                renderProxy.map = layer;
-                dungeonRenderer.render(batch, renderProxy);
+                // [Modified] Use renderTileGrid directly
+                dungeonRenderer.renderTileGrid(batch, layer, DungeonTheme.DEFAULT, true);
             }
             
             // 2. 实体 (Item, Monster Texture)
@@ -681,9 +697,13 @@ public class CampEditorScreen extends GScreen {
         if (currentMode == EditorMode.MAP) {
             if (isNewClick || (gx != lastGx || gy != lastGy)) {
                 if (selectedMapLayerIndex >= 0 && selectedMapLayerIndex < mapLayers.size()) {
-                    Tile tile = new Tile(selectedTileType);
-                    mapLayers.get(selectedMapLayerIndex)[gy][gx] = tile;
-                    updateCollisionAt(gx, gy);
+                    // [Modified] Check if tile type changed
+                    Tile current = mapLayers.get(selectedMapLayerIndex)[gy][gx];
+                    if (current == null || current.type != selectedTileType) {
+                        Tile tile = new Tile(selectedTileType);
+                        mapLayers.get(selectedMapLayerIndex)[gy][gx] = tile;
+                        updateCollisionAt(gx, gy);
+                    }
                 }
                 lastGx = gx; lastGy = gy;
             }
@@ -703,5 +723,53 @@ public class CampEditorScreen extends GScreen {
                 items.add(item);
             }
         }
+    }
+
+    private void saveMap() {
+        GameMapData data = new GameMapData();
+        data.width = 50;
+        data.height = 50;
+        data.themeName = DungeonTheme.DEFAULT.name();
+        
+        // Flatten map
+        data.grid = new String[data.height][data.width];
+        for(int y=0; y<data.height; y++) {
+            for(int x=0; x<data.width; x++) {
+                Tile t = null;
+                // Top-down search to find visible tile
+                for(int i=mapLayers.size()-1; i>=0; i--) {
+                     if(mapLayers.get(i)[y][x] != null) {
+                         t = mapLayers.get(i)[y][x];
+                         break;
+                     }
+                }
+                if(t != null) {
+                    data.grid[y][x] = t.type.name();
+                }
+            }
+        }
+        
+        // Entities
+        data.entities = new ArrayList<>();
+        for(Monster m : monsters) {
+            data.entities.add(new MapEntityData(m.x, m.y, m.type.name()));
+        }
+        
+        // Items
+        data.items = new ArrayList<>();
+        for(Item item : items) {
+            data.items.add(new MapItemData(item.x, item.y, item.item.data.name()));
+        }
+        
+        Json json = new Json();
+        json.setOutputType(JsonWriter.OutputType.json);
+        String jsonStr = json.prettyPrint(data);
+        
+        // Save to project assets (using absolute path for now to ensure it works in IDE)
+        String path = "assets/maps/camp.json";
+        // Gdx.files.local points to project root in desktop project usually? No, it's relative to working dir.
+        // Let's try relative path first.
+        Gdx.files.local(path).writeString(jsonStr, false);
+        System.out.println("Map saved to " + Gdx.files.local(path).file().getAbsolutePath());
     }
 }

@@ -1,8 +1,11 @@
 package com.goldsprite.magicdungeon.world;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.RandomXS128;
+import com.badlogic.gdx.utils.Json;
+import com.goldsprite.magicdungeon.world.data.GameMapData;
 
 public class Dungeon {
 	public int width;
@@ -12,6 +15,9 @@ public class Dungeon {
 	public GridPoint2 startPos;
 	public long globalSeed;
     public DungeonTheme theme = DungeonTheme.DEFAULT;
+    
+    // 暂存加载的地图数据，供 GameScreen 读取实体
+    public GameMapData loadedMapData;
 
 	public Dungeon(int width, int height, long globalSeed, DungeonTheme theme) {
 		this.width = width;
@@ -46,7 +52,22 @@ public class Dungeon {
 	}
 
 	public void generate() {
+        this.loadedMapData = null; // Reset
+        
 		if (this.level == 0) {
+            // 优先尝试加载编辑器生成的地图
+            if (Gdx.files.internal("maps/camp.json").exists()) {
+                try {
+                    Json json = new Json();
+                    GameMapData data = json.fromJson(GameMapData.class, Gdx.files.internal("maps/camp.json"));
+                    loadFromData(data);
+                    this.loadedMapData = data;
+                    return;
+                } catch (Exception e) {
+                    Gdx.app.error("Dungeon", "Failed to load camp.json", e);
+                }
+            }
+            
 			MapGenerator.GenResult result = CampMapGenerator.generate();
 			this.map = result.grid;
 			this.height = this.map.length;
@@ -94,4 +115,29 @@ public class Dungeon {
 	public GridPoint2 getRandomWalkableTile() {
 		return getRandomWalkableTile(new RandomXS128());
 	}
+    
+    public void loadFromData(GameMapData data) {
+        this.width = data.width;
+        this.height = data.height;
+        this.map = new Tile[height][width];
+        
+        // Load Grid
+        for(int y=0; y<height; y++) {
+            for(int x=0; x<width; x++) {
+                String typeName = data.grid[y][x];
+                if(typeName != null) {
+                    try {
+                        TileType type = TileType.valueOf(typeName);
+                        this.map[y][x] = new Tile(type);
+                    } catch (IllegalArgumentException e) {
+                        // Ignore invalid types
+                    }
+                }
+            }
+        }
+        
+        // Find start pos (first available floor or specific type)
+        // Default center
+        this.startPos = new GridPoint2(width/2, height/2);
+    }
 }

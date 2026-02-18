@@ -135,23 +135,31 @@ public class DualGridDungeonRenderer implements Disposable {
     }
 
     public void render(NeonBatch batch, Dungeon dungeon) {
-        if (currentTheme != dungeon.theme) {
-            updateTheme(dungeon.theme);
+        renderTileGrid(batch, dungeon.map, dungeon.theme, dungeon.level == 0);
+    }
+
+    public void renderTileGrid(NeonBatch batch, Tile[][] map, DungeonTheme theme, boolean isCamp) {
+        if (map == null || map.length == 0) return;
+        int height = map.length;
+        int width = map[0].length;
+
+        if (currentTheme != theme) {
+            updateTheme(theme);
         }
 
-        if (dungeon.level == 0) {
+        if (isCamp) {
             // === 营地模式 (Level 0) ===
             // 恢复完整的自然地形渲染逻辑
 
             // Layer 0: Dirt (Base) - Only draw if TileType is explicitly Dirt
-            renderLayer(batch, dungeon, "dirt", (t) -> t != null && t.type == TileType.Dirt);
+            renderLayer(batch, map, "dirt", (t) -> t != null && t.type == TileType.Dirt);
 
             // Layer 0.5: Floor (Standard)
             TextureRegion floorTex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Floor);
             if (floorTex != null) {
-                for (int x = 0; x < dungeon.width; x++) {
-                    for (int y = 0; y < dungeon.height; y++) {
-                        Tile t = dungeon.getTile(x, y);
+                for (int x = 0; x < width; x++) {
+                    for (int y = 0; y < height; y++) {
+                        Tile t = getTileFromArray(map, x, y);
                         if (t != null && t.type == TileType.Floor) {
                             batch.draw(floorTex, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                         }
@@ -160,20 +168,20 @@ public class DualGridDungeonRenderer implements Disposable {
             }
 
             // Layer 1: Brick - Draw for Wall only (removed Floor, Door, Stairs)
-            renderLayer(batch, dungeon, "brick", (t) -> t != null && (
+            renderLayer(batch, map, "brick", (t) -> t != null && (
                 t.type == TileType.Wall || t.type == TileType.Torch || t.type == TileType.Window
             ));
 
             // Layer 2: Sand
-            renderLayer(batch, dungeon, "sand", (t) -> t != null && t.type == TileType.Sand);
+            renderLayer(batch, map, "sand", (t) -> t != null && t.type == TileType.Sand);
 
             // Layer 3: Grass
-            renderLayer(batch, dungeon, "grass", (t) -> t != null && t.type == TileType.Grass);
+            renderLayer(batch, map, "grass", (t) -> t != null && t.type == TileType.Grass);
 
             // Layer 4: Simple Objects (Tree, Door, Stairs, StonePath, etc.)
-            for (int x = 0; x < dungeon.width; x++) {
-                for (int y = 0; y < dungeon.height; y++) {
-                    Tile t = dungeon.getTile(x, y);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    Tile t = getTileFromArray(map, x, y);
                     if (t == null) continue;
                     
                     if (t.type == TileType.Tree || t.type == TileType.Door || 
@@ -194,9 +202,9 @@ public class DualGridDungeonRenderer implements Disposable {
 
             // 1. 渲染地板 (Floor) - 支持随机变种
             // 使用确定的哈希算法确保同一位置总是显示相同的地板变种
-            for (int x = 0; x < dungeon.width; x++) {
-                for (int y = 0; y < dungeon.height; y++) {
-                    Tile t = dungeon.getTile(x, y);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    Tile t = getTileFromArray(map, x, y);
                     if (t != null) {
                         // 只要不是 null，就绘制地板背景（或者是只在可行走区域绘制？通常地牢是铺满的）
                         // 这里我们假设所有有效 Tile 下面都有地板
@@ -215,20 +223,17 @@ public class DualGridDungeonRenderer implements Disposable {
 
             // 2. 双网格渲染器现在主要用于渲染地牢墙壁 (dungeon_brick)
             // 我们只在有 Wall 的地方渲染 "brick" 层，这样墙壁会有双网格边缘效果
-
-            // 注意：这里的逻辑是，如果 Tile 是 Wall，则该位置是实心块 (1)，否则是空 (0)
-            // 这样双网格算法会计算出墙壁的边缘和平滑过渡
             // 我们将 Torch 和 Window 也视为墙壁，以便它们下面也有墙体渲染
 
-            renderLayer(batch, dungeon, "brick", (t) -> t != null && (
+            renderLayer(batch, map, "brick", (t) -> t != null && (
                 t.type == TileType.Wall || t.type == TileType.Torch || t.type == TileType.Window
             ));
 
             // 3. 渲染墙壁装饰 (火把, 窗户)
             // 这些装饰物是叠加在双网格墙壁之上的
-            for (int x = 0; x < dungeon.width; x++) {
-                for (int y = 0; y < dungeon.height; y++) {
-                    Tile t = dungeon.getTile(x, y);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    Tile t = getTileFromArray(map, x, y);
                     if (t == null) continue;
 
                     if (t.type == TileType.Torch && torchTex != null) {
@@ -240,9 +245,9 @@ public class DualGridDungeonRenderer implements Disposable {
             }
             
             // 4. Simple Tiles (Tree, Door, Stairs, StonePath, etc.)
-            for (int x = 0; x < dungeon.width; x++) {
-                for (int y = 0; y < dungeon.height; y++) {
-                    Tile t = dungeon.getTile(x, y);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    Tile t = getTileFromArray(map, x, y);
                     if (t == null) continue;
                     
                     if (t.type == TileType.Tree || t.type == TileType.Door || 
@@ -258,6 +263,15 @@ public class DualGridDungeonRenderer implements Disposable {
                 }
             }
         }
+    }
+
+    private Tile getTileFromArray(Tile[][] map, int x, int y) {
+        if (map == null) return null;
+        int h = map.length;
+        if (h == 0) return null;
+        int w = map[0].length;
+        if (x < 0 || x >= w || y < 0 || y >= h) return null;
+        return map[y][x];
     }
 
     private interface TilePredicate {
