@@ -23,4 +23,9 @@ public class SaveData {
         this.currentAreaId = "camp"; // Default start area
         this.currentFloor = 0; // Default start at Camp (Floor 0)
     }
+
+    @Override
+    public String toString() {
+        return saveName;
+    }
 }

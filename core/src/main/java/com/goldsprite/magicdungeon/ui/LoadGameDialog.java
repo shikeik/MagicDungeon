@@ -25,11 +25,15 @@ public class LoadGameDialog extends BaseDialog {
     public LoadGameDialog() {
         super("选择存档");
         initUI();
-        pack();
-        centerWindow();
         
         if (ScreenManager.getInstance().getCurScreen() != null) {
-            show(ScreenManager.getInstance().getCurScreen().getStage());
+            com.badlogic.gdx.scenes.scene2d.Stage stage = ScreenManager.getInstance().getCurScreen().getStage();
+            setSize(stage.getWidth() * 0.6f, stage.getHeight() * 0.6f);
+            centerWindow();
+            show(stage);
+        } else {
+            setSize(600, 400);
+            centerWindow();
         }
     }
 
@@ -49,7 +53,7 @@ public class LoadGameDialog extends BaseDialog {
 
         VisScrollPane scrollPane = new VisScrollPane(saveList);
         scrollPane.setFadeScrollBars(false);
-        getContentTable().add(scrollPane).width(300).height(200).row();
+        getContentTable().add(scrollPane).expand().fill().row();
 
         infoLabel = new VisLabel("请选择存档");
         getContentTable().add(infoLabel).expandX().fillX().pad(10).row();
@@ -89,6 +93,7 @@ public class LoadGameDialog extends BaseDialog {
         getButtonsTable().add(loadBtn);
         getButtonsTable().add(deleteBtn);
         getButtonsTable().add(cancelBtn);
+        getButtonsTable().pack();
     }
     
     private void updateSelection() {
@@ -107,8 +112,6 @@ public class LoadGameDialog extends BaseDialog {
             deleteBtn.setDisabled(true);
             infoLabel.setText("请选择存档");
         }
-        pack();
-        centerWindow();
     }
 
     private void loadGame() {

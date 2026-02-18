@@ -65,6 +65,7 @@ public class ScreenManager implements Disposable {
     // [新增] Loading 渲染器接口
     public interface LoadingRenderer {
         void render(float delta, float alpha);
+        void setText(String text);
     }
     private LoadingRenderer loadingRenderer;
 
@@ -186,14 +187,19 @@ public class ScreenManager implements Disposable {
 	/**
 	 * 执行带加载动画的转场
 	 * @param loader 异步加载任务，接受一个 finishCallback。当加载完成时必须调用此 callback。
+	 * @param tipText 加载时显示的提示文本
 	 * @param minDuration 最小转场持续时间 (秒)，防止加载过快导致动画闪烁。
 	 */
-	public void playLoadingTransition(Consumer<Runnable> loader, float minDuration) {
+	public void playLoadingTransition(Consumer<Runnable> loader, String tipText, float minDuration) {
 	    if (transitionState != TransitionState.NONE) return;
 	    
 	    this.loadingMinDuration = minDuration;
 	    this.loadingElapsedTime = 0f;
 	    this.loadingTaskFinished = false;
+
+        if (loadingRenderer != null) {
+            loadingRenderer.setText(tipText);
+        }
 	    
 	    playTransition(() -> {
 	        // 进入 LOADING_WAIT 状态，而不是立即 FADE_IN

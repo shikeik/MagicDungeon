@@ -936,17 +936,23 @@ public class GameScreen extends GScreen {
 					// Save current progress before switching to World Map
 					saveGameData();
 
-					// Switch to WorldMapScreen
-					WorldMapScreen mapScreen = new WorldMapScreen((node) -> {
-						// 1. Return to GameScreen (pop map)
-						getScreenManager().popLastScreen();
-						
-						// 2. Play Loading Transition & Rebuild Scene
-						getScreenManager().playLoadingTransition((finishCallback) -> {
-							rebuildScene(node, finishCallback);
-						}, 1.5f); // Min 1.5s duration
-					});
-					getScreenManager().goScreen(mapScreen);
+					// Switch to WorldMapScreen with Fade Transition
+					getScreenManager().playTransition(() -> {
+                        WorldMapScreen mapScreen = new WorldMapScreen((node) -> {
+                             // Callback when area selected
+                             
+                             // 2. Play Loading Transition & Rebuild Scene
+                             // Update tip text
+                             String areaName = node.name; // Assuming node has name
+                             getScreenManager().playLoadingTransition((finishCallback) -> {
+                                 // 1. Return to GameScreen (pop map) - Do this while black
+                                 getScreenManager().popLastScreen();
+                                 
+                                 rebuildScene(node, finishCallback);
+                             }, "去往 " + areaName + " 中...", 1.5f);
+                         });
+                         getScreenManager().goScreen(mapScreen);
+                     });
 					
 					handledInteract = true;
 				}

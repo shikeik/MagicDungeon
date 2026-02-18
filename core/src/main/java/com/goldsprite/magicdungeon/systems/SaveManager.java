@@ -17,6 +17,7 @@ import java.util.List;
 
 import com.goldsprite.magicdungeon.utils.MapIO;
 import com.goldsprite.magicdungeon.world.data.GameMapData;
+import com.goldsprite.magicdungeon.model.AreaMapData;
 
 public class SaveManager {
     public static final String SAVES_ROOT = AppConstants.STORAGE_ROOT + "saves/game_saves/";
@@ -115,31 +116,44 @@ public class SaveManager {
             
             if (subFiles.length > 0) {
                 // It is a directory (e.g. maps/stone_tower/)
-                FileHandle targetSubDir = targetAreasDir.child(fileName);
-                targetSubDir.mkdirs();
+                String areaId = fileName;
+                AreaMapData areaData = new AreaMapData(areaId);
                 
                 for (String sub : subFiles) {
                     FileHandle subSource = Gdx.files.internal("maps/" + fileName + "/" + sub);
-                    // Assume sub files are not directories (flat structure for now inside area folders)
-                    processMapFile(subSource, targetSubDir.child(sub));
+                    LayerData layer = loadLayerFromSource(subSource);
+                    if (layer != null) {
+                        // Try to parse floor number from filename (e.g. floor_1.json)
+                        int floor = 0;
+                        try {
+                            String num = sub.replaceAll("[^0-9]", "");
+                            if (!num.isEmpty()) floor = Integer.parseInt(num);
+                        } catch (Exception e) {}
+                        
+                        areaData.floors.put(floor, layer);
+                    }
                 }
+                saveJson(targetAreasDir.child(areaId + ".json"), areaData);
             } else {
                 // It is a file (e.g. maps/camp.json)
                 if (fileName.endsWith(".json")) {
                     FileHandle source = Gdx.files.internal("maps/" + fileName);
                     String areaName = fileName.replace(".json", "");
-                    FileHandle targetDir = targetAreasDir.child(areaName);
-                    targetDir.mkdirs();
                     
-                    // 特殊处理 camp.json: 默认作为 floor 0
-                    String targetFloorName = areaName.equals("camp") ? "floor_0.json" : "floor_1.json";
-                    processMapFile(source, targetDir.child(targetFloorName));
+                    AreaMapData areaData = new AreaMapData(areaName);
+                    LayerData layer = loadLayerFromSource(source);
+                    
+                    if (layer != null) {
+                        int floor = areaName.equals("camp") ? 0 : 1;
+                        areaData.floors.put(floor, layer);
+                        saveJson(targetAreasDir.child(areaName + ".json"), areaData);
+                    }
                 }
             }
         }
     }
 
-    private static void processMapFile(FileHandle source, FileHandle target) {
+    private static LayerData loadLayerFromSource(FileHandle source) {
         // Try to load as GameMapData first (Legacy format)
         try {
             GameMapData gameMapData = json.fromJson(GameMapData.class, source);
@@ -147,9 +161,8 @@ public class SaveManager {
             if (gameMapData != null && gameMapData.grid != null) {
                 // Convert to LayerData
                 LayerData layerData = MapIO.fromGameMapData(gameMapData);
-                saveJson(target, layerData);
                 DLog.logT("SaveManager", "Converted map " + source.name() + " to LayerData.");
-                return;
+                return layerData;
             }
         } catch (Exception e) {
             // Not GameMapData or parse error
@@ -159,16 +172,15 @@ public class SaveManager {
         try {
             LayerData layerData = json.fromJson(LayerData.class, source);
             if (layerData != null && (layerData.floorIds != null || layerData.blockIds != null)) {
-                // Valid LayerData, copy or save
-                saveJson(target, layerData);
                  DLog.logT("SaveManager", "Imported LayerData map " + source.name());
-                return;
+                return layerData;
             }
         } catch (Exception e) {
             // Not LayerData
         }
         
         DLog.logErr("SaveManager", "Failed to process map file: " + source.path());
+        return null;
     }
 
     public static SaveData loadSaveMeta(String saveName) {
@@ -188,23 +200,38 @@ public class SaveManager {
     }
 
     public static LayerData loadLayerData(String saveName, String areaId, int floor) {
-        FileHandle file = getLayerFile(saveName, areaId, floor);
+        FileHandle file = getAreaFile(saveName, areaId);
         if (!file.exists()) return null;
-        return loadJson(file, LayerData.class);
+        AreaMapData area = loadJson(file, AreaMapData.class);
+        if (area == null) return null;
+        return area.floors.get(floor);
     }
 
     public static void saveLayerData(String saveName, String areaId, int floor, LayerData data) {
-        FileHandle file = getLayerFile(saveName, areaId, floor);
+        FileHandle file = getAreaFile(saveName, areaId);
+        AreaMapData area;
+        if (file.exists()) {
+             area = loadJson(file, AreaMapData.class);
+        } else {
+             area = new AreaMapData(areaId);
+        }
+        if (area == null) area = new AreaMapData(areaId);
+        
+        area.floors.put(floor, data);
+        
         file.parent().mkdirs();
-        saveJson(file, data);
+        saveJson(file, area);
     }
     
     public static boolean hasLayerData(String saveName, String areaId, int floor) {
-        return getLayerFile(saveName, areaId, floor).exists();
+        FileHandle file = getAreaFile(saveName, areaId);
+        if (!file.exists()) return false;
+        AreaMapData area = loadJson(file, AreaMapData.class);
+        return area != null && area.floors.containsKey(floor);
     }
 
-    private static FileHandle getLayerFile(String saveName, String areaId, int floor) {
-        return Gdx.files.local(SAVES_ROOT + saveName + "/areas/" + areaId + "/floor_" + floor + ".json");
+    private static FileHandle getAreaFile(String saveName, String areaId) {
+        return Gdx.files.local(SAVES_ROOT + saveName + "/areas/" + areaId + ".json");
     }
 
     private static <T> void saveJson(FileHandle file, T object) {

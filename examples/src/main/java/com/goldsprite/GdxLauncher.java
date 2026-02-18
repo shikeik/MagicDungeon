@@ -84,7 +84,7 @@ public class GdxLauncher extends Game {
 					sm.goScreen(DebugLaunchConfig.targetScreen);
 				}
 				if(DebugLaunchConfig.currentMode == LaunchMode.DIRECT_SCENE) break;
-				
+
 				// 自动测试模式继续执行测试用例
 				if (DebugLaunchConfig.autoTestClass != null) {
 					DLog.log("启动模式: 自动测试 -> 用例: " + DebugLaunchConfig.autoTestClass.getSimpleName());
@@ -116,9 +116,9 @@ public class GdxLauncher extends Game {
 		}
 
 		ScreenManager.getInstance().render();
-		
+
 		DLog.infoT("ScreenStack", ScreenManager.getInstance().getScreenStackInfo());
-		
+
 		if (debug != null) debug.render();
 
 		// 自动测试驱动

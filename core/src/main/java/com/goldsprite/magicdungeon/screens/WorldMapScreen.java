@@ -380,6 +380,19 @@ public class WorldMapScreen extends GScreen {
     }
     
     @Override
+    public boolean handleBackKey() {
+        if (screenManager != null && screenManager.isTransitioning()) return true;
+        
+        if (screenManager != null) {
+            screenManager.playTransition(() -> {
+                 screenManager.popLastScreen();
+            });
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
     public void dispose() {
         super.dispose();
         if (neonBatch != null) neonBatch.dispose();

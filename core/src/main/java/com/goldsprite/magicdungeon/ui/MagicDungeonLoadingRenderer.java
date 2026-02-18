@@ -3,6 +3,7 @@ package com.goldsprite.magicdungeon.ui;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -22,7 +23,15 @@ public class MagicDungeonLoadingRenderer implements ScreenManager.LoadingRendere
     private Skeleton skeleton;
     private AnimationState animationState;
     
+    private String loadingText = "正在前往目标区域...";
     private boolean initialized = false;
+
+    @Override
+    public void setText(String text) {
+        if (text != null) {
+            this.loadingText = text;
+        }
+    }
 
     private void init() {
         if (initialized) return;
@@ -72,14 +81,18 @@ public class MagicDungeonLoadingRenderer implements ScreenManager.LoadingRendere
         
         // Draw Text
         batch.begin();
-        String text = "正在前往目标区域...";
         
         if (VisUI.isLoaded()) {
             BitmapFont font = VisUI.getSkin().getFont("default-font");
             Color oldColor = font.getColor().cpy();
             font.setColor(Color.WHITE);
-            // Simple centering
-            font.draw(batch, text, w / 2 - 60, h / 2 - 80);
+            
+            // Calculate center
+            GlyphLayout layout = new GlyphLayout(font, loadingText);
+            float textX = (w - layout.width) / 2;
+            float textY = (h / 2) - 80;
+            
+            font.draw(batch, loadingText, textX, textY);
             font.setColor(oldColor);
         }
         

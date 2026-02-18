@@ -14,7 +14,8 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		// --- 核心场景 ---
-		map.put("开始游戏", MainMenuScreen.class);
+		// [修改] 开始游戏指向预加载屏幕，以实现统一资源加载
+		map.put("开始游戏", PreloaderScreen.class);
 
 		map.put("", null); // 分隔线
 
