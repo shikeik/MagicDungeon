@@ -1,0 +1,49 @@
+{
+  "name": "fire_crystal",
+  "width": 256,
+  "height": 256,
+  "commands": [
+    {
+      "type": "drawVerticalGradientRect",
+      "args": [0, 0, 1, 1],
+      "color": "#0a0000",
+      "color2": "#2a0a00"
+    },
+    {
+      "type": "drawRegularPolygon",
+      "args": [0.5, 0.5, 0.3, 5, 90, 0, 0],
+      "color": "#ff4500",
+      "color2": "#ff4500",
+      "filled": true
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.5, 0.5, 0.32],
+      "color": "#ffaa00",
+      "color2": "#ff2200",
+      "segments": 48
+    },
+    {
+      "type": "drawRegularPolygon",
+      "args": [0.5, 0.5, 0.25, 6, 0, 0.01, 0],
+      "color": "#ffdd00"
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.5, 0.48, 0.15],
+      "color": "#ffffff",
+      "color2": "#ffaa00",
+      "segments": 32
+    },
+    {
+      "type": "drawCircleGradientStroke",
+      "args": [0.5, 0.5, 0.35, 0.015],
+      "color": "#ffddaa",
+      "color2": "#1a0000"
+    },
+    {
+      "type": "save",
+      "filename": "fire_crystal.png"
+    }
+  ]
+}

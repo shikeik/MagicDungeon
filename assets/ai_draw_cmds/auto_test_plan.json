@@ -1,0 +1,9 @@
+{
+  "name": "auto_test_circle",
+  "width": 128,
+  "height": 128,
+  "commands": [
+    { "type": "drawRadialGradientCircle", "args": [0.5, 0.5, 0.4], "color": "#FFFFFF", "color2": "#888888", "segments": 32 },
+    { "type": "save", "filename": "aidraw_test_output.png" }
+  ]
+}

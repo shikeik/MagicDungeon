@@ -1,0 +1,77 @@
+{
+  "name": "circuit_board",
+  "width": 256,
+  "height": 256,
+  "commands": [
+    {
+      "type": "drawVerticalGradientRect",
+      "args": [0, 0, 1, 1],
+      "color": "#001a00",
+      "color2": "#000a00"
+    },
+    {
+      "type": "drawHorizontalGradientRect",
+      "args": [0.05, 0.05, 0.9, 0.9],
+      "color": "#003300",
+      "color2": "#00aa00",
+      "color2": "#001a00"
+    },
+    {
+      "type": "drawLine",
+      "args": [0.1, 0.2, 0.4, 0.2, 0.003],
+      "color": "#00ff00"
+    },
+    {
+      "type": "drawCircle",
+      "args": [0.4, 0.2, 0.02, 0, 0],
+      "color": "#00ff00",
+      "segments": 16
+    },
+    {
+      "type": "drawLine",
+      "args": [0.4, 0.2, 0.4, 0.5, 0.003],
+      "color": "#00ff00"
+    },
+    {
+      "type": "drawLine",
+      "args": [0.4, 0.5, 0.7, 0.5, 0.003],
+      "color": "#00ff00"
+    },
+    {
+      "type": "drawCircle",
+      "args": [0.7, 0.5, 0.02, 0, 0],
+      "color": "#00ff00",
+      "segments": 16
+    },
+    {
+      "type": "drawLine",
+      "args": [0.7, 0.5, 0.7, 0.8, 0.003],
+      "color": "#00ff00"
+    },
+    {
+      "type": "drawSquare",
+      "args": [0.7, 0.8, 0.04, 0, 0.002],
+      "color": "#00aa00"
+    },
+    {
+      "type": "drawLine",
+      "args": [0.1, 0.4, 0.2, 0.5, 0.002],
+      "color": "#00dd00"
+    },
+    {
+      "type": "drawRect",
+      "args": [0.15, 0.48, 0.1, 0.04, 0, 0.001],
+      "color": "#00dd00"
+    },
+    {
+      "type": "drawCircle",
+      "args": [0.5, 0.6, 0.03, 0, 0],
+      "color": "#ffff00",
+      "segments": 20
+    },
+    {
+      "type": "save",
+      "filename": "circuit_board.png"
+    }
+  ]
+}

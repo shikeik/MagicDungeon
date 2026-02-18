@@ -1,0 +1,49 @@
+{
+  "name": "ice_sphere",
+  "width": 256,
+  "height": 256,
+  "commands": [
+    {
+      "type": "drawVerticalGradientRect",
+      "args": [0, 0, 1, 1],
+      "color": "#0a1a2a",
+      "color2": "#0a2a3a"
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.5, 0.5, 0.38],
+      "color": "#7fffff",
+      "color2": "#004488",
+      "segments": 64
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.5, 0.5, 0.35],
+      "color": "#aaffff",
+      "color2": "#0055aa",
+      "segments": 64
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.35, 0.3, 0.1],
+      "color": "#ffffff",
+      "color2": "#0088cc",
+      "segments": 40
+    },
+    {
+      "type": "drawOval",
+      "args": [0.3, 0.55, 0.25, 0.15, 30, 0.003],
+      "color": "#ccffff"
+    },
+    {
+      "type": "drawCircleGradientStroke",
+      "args": [0.5, 0.5, 0.4, 0.02],
+      "color": "#88ddff",
+      "color2": "#001a3a"
+    },
+    {
+      "type": "save",
+      "filename": "ice_sphere.png"
+    }
+  ]
+}

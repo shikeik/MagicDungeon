@@ -1,0 +1,44 @@
+{
+  "name": "metallic_orb",
+  "width": 256,
+  "height": 256,
+  "commands": [
+    {
+      "type": "drawVerticalGradientRect",
+      "args": [0, 0, 1, 1],
+      "color": "#0a0e27",
+      "color2": "#1a2540"
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.5, 0.5, 0.35],
+      "color": "#ffffff",
+      "color2": "#2d3a5a",
+      "segments": 64
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.5, 0.5, 0.32],
+      "color": "#d4d4d4",
+      "color2": "#4a5a7a",
+      "segments": 64
+    },
+    {
+      "type": "drawRadialGradientCircle",
+      "args": [0.35, 0.32, 0.12],
+      "color": "#fafbff",
+      "color2": "#6a7a9a",
+      "segments": 48
+    },
+    {
+      "type": "drawCircleGradientStroke",
+      "args": [0.5, 0.5, 0.38, 0.02],
+      "color": "#ffffff",
+      "color2": "#1a2540"
+    },
+    {
+      "type": "save",
+      "filename": "metallic_orb.png"
+    }
+  ]
+}
