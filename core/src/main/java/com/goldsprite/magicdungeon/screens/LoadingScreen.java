@@ -125,7 +125,8 @@ public class LoadingScreen extends GScreen {
                 }
             } else {
                 // Transition to GameScreen
-                ScreenManager.getInstance().goScreen(new GameScreen(saveName));
+                // Use showScreen to avoid pushing LoadingScreen to stack
+                ScreenManager.getInstance().showScreen(new GameScreen(saveName));
             }
         }
     }

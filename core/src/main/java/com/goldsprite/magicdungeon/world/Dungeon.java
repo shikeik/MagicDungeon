@@ -139,5 +139,13 @@ public class Dungeon {
         // Find start pos (first available floor or specific type)
         // Default center
         this.startPos = new GridPoint2(width/2, height/2);
+        
+        // Ensure startPos is walkable
+        if (!isWalkable(startPos.x, startPos.y)) {
+             GridPoint2 safePos = getRandomWalkableTile();
+             if (safePos != null) {
+                 this.startPos = safePos;
+             }
+        }
     }
 }

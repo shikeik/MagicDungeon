@@ -21,6 +21,6 @@ public class SaveData {
         this.createTime = System.currentTimeMillis();
         this.lastPlayedTime = this.createTime;
         this.currentAreaId = "camp"; // Default start area
-        this.currentFloor = 1;
+        this.currentFloor = 0; // Default start at Camp (Floor 0)
     }
 }

@@ -520,4 +520,38 @@ public class ScreenManager implements Disposable {
 		imp.removeProcessor(screenImp);
 	}
 
+    /**
+     * 清空屏幕历史栈
+     */
+    public void clearStack() {
+        screenHistory.clear();
+    }
+
+    /**
+     * 回退到指定类型的屏幕（如果有的话）。
+     * 会一直 pop 直到栈顶是目标类型的屏幕，然后将其作为当前屏幕。
+     * @return true 如果成功回退，false 如果栈中未找到该类型屏幕
+     */
+    public boolean popTo(Class<? extends GScreen> targetScreenClass) {
+        if (curScreen != null && targetScreenClass.isInstance(curScreen)) return true;
+
+        int targetIndex = -1;
+        // 从栈顶向下查找
+        for (int i = screenHistory.size() - 1; i >= 0; i--) {
+            if (targetScreenClass.isInstance(screenHistory.get(i))) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex == -1) return false;
+
+        // 移除目标之上的所有屏幕
+        while (screenHistory.size() > targetIndex + 1) {
+            screenHistory.pop();
+        }
+
+        // 此时栈顶就是目标屏幕，弹出并显示
+        return popLastScreen();
+    }
 }

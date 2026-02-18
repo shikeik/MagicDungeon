@@ -130,7 +130,10 @@ public class SaveManager {
                     String areaName = fileName.replace(".json", "");
                     FileHandle targetDir = targetAreasDir.child(areaName);
                     targetDir.mkdirs();
-                    processMapFile(source, targetDir.child("floor_1.json"));
+                    
+                    // 特殊处理 camp.json: 默认作为 floor 0
+                    String targetFloorName = areaName.equals("camp") ? "floor_0.json" : "floor_1.json";
+                    processMapFile(source, targetDir.child(targetFloorName));
                 }
             }
         }

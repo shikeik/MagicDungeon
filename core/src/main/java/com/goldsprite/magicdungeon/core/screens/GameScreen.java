@@ -176,6 +176,8 @@ public class GameScreen extends GScreen {
 		this.dungeon.level = 0;
 
 		this.player = new Player(0, 0); // Temp pos, will be set by enterCamp
+		this.player.visualX = this.player.x * Constants.TILE_SIZE;
+		this.player.visualY = this.player.y * Constants.TILE_SIZE;
 
 		this.monsters = new ArrayList<>();
 		this.items = new ArrayList<>();
@@ -183,6 +185,11 @@ public class GameScreen extends GScreen {
 
 		// Start Game
 		loadGame();
+		
+		// If level is 0, ensure we are in Camp mode correctly
+		if (dungeon.level == 0) {
+		    enterCamp(false);
+		}
 
 		// Ensure initial visual is generated
 		player.updateVisuals();

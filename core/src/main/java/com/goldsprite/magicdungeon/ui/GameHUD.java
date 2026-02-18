@@ -2278,8 +2278,19 @@ public class GameHUD implements Disposable {
 		btnExit.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				// Fallback
-				ScreenManager.getInstance().playTransition(() -> ScreenManager.getInstance().popLastScreen());
+				// 关闭暂停窗口
+				pauseWindow.fadeOut();
+				
+				// 播放转场并返回标题
+				ScreenManager.getInstance().playTransition(() -> {
+					// 尝试回退到主菜单
+					boolean success = ScreenManager.getInstance().popTo(com.goldsprite.magicdungeon.core.screens.MainMenuScreen.class);
+					if (!success) {
+						// 如果栈里没有主菜单（异常情况），则新建并清空栈
+						ScreenManager.getInstance().goScreen(new com.goldsprite.magicdungeon.core.screens.MainMenuScreen());
+						ScreenManager.getInstance().clearStack();
+					}
+				});
 			}
 		});
 
