@@ -17,50 +17,32 @@ public class MapIO {
         int w = data.width;
         int h = data.height;
         Tile[][] map = new Tile[h][w];
+        
+        int[] floorIds = decodeIds(data.compressedFloors, w * h);
+        int[] blockIds = decodeIds(data.compressedBlocks, w * h);
 
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 int index = y * w + x;
                 
                 // 1. Base Floor
-                String floorId = (data.floorIds != null && index < data.floorIds.length) ? data.floorIds[index] : null;
-                TileType floorType = null;
-                if (floorId != null) {
-                    try {
-                        floorType = TileType.valueOf(floorId);
-                    } catch (Exception e) {}
-                }
+                TileType floorType = TileType.fromId(floorIds[index]);
 
                 // 2. Block/Object
-                String blockId = (data.blockIds != null && index < data.blockIds.length) ? data.blockIds[index] : null;
-                TileType blockType = null;
-                if (blockId != null) {
-                    try {
-                        blockType = TileType.valueOf(blockId);
-                    } catch (Exception e) {}
-                }
+                TileType blockType = TileType.fromId(blockIds[index]);
 
                 // Combine: prioritize Block, fallback to Floor
-                // Note: Current game logic uses single Tile per cell.
-                // If we want dual layer (floor + object), we need to change Tile class or how we load it.
-                // For now, if block is present, use block. If block is null/Air, use floor.
-                // If both present, usually block covers floor, but in current Tile system we only have one type.
-                // Wait, TileType has Wall, Floor, etc.
-                // If data has Floor=Floor and Block=Wall, we should set Tile=Wall.
-                // If data has Floor=Floor and Block=null, we set Tile=Floor.
-                
-                TileType finalType = null;
-                if (blockType != null) {
+                TileType finalType = TileType.Air;
+                if (blockType != TileType.Air) {
                     finalType = blockType;
-                } else if (floorType != null) {
+                } else if (floorType != TileType.Air) {
                     finalType = floorType;
                 }
 
-                if (finalType != null) {
+                if (finalType != TileType.Air) {
                     map[y][x] = new Tile(finalType);
                 } else {
-                    // map[y][x] remains null or Air?
-                    // Existing code handles null as void/nothing
+                    // map[y][x] remains null or Air
                 }
             }
         }
@@ -69,6 +51,8 @@ public class MapIO {
 
     public static LayerData fromTileMap(Tile[][] map, int width, int height) {
         LayerData data = new LayerData(width, height);
+        int[] floorIds = new int[width * height];
+        int[] blockIds = new int[width * height];
         
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
@@ -76,23 +60,20 @@ public class MapIO {
                 Tile t = (y < map.length && x < map[0].length) ? map[y][x] : null;
                 
                 if (t != null) {
-                    // This is lossy because Tile doesn't store if it's on a floor or not.
-                    // But usually:
-                    // Wall -> Block=Wall, Floor=Floor (implicitly)
-                    // Floor -> Block=null, Floor=Floor
-                    // Object -> Block=Object, Floor=Floor
-                    
                     if (isFloor(t.type)) {
-                        data.floorIds[index] = t.type.name();
+                        floorIds[index] = t.type.getId();
                     } else {
                         // It's an object/wall
-                        data.blockIds[index] = t.type.name();
+                        blockIds[index] = t.type.getId();
                         // Assume standard floor underneath?
-                        data.floorIds[index] = TileType.Floor.name(); 
+                        floorIds[index] = TileType.Floor.getId(); 
                     }
                 }
             }
         }
+        
+        data.compressedFloors = encodeIds(floorIds);
+        data.compressedBlocks = encodeIds(blockIds);
         return data;
     }
 
@@ -101,6 +82,8 @@ public class MapIO {
         int w = gameMapData.width;
         int h = gameMapData.height;
         LayerData layerData = new LayerData(w, h);
+        int[] floorIds = new int[w * h];
+        int[] blockIds = new int[w * h];
         
         // 1. Convert Grid
         if (gameMapData.grid != null) {
@@ -114,11 +97,11 @@ public class MapIO {
                         try {
                             TileType type = TileType.valueOf(typeName);
                             if (isFloor(type)) {
-                                layerData.floorIds[index] = typeName;
+                                floorIds[index] = type.getId();
                             } else {
-                                layerData.blockIds[index] = typeName;
+                                blockIds[index] = type.getId();
                                 // Fill floor underneath if it's a block
-                                layerData.floorIds[index] = TileType.Floor.name();
+                                floorIds[index] = TileType.Floor.getId();
                             }
                         } catch (Exception e) {
                             // Fallback for unknown types or just ignore
@@ -127,6 +110,9 @@ public class MapIO {
                 }
             }
         }
+        
+        layerData.compressedFloors = encodeIds(floorIds);
+        layerData.compressedBlocks = encodeIds(blockIds);
         
         // 2. Convert Entities
         if (gameMapData.entities != null) {
@@ -150,6 +136,30 @@ public class MapIO {
         }
         
         return layerData;
+    }
+    
+    public static String encodeIds(int[] ids) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ids.length; i++) {
+            sb.append(ids[i]);
+            if (i < ids.length - 1) sb.append(" ");
+        }
+        return sb.toString();
+    }
+    
+    public static int[] decodeIds(String data, int size) {
+        int[] ids = new int[size];
+        if (data == null || data.isEmpty()) return ids;
+        
+        String[] parts = data.split(" ");
+        for (int i = 0; i < Math.min(ids.length, parts.length); i++) {
+            try {
+                ids[i] = Integer.parseInt(parts[i]);
+            } catch (NumberFormatException e) {
+                ids[i] = 0; // Air
+            }
+        }
+        return ids;
     }
 
     private static boolean isFloor(TileType type) {

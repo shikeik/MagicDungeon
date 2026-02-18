@@ -1,6 +1,7 @@
 package com.goldsprite.magicdungeon.world;
 
 public enum TileType {
+	Air, // 0
 	Wall,
 	Floor,
 	Door,
@@ -14,5 +15,14 @@ public enum TileType {
 	Pillar,
 	Torch,
 	Window,
-	Dirt
+	Dirt;
+
+    public static TileType fromId(int id) {
+        if (id < 0 || id >= values().length) return Air;
+        return values()[id];
+    }
+    
+    public int getId() {
+        return this.ordinal();
+    }
 }

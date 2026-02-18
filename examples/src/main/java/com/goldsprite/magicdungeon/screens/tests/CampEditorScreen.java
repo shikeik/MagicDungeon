@@ -817,12 +817,15 @@ public class CampEditorScreen extends GScreen {
         // Build LayerData
         LayerData data = new LayerData(50, 50);
         
+        int[] floorIds = new int[50 * 50];
+        int[] blockIds = new int[50 * 50];
+
         // Layer 0: Floor
         Tile[][] floorLayer = mapLayers.get(0);
         for(int y=0; y<50; y++) {
             for(int x=0; x<50; x++) {
                 Tile t = floorLayer[y][x];
-                if(t != null) data.floorIds[y*50+x] = t.type.name();
+                if(t != null) floorIds[y*50+x] = t.type.getId();
             }
         }
         
@@ -832,10 +835,13 @@ public class CampEditorScreen extends GScreen {
             for(int y=0; y<50; y++) {
                 for(int x=0; x<50; x++) {
                     Tile t = blockLayer[y][x];
-                    if(t != null) data.blockIds[y*50+x] = t.type.name();
+                    if(t != null) blockIds[y*50+x] = t.type.getId();
                 }
             }
         }
+        
+        data.compressedFloors = MapIO.encodeIds(floorIds);
+        data.compressedBlocks = MapIO.encodeIds(blockIds);
         
         // Entities
         for(Monster m : monsters) {
@@ -915,16 +921,17 @@ public class CampEditorScreen extends GScreen {
         }
         
         // Layer 0: Floor
-        if (data.floorIds != null) {
+        if (data.compressedFloors != null) {
+            int[] floorIds = MapIO.decodeIds(data.compressedFloors, data.width * data.height);
             Tile[][] floorLayer = mapLayers.get(0);
-            for(int i=0; i<data.floorIds.length; i++) {
-                String id = data.floorIds[i];
-                if (id != null) {
-                    int x = i % data.width; // Assuming width is 50
+            for(int i=0; i<floorIds.length; i++) {
+                int id = floorIds[i];
+                if (id != 0) { // Not Air
+                    int x = i % data.width;
                     int y = i / data.width;
                     if (x < 50 && y < 50) {
                         try {
-                            floorLayer[y][x] = new Tile(TileType.valueOf(id));
+                            floorLayer[y][x] = new Tile(TileType.fromId(id));
                         } catch(Exception e){}
                     }
                 }
@@ -932,16 +939,17 @@ public class CampEditorScreen extends GScreen {
         }
         
         // Layer 1: Block
-        if (data.blockIds != null) {
+        if (data.compressedBlocks != null) {
+            int[] blockIds = MapIO.decodeIds(data.compressedBlocks, data.width * data.height);
             Tile[][] blockLayer = mapLayers.get(1);
-            for(int i=0; i<data.blockIds.length; i++) {
-                String id = data.blockIds[i];
-                if (id != null) {
+            for(int i=0; i<blockIds.length; i++) {
+                int id = blockIds[i];
+                if (id != 0) { // Not Air
                     int x = i % data.width;
                     int y = i / data.width;
                     if (x < 50 && y < 50) {
                         try {
-                            blockLayer[y][x] = new Tile(TileType.valueOf(id));
+                            blockLayer[y][x] = new Tile(TileType.fromId(id));
                         } catch(Exception e){}
                     }
                 }

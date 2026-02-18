@@ -177,7 +177,11 @@ public class ScreenManager implements Disposable {
 	}
 
 	/**
-	 * 开始一个转场效果 (淡入淡出)
+	 * 开始一个转场效果 (淡入淡出 - Fade)
+	 * <p>
+	 * 适用于无需加载资源的轻量级场景切换（如菜单跳转）。
+	 * 只有黑屏渐变，没有加载动画。
+	 * </p>
 	 * @param onMiddle 当屏幕完全变黑时执行的操作 (通常用于切换屏幕或重置关卡)
 	 */
 	public void playTransition(Runnable onMiddle) {
@@ -185,7 +189,11 @@ public class ScreenManager implements Disposable {
 	}
 	
 	/**
-	 * 执行带加载动画的转场
+	 * 执行带加载动画的转场 (Loading)
+	 * <p>
+	 * 适用于需要加载资源或生成地图的场景（如进入地牢、切换楼层）。
+	 * 屏幕变黑后会显示加载动画（如小人跑动）和提示文本，直到加载任务完成。
+	 * </p>
 	 * @param loader 异步加载任务，接受一个 finishCallback。当加载完成时必须调用此 callback。
 	 * @param tipText 加载时显示的提示文本
 	 * @param minDuration 最小转场持续时间 (秒)，防止加载过快导致动画闪烁。

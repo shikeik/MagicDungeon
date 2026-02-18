@@ -19,17 +19,24 @@ import java.util.Set;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.Gdx;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class TextureManager implements Disposable {
 	private static TextureManager instance;
 
 	private Map<String, TextureRegion> regionCache;
 	// Track underlying textures for disposal
 	private Set<Texture> managedTextures;
+    
+    // Async Loading Queue
+    private Queue<Runnable> loadQueue = new LinkedList<>();
+    private int totalTasks = 0;
 
 	private TextureManager() {
 		regionCache = new HashMap<>();
 		managedTextures = new HashSet<>();
-		loadAll();
+        // loadAll(); // [Change] Removed sync load
 	}
 
 	public static TextureManager getInstance() {
@@ -38,71 +45,106 @@ public class TextureManager implements Disposable {
 		}
 		return instance;
 	}
+    
+    /**
+     * Start queuing async tasks
+     */
+    public void loadAsync() {
+        if (totalTasks > 0) return; // Already loaded or loading
+        
+        loadQueue.clear();
+        
+        // 1. Load Assets (Sprite Sheets)
+        // SpriteSheetLoader is disk I/O, better keep it here or move to separate thread?
+        // For now keep in queue to spread frame time.
+        loadQueue.add(() -> loadSheet("sprites/all_blocks_sheet.json"));
+        loadQueue.add(() -> loadSheet("sprites/all_entities_sheet.json"));
+        loadQueue.add(() -> loadSheet("sprites/all_items_sheet.json"));
 
-	private void loadAll() {
-		// 1. Load Assets (Sprite Sheets)
-		loadSheet("sprites/all_blocks_sheet.json");
-		loadSheet("sprites/all_entities_sheet.json");
-		loadSheet("sprites/all_items_sheet.json");
+        // 2. Generate Missing Textures (Fallback)
 
-		// 2. Generate Missing Textures (Fallback)
+        // Tiles
+        loadQueue.add(() -> checkAndGenerate(TileType.Wall.name(), () -> NeonTileGenerator.createDungeonWallTileset(ThemeConfig.WALL_TOP, ThemeConfig.WALL_FACE)));
+        loadQueue.add(() -> checkAndGenerate(TileType.Floor.name(), () -> NeonTileGenerator.createFloor(ThemeConfig.FLOOR_BASE, ThemeConfig.FLOOR_DARK, ThemeConfig.FLOOR_HIGHLIGHT)));
 
-		// Tiles
-		// [修改] 切换到 NeonTileGenerator
-		checkAndGenerate(TileType.Wall.name(), () -> NeonTileGenerator.createDungeonWallTileset(ThemeConfig.WALL_TOP, ThemeConfig.WALL_FACE));
-		checkAndGenerate(TileType.Floor.name(), () -> NeonTileGenerator.createFloor(ThemeConfig.FLOOR_BASE, ThemeConfig.FLOOR_DARK, ThemeConfig.FLOOR_HIGHLIGHT));
+        loadQueue.add(() -> checkAndGenerate(TileType.Door.name(), () -> SpriteGenerator.createDoor()));
+        loadQueue.add(() -> checkAndGenerate(TileType.Stairs_Down.name(), () -> SpriteGenerator.createStairs(false)));
+        loadQueue.add(() -> checkAndGenerate(TileType.Stairs_Up.name(), () -> SpriteGenerator.createStairs(true)));
 
-		checkAndGenerate(TileType.Door.name(), () -> SpriteGenerator.createDoor());
-		checkAndGenerate(TileType.Stairs_Down.name(), () -> SpriteGenerator.createStairs(false));
-		checkAndGenerate(TileType.Stairs_Up.name(), () -> SpriteGenerator.createStairs(true));
+        // Camp Tiles
+        loadQueue.add(() -> checkAndGenerate(TileType.Tree.name(), () -> SpriteGenerator.createTree()));
+        loadQueue.add(() -> checkAndGenerate(TileType.Grass.name(), () -> SpriteGenerator.createGrass()));
+        loadQueue.add(() -> checkAndGenerate(TileType.Sand.name(), () -> SpriteGenerator.createSand()));
+        loadQueue.add(() -> checkAndGenerate(TileType.Dirt.name(), () -> SpriteGenerator.createDirt()));
+        loadQueue.add(() -> checkAndGenerate(TileType.StonePath.name(), () -> SpriteGenerator.createStonePath()));
+        loadQueue.add(() -> checkAndGenerate(TileType.Dungeon_Entrance.name(), () -> SpriteGenerator.createDungeonEntrance()));
 
-		// Camp Tiles
-		checkAndGenerate(TileType.Tree.name(), () -> SpriteGenerator.createTree());
-		checkAndGenerate(TileType.Grass.name(), () -> SpriteGenerator.createGrass());
-		checkAndGenerate(TileType.Sand.name(), () -> SpriteGenerator.createSand());
-		checkAndGenerate(TileType.Dirt.name(), () -> SpriteGenerator.createDirt());
-		checkAndGenerate(TileType.StonePath.name(), () -> SpriteGenerator.createStonePath());
-		checkAndGenerate(TileType.Dungeon_Entrance.name(), () -> SpriteGenerator.createDungeonEntrance());
+        // Decor
+        loadQueue.add(() -> checkAndGenerate(TileType.Pillar.name(), () -> SpriteGenerator.createPillar()));
+        loadQueue.add(() -> checkAndGenerate(TileType.Torch.name(), () -> SpriteGenerator.createTorch()));
+        loadQueue.add(() -> checkAndGenerate(TileType.Window.name(), () -> SpriteGenerator.createWindow()));
 
-		// Decor
-		checkAndGenerate(TileType.Pillar.name(), () -> SpriteGenerator.createPillar());
-		checkAndGenerate(TileType.Torch.name(), () -> SpriteGenerator.createTorch());
-		checkAndGenerate(TileType.Window.name(), () -> SpriteGenerator.createWindow());
+        // Player
+        loadQueue.add(() -> checkAndGenerate("PLAYER", () -> NeonSpriteGenerator.createPlayer()));
 
-		// Player
-		// [修改] 切换到 NeonSpriteGenerator
-		checkAndGenerate("PLAYER", () -> NeonSpriteGenerator.createPlayer());
+        // Monsters (Split into chunks to avoid long frames)
+        for (MonsterType type : MonsterType.values()) {
+            loadQueue.add(() -> {
+                final String enumName = type.name();
+                
+                try {
+                    FileHandle customFile = Gdx.files.internal("textures/monsters/" + enumName + ".png");
+                    if (customFile.exists()) {
+                        checkAndGenerate(enumName, () -> new TextureRegion(new Texture(customFile)));
+                        return;
+                    }
+                } catch (Exception e) {
+                    Gdx.app.error("TextureManager", "Failed to check custom texture for " + enumName, e);
+                }
 
-		// Monsters
-		for (MonsterType type : MonsterType.values()) {
-			final String enumName = type.name();
-			
-			// [New Feature] 尝试加载自定义纹理文件 (assets/textures/monsters/Boss.png)
-			try {
-				FileHandle customFile = Gdx.files.internal("textures/monsters/" + enumName + ".png");
-				if (customFile.exists()) {
-					checkAndGenerate(enumName, () -> new TextureRegion(new Texture(customFile)));
-					continue;
-				}
-			} catch (Exception e) {
-				Gdx.app.error("TextureManager", "Failed to check custom texture for " + enumName, e);
-			}
+                TextureRegion region = NeonSpriteGenerator.createMonster(type.name);
+                if (region != null) {
+                    checkAndGenerate(type.name(), () -> region);
+                } else {
+                    checkAndGenerate(type.name(), () -> SpriteGenerator.createMonster(type.name()));
+                }
+            });
+        }
 
-			// [Integration] 尝试使用 NeonSpriteGenerator (针对 Boss/Dragon)
-			TextureRegion region = NeonSpriteGenerator.createMonster(type.name);
-			if (region != null) {
-				checkAndGenerate(type.name(), () -> region);
-			} else {
-				// 回退到旧的生成器
-				checkAndGenerate(type.name(), () -> SpriteGenerator.createMonster(type.name()));
-			}
-		}
-
-		// Items
-		// [修改] 切换到 NeonItemGenerator
-		for (ItemData item : ItemData.values()) {
-			checkAndGenerate(item.name(), () -> NeonItemGenerator.createItem(item.name));
-		}
+        // Items
+        for (ItemData item : ItemData.values()) {
+            loadQueue.add(() -> checkAndGenerate(item.name(), () -> NeonItemGenerator.createItem(item.name)));
+        }
+        
+        totalTasks = loadQueue.size();
+    }
+    
+    /**
+     * Process tasks for limited time per frame
+     * @return true if all finished
+     */
+    public boolean update() {
+        if (loadQueue.isEmpty()) return true;
+        
+        long startTime = System.nanoTime();
+        // 8ms budget
+        while (!loadQueue.isEmpty() && System.nanoTime() - startTime < 8000000) {
+            Runnable task = loadQueue.poll();
+            if (task != null) task.run();
+        }
+        
+        return loadQueue.isEmpty();
+    }
+    
+    public float getProgress() {
+        if (totalTasks == 0) return 1.0f;
+        return 1.0f - (float)loadQueue.size() / totalTasks;
+    }
+    
+    private void loadAll() {
+        // Legacy support: if called synchronously, run all tasks immediately
+        loadAsync();
+        while(!update()) {}
 	}
 
 	private void loadSheet(String path) {

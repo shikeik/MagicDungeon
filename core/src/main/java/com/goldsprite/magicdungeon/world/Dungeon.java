@@ -11,6 +11,8 @@ public class Dungeon {
 	public int width;
 	public int height;
 	public int level;
+    // [Refactor] Separate Area ID (e.g. "camp", "misty_forest", "castle")
+    public String areaId = "camp";
 	public Tile[][] map;
 	public GridPoint2 startPos;
 	public long globalSeed;

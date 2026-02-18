@@ -170,8 +170,8 @@ public class SaveManager {
         
         // Try to load as LayerData (New format)
         try {
-            LayerData layerData = json.fromJson(LayerData.class, source);
-            if (layerData != null && (layerData.floorIds != null || layerData.blockIds != null)) {
+            LayerData layerData = new Json().fromJson(LayerData.class, source);
+            if (layerData != null && (layerData.compressedFloors != null || layerData.compressedBlocks != null)) {
                  DLog.logT("SaveManager", "Imported LayerData map " + source.name());
                 return layerData;
             }

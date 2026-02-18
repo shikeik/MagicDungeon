@@ -243,7 +243,7 @@ public class GameScreen extends GScreen {
 		}
 		meta.lastPlayedTime = System.currentTimeMillis();
 		meta.currentFloor = dungeon.level;
-		meta.currentAreaId = (dungeon.level == 0) ? "camp" : "dungeon";
+		meta.currentAreaId = dungeon.areaId;
 		meta.maxDepth = this.maxDepth;
 		SaveManager.saveSaveMeta(meta);
 
@@ -301,8 +301,7 @@ public class GameScreen extends GScreen {
 		data.monsters = monsterStates;
 		data.items = itemStates;
 
-		String areaId = (dungeon.level == 0) ? "camp" : "dungeon";
-		SaveManager.saveLayerData(saveName, areaId, dungeon.level, data);
+		SaveManager.saveLayerData(saveName, dungeon.areaId, dungeon.level, data);
 	}
 
 	private void enterCamp(boolean fromStairs) {
@@ -312,6 +311,7 @@ public class GameScreen extends GScreen {
 		}
 
 		dungeon.level = 0;
+        dungeon.areaId = "camp"; // Switch to Camp Area
 		loadCurrentLevel();
 
 		if (fromStairs && wasInDungeon) {
@@ -357,6 +357,7 @@ public class GameScreen extends GScreen {
         Gdx.app.postRunnable(() -> {
             try {
                 dungeon.level = Math.max(1, node.minLv);
+                dungeon.areaId = node.id; // Set correct Area ID
                 dungeon.theme = node.theme;
                 dungeon.generate();
 
@@ -921,15 +922,24 @@ public class GameScreen extends GScreen {
 			if (tile != null) {
 				if (tile.type == TileType.Stairs_Down) {
 					// Go deeper
-					getScreenManager().playTransition(() -> enterDungeon(dungeon.level + 1));
+                    getScreenManager().playLoadingTransition((finishCallback) -> {
+                        enterDungeon(dungeon.level + 1);
+                        finishCallback.run();
+                    }, "进入下层 (Lv." + (dungeon.level + 1) + ")...", 1.0f);
 					handledInteract = true;
 				} else if (tile.type == TileType.Stairs_Up) {
 					// Go back up
 					if (dungeon.level > 1) {
-						getScreenManager().playTransition(() -> enterDungeon(dungeon.level - 1));
+                        getScreenManager().playLoadingTransition((finishCallback) -> {
+                            enterDungeon(dungeon.level - 1);
+                            finishCallback.run();
+                        }, "返回上层 (Lv." + (dungeon.level - 1) + ")...", 1.0f);
 					} else {
 						// Level 1 -> Camp
-						getScreenManager().playTransition(() -> enterCamp(true));
+                        getScreenManager().playLoadingTransition((finishCallback) -> {
+                            enterCamp(true);
+                            finishCallback.run();
+                        }, "返回营地...", 1.0f);
 					}
 					handledInteract = true;
 				} else if (tile.type == TileType.Dungeon_Entrance) {
@@ -1061,7 +1071,7 @@ public class GameScreen extends GScreen {
 			@Override
 			public void run() {
 				// Restart (Respawn at Camp with reset progress)
-				getScreenManager().playTransition(() -> {
+                getScreenManager().playLoadingTransition((finishCallback) -> {
 					isGameOver = false;
 					playCurrentBGM();
 
@@ -1075,7 +1085,8 @@ public class GameScreen extends GScreen {
 					enterCamp(false);
 
 					hud.showMessage("你已复活。等级和物品已掉落。");
-				});
+                    finishCallback.run();
+                }, "复活中...", 1.0f);
 			}
 		}, new Runnable() {
 			@Override
@@ -1383,6 +1394,10 @@ public class GameScreen extends GScreen {
 
 		// Set current level
 		dungeon.level = meta.currentFloor;
+        dungeon.areaId = meta.currentAreaId;
+        if (dungeon.areaId == null || dungeon.areaId.isEmpty()) {
+            dungeon.areaId = (dungeon.level == 0) ? "camp" : "dungeon";
+        }
 		this.maxDepth = Math.max(1, meta.maxDepth); // Ensure at least 1
 
 		loadCurrentLevel();
@@ -1392,7 +1407,7 @@ public class GameScreen extends GScreen {
 	}
 
 	private void loadCurrentLevel() {
-		String areaId = (dungeon.level == 0) ? "camp" : "dungeon";
+		String areaId = dungeon.areaId;
 
 		if (SaveManager.hasLayerData(saveName, areaId, dungeon.level)) {
 			LayerData data = SaveManager.loadLayerData(saveName, areaId, dungeon.level);

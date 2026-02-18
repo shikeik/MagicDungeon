@@ -12,11 +12,10 @@ public class LayerData {
     public int width;
     public int height;
     
-    // 地皮层 (Ground Layer) - 存储 TileType.name()
-    public String[] floorIds;
-    
-    // 方块层 (Block Layer) - 存储 TileType.name() (Wall, Decor, Interactive)
-    public String[] blockIds;
+    // 压缩后的地图数据 (Space separated IDs)
+    // ID 对应 TileType.ordinal()
+    public String compressedFloors;
+    public String compressedBlocks;
     
     // 实体列表
     public List<MonsterState> monsters = new ArrayList<>();
@@ -30,7 +29,6 @@ public class LayerData {
     public LayerData(int width, int height) {
         this.width = width;
         this.height = height;
-        this.floorIds = new String[width * height];
-        this.blockIds = new String[width * height];
+        // Data initialized empty
     }
 }

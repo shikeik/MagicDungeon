@@ -25,16 +25,16 @@ public class LoadGameDialog extends BaseDialog {
     public LoadGameDialog() {
         super("选择存档");
         initUI();
-        
-        if (ScreenManager.getInstance().getCurScreen() != null) {
-            com.badlogic.gdx.scenes.scene2d.Stage stage = ScreenManager.getInstance().getCurScreen().getStage();
-            setSize(stage.getWidth() * 0.6f, stage.getHeight() * 0.6f);
-            centerWindow();
-            show(stage);
-        } else {
-            setSize(600, 400);
-            centerWindow();
-        }
+    }
+
+    @Override
+    public com.kotcrab.vis.ui.widget.VisDialog show(com.badlogic.gdx.scenes.scene2d.Stage stage) {
+        // [UI调整] 始终使用舞台尺寸的 3/5
+        float w = stage.getWidth() * 0.6f;
+        float h = stage.getHeight() * 0.6f;
+        setSize(w, h);
+        centerWindow();
+        return super.show(stage);
     }
 
     private void initUI() {

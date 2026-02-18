@@ -124,9 +124,16 @@ public class LoadingScreen extends GScreen {
                     Gdx.input.setInputProcessor(stage);
                 }
             } else {
-                // Transition to GameScreen
-                // Use showScreen to avoid pushing LoadingScreen to stack
-                ScreenManager.getInstance().showScreen(new GameScreen(saveName));
+                // Transition to GameScreen with Loading Transition
+                // 使用 playLoadingTransition 确保显示小人动画，符合“进入游戏时”的加载感
+                ScreenManager.getInstance().playLoadingTransition((finishCallback) -> {
+                     // 预先初始化 GameScreen
+                     GameScreen gameScreen = new GameScreen(saveName);
+                     // 切换屏幕
+                     ScreenManager.getInstance().showScreen(gameScreen);
+                     // 标记完成
+                     finishCallback.run();
+                }, "进入世界中...", 1.0f);
             }
         }
     }
