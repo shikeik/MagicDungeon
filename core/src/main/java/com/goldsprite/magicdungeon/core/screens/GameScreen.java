@@ -1466,6 +1466,9 @@ public class GameScreen extends GScreen {
 		// If load failed or no data, generate
 		dungeon.generate();
 		spawnEntities();
+        
+        // Ensure generated state is saved immediately to persist consistency (e.g. random camp becomes fixed)
+        saveCurrentLevelState();
 	}
 
 	@Override

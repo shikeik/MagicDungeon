@@ -217,6 +217,16 @@ public class SaveManager {
         }
         if (area == null) area = new AreaMapData(areaId);
         
+        // Ensure map is initialized (in case loadJson returned null map field)
+        if (area.floors == null) area.floors = new java.util.HashMap<>();
+
+        // Log existing keys to debug duplicate levels issue
+        DLog.logT("SaveManager", "Saving Area " + areaId + " Floor " + floor + ". Existing floors: " + area.floors.keySet());
+        
+        // Explicitly remove if exists (though put replaces, this clarifies intent)
+        if (area.floors.containsKey(floor)) {
+            area.floors.remove(floor);
+        }
         area.floors.put(floor, data);
         
         file.parent().mkdirs();

@@ -96,9 +96,15 @@ public class PreloaderScreen extends GScreen {
             // Transition to Main Menu
             ScreenManager.getInstance().playTransition(() -> {
                 // Go to Main Menu (Already initialized above)
-                ScreenManager.getInstance().replaceScreen(MainMenuScreen.class);
+                // Use showScreen to avoid pushing PreloaderScreen to stack
+                ScreenManager.getInstance().showScreen(MainMenuScreen.class);
             });
         }
+    }
+
+    @Override
+    public void hide() {
+        dispose();
     }
 
     @Override

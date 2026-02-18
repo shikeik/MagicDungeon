@@ -151,7 +151,7 @@ public class MainMenuScreen extends GScreen {
 			createMenuButton("继续游戏", targetX, currentY, 0.2f, new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
-					new LoadGameDialog();
+					new LoadGameDialog().show(stage);
 				}
 			});
 			currentY -= gap;
