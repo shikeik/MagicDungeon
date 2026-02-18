@@ -496,6 +496,31 @@ public class SpriteGenerator {
 		return toTextureRegion(p);
 	}
 
+	public static TextureRegion createDirt() {
+		Pixmap p = createPixmap();
+
+		// Base Dirt (Dark Brown)
+		drawRect(p, 0, 0, TEX_SIZE, TEX_SIZE, Color.valueOf("#5d4037"));
+
+		// Grain / Noise
+		p.setColor(Color.valueOf("#4e342e"));
+		for(int i=0; i<400; i++) {
+			int x = MathUtils.random(TEX_SIZE);
+			int y = MathUtils.random(TEX_SIZE);
+			p.drawPixel(x, y);
+		}
+		
+		// Highlights
+		p.setColor(Color.valueOf("#795548"));
+		for(int i=0; i<100; i++) {
+			int x = MathUtils.random(TEX_SIZE);
+			int y = MathUtils.random(TEX_SIZE);
+			p.drawPixel(x, y);
+		}
+
+		return toTextureRegion(p);
+	}
+
 	public static TextureRegion createSand() {
 		Pixmap p = createPixmap();
 
@@ -958,6 +983,34 @@ public class SpriteGenerator {
 			// Eyes (Red, small)
 			drawRect(p, headX + 10, headY + 30, 20, 10, Color.RED);
 			drawRect(p, headX + headW - 30, headY + 30, 20, 10, Color.RED);
+
+		} else if (type.equals("Wolf")) {
+			// Wolf
+			Color fur = Color.GRAY;
+			Color darkFur = Color.DARK_GRAY;
+
+			// Body
+			drawRect(p, 80, 140, 100, 50, fur);
+			
+			// Head
+			drawRect(p, 50, 110, 50, 60, fur);
+			// Snout
+			drawRect(p, 30, 130, 20, 30, darkFur);
+			
+			// Ears
+			p.setColor(darkFur);
+			p.fillTriangle(60, 110, 70, 110, 65, 90);
+			p.fillTriangle(80, 110, 90, 110, 85, 90);
+			
+			// Legs
+			drawRect(p, 80, 190, 15, 60, fur);
+			drawRect(p, 165, 190, 15, 60, fur);
+			
+			// Tail
+			drawRect(p, 180, 140, 40, 20, darkFur);
+			
+			// Eyes
+			drawRect(p, 55, 125, 8, 8, Color.RED);
 
 		} else if (type.equals("Bat")) {
 			// Wings (Dark Purple/Grey)

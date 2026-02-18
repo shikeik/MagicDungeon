@@ -58,6 +58,7 @@ public class TextureManager implements Disposable {
 		checkAndGenerate(TileType.Tree.name(), () -> SpriteGenerator.createTree());
 		checkAndGenerate(TileType.Grass.name(), () -> SpriteGenerator.createGrass());
 		checkAndGenerate(TileType.Sand.name(), () -> SpriteGenerator.createSand());
+		checkAndGenerate(TileType.Dirt.name(), () -> SpriteGenerator.createDirt());
 		checkAndGenerate(TileType.StonePath.name(), () -> SpriteGenerator.createStonePath());
 		checkAndGenerate(TileType.Dungeon_Entrance.name(), () -> SpriteGenerator.createDungeonEntrance());
 

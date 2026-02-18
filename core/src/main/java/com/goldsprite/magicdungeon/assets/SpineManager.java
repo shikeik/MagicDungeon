@@ -30,7 +30,7 @@ public class SpineManager implements Disposable {
     }
 
     private void loadAll() {
-        loadSpine("Wolf", "spines/wolf/exports/spine_108_02");
+        loadSpine("Wolf", "spines/wolf/wolf");
     }
 
     private void loadSpine(String key, String basePath) {
