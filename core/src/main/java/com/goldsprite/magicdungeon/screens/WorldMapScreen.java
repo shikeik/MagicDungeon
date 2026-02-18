@@ -373,7 +373,7 @@ public class WorldMapScreen extends GScreen {
                 screenManager.playTransition(() -> {
                     GameScreen gameScreen = new GameScreen(seed);
                     // TODO: 根据 node.id 设置地牢类型/难度
-                    screenManager.turnScreen(gameScreen);
+                    screenManager.goScreen(gameScreen);
                 });
             }
         }

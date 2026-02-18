@@ -2,13 +2,13 @@ package com.goldsprite.magicdungeon.testing;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.magicdungeon.core.screens.GameScreen;
 import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
-import com.badlogic.gdx.math.Vector2;
 
 /**
  * 模拟人类可视化测试流程
@@ -24,7 +24,7 @@ public class HumanSimulatorTest implements IGameAutoTest {
 
         // 1. 进入主菜单 (重置状态)
         atm.addAction("Go to MainMenu", () -> {
-            ScreenManager.getInstance().turnScreen(MainMenuScreen.class, true);
+            ScreenManager.getInstance().goScreen(MainMenuScreen.class);
         });
         atm.addWait(1.0f);
 

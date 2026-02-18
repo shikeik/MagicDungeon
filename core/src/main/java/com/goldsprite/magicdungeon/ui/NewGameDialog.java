@@ -119,6 +119,6 @@ public class NewGameDialog extends BaseDialog {
 
     private void startGame(String saveName, String playerName) {
         close();
-        ScreenManager.getInstance().turnScreen(new LoadingScreen(saveName, playerName, true));
+        ScreenManager.getInstance().goScreen(new LoadingScreen(saveName, playerName, true));
     }
 }

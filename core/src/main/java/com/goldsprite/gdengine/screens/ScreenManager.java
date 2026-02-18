@@ -1,19 +1,24 @@
 package com.goldsprite.gdengine.screens;
 
-import com.badlogic.gdx.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Camera;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
-
-import java.util.*;
-import java.util.function.Consumer;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
-
-import java.util.function.Supplier;
 
 /**
  * 使用：
@@ -23,9 +28,11 @@ import java.util.function.Supplier;
  * * * 重大小: ScreenManager.getInstance().resize(width, height);
  * * * 回收: ScreenManager.getInstance().dispose();
  * * 切换屏幕:
- * * * 首先需要已添加目标屏幕，然后在屏幕内部使用getScreenManager().setCurScreen(TargetScreen.class)
- * * 返回上次屏幕:
- * * * 在屏幕历史堆栈有屏幕时getScreenManager().popLastScreen()来返回上个屏幕
+ * * * 使用 getScreenManager().goScreen(TargetScreen.class) 进入屏幕（可返回）
+ * * * 使用 getScreenManager().showScreen(TargetScreen.class) 仅显示屏幕（不可返回）
+ * * * 使用 getScreenManager().replaceScreen(TargetScreen.class) 替换屏幕（重新创建）
+ * * 返回上个屏幕:
+ * * * 在屏幕历史堆栈有屏幕时 getScreenManager().popLastScreen() 来返回上个屏幕
  * * 转场效果:
  * * * 使用 playTransition(Runnable onMiddle) 来执行带黑屏过渡的操作
  */
@@ -41,7 +48,8 @@ public class ScreenManager implements Disposable {
 	private enum TransitionState {
 		NONE,
 		FADE_OUT, // 透明 -> 黑
-		FADE_IN   // 黑 -> 透明
+		FADE_IN,   // 黑 -> 透明
+		LOADING_WAIT // 等待加载完成 (显示 LoadingOverlay)
 	}
 
 	// 2. 定义回调接口 (底层不依赖 Android/Lwjgl)
@@ -52,6 +60,12 @@ public class ScreenManager implements Disposable {
     public static Runnable inputUpdater;
     public static Supplier<Boolean> backKeyTrigger = () -> 
         Gdx.input.isKeyJustPressed(Input.Keys.BACK) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
+
+    // [新增] Loading 渲染器接口
+    public interface LoadingRenderer {
+        void render(float delta, float alpha);
+    }
+    private LoadingRenderer loadingRenderer;
 
 	private static ScreenManager instance;
 	private final Map<Class<?>, GScreen> screens = new HashMap<>();
@@ -69,6 +83,12 @@ public class ScreenManager implements Disposable {
 	private float transitionTime = 0f;
 	private Runnable onTransitionMiddle;
 	private Runnable onTransitionEnd;
+	
+	// Loading 转场相关
+	private boolean loadingTaskFinished = false;
+	private float loadingMinDuration = 0f;
+	private float loadingElapsedTime = 0f;
+	
 	private ShapeRenderer shapeRenderer;
 
 	public ScreenManager() {
@@ -150,12 +170,43 @@ public class ScreenManager implements Disposable {
 		return this;
 	}
 
+	public void setLoadingRenderer(LoadingRenderer renderer) {
+		this.loadingRenderer = renderer;
+	}
+
 	/**
 	 * 开始一个转场效果 (淡入淡出)
 	 * @param onMiddle 当屏幕完全变黑时执行的操作 (通常用于切换屏幕或重置关卡)
 	 */
 	public void playTransition(Runnable onMiddle) {
 		playTransition(onMiddle, null);
+	}
+	
+	/**
+	 * 执行带加载动画的转场
+	 * @param loader 异步加载任务，接受一个 finishCallback。当加载完成时必须调用此 callback。
+	 * @param minDuration 最小转场持续时间 (秒)，防止加载过快导致动画闪烁。
+	 */
+	public void playLoadingTransition(Consumer<Runnable> loader, float minDuration) {
+	    if (transitionState != TransitionState.NONE) return;
+	    
+	    this.loadingMinDuration = minDuration;
+	    this.loadingElapsedTime = 0f;
+	    this.loadingTaskFinished = false;
+	    
+	    playTransition(() -> {
+	        // 进入 LOADING_WAIT 状态，而不是立即 FADE_IN
+	        transitionState = TransitionState.LOADING_WAIT;
+	        
+	        // 执行加载任务
+	        if (loader != null) {
+	            loader.accept(() -> {
+	                loadingTaskFinished = true;
+	            });
+	        } else {
+	            loadingTaskFinished = true;
+	        }
+	    });
 	}
 
 	/**
@@ -222,11 +273,25 @@ public class ScreenManager implements Disposable {
 					onTransitionMiddle.run();
 					onTransitionMiddle = null; // 确保只执行一次
 				}
-				// 切换到 Fade In
-				transitionState = TransitionState.FADE_IN;
+				
+				// 如果中间回调没有改变状态（例如改为 LOADING_WAIT），则默认切换到 FADE_IN
+				if (transitionState == TransitionState.FADE_OUT) {
+				    transitionState = TransitionState.FADE_IN;
+				}
+				
 				transitionTime = 0f;
 				alpha = 1f; // 保持全黑一帧
 			}
+		} else if (transitionState == TransitionState.LOADING_WAIT) {
+		    // 保持全黑，显示加载动画
+		    alpha = 1f;
+		    loadingElapsedTime += delta;
+		    
+		    if (loadingElapsedTime >= loadingMinDuration && loadingTaskFinished) {
+		        // 加载完成且满足最小时长，开始 Fade In
+		        transitionState = TransitionState.FADE_IN;
+		        transitionTime = 0f;
+		    }
 		} else if (transitionState == TransitionState.FADE_IN) {
 			alpha = 1f - Math.min(1f, transitionTime / transitionDuration);
 			if (transitionTime >= transitionDuration) {
@@ -256,6 +321,12 @@ public class ScreenManager implements Disposable {
 			shapeRenderer.rect(cam.position.x - w, cam.position.y - h, w * 2, h * 2);
 			
 			shapeRenderer.end();
+			
+			// 如果处于 LOADING_WAIT 状态，绘制加载动画
+			if (transitionState == TransitionState.LOADING_WAIT && loadingRenderer != null) {
+			    loadingRenderer.render(delta, alpha);
+			}
+			
 			Gdx.gl.glDisable(GL20.GL_BLEND);
 		}
 	}
@@ -312,54 +383,114 @@ public class ScreenManager implements Disposable {
 		return curScreen;
 	}
 
-	public void turnNewScreen(Class<? extends GScreen> key) {
-		if(existsScreen(key)) {
-			getScreen(key).dispose();
-			removeScreen(key);
-		}
-		turnScreen(key, true);
-	}
-	public void turnScreen(Class<? extends GScreen> key) {
-		turnScreen(key, false);
-	}
-	public void turnScreen(Class<? extends GScreen> key, boolean autoCreate) {
-		//自动加入管理屏幕中
-		if (autoCreate && !existsScreen(key)) {
+	/**
+	 * 进入屏幕（入栈管理，可返回）。
+	 * 如果已是当前屏幕，直接忽略（幂等操作）。
+	 */
+	public ScreenManager goScreen(Class<? extends GScreen> key) {
+		if (!existsScreen(key)) {
 			try {
 				addScreen(key.getConstructor().newInstance());
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		}
-		turnScreen(getScreen(key));
+		return goScreen(getScreen(key));
 	}
-	public void turnScreen(GScreen screen) {
-		// [修复] 自动依赖注入
-		// 如果是临时 new 出来的屏幕，还没有绑定 Manager 或 Input，这里自动补全
+
+	/**
+	 * 进入屏幕对象（入栈管理，可返回）。
+	 * 如果已是当前屏幕，直接忽略（幂等操作）。
+	 */
+	public ScreenManager goScreen(GScreen screen) {
+		// 相同屏幕直接忽略
+		if (this.curScreen == screen) {
+			return this;
+		}
+
+		_initializeScreen(screen);
+
+		// 隐藏上个屏幕并入栈
+		if (this.curScreen != null) {
+			this.curScreen.hide();
+			if (!popping) screenHistory.push(curScreen);
+		}
+
+		this.curScreen = screen;
+		this.curScreen.show();
+		return this;
+	}
+
+	/**
+	 * 仅显示屏幕（不入栈，不可返回）。
+	 * 用于临时显示（如模态对话框、加载界面等）。
+	 */
+	public ScreenManager showScreen(Class<? extends GScreen> key) {
+		if (!existsScreen(key)) {
+			try {
+				addScreen(key.getConstructor().newInstance());
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return showScreen(getScreen(key));
+	}
+
+	/**
+	 * 仅显示屏幕对象（不入栈，不可返回）。
+	 */
+	public ScreenManager showScreen(GScreen screen) {
+		_initializeScreen(screen);
+
+		// 隐藏上个屏幕但不入栈
+		if (this.curScreen != null) {
+			this.curScreen.hide();
+			// 注意：这里不入栈，所以 ESC/返回 会直接退出应用而不是回到上个屏幕
+		}
+
+		this.curScreen = screen;
+		this.curScreen.show();
+		return this;
+	}
+
+	/**
+	 * 替换屏幕（销毁旧实例，创建新实例）。
+	 * 用于需要完全重置状态的场景。
+	 */
+	public ScreenManager replaceScreen(Class<? extends GScreen> key) {
+		if (existsScreen(key)) {
+			getScreen(key).dispose();
+			removeScreen(key);
+		}
+		return goScreen(key);
+	}
+
+	/**
+	 * 私有方法：屏幕初始化和依赖注入。
+	 */
+	private void _initializeScreen(GScreen screen) {
+		// 自动依赖注入
 		if (screen.getScreenManager() == null) {
 			screen.setScreenManager(this);
 		}
 		if (screen.getImp() == null) {
 			screen.setImp(new InputMultiplexer());
 		}
-		//如果屏幕未准备则初始化屏幕
-		screen.initialize();
-		//隐藏上个屏幕并切换到目标屏幕
-		if (this.curScreen != null) {
-			this.curScreen.hide();
-			//如果为非popping状态，将旧屏幕推入历史堆栈以记录
-			if (!popping) screenHistory.push(curScreen);
+		// 如果屏幕未准备则初始化
+		if (!screen.isInitialized()) {
+			screen.initialize();
 		}
-		this.curScreen = screen;
-		this.curScreen.show();
 	}
 
-	//回到上个屏幕
+	/**
+	 * 返回上个屏幕（弹出栈）。
+	 * @return true 如果成功返回到栈中的屏幕，false 如果栈为空
+	 */
 	public boolean popLastScreen() {
 		if (screenHistory.isEmpty()) return false;
 		GScreen lastScreen = screenHistory.pop();
 		popping = true;
-		turnScreen(lastScreen);
+		goScreen(lastScreen);  // 使用 goScreen 确保不再次入栈
 		popping = false;
 		return true;
 	}
@@ -376,7 +507,7 @@ public class ScreenManager implements Disposable {
 	public ScreenManager setLaunchScreen(GScreen screen) {
 		launchScreen = screen;
 		if (!screen.isInitialized())
-			turnScreen(launchScreen);
+			goScreen(launchScreen);
 		return this;
 	}
 

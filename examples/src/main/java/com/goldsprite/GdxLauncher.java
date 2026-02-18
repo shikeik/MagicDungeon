@@ -22,7 +22,10 @@ import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 
 import com.goldsprite.magicdungeon.DebugLaunchConfig;
+import com.goldsprite.magicdungeon.config.LaunchMode;
 import com.goldsprite.magicdungeon.testing.IGameAutoTest;
+
+import com.goldsprite.magicdungeon.ui.MagicDungeonLoadingRenderer;
 
 public class GdxLauncher extends Game {
 	private Stage toastStage;
@@ -56,6 +59,7 @@ public class GdxLauncher extends Game {
 		ScreenManager sm = new ScreenManager()
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);
+		sm.setLoadingRenderer(new MagicDungeonLoadingRenderer());
 
 		// [修复] 全局配置输入更新钩子，确保 InputManager 在启动时立即生效
 		// 解决初次进入演示屏手柄无法操作及鼠标锁定后无法解锁的问题
@@ -75,26 +79,21 @@ public class GdxLauncher extends Game {
 			case NORMAL:
 				// 正常流程，ScreenManager 已配置默认启动屏
 				break;
-
 			case DIRECT_SCENE:
-				if (DebugLaunchConfig.targetScreen != null) {
-					DLog.getInstance().log("启动模式: 直接进入场景 -> " + DebugLaunchConfig.targetScreen.getSimpleName());
-					sm.turnScreen(DebugLaunchConfig.targetScreen, true);
-				}
-				break;
-
 			case AUTO_TEST:
 				if (DebugLaunchConfig.targetScreen != null) {
-					DLog.getInstance().log("启动模式: 自动测试 -> 场景: " + DebugLaunchConfig.targetScreen.getSimpleName());
-					sm.turnScreen(DebugLaunchConfig.targetScreen, true);
+					DLog.log("启动模式: 自动测试 -> 场景: " + DebugLaunchConfig.targetScreen.getSimpleName());
+					sm.goScreen(DebugLaunchConfig.targetScreen);
 				}
-
+				if(DebugLaunchConfig.currentMode == LaunchMode.DIRECT_SCENE) break;
+				
+				// 自动测试模式继续执行测试用例
 				if (DebugLaunchConfig.autoTestClass != null) {
-					DLog.getInstance().log("启动模式: 自动测试 -> 用例: " + DebugLaunchConfig.autoTestClass.getSimpleName());
+					DLog.log("启动模式: 自动测试 -> 用例: " + DebugLaunchConfig.autoTestClass.getSimpleName());
 					try {
 						// 使用反射实例化测试类
 						// 注意：测试类必须有无参构造函数
-						IGameAutoTest test = DebugLaunchConfig.autoTestClass.newInstance();
+						IGameAutoTest test = DebugLaunchConfig.autoTestClass.getDeclaredConstructor().newInstance();
 						test.run();
 					} catch (Exception e) {
 						DLog.logErr("无法实例化测试用例: " + e.getMessage());

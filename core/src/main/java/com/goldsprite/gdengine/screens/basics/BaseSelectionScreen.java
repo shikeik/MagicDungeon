@@ -178,7 +178,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 	 */
 	protected void onScreenSelected(Class<? extends GScreen> screenClass) {
 		// 自动创建并跳转
-		getScreenManager().turnNewScreen(screenClass);
+		getScreenManager().replaceScreen(screenClass);
 	}
 
 	@Override

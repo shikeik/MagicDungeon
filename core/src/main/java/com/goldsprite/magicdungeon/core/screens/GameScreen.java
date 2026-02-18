@@ -333,28 +333,47 @@ public class GameScreen extends GScreen {
 	}
 
 	public void enterDungeonFromMap(WorldMapScreen.DungeonNode node) {
-		dungeon.level = Math.max(1, node.minLv);
-        dungeon.theme = node.theme;
-		dungeon.generate();
-
-		player.x = dungeon.startPos.x;
-		player.y = dungeon.startPos.y;
-		player.visualX = player.x * Constants.TILE_SIZE;
-		player.visualY = player.y * Constants.TILE_SIZE;
-
-		monsters.clear();
-		items.clear();
-		chests.clear();
-
-		spawnEntities();
-		updateCamera();
-
-		hud.showMessage("进入了 " + node.name);
-		if (audio != null) {
-			if (dungeon.level % 5 == 0) audio.playMusic(AudioAssets.MUSIC_TAKE_COVER);
-			else audio.playMusic(AudioAssets.MUSIC_LASER_QUEST);
-		}
+		rebuildScene(node, null);
 	}
+
+    /**
+     * 重构场景 (In-Place Rebuild)
+     * 用于在不销毁 GameScreen 实例的情况下切换关卡/区域
+     */
+    public void rebuildScene(WorldMapScreen.DungeonNode node, Runnable onFinish) {
+        Gdx.app.postRunnable(() -> {
+            try {
+                dungeon.level = Math.max(1, node.minLv);
+                dungeon.theme = node.theme;
+                dungeon.generate();
+
+                player.x = dungeon.startPos.x;
+                player.y = dungeon.startPos.y;
+                player.visualX = player.x * Constants.TILE_SIZE;
+                player.visualY = player.y * Constants.TILE_SIZE;
+
+                monsters.clear();
+                items.clear();
+                chests.clear();
+
+                spawnEntities();
+                updateCamera();
+
+                hud.showMessage("进入了 " + node.name);
+                
+                // Update BGM
+                if (audio != null) {
+                    if (dungeon.level % 5 == 0) audio.playMusic(AudioAssets.MUSIC_TAKE_COVER);
+                    else audio.playMusic(AudioAssets.MUSIC_LASER_QUEST);
+                }
+                
+                if (onFinish != null) onFinish.run();
+            } catch (Exception e) {
+                Gdx.app.error("GameScreen", "Failed to rebuild scene", e);
+                if (onFinish != null) onFinish.run();
+            }
+        });
+    }
 
 	private void enterDungeon(int level) {
 		int prevLevel = dungeon.level;
@@ -726,7 +745,7 @@ public class GameScreen extends GScreen {
 
 		// Toggle Progress Screen
 		if (input.isJustPressed(InputAction.PROGRESS)) {
-			getScreenManager().turnScreen(ProgressScreen.class, true);
+			getScreenManager().goScreen(ProgressScreen.class);
 		}
 
 		// Save Game
@@ -905,21 +924,17 @@ public class GameScreen extends GScreen {
 					saveGameData();
 
 					// Switch to WorldMapScreen
-					getScreenManager().playTransition(() -> {
-						WorldMapScreen mapScreen = new WorldMapScreen((node) -> {
-							// Callback when a node is selected
-							getScreenManager().playTransition(() -> {
-								// Create new GameScreen
-								GameScreen gameScreen = new GameScreen(seed);
-								getScreenManager().turnScreen(gameScreen);
-								// Load saved state (restore player stats/inventory)
-								gameScreen.loadGame();
-								// Enter specific dungeon node (override level/generation)
-								gameScreen.enterDungeonFromMap(node);
-							});
-						});
-						getScreenManager().turnScreen(mapScreen);
+					WorldMapScreen mapScreen = new WorldMapScreen((node) -> {
+						// 1. Return to GameScreen (pop map)
+						getScreenManager().popLastScreen();
+						
+						// 2. Play Loading Transition & Rebuild Scene
+						getScreenManager().playLoadingTransition((finishCallback) -> {
+							rebuildScene(node, finishCallback);
+						}, 1.5f); // Min 1.5s duration
 					});
+					getScreenManager().goScreen(mapScreen);
+					
 					handledInteract = true;
 				}
 			}
@@ -1051,7 +1066,7 @@ public class GameScreen extends GScreen {
 					@Override
 					public void run() {
 						getScreenManager().playTransition(() -> {
-							getScreenManager().turnScreen(new MainMenuScreen());
+							getScreenManager().goScreen(new MainMenuScreen());
 						});
 					}
 				});
