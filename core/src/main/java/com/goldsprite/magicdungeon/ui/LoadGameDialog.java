@@ -4,13 +4,13 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
-import com.goldsprite.magicdungeon.screens.LoadingScreen;
+import com.goldsprite.gdengine.ui.widget.single.DialogUI;
 import com.goldsprite.magicdungeon.model.SaveData;
+import com.goldsprite.magicdungeon.screens.LoadingScreen;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisList;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
-import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -24,15 +24,17 @@ public class LoadGameDialog extends BaseDialog {
 
     public LoadGameDialog() {
         super("选择存档");
-        
         initUI();
         pack();
         centerWindow();
+        
+        if (ScreenManager.getInstance().getCurScreen() != null) {
+            show(ScreenManager.getInstance().getCurScreen().getStage());
+        }
     }
 
     private void initUI() {
-        VisTable content = new VisTable();
-        content.defaults().pad(5);
+        getContentTable().defaults().pad(5);
 
         saveList = new VisList<>();
         List<SaveData> saves = SaveManager.listSaves();
@@ -47,16 +49,13 @@ public class LoadGameDialog extends BaseDialog {
 
         VisScrollPane scrollPane = new VisScrollPane(saveList);
         scrollPane.setFadeScrollBars(false);
-        content.add(scrollPane).width(300).height(200).row();
+        getContentTable().add(scrollPane).width(300).height(200).row();
 
         infoLabel = new VisLabel("请选择存档");
-        content.add(infoLabel).expandX().fillX().pad(10).row();
-
-        add(content).pad(20).row();
-
-        VisTable buttons = new VisTable();
-        buttons.defaults().pad(10).width(100);
-
+        getContentTable().add(infoLabel).expandX().fillX().pad(10).row();
+        
+        getButtonsTable().defaults().pad(10).width(80);
+        
         loadBtn = new VisTextButton("加载");
         loadBtn.setDisabled(true);
         loadBtn.addListener(new ClickListener() {
@@ -87,13 +86,11 @@ public class LoadGameDialog extends BaseDialog {
             }
         });
 
-        buttons.add(loadBtn);
-        buttons.add(deleteBtn);
-        buttons.add(cancelBtn);
-
-        add(buttons).padBottom(10);
+        getButtonsTable().add(loadBtn);
+        getButtonsTable().add(deleteBtn);
+        getButtonsTable().add(cancelBtn);
     }
-
+    
     private void updateSelection() {
         SaveData selected = saveList.getSelected();
         if (selected != null) {
@@ -110,6 +107,8 @@ public class LoadGameDialog extends BaseDialog {
             deleteBtn.setDisabled(true);
             infoLabel.setText("请选择存档");
         }
+        pack();
+        centerWindow();
     }
 
     private void loadGame() {
@@ -121,8 +120,18 @@ public class LoadGameDialog extends BaseDialog {
     }
 
     private void deleteGame() {
-        // TODO: Implement delete logic in SaveManager
-        // SaveManager.deleteSave(saveList.getSelected().saveName);
-        // Refresh list
+        SaveData selected = saveList.getSelected();
+        if (selected == null) return;
+        
+        DialogUI.confirm("删除确认", "确定要删除存档 '" + selected.saveName + "' 吗?", () -> {
+            try {
+                SaveManager.deleteSave(selected.saveName);
+                List<SaveData> saves = SaveManager.listSaves();
+                saveList.setItems(saves.toArray(new SaveData[0]));
+                updateSelection();
+            } catch (Exception e) {
+                DialogUI.show("错误", "删除失败: " + e.getMessage());
+            }
+        });
     }
 }

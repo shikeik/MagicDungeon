@@ -13,7 +13,7 @@ import com.esotericsoftware.spine.SkeletonData;
 import com.esotericsoftware.spine.SkeletonJson;
 import com.esotericsoftware.spine.SkeletonRenderer;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.VisUI;
 
 public class MagicDungeonLoadingRenderer implements ScreenManager.LoadingRenderer {
     private PolygonSpriteBatch polyBatch;
@@ -21,15 +21,8 @@ public class MagicDungeonLoadingRenderer implements ScreenManager.LoadingRendere
     private SkeletonRenderer skeletonRenderer;
     private Skeleton skeleton;
     private AnimationState animationState;
-    private BitmapFont font;
     
     private boolean initialized = false;
-
-    public MagicDungeonLoadingRenderer() {
-        // Lazy init in render or explicit init?
-        // Since ScreenManager might be created early, let's init on first use or in constructor if context ready.
-        // But context is ready when this is created.
-    }
 
     private void init() {
         if (initialized) return;
@@ -54,9 +47,6 @@ public class MagicDungeonLoadingRenderer implements ScreenManager.LoadingRendere
         } catch (Exception e) {
             Gdx.app.error("LoadingRenderer", "Failed to load spine", e);
         }
-        
-        font = new BitmapFont();
-        font.setColor(Color.WHITE);
         
         initialized = true;
     }
@@ -83,15 +73,21 @@ public class MagicDungeonLoadingRenderer implements ScreenManager.LoadingRendere
         // Draw Text
         batch.begin();
         String text = "正在前往目标区域...";
-        // Simple centering
-        font.draw(batch, text, w / 2 - 60, h / 2 - 80);
+        
+        if (VisUI.isLoaded()) {
+            BitmapFont font = VisUI.getSkin().getFont("default-font");
+            Color oldColor = font.getColor().cpy();
+            font.setColor(Color.WHITE);
+            // Simple centering
+            font.draw(batch, text, w / 2 - 60, h / 2 - 80);
+            font.setColor(oldColor);
+        }
+        
         batch.end();
     }
     
     public void dispose() {
         if (polyBatch != null) polyBatch.dispose();
         if (batch != null) batch.dispose();
-        if (font != null) font.dispose();
-        // Atlas disposal? Ideally we should manage it.
     }
 }

@@ -46,6 +46,7 @@ import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.goldsprite.magicdungeon.ui.ItemRenderer;
 import com.goldsprite.magicdungeon.core.renderer.DualGridDungeonRenderer;
 import com.esotericsoftware.spine.AnimationState;
@@ -126,6 +127,11 @@ public class GameScreen extends GScreen {
 
 	public GameHUD getHud() {
 		return hud;
+	}
+	
+	@Override
+	public Stage getStage() {
+	    return hud != null ? hud.getStage() : null;
 	}
 
 	@Override

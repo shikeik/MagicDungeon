@@ -2923,4 +2923,8 @@ public class GameHUD implements Disposable {
 			}
 		}
 	}
+
+    public Stage getStage() {
+		return stage;
+    }
 }

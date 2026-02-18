@@ -56,9 +56,10 @@ public class MainMenuScreen extends GScreen {
 	@Override
 
 	public void create() {
-		// 配置 ScreenManager 的输入钩子
-		ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
-		ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
+		//这里无需配置因为入口已配置了
+		// // 配置 ScreenManager 的输入钩子
+		// ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
+		// ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
 
 		// 1. 初始化渲染器
 		batch = new NeonBatch();
@@ -150,7 +151,7 @@ public class MainMenuScreen extends GScreen {
 			createMenuButton("继续游戏", targetX, currentY, 0.2f, new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
-					new LoadGameDialog().show(stage);
+					new LoadGameDialog();
 				}
 			});
 			currentY -= gap;
@@ -260,7 +261,12 @@ public class MainMenuScreen extends GScreen {
 	}
 
 	@Override
-	public void render(float delta) {
+	public Stage getStage() {
+		return stage;
+	}
+
+	@Override
+	public void render0(float delta) {
 		ScreenUtils.clear(0, 0, 0, 1);
 
 		float scl = 1f;

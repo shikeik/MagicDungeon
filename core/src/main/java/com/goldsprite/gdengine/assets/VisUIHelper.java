@@ -249,7 +249,7 @@ public class VisUIHelper {
 	}
 
 	private static void addGlobalAssetsStyles(Skin skin, BitmapFont font, BitmapFont smallFont) {
-		// [新增] 确保 window-bg 存在 (用于 GlobalDialog 和 VisUIDemoScreen)
+		// [新增] 确保 window-bg 存在 (用于 DialogUI 和 VisUIDemoScreen)
 		// 优先复用现有的窗口背景
 		if (!skin.has("window-bg", Drawable.class)) {
 			DLog.log("Injecting window-bg fallback for skin.");

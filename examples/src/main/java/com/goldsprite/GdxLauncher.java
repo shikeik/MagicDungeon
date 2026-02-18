@@ -13,7 +13,6 @@ import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.single.ToastUI;
-import com.goldsprite.gdengine.ui.widget.single.DialogUI;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.gdengine.web.DocServer;
 import com.goldsprite.magicdungeon.input.InputAction;
@@ -54,7 +53,6 @@ public class GdxLauncher extends Game {
 		debug.initUI();
 		toastStage = new Stage(new ScreenViewport());
 		toastStage.addActor(ToastUI.inst());
-		toastStage.addActor(DialogUI.getInstance());
 
 		ScreenManager sm = new ScreenManager()
 			.addScreen(new ExampleSelectScreen())
@@ -70,7 +68,7 @@ public class GdxLauncher extends Game {
 		Gdx.input.setCatchKey(Input.Keys.BACK, true);
 
 		// 确保 toastStage 能接收输入 (插入到最前面)
-		sm.getImp().addProcessor(toastStage);
+		sm.getImp().addProcessor(0, toastStage);
 
 		isInitialized = true;
 
@@ -118,6 +116,9 @@ public class GdxLauncher extends Game {
 		}
 
 		ScreenManager.getInstance().render();
+		
+		DLog.infoT("ScreenStack", ScreenManager.getInstance().getScreenStackInfo());
+		
 		if (debug != null) debug.render();
 
 		// 自动测试驱动

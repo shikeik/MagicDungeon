@@ -15,6 +15,7 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -249,17 +250,29 @@ public class ScreenManager implements Disposable {
             }
         }
 
-		if (!curScreen.isInitialized()) return;
+        if (curScreen == null) return; // 确保 curScreen 不为 null
 
-		float delta = Gdx.graphics.getDeltaTime();
-		curScreen.getUIViewport().apply();
-		curScreen.render(delta);
-		
-		// 渲染转场效果
-		renderTransition(delta);
-	}
+        if (!curScreen.isInitialized()) return;
 
-	private void renderTransition(float delta) {
+        float delta = Gdx.graphics.getDeltaTime();
+        curScreen.getUIViewport().apply();
+        curScreen.render(delta);
+        
+        // 渲染转场效果
+        renderTransition(delta);
+    }
+    
+    /**
+     * 获取当前屏幕的 Stage (便捷方法)
+     */
+    public Stage getStage() {
+        if (curScreen != null) {
+            return curScreen.getStage();
+        }
+        return null;
+    }
+
+    private void renderTransition(float delta) {
 		if (transitionState == TransitionState.NONE) return;
 
 		transitionTime += delta;
@@ -553,5 +566,29 @@ public class ScreenManager implements Disposable {
 
         // 此时栈顶就是目标屏幕，弹出并显示
         return popLastScreen();
+    }
+
+    /**
+     * 获取当前屏幕栈信息
+     * 格式: ScreenA -> ScreenB -> ScreenC
+     */
+    public String getScreenStackInfo() {
+        StringBuilder sb = new StringBuilder();
+        if (screenHistory.isEmpty()) {
+            //sb.append("[Empty]");
+        } else {
+            for (int i = 0; i < screenHistory.size(); i++) {
+                sb.append(screenHistory.get(i).getClass().getSimpleName());
+                sb.append(" -> ");
+            }
+        }
+        
+        if (curScreen != null) {
+            sb.append(curScreen.getClass().getSimpleName());
+        } else {
+            sb.append("null");
+        }
+        
+        return sb.toString();
     }
 }

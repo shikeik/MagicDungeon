@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 public class NeonStage extends Stage {
+	protected NeonBatch batch;
 	public NeonStage() {
 		this(new ScreenViewport());
 	}
@@ -14,5 +15,10 @@ public class NeonStage extends Stage {
 
 	public NeonStage(Viewport viewport, NeonBatch batch) {
 		super(viewport, batch);
+		this.batch = batch;
+	}
+
+	public NeonBatch getBatch() {
+		return batch;
 	}
 }

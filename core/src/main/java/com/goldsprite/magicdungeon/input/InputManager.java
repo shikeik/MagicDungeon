@@ -684,12 +684,12 @@ public class InputManager {
         // Actions
         // Attack: J, X, Button X
         mapK(InputAction.ATTACK, Input.Keys.J, Input.Keys.X, Input.Keys.BUTTON_X);
-        // Interact: Space, A, Button A
+        // Interact: Space, Button A
         mapK(InputAction.INTERACT, Input.Keys.SPACE, Input.Keys.BUTTON_A);
         // Skill: H, Button R2
         mapK(InputAction.SKILL, Input.Keys.H, Input.Keys.BUTTON_R2);
-        // Back: Esc, Del, Button B, Android Back
-        mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.DEL, Input.Keys.BUTTON_B, Input.Keys.BACK);
+        // Back: Esc, Button B, Android Back
+        mapK(InputAction.BACK, Input.Keys.ESCAPE, Input.Keys.BUTTON_B, Input.Keys.BACK);
 
         // Menus
         mapK(InputAction.MAP, Input.Keys.M, Input.Keys.BUTTON_Y);
@@ -710,7 +710,8 @@ public class InputManager {
         mapK(InputAction.UI_LEFT, Input.Keys.A, Input.Keys.LEFT);
         mapK(InputAction.UI_RIGHT, Input.Keys.D, Input.Keys.RIGHT);
         mapK(InputAction.UI_CONFIRM, Input.Keys.ENTER, Input.Keys.SPACE, Input.Keys.J, Input.Keys.BUTTON_A);
-        mapK(InputAction.UI_CANCEL, Input.Keys.ESCAPE, Input.Keys.BACKSPACE, Input.Keys.BUTTON_B, Input.Keys.BACK);
+        // [Fix] Remove BACKSPACE from UI_CANCEL to avoid closing dialogs when deleting text
+        mapK(InputAction.UI_CANCEL, Input.Keys.ESCAPE, Input.Keys.BUTTON_B);
 
         // --- Controller Mappings (Using Virtual Logical Buttons) ---
         // These are for PHYSICAL controllers (Xbox, PS4, Switch, etc.)

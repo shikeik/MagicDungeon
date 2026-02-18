@@ -7,11 +7,14 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import java.util.Stack;
 
@@ -22,6 +25,8 @@ import java.util.Stack;
  * <br/>- 添加事件处理器: getImp().addInputProcessor(...)
  */
 public abstract class GScreen extends ScreenAdapter {
+	protected NeonStage stage;
+	protected NeonBatch batch;
 	private final Vector2 viewSize = new Vector2();
 	private final Vector2 viewCenter = new Vector2();
 	private final Vector2 worldSize = new Vector2();
@@ -36,7 +41,6 @@ public abstract class GScreen extends ScreenAdapter {
 	protected boolean visible = true;
 	Vector2 tmpCoord = new Vector2();
 	//绘制底色背景
-	private ShapeRenderer shapeRenderer;
 	private boolean drawScreenBack = true;
 
 	// [新增] UI 视口引用 (子类可覆盖)
@@ -87,10 +91,14 @@ public abstract class GScreen extends ScreenAdapter {
 		return false; // 默认不处理，交由 ScreenManager 处理
 	}
 
+	/**
+	 * 空参构造, 留给反射调用
+	 */
 	public GScreen() {
 	}
 
 	public GScreen(ScreenManager screenManager) {
+		this();
 		this.screenManager = screenManager;
 	}
 
@@ -105,11 +113,12 @@ public abstract class GScreen extends ScreenAdapter {
 
 	//初始化一些配置
 	private void init() {
-		shapeRenderer = new ShapeRenderer();
-
 		// 调用可重写的初始化方法，代替直接实例化
 		initViewport();
 		resizeWorldCamera(autoCenterWorldCamera);// 这里更新数据create才能拿到正确相机数据
+
+		stage = new NeonStage(uiViewport);
+		batch = new NeonBatch();
 
 		create();
 	}
@@ -192,7 +201,7 @@ public abstract class GScreen extends ScreenAdapter {
 	public Vector2 getViewSize() { return viewSize.set(getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight()); }
 	public Vector2 getViewCenter() { return viewCenter.set(getUIViewport().getWorldWidth() / 2, getUIViewport().getWorldHeight() / 2); }
 	public Vector2 getWorldSize() { return worldSize.set(getWorldCamera().viewportWidth, getWorldCamera().viewportHeight); }
-	public Vector2 getWorldCenter() { return worldSize.set(getWorldCamera().viewportWidth / 2, getWorldCamera().viewportHeight / 2); }
+	public Vector2 getWorldCenter() { return worldCenter.set(getWorldCamera().viewportWidth / 2, getWorldCamera().viewportHeight / 2); }
 
 	public Vector2 getGraphicSize() {
 		return graphicSize.set(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -269,11 +278,9 @@ public abstract class GScreen extends ScreenAdapter {
 	}
 
 	protected void drawScreenBack() {
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-		shapeRenderer.setProjectionMatrix(getUICamera().combined);
-		shapeRenderer.setColor(screenBackColor);
-		shapeRenderer.rect(0, 0, getViewSize().x, getViewSize().y);
-		shapeRenderer.end();
+		stage.getBatch().begin();
+		stage.getBatch().drawRect(0, 0, getViewSize().x, getViewSize().y, 0, 0, screenBackColor, true);
+		stage.getBatch().end();
 	}
 
 	@Override
@@ -338,6 +345,15 @@ public abstract class GScreen extends ScreenAdapter {
 	public void hide() {
 		visible = false;
 		getScreenManager().disableInput(getImp());
+	}
+	
+	/**
+	 * 获取 UI Stage。
+	 * 子类如果使用了 Stage (例如 MainMenuScreen, GameScreen), 应该重写此方法返回其 Stage。
+	 * 默认返回 null。
+	 */
+	public Stage getStage() {
+	    return stage;
 	}
 
 	@Override
