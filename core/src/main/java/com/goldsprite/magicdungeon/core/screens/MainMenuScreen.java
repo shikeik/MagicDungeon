@@ -3,7 +3,6 @@ package com.goldsprite.magicdungeon.core.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -13,7 +12,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.neonbatch.BloomRenderer;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -24,10 +22,8 @@ import com.goldsprite.magicdungeon.core.ui.SettingsDialog;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.systems.AudioSystem;
-import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.goldsprite.magicdungeon.utils.Constants;
 import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 
@@ -55,15 +51,7 @@ public class MainMenuScreen extends GScreen {
 	}
 
 	@Override
-	public boolean handleBackKey() {
-		if (settingsDialog != null && settingsDialog.hasParent()) {
-			settingsDialog.fadeOut();
-			return true;
-		}
-		return false;
-	}
 
-	@Override
 	public void create() {
 		// 配置 ScreenManager 的输入钩子
 		ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
@@ -148,23 +136,23 @@ public class MainMenuScreen extends GScreen {
 		createMenuButton("新游戏", targetX, currentY, 0.1f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				stage.addActor(new com.goldsprite.magicdungeon.ui.NewGameDialog());
+				// 使用 BaseDialog.show() 把窗口压入 GScreen.dialogStack，
+				// 否则 ESC/BACK 无法被 GScreen.handleBackKey 拦截。
+				new com.goldsprite.magicdungeon.ui.NewGameDialog().show(stage);
 			}
 		});
-
 		currentY -= gap;
 
 		if (!com.goldsprite.magicdungeon.systems.SaveManager.listSaves().isEmpty()) {
 			createMenuButton("继续游戏", targetX, currentY, 0.2f, new ClickListener() {
 				@Override
-			public void clicked(InputEvent event, float x, float y) {
-					stage.addActor(new com.goldsprite.magicdungeon.ui.LoadGameDialog());
+				public void clicked(InputEvent event, float x, float y) {
+					new com.goldsprite.magicdungeon.ui.LoadGameDialog().show(stage);
 				}
 			});
 			currentY -= gap;
 		}
 
-		// [New] 设置按钮
 		createMenuButton("设置", targetX, currentY, 0.25f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {

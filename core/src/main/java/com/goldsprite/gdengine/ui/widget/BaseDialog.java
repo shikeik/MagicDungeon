@@ -1,13 +1,14 @@
 package com.goldsprite.gdengine.ui.widget;
 
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.util.TableUtils;
 import com.kotcrab.vis.ui.widget.VisDialog;
-import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.gdengine.screens.GScreen;
 
 public class BaseDialog extends VisDialog {
 	public boolean autoPack = false;
+	private boolean spacingInitialized = false;
 
 	public BaseDialog(String title) {
 		super(title);
@@ -15,11 +16,15 @@ public class BaseDialog extends VisDialog {
 		setModal(true);
 		addCloseButton();
 		// closeOnEscape(); // 移除自动关闭，交由 ScreenManager.handleBackKey 统一处理，防止 Escape 同时触发关闭窗口和退出屏幕
-		TableUtils.setSpacingDefaults(this);
 	}
 
 	// 方便子类显示
+	@Override
 	public VisDialog show(Stage stage) {
+		if(!spacingInitialized) {
+			TableUtils.setSpacingDefaults(this);
+			spacingInitialized = true;
+		}
 		if(autoPack) pack();
 		centerWindow();
 		stage.addActor(this.fadeIn());
@@ -31,6 +36,12 @@ public class BaseDialog extends VisDialog {
 		}
 		
 		return this;
+	}
+	
+	@Override
+	public void hide() {
+		// 关闭时自动应用淡出动画，动画完成后自动 remove()
+		this.fadeOut();
 	}
 	
 	@Override

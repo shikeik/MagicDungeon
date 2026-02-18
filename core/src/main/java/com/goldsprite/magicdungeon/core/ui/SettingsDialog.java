@@ -1,23 +1,28 @@
 package com.goldsprite.magicdungeon.core.ui;
 
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.ControllerAdapter;
+import com.badlogic.gdx.controllers.ControllerListener;
+import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
 import com.goldsprite.magicdungeon.core.SettingsManager;
 import com.goldsprite.magicdungeon.input.InputAction;
 import com.goldsprite.magicdungeon.input.InputManager;
-import com.badlogic.gdx.controllers.Controller;
-import com.badlogic.gdx.controllers.ControllerAdapter;
-import com.badlogic.gdx.controllers.ControllerListener;
-import com.badlogic.gdx.controllers.Controllers;
-import com.kotcrab.vis.ui.widget.*;
-import com.goldsprite.gdengine.log.DLog;
+import com.kotcrab.vis.ui.widget.VisCheckBox;
+import com.kotcrab.vis.ui.widget.VisDialog;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisSlider;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class SettingsDialog extends BaseDialog {
 	private final SettingsManager settings;
@@ -208,7 +213,8 @@ public class SettingsDialog extends BaseDialog {
 		InputManager.getInstance().setInputBlocked(true);
 		btn.setText("按任意键...");
 		RebindDialog dialog = new RebindDialog(action, btn, isKeyboard);
-		getStage().addActor(dialog);
+		// 使用 BaseDialog.show() 将对话框加入 GScreen 的 dialogStack
+		dialog.show(getStage());
 	}
 
 	private void saveAll() {
@@ -217,7 +223,7 @@ public class SettingsDialog extends BaseDialog {
 	}
 
 	// --- 输入捕获内部类 ---
-	private class RebindDialog extends VisDialog {
+	private class RebindDialog extends BaseDialog {
 		private final InputAction action;
 		private final VisTextButton targetBtn;
         private final boolean isKeyboard;
