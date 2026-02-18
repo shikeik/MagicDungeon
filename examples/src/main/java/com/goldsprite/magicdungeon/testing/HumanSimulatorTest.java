@@ -24,7 +24,7 @@ public class HumanSimulatorTest implements IGameAutoTest {
 
         // 1. 进入主菜单 (重置状态)
         atm.addAction("Go to MainMenu", () -> {
-            ScreenManager.getInstance().setCurScreen(MainMenuScreen.class, true);
+            ScreenManager.getInstance().turnScreen(MainMenuScreen.class, true);
         });
         atm.addWait(1.0f);
 

@@ -726,7 +726,7 @@ public class GameScreen extends GScreen {
 
 		// Toggle Progress Screen
 		if (input.isJustPressed(InputAction.PROGRESS)) {
-			getScreenManager().setCurScreen(ProgressScreen.class, true);
+			getScreenManager().turnScreen(ProgressScreen.class, true);
 		}
 
 		// Save Game
@@ -911,14 +911,14 @@ public class GameScreen extends GScreen {
 							getScreenManager().playTransition(() -> {
 								// Create new GameScreen
 								GameScreen gameScreen = new GameScreen(seed);
-								getScreenManager().setCurScreen(gameScreen);
+								getScreenManager().turnScreen(gameScreen);
 								// Load saved state (restore player stats/inventory)
 								gameScreen.loadGame();
 								// Enter specific dungeon node (override level/generation)
 								gameScreen.enterDungeonFromMap(node);
 							});
 						});
-						getScreenManager().setCurScreen(mapScreen);
+						getScreenManager().turnScreen(mapScreen);
 					});
 					handledInteract = true;
 				}
@@ -1051,7 +1051,7 @@ public class GameScreen extends GScreen {
 					@Override
 					public void run() {
 						getScreenManager().playTransition(() -> {
-							getScreenManager().setCurScreen(new MainMenuScreen());
+							getScreenManager().turnScreen(new MainMenuScreen());
 						});
 					}
 				});

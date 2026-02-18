@@ -67,18 +67,6 @@ public class WorldMapScreen extends GScreen {
         // 输入处理
         getImp().addProcessor(new InputAdapter() {
             @Override
-            public boolean keyDown(int keycode) {
-                if (keycode == Input.Keys.ESCAPE) {
-                    // 返回主菜单
-                    if (screenManager != null) {
-                         screenManager.setCurScreen(MainMenuScreen.class);
-                    }
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 if (button == Input.Buttons.LEFT && hoveredNode != null) {
                     enterDungeon(hoveredNode);
@@ -385,7 +373,7 @@ public class WorldMapScreen extends GScreen {
                 screenManager.playTransition(() -> {
                     GameScreen gameScreen = new GameScreen(seed);
                     // TODO: 根据 node.id 设置地牢类型/难度
-                    screenManager.setCurScreen(gameScreen);
+                    screenManager.turnScreen(gameScreen);
                 });
             }
         }

@@ -79,14 +79,14 @@ public class GdxLauncher extends Game {
 			case DIRECT_SCENE:
 				if (DebugLaunchConfig.targetScreen != null) {
 					DLog.getInstance().log("启动模式: 直接进入场景 -> " + DebugLaunchConfig.targetScreen.getSimpleName());
-					sm.setCurScreen(DebugLaunchConfig.targetScreen, true);
+					sm.turnScreen(DebugLaunchConfig.targetScreen, true);
 				}
 				break;
 
 			case AUTO_TEST:
 				if (DebugLaunchConfig.targetScreen != null) {
 					DLog.getInstance().log("启动模式: 自动测试 -> 场景: " + DebugLaunchConfig.targetScreen.getSimpleName());
-					sm.setCurScreen(DebugLaunchConfig.targetScreen, true);
+					sm.turnScreen(DebugLaunchConfig.targetScreen, true);
 				}
 
 				if (DebugLaunchConfig.autoTestClass != null) {

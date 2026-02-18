@@ -83,7 +83,7 @@ public class LoadingScreen extends GScreen {
         backButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                ScreenManager.getInstance().setCurScreen(new MainMenuScreen());
+                ScreenManager.getInstance().turnScreen(new MainMenuScreen());
             }
         });
         table.add(backButton).bottom().padBottom(30);
@@ -125,7 +125,7 @@ public class LoadingScreen extends GScreen {
                 }
             } else {
                 // Transition to GameScreen
-                ScreenManager.getInstance().setCurScreen(new GameScreen(saveName));
+                ScreenManager.getInstance().turnScreen(new GameScreen(saveName));
             }
         }
     }

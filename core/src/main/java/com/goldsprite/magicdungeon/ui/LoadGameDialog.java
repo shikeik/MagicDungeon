@@ -116,7 +116,7 @@ public class LoadGameDialog extends BaseDialog {
         SaveData selected = saveList.getSelected();
         if (selected != null) {
             close();
-            ScreenManager.getInstance().setCurScreen(new LoadingScreen(selected.saveName, selected.currentPlayerName, false));
+            ScreenManager.getInstance().turnScreen(new LoadingScreen(selected.saveName, selected.currentPlayerName, false));
         }
     }
 

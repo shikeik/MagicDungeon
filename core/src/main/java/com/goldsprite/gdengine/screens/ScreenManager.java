@@ -312,11 +312,28 @@ public class ScreenManager implements Disposable {
 		return curScreen;
 	}
 
-	public void setCurScreen(Class<? extends GScreen> key) {
-		setCurScreen(key, false);
+	public void turnNewScreen(Class<? extends GScreen> key) {
+		if(existsScreen(key)) {
+			getScreen(key).dispose();
+			removeScreen(key);
+		}
+		turnScreen(key, true);
 	}
-
-	public void setCurScreen(GScreen screen) {
+	public void turnScreen(Class<? extends GScreen> key) {
+		turnScreen(key, false);
+	}
+	public void turnScreen(Class<? extends GScreen> key, boolean autoCreate) {
+		//自动加入管理屏幕中
+		if (autoCreate && !existsScreen(key)) {
+			try {
+				addScreen(key.getConstructor().newInstance());
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		turnScreen(getScreen(key));
+	}
+	public void turnScreen(GScreen screen) {
 		// [修复] 自动依赖注入
 		// 如果是临时 new 出来的屏幕，还没有绑定 Manager 或 Input，这里自动补全
 		if (screen.getScreenManager() == null) {
@@ -337,32 +354,12 @@ public class ScreenManager implements Disposable {
 		this.curScreen.show();
 	}
 
-	public void turnNewScreen(Class<? extends GScreen> key) {
-		if(existsScreen(key)) {
-			getScreen(key).dispose();
-			removeScreen(key);
-		}
-		setCurScreen(key, true);
-	}
-
-	public void setCurScreen(Class<? extends GScreen> key, boolean autoCreate) {
-		//自动加入管理屏幕中
-		if (autoCreate && !existsScreen(key)) {
-			try {
-				addScreen(key.getConstructor().newInstance());
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-		setCurScreen(getScreen(key));
-	}
-
 	//回到上个屏幕
 	public boolean popLastScreen() {
 		if (screenHistory.isEmpty()) return false;
 		GScreen lastScreen = screenHistory.pop();
 		popping = true;
-		setCurScreen(lastScreen);
+		turnScreen(lastScreen);
 		popping = false;
 		return true;
 	}
@@ -379,7 +376,7 @@ public class ScreenManager implements Disposable {
 	public ScreenManager setLaunchScreen(GScreen screen) {
 		launchScreen = screen;
 		if (!screen.isInitialized())
-			setCurScreen(launchScreen);
+			turnScreen(launchScreen);
 		return this;
 	}
 
