@@ -5,7 +5,11 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.util.TableUtils;
 import com.kotcrab.vis.ui.widget.VisDialog;
-
+/**
+ * 基础对话框，继承自 VisDialog，自动设置为模态并添加关闭按钮。
+ * 可通过 autoPack 控制是否在显示时自动调用 pack()。
+ * 对话框的生命周期由 ScreenManager 统一管理，支持淡入淡出动画。
+ */
 public class BaseDialog extends VisDialog {
 	public boolean autoPack = false;
 	private boolean spacingInitialized = false;
@@ -15,7 +19,6 @@ public class BaseDialog extends VisDialog {
 		getTitleLabel().setFontScale(0.95f); // 字体太大修正
 		setModal(true);
 		addCloseButton();
-		// closeOnEscape(); // 移除自动关闭，交由 ScreenManager.handleBackKey 统一处理，防止 Escape 同时触发关闭窗口和退出屏幕
 	}
 
 	// 方便子类显示

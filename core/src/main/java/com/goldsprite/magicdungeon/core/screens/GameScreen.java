@@ -1390,15 +1390,15 @@ public class GameScreen extends GScreen {
 
 				items.clear();
 				for (ItemState is : data.items) {
-					com.goldsprite.magicdungeon.entities.ItemData iData = null;
+					ItemData iData = null;
 					try {
-						iData = com.goldsprite.magicdungeon.entities.ItemData.valueOf(is.itemName);
+						iData = ItemData.valueOf(is.itemName);
 					} catch(Exception e) {
 						continue;
 					}
 
 					InventoryItem invItem = new InventoryItem(iData);
-					invItem.quality = com.goldsprite.magicdungeon.entities.ItemQuality.valueOf(is.quality);
+					invItem.quality = ItemQuality.valueOf(is.quality);
 					invItem.atk = is.atk;
 					invItem.def = is.def;
 					invItem.heal = is.heal;

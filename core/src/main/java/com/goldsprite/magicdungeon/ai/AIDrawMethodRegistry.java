@@ -9,6 +9,11 @@ import java.util.Map;
 import com.badlogic.gdx.graphics.Color;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 命令到 `NeonBatch` 方法的动态注册器。
@@ -26,18 +31,18 @@ public class AIDrawMethodRegistry {
         }
     }
 
-    private static final Map<String, java.util.List<Entry>> registry = new HashMap<>();
+    private static final Map<String, List<Entry>> registry = new HashMap<>();
 
     static {
         try {
             MethodHandles.Lookup lookup = MethodHandles.lookup();
-            java.lang.reflect.Method[] methods = NeonBatch.class.getMethods();
-            for (java.lang.reflect.Method m : methods) {
+            Method[] methods = NeonBatch.class.getMethods();
+            for (Method m : methods) {
                 // only consider instance (non-static) public methods declared in NeonBatch or inherited
-                if (java.lang.reflect.Modifier.isStatic(m.getModifiers())) continue;
+                if (Modifier.isStatic(m.getModifiers())) continue;
                 MethodHandle mh = lookup.unreflect(m);
                 String name = m.getName().toLowerCase(Locale.ROOT);
-                registry.computeIfAbsent(name, k -> new java.util.ArrayList<>()).add(new Entry(mh, m.getParameterTypes()));
+                registry.computeIfAbsent(name, k -> new ArrayList<>()).add(new Entry(mh, m.getParameterTypes()));
             }
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Failed to initialize dynamic AIDrawMethodRegistry", e);
@@ -75,17 +80,17 @@ public class AIDrawMethodRegistry {
 
     public static boolean invoke(NeonBatch batch, AIDrawCommand cmd) {
         if (cmd == null || cmd.type == null) return false;
-        java.util.List<Entry> list = registry.get(cmd.type.trim().toLowerCase(Locale.ROOT));
+        List<Entry> list = registry.get(cmd.type.trim().toLowerCase(Locale.ROOT));
         if (list == null || list.isEmpty()) return false;
         DLog.logT("AIDraw", "Invoking command: %s", cmd.type);
 
         // Try to map args for each overload and score candidates
-        java.util.List<java.util.Map.Entry<Entry, Object[]>> candidates = new java.util.ArrayList<>();
+        List<Map.Entry<Entry, Object[]>> candidates = new ArrayList<>();
         for (Entry e : list) {
             try {
                 Object[] mapped = tryMapArgs(cmd, e.paramTypes);
                 if (mapped != null) {
-                    candidates.add(new java.util.AbstractMap.SimpleEntry<>(e, mapped));
+                    candidates.add(new AbstractMap.SimpleEntry<>(e, mapped));
                 }
             } catch (Throwable ex) {
                 // mapping failed for this overload; skip
@@ -106,7 +111,7 @@ public class AIDrawMethodRegistry {
         });
 
         // Try invoking in order
-        for (java.util.Map.Entry<Entry, Object[]> ent : candidates) {
+        for (Map.Entry<Entry, Object[]> ent : candidates) {
             Entry e = ent.getKey();
             Object[] mapped = ent.getValue();
             try {
@@ -139,7 +144,7 @@ public class AIDrawMethodRegistry {
             } else if (o instanceof float[]) {
                 float[] a = (float[]) o;
                 if (a.length > 0) s += 3;
-            } else if (o instanceof com.badlogic.gdx.graphics.Color) {
+            } else if (o instanceof Color) {
                 s += 2;
             } else if (o instanceof String) {
                 s += 1;
@@ -190,7 +195,7 @@ public class AIDrawMethodRegistry {
             } else if (p == float[].class) {
                 if (args.length > 0) out[i] = args;
                 else return null; // cannot satisfy required float[]
-            } else if (p == com.badlogic.gdx.graphics.Color.class) {
+            } else if (p == Color.class) {
                 String colorStr = colorIdx == 0 ? cmd.color : cmd.color2;
                 colorIdx++;
                 if (colorStr == null) return null; // require explicit color for Color param
@@ -240,7 +245,7 @@ public class AIDrawMethodRegistry {
             } else if (p == String.class) {
                 // supply filename or meta
                 out[i] = cmd.filename != null ? cmd.filename : cmd.meta;
-            } else if (p == java.lang.Integer.TYPE || p == java.lang.Integer.class) {
+            } else if (p == Integer.TYPE || p == Integer.class) {
                 int v = 0;
                 if (cmd.segments != null) v = cmd.segments;
                 else if (cmd.args != null && numIdx < cmd.args.length) v = (int) cmd.args[numIdx++];

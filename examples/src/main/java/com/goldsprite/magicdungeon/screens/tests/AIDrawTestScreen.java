@@ -19,6 +19,7 @@ import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.badlogic.gdx.utils.Scaling;
 
 /**
  * AI 绘制测试场景：扫描 assets/ai_draw_cmds/ 下的所有 JSON 计划，
@@ -88,7 +89,7 @@ public class AIDrawTestScreen extends GScreen {
         VisTable previewPanel = new VisTable(false);
         previewPanel.add(new VisLabel("■ 预览")).padBottom(5).expandX().row();
         preview = new VisImage();
-        preview.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        preview.setScaling(Scaling.fit);
         previewPanel.add(preview).fill().expand().size(450, 450).row();
         infoLabel = new VisLabel("未选择计划");
         previewPanel.add(infoLabel).expandX().fillX().padTop(5).row();

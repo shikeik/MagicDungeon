@@ -12,6 +12,8 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.ui.widget.BaseDialog;
+import java.util.Stack;
 
 
 /**
@@ -59,20 +61,20 @@ public abstract class GScreen extends ScreenAdapter {
 	}
 
 	// [新增] Dialog 管理栈
-	protected final java.util.Stack<com.goldsprite.gdengine.ui.widget.BaseDialog> dialogStack = new java.util.Stack<>();
+	protected final Stack<BaseDialog> dialogStack = new Stack<>();
 
-	public void pushDialog(com.goldsprite.gdengine.ui.widget.BaseDialog dialog) {
+	public void pushDialog(BaseDialog dialog) {
 		dialogStack.push(dialog);
 	}
 
-	public void popDialog(com.goldsprite.gdengine.ui.widget.BaseDialog dialog) {
+	public void popDialog(BaseDialog dialog) {
 		dialogStack.remove(dialog);
 	}
 
 	public boolean handleBackKey() {
 		// 1. 优先关闭顶层 Modal Dialog
 		if (!dialogStack.isEmpty()) {
-			com.goldsprite.gdengine.ui.widget.BaseDialog top = dialogStack.peek();
+			BaseDialog top = dialogStack.peek();
 			if (top != null && top.hasParent()) { // 确保 Dialog 还在 Stage 上
 				top.hide(); // 调用 hide/close，它会触发 remove -> popDialog
 				return true; // 消耗 Back 键

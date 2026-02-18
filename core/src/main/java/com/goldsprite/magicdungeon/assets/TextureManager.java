@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.Gdx;
 
 public class TextureManager implements Disposable {
 	private static TextureManager instance;
@@ -77,13 +79,13 @@ public class TextureManager implements Disposable {
 			
 			// [New Feature] 尝试加载自定义纹理文件 (assets/textures/monsters/Boss.png)
 			try {
-				com.badlogic.gdx.files.FileHandle customFile = com.badlogic.gdx.Gdx.files.internal("textures/monsters/" + enumName + ".png");
+				FileHandle customFile = Gdx.files.internal("textures/monsters/" + enumName + ".png");
 				if (customFile.exists()) {
 					checkAndGenerate(enumName, () -> new TextureRegion(new Texture(customFile)));
 					continue;
 				}
 			} catch (Exception e) {
-				com.badlogic.gdx.Gdx.app.error("TextureManager", "Failed to check custom texture for " + enumName, e);
+				Gdx.app.error("TextureManager", "Failed to check custom texture for " + enumName, e);
 			}
 
 			// [Integration] 尝试使用 NeonSpriteGenerator (针对 Boss/Dragon)

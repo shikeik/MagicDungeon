@@ -69,6 +69,7 @@ import com.goldsprite.magicdungeon.utils.MapIO;
 import com.goldsprite.magicdungeon.core.MonsterState;
 import com.goldsprite.magicdungeon.core.ItemState;
 import com.badlogic.gdx.files.FileHandle;
+import com.goldsprite.magicdungeon.entities.ItemQuality;
 
 /**
  * 简易营地编辑器 (CampEditorScreen)
@@ -970,7 +971,7 @@ public class CampEditorScreen extends GScreen {
              try {
                 ItemData id = ItemData.valueOf(is.itemName); // Assuming ItemState stores ItemData enum name
                 InventoryItem ii = new InventoryItem(id);
-                ii.quality = com.goldsprite.magicdungeon.entities.ItemQuality.valueOf(is.quality);
+                ii.quality = ItemQuality.valueOf(is.quality);
                 ii.atk = is.atk; ii.def = is.def; ii.heal = is.heal; ii.manaRegen = is.manaRegen;
                 ii.count = is.count > 0 ? is.count : 1;
                 

@@ -19,8 +19,6 @@ public class NewGameDialog extends BaseDialog {
 
     public NewGameDialog() {
         super("创建新游戏");
-        setModal(true);
-        addCloseButton();
         
         initUI();
         pack();

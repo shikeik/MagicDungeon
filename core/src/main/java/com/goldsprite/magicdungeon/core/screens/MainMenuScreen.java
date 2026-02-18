@@ -26,6 +26,9 @@ import com.goldsprite.magicdungeon.utils.Constants;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
+import com.goldsprite.magicdungeon.systems.SaveManager;
+import com.goldsprite.magicdungeon.ui.LoadGameDialog;
+import com.goldsprite.magicdungeon.ui.NewGameDialog;
 
 public class MainMenuScreen extends GScreen {
 	private NeonBatch batch;
@@ -138,16 +141,16 @@ public class MainMenuScreen extends GScreen {
 			public void clicked(InputEvent event, float x, float y) {
 				// 使用 BaseDialog.show() 把窗口压入 GScreen.dialogStack，
 				// 否则 ESC/BACK 无法被 GScreen.handleBackKey 拦截。
-				new com.goldsprite.magicdungeon.ui.NewGameDialog().show(stage);
+				new NewGameDialog().show(stage);
 			}
 		});
 		currentY -= gap;
 
-		if (!com.goldsprite.magicdungeon.systems.SaveManager.listSaves().isEmpty()) {
+		if (!SaveManager.listSaves().isEmpty()) {
 			createMenuButton("继续游戏", targetX, currentY, 0.2f, new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
-					new com.goldsprite.magicdungeon.ui.LoadGameDialog().show(stage);
+					new LoadGameDialog().show(stage);
 				}
 			});
 			currentY -= gap;

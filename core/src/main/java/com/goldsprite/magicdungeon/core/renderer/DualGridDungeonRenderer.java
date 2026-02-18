@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import com.goldsprite.magicdungeon.utils.texturegenerator.SpriteGenerator;
 import com.goldsprite.magicdungeon.world.DungeonTheme;
+import com.goldsprite.magicdungeon.assets.TextureManager;
 
 public class DualGridDungeonRenderer implements Disposable {
     private static final int TILE_SIZE = Constants.TILE_SIZE;
@@ -155,7 +156,7 @@ public class DualGridDungeonRenderer implements Disposable {
             renderLayer(batch, map, "dirt", (t) -> t != null && t.type == TileType.Dirt);
 
             // Layer 0.5: Floor (Standard)
-            TextureRegion floorTex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Floor);
+            TextureRegion floorTex = TextureManager.getInstance().getTile(TileType.Floor);
             if (floorTex != null) {
                 for (int x = 0; x < width; x++) {
                     for (int y = 0; y < height; y++) {
@@ -189,7 +190,7 @@ public class DualGridDungeonRenderer implements Disposable {
                         t.type == TileType.StonePath || t.type == TileType.Dungeon_Entrance ||
                         t.type == TileType.Pillar) {
                             
-                        TextureRegion region = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(t.type);
+                        TextureRegion region = TextureManager.getInstance().getTile(t.type);
                         if (region != null) {
                              batch.draw(region, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                         }
@@ -255,7 +256,7 @@ public class DualGridDungeonRenderer implements Disposable {
                         t.type == TileType.StonePath || t.type == TileType.Dungeon_Entrance ||
                         t.type == TileType.Pillar) {
                             
-                        TextureRegion region = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(t.type);
+                        TextureRegion region = TextureManager.getInstance().getTile(t.type);
                         if (region != null) {
                              batch.draw(region, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                         }

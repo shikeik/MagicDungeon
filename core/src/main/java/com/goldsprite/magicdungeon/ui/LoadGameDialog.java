@@ -1,8 +1,6 @@
 package com.goldsprite.magicdungeon.ui;
 
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.ui.List;
-import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
@@ -16,6 +14,7 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class LoadGameDialog extends BaseDialog {
     private VisList<SaveData> saveList;
@@ -25,8 +24,6 @@ public class LoadGameDialog extends BaseDialog {
 
     public LoadGameDialog() {
         super("选择存档");
-        setModal(true);
-        addCloseButton();
         
         initUI();
         pack();
@@ -38,7 +35,7 @@ public class LoadGameDialog extends BaseDialog {
         content.defaults().pad(5);
 
         saveList = new VisList<>();
-        java.util.List<SaveData> saves = SaveManager.listSaves();
+        List<SaveData> saves = SaveManager.listSaves();
         saveList.setItems(saves.toArray(new SaveData[0]));
         
         saveList.addListener(new ClickListener() {

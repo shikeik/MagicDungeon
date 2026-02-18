@@ -18,6 +18,10 @@ import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 
 public class LoadingScreen extends GScreen {
     private String saveName;
@@ -30,7 +34,7 @@ public class LoadingScreen extends GScreen {
     private AnimationState animationState;
     private VisLabel statusLabel;
     private VisTextButton backButton;
-    private com.badlogic.gdx.scenes.scene2d.Stage stage;
+    private Stage stage;
 
     private boolean taskStarted = false;
     private boolean taskFinished = false;
@@ -67,7 +71,7 @@ public class LoadingScreen extends GScreen {
     }
 
     private void initUI() {
-        stage = new com.badlogic.gdx.scenes.scene2d.Stage(getUIViewport());
+        stage = new Stage(getUIViewport());
         VisTable table = new VisTable();
         table.setFillParent(true);
         statusLabel = new VisLabel("Loading...");
@@ -76,10 +80,10 @@ public class LoadingScreen extends GScreen {
         
         backButton = new VisTextButton("返回主菜单");
         backButton.setVisible(false);
-        backButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ClickListener() {
+        backButton.addListener(new ClickListener() {
             @Override
-            public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
-                com.goldsprite.gdengine.screens.ScreenManager.getInstance().setCurScreen(new com.goldsprite.magicdungeon.core.screens.MainMenuScreen());
+            public void clicked(InputEvent event, float x, float y) {
+                ScreenManager.getInstance().setCurScreen(new MainMenuScreen());
             }
         });
         table.add(backButton).bottom().padBottom(30);

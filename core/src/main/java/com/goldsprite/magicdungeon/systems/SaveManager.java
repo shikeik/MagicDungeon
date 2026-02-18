@@ -93,8 +93,8 @@ public class SaveManager {
         PlayerData player = new PlayerData();
         player.name = playerName;
         player.stats = new PlayerStats(); // Initialize default stats
-        player.inventory = new java.util.ArrayList<>();
-        player.equipment = new com.goldsprite.magicdungeon.core.EquipmentState();
+        player.inventory = new ArrayList<>();
+        player.equipment = new EquipmentState();
         
         saveJson(playersDir.child(playerName + ".json"), player);
 
