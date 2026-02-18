@@ -288,7 +288,7 @@ public class DualGridDungeonRenderer implements Disposable {
         }
     }
 
-    private void renderLayer(NeonBatch batch, Dungeon dungeon, String layerName, TilePredicate predicate) {
+    private void renderLayer(NeonBatch batch, Tile[][] map, String layerName, TilePredicate predicate) {
         LayerConfig config = null;
         for (LayerConfig l : layers) {
             if (l.name.equals(layerName)) {
@@ -299,10 +299,14 @@ public class DualGridDungeonRenderer implements Disposable {
         if (config == null) return;
         TextureRegion[] atlas = config.atlas;
 
+        if (map == null || map.length == 0) return;
+        int height = map.length;
+        int width = map[0].length;
+
         // Iterate over all intersections
-        for (int x = 0; x <= dungeon.width; x++) {
-            for (int y = 0; y <= dungeon.height; y++) {
-                int mask = calculateMask(dungeon, x, y, predicate);
+        for (int x = 0; x <= width; x++) {
+            for (int y = 0; y <= height; y++) {
+                int mask = calculateMask(map, x, y, predicate);
                 if (mask <= 0) continue;
 
                 int tx = MASK_TO_ATLAS_X[mask];
@@ -319,16 +323,20 @@ public class DualGridDungeonRenderer implements Disposable {
         }
     }
 
-    private int calculateMask(Dungeon dungeon, int x, int y, TilePredicate predicate) {
-        boolean tr = predicate.match(dungeon.getTile(x, y));
-        boolean tl = predicate.match(dungeon.getTile(x - 1, y));
-        boolean br = predicate.match(dungeon.getTile(x, y - 1));
-        boolean bl = predicate.match(dungeon.getTile(x - 1, y - 1));
+    private int calculateMask(Tile[][] map, int x, int y, TilePredicate predicate) {
+        boolean tr = match(map, x, y, predicate);
+        boolean tl = match(map, x - 1, y, predicate);
+        boolean br = match(map, x, y - 1, predicate);
+        boolean bl = match(map, x - 1, y - 1, predicate);
 
         return ((tl ? 1 : 0) << 3) |
                ((tr ? 1 : 0) << 2) |
                ((bl ? 1 : 0) << 1) |
                (br ? 1 : 0);
+    }
+
+    private boolean match(Tile[][] map, int x, int y, TilePredicate predicate) {
+        return predicate.match(getTileFromArray(map, x, y));
     }
 
     @Override
