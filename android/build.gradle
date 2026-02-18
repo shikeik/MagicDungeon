@@ -85,6 +85,7 @@ android {
 repositories {
 	// needed for AAPT2, may be needed for other tools
 	google()
+	mavenCentral() // 确保有这个，ImGui 库在 Maven Central
 }
 
 configurations { natives }
@@ -96,13 +97,8 @@ dependencies {
 	coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 
 	implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
-    implementation "com.badlogicgames.gdx-controllers:gdx-controllers-android:$gdxControllersVersion"
+	implementation "com.badlogicgames.gdx-controllers:gdx-controllers-android:$gdxControllersVersion"
 	implementation project(':examples')
-
-	// 1. Eclipse Java Compiler (负责把 .java 变成 .class)
-	implementation 'org.eclipse.jdt.core.compiler:ecj:4.6.1'
-
-	implementation 'com.android.tools:r8:8.2.33'
 
 	natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
 	natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"

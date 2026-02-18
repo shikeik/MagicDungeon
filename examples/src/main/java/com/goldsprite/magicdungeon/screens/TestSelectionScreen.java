@@ -22,6 +22,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("", null);
 
 		map.put("通用 UI & 皮肤切换演示", VisUIDemoScreen.class);
+		map.put("营地编辑器 (Camp Editor)", CampEditorScreen.class);
 		map.put("双网格演示", DualGridDemoScreen.class);
 		map.put("新材质预览", MaterialPreviewScreen.class);
 		map.put("纹理预览", TexturePreviewScreen.class);

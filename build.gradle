@@ -55,7 +55,9 @@ subprojects {
 		maven { url 'https://s01.oss.sonatype.org' }
 		maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
 		maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
-		maven { url "https://jitpack.io" }
+		maven { url "https://jitpack.io" } // 【关键】添加 JitPack
+		maven { url "https://oss.sonatype.org/content/repositories/snapshots/" } // 添加快照仓库
+		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 		maven { url 'https://repo1.maven.org/maven2/' }
 		maven { url 'https://dl.bintray.com/ppartisan/maven/' }
 		maven { url "https://clojars.org/repo/" }
@@ -94,10 +96,10 @@ apply from: 'gradle/publish-docs.gradle'
 task oneClickRelease {
     group = "distribution"
     description = "一键构建 Jar -> jpackage -> 单文件 Exe (需要配置 Enigma)"
-    
+
     // 依赖 lwjgl3 模块的打包任务
     dependsOn ':lwjgl3:packageSingleExe'
-    
+
     doLast {
         println "--------------------------------------------------"
         println "🎉 发布流程结束"
