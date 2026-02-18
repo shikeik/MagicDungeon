@@ -1,0 +1,174 @@
+
+ice_rat.png
+size: 256,256
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+b1
+  rotate: false
+  xy: 221, 107
+  size: 26, 39
+  orig: 26, 39
+  offset: 0, 0
+  index: -1
+b2
+  rotate: false
+  xy: 2, 2
+  size: 26, 42
+  orig: 26, 42
+  offset: 0, 0
+  index: -1
+b3
+  rotate: false
+  xy: 144, 23
+  size: 26, 25
+  orig: 26, 25
+  offset: 0, 0
+  index: -1
+b4
+  rotate: false
+  xy: 2, 151
+  size: 72, 103
+  orig: 72, 103
+  offset: 0, 0
+  index: -1
+b4mh
+  rotate: false
+  xy: 2, 46
+  size: 72, 103
+  orig: 72, 103
+  offset: 0, 0
+  index: -1
+b5
+  rotate: false
+  xy: 159, 153
+  size: 60, 101
+  orig: 60, 101
+  offset: 0, 0
+  index: -1
+b5mh
+  rotate: false
+  xy: 159, 50
+  size: 60, 101
+  orig: 60, 101
+  offset: 0, 0
+  index: -1
+b6
+  rotate: false
+  xy: 76, 165
+  size: 81, 89
+  orig: 81, 89
+  offset: 0, 0
+  index: -1
+b6mh
+  rotate: false
+  xy: 76, 74
+  size: 81, 89
+  orig: 81, 89
+  offset: 0, 0
+  index: -1
+erduo1
+  rotate: false
+  xy: 221, 148
+  size: 30, 49
+  orig: 30, 49
+  offset: 0, 0
+  index: -1
+erduo2
+  rotate: false
+  xy: 221, 199
+  size: 31, 55
+  orig: 31, 55
+  offset: 0, 0
+  index: -1
+eye1
+  rotate: false
+  xy: 239, 48
+  size: 15, 11
+  orig: 15, 11
+  offset: 0, 0
+  index: -1
+eye2
+  rotate: false
+  xy: 144, 61
+  size: 11, 11
+  orig: 11, 11
+  offset: 0, 0
+  index: -1
+eyeb1
+  rotate: false
+  xy: 30, 4
+  size: 14, 6
+  orig: 14, 6
+  offset: 0, 0
+  index: -1
+eyeb2
+  rotate: false
+  xy: 144, 54
+  size: 10, 5
+  orig: 10, 5
+  offset: 0, 0
+  index: -1
+eyeg1
+  rotate: false
+  xy: 221, 47
+  size: 16, 12
+  orig: 16, 12
+  offset: 0, 0
+  index: -1
+eyeg2
+  rotate: false
+  xy: 215, 19
+  size: 11, 11
+  orig: 11, 11
+  offset: 0, 0
+  index: -1
+s1
+  rotate: false
+  xy: 215, 32
+  size: 16, 13
+  orig: 16, 13
+  offset: 0, 0
+  index: -1
+shadow
+  rotate: false
+  xy: 221, 93
+  size: 33, 12
+  orig: 33, 12
+  offset: 0, 0
+  index: -1
+sj
+  rotate: false
+  xy: 172, 22
+  size: 25, 26
+  orig: 25, 26
+  offset: 0, 0
+  index: -1
+st
+  rotate: false
+  xy: 30, 12
+  size: 39, 32
+  orig: 39, 32
+  offset: 0, 0
+  index: -1
+t
+  rotate: false
+  xy: 76, 23
+  size: 66, 49
+  orig: 66, 49
+  offset: 0, 0
+  index: -1
+t1
+  rotate: false
+  xy: 221, 61
+  size: 22, 30
+  orig: 22, 30
+  offset: 0, 0
+  index: -1
+t2
+  rotate: false
+  xy: 199, 15
+  size: 14, 33
+  orig: 14, 33
+  offset: 0, 0
+  index: -1

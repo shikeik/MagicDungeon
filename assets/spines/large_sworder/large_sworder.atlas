@@ -1,0 +1,167 @@
+
+large_sworder.png
+size: 2048,128
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+canying
+  rotate: false
+  xy: 122, 8
+  size: 132, 118
+  orig: 133, 119
+  offset: 0, 1
+  index: -1
+eye_L
+  rotate: false
+  xy: 256, 2
+  size: 9, 21
+  orig: 9, 21
+  offset: 0, 0
+  index: -1
+eye_R
+  rotate: false
+  xy: 267, 2
+  size: 9, 21
+  orig: 9, 21
+  offset: 0, 0
+  index: -1
+eye_xuanyun
+  rotate: false
+  xy: 847, 20
+  size: 22, 22
+  orig: 22, 22
+  offset: 0, 0
+  index: -1
+gutou
+  rotate: false
+  xy: 998, 73
+  size: 70, 53
+  orig: 70, 53
+  offset: 0, 0
+  index: -1
+hand_L
+  rotate: false
+  xy: 586, 2
+  size: 36, 38
+  orig: 36, 38
+  offset: 0, 0
+  index: -1
+head_1
+  rotate: false
+  xy: 871, 5
+  size: 93, 57
+  orig: 93, 57
+  offset: 0, 0
+  index: -1
+head_2
+  rotate: false
+  xy: 650, 43
+  size: 118, 83
+  orig: 118, 83
+  offset: 0, 0
+  index: -1
+head_3
+  rotate: false
+  xy: 770, 44
+  size: 94, 82
+  orig: 94, 82
+  offset: 0, 0
+  index: -1
+hit_yan1
+  rotate: false
+  xy: 300, 5
+  size: 16, 18
+  orig: 16, 18
+  offset: 0, 0
+  index: -1
+hit_yan2
+  rotate: false
+  xy: 278, 3
+  size: 20, 20
+  orig: 20, 20
+  offset: 0, 0
+  index: -1
+kulou
+  rotate: false
+  xy: 866, 64
+  size: 77, 62
+  orig: 77, 63
+  offset: 0, 1
+  index: -1
+leg_L
+  rotate: false
+  xy: 945, 65
+  size: 51, 61
+  orig: 51, 61
+  offset: 0, 0
+  index: -1
+leg_R
+  rotate: false
+  xy: 966, 2
+  size: 51, 61
+  orig: 51, 61
+  offset: 0, 0
+  index: -1
+spine_1
+  rotate: false
+  xy: 2, 3
+  size: 118, 123
+  orig: 118, 123
+  offset: 0, 0
+  index: -1
+spine_2
+  rotate: false
+  xy: 503, 39
+  size: 60, 87
+  orig: 60, 87
+  offset: 0, 0
+  index: -1
+spine_3
+  rotate: false
+  xy: 565, 42
+  size: 83, 84
+  orig: 83, 84
+  offset: 0, 0
+  index: -1
+spine_4
+  rotate: false
+  xy: 767, 2
+  size: 78, 39
+  orig: 78, 39
+  offset: 0, 0
+  index: -1
+upperarm_L_01
+  rotate: false
+  xy: 529, 7
+  size: 55, 30
+  orig: 55, 30
+  offset: 0, 0
+  index: -1
+upperarm_L_02
+  rotate: false
+  xy: 1019, 26
+  size: 34, 45
+  orig: 34, 45
+  offset: 0, 0
+  index: -1
+weapon_1
+  rotate: false
+  xy: 256, 25
+  size: 245, 101
+  orig: 245, 102
+  offset: 0, 0
+  index: -1
+yinying
+  rotate: false
+  xy: 624, 15
+  size: 141, 25
+  orig: 141, 25
+  offset: 0, 0
+  index: -1
+zui
+  rotate: false
+  xy: 503, 5
+  size: 24, 32
+  orig: 24, 32
+  offset: 0, 0
+  index: -1
