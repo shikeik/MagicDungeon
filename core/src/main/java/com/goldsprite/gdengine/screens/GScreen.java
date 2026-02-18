@@ -58,7 +58,30 @@ public abstract class GScreen extends ScreenAdapter {
 		return PlatformImpl.defaultOrientation;
 	}
 
+	// [新增] Dialog 管理栈
+	protected final java.util.Stack<com.goldsprite.gdengine.ui.widget.BaseDialog> dialogStack = new java.util.Stack<>();
+
+	public void pushDialog(com.goldsprite.gdengine.ui.widget.BaseDialog dialog) {
+		dialogStack.push(dialog);
+	}
+
+	public void popDialog(com.goldsprite.gdengine.ui.widget.BaseDialog dialog) {
+		dialogStack.remove(dialog);
+	}
+
 	public boolean handleBackKey() {
+		// 1. 优先关闭顶层 Modal Dialog
+		if (!dialogStack.isEmpty()) {
+			com.goldsprite.gdengine.ui.widget.BaseDialog top = dialogStack.peek();
+			if (top != null && top.hasParent()) { // 确保 Dialog 还在 Stage 上
+				top.hide(); // 调用 hide/close，它会触发 remove -> popDialog
+				return true; // 消耗 Back 键
+			} else {
+				// 清理无效引用
+				dialogStack.pop();
+				return handleBackKey(); // 递归重试
+			}
+		}
 		return false; // 默认不处理，交由 ScreenManager 处理
 	}
 

@@ -1320,8 +1320,12 @@ public class GameScreen extends GScreen {
 		// Load Player Data
 		PlayerData pd = SaveManager.loadPlayerData(saveName, meta.currentPlayerName);
 		if (pd != null) {
-			player.stats = pd.stats;
-			player.inventory = pd.inventory;
+			if (pd.stats != null) {
+				player.stats = pd.stats;
+			}
+			if (pd.inventory != null) {
+				player.inventory = pd.inventory;
+			}
 
 			// Restore Equipment
 			if (pd.equipment != null) {

@@ -128,6 +128,12 @@ public class ScreenManager implements Disposable {
 				return false;
 			}
 		};
+		// 注意：imp.addProcessor 顺序很重要。后添加的在数组末尾。
+		// LibGDX InputMultiplexer 默认是按添加顺序处理 (0, 1, 2...)
+		// 我们希望 Stage (UI) 先处理，然后是 InputManager (Game Logic)，最后是 defaultHandler。
+		// GScreen.show() 会调用 enableInput(screenImp)，那里会把 screenImp 加到 imp 中。
+		// 如果 screenImp 包含 Stage，它会被加入。
+		// 为了确保 defaultHandler 不拦截其他事件，它只处理 F11，返回 false，这没问题。
 		imp.addProcessor(defaultHandler);
 	}
 
@@ -378,7 +384,8 @@ public class ScreenManager implements Disposable {
 	}
 
 	public void enableInput(InputMultiplexer screenImp) {
-		imp.addProcessor(screenImp);
+		// 确保 screenImp 插入到最前面，以便 UI 优先处理
+		imp.addProcessor(0, screenImp);
 	}
 
 	public void disableInput(InputMultiplexer screenImp) {

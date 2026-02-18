@@ -7,6 +7,8 @@ import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon.AppConstants;
 import com.goldsprite.magicdungeon.model.LayerData;
+import com.goldsprite.magicdungeon.core.EquipmentState;
+import com.goldsprite.magicdungeon.entities.PlayerStats;
 import com.goldsprite.magicdungeon.model.PlayerData;
 import com.goldsprite.magicdungeon.model.SaveData;
 import com.goldsprite.magicdungeon.utils.AssetUtils;
@@ -52,6 +54,23 @@ public class SaveManager {
     }
 
     /**
+     * 检查存档是否存在
+     */
+    public static boolean hasSave(String saveName) {
+        return Gdx.files.local(SAVES_ROOT + saveName).exists();
+    }
+
+    /**
+     * 删除存档
+     */
+    public static void deleteSave(String saveName) {
+        FileHandle saveDir = Gdx.files.local(SAVES_ROOT + saveName);
+        if (saveDir.exists()) {
+            saveDir.deleteDirectory();
+        }
+    }
+
+    /**
      * 创建新存档
      */
     public static void createSave(String saveName, String playerName) {
@@ -70,10 +89,13 @@ public class SaveManager {
         // 2. Create Players Dir & Initial Player Data
         FileHandle playersDir = saveDir.child("players");
         playersDir.mkdirs();
-        // Initial player data is created empty, will be populated by GameScreen logic or here?
-        // Let's create a basic one
+        
         PlayerData player = new PlayerData();
         player.name = playerName;
+        player.stats = new PlayerStats(); // Initialize default stats
+        player.inventory = new java.util.ArrayList<>();
+        player.equipment = new com.goldsprite.magicdungeon.core.EquipmentState();
+        
         saveJson(playersDir.child(playerName + ".json"), player);
 
         // 3. Create Areas Dir & Import Assets

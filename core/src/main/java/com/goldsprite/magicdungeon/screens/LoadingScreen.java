@@ -17,6 +17,7 @@ import com.goldsprite.magicdungeon.core.screens.GameScreen;
 import com.goldsprite.magicdungeon.systems.SaveManager;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class LoadingScreen extends GScreen {
     private String saveName;
@@ -28,6 +29,7 @@ public class LoadingScreen extends GScreen {
     private Skeleton skeleton;
     private AnimationState animationState;
     private VisLabel statusLabel;
+    private VisTextButton backButton;
     private com.badlogic.gdx.scenes.scene2d.Stage stage;
 
     private boolean taskStarted = false;
@@ -61,7 +63,7 @@ public class LoadingScreen extends GScreen {
 
         AnimationStateData stateData = new AnimationStateData(skeletonData);
         animationState = new AnimationState(stateData);
-        animationState.setAnimation(0, "run", true); // Assuming "run" animation exists
+        animationState.setAnimation(0, "move", true); // Assuming "run" animation exists
     }
 
     private void initUI() {
@@ -70,7 +72,17 @@ public class LoadingScreen extends GScreen {
         table.setFillParent(true);
         statusLabel = new VisLabel("Loading...");
         statusLabel.setColor(Color.WHITE);
-        table.add(statusLabel).bottom().padBottom(50);
+        table.add(statusLabel).bottom().padBottom(20).row();
+        
+        backButton = new VisTextButton("返回主菜单");
+        backButton.setVisible(false);
+        backButton.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ClickListener() {
+            @Override
+            public void clicked(com.badlogic.gdx.scenes.scene2d.InputEvent event, float x, float y) {
+                com.goldsprite.gdengine.screens.ScreenManager.getInstance().setCurScreen(new com.goldsprite.magicdungeon.core.screens.MainMenuScreen());
+            }
+        });
+        table.add(backButton).bottom().padBottom(30);
         
         stage.addActor(table);
     }
@@ -102,7 +114,11 @@ public class LoadingScreen extends GScreen {
         if (taskFinished) {
             if (taskError != null) {
                 statusLabel.setText("Error: " + taskError.getMessage());
-                // Handle error (maybe button to go back)
+                if (!backButton.isVisible()) {
+                    backButton.setVisible(true);
+                    // Ensure stage handles input for the button
+                    Gdx.input.setInputProcessor(stage);
+                }
             } else {
                 // Transition to GameScreen
                 ScreenManager.getInstance().setCurScreen(new GameScreen(saveName));

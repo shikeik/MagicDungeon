@@ -11,6 +11,8 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 
+import com.kotcrab.vis.ui.util.dialog.Dialogs;
+
 public class NewGameDialog extends BaseDialog {
     private VisTextField saveNameField;
     private VisTextField playerNameField;
@@ -69,19 +71,56 @@ public class NewGameDialog extends BaseDialog {
         String playerName = playerNameField.getText().trim();
 
         if (saveName.isEmpty() || playerName.isEmpty()) {
-            // TODO: Show error
+            Dialogs.showOKDialog(getStage(), "错误", "存档名或玩家名不能为空!");
             return;
         }
 
-        try {
-            // Check if save exists
-            // Ideally SaveManager should have a check method
-            // For now, let LoadingScreen handle it or catch exception
-            
-            close();
-            ScreenManager.getInstance().setCurScreen(new LoadingScreen(saveName, playerName, true));
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (SaveManager.hasSave(saveName)) {
+            showConfirmDialog("确认", "存档 '" + saveName + "' 已存在, 是否覆盖?", () -> {
+                try {
+                    SaveManager.deleteSave(saveName);
+                    startGame(saveName, playerName);
+                } catch (Exception e) {
+                    Dialogs.showDetailsDialog(getStage(), "删除存档失败", "无法删除旧存档", e.getMessage());
+                }
+            });
+            return;
         }
+
+        startGame(saveName, playerName);
+    }
+
+    private void showConfirmDialog(String title, String message, Runnable onYes) {
+        BaseDialog dialog = new BaseDialog(title);
+        dialog.add(new VisLabel(message)).pad(20).row();
+        
+        VisTable buttons = new VisTable();
+        VisTextButton yesBtn = new VisTextButton("是");
+        yesBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                dialog.fadeOut();
+                onYes.run();
+            }
+        });
+        
+        VisTextButton noBtn = new VisTextButton("否");
+        noBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                dialog.fadeOut();
+            }
+        });
+        
+        buttons.add(yesBtn).pad(10);
+        buttons.add(noBtn).pad(10);
+        
+        dialog.add(buttons).padBottom(10);
+        dialog.show(getStage());
+    }
+
+    private void startGame(String saveName, String playerName) {
+        close();
+        ScreenManager.getInstance().setCurScreen(new LoadingScreen(saveName, playerName, true));
     }
 }
