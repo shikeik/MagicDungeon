@@ -78,7 +78,8 @@ public class NeonSpriteGenerator {
         // 只有 Dragon/Boss 实现了 Neon 逻辑
         if (name != null && (name.contains("Dragon") || name.contains("Boss") || name.contains("魔龙"))) {
             return NeonGenerator.getInstance().generate(size, size, batch -> {
-                 NeonTextureFactory.drawComplexDragon(batch, NeonTextureFactory.DragonPalette.FIRE);
+                 // [Modification] 切换为黑色魔龙 (Black Dragon)
+                 NeonTextureFactory.drawComplexDragon(batch, NeonTextureFactory.DragonPalette.BLACK);
             });
         }
         

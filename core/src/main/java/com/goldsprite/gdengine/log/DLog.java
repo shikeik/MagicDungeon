@@ -27,6 +27,7 @@ public class DLog {
 
 	static {
 		blackList.add("拦截");
+		blackList.add("InputManager");
 	}
 
 	public static String[] showTags = {

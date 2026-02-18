@@ -60,6 +60,7 @@ public class NeonTextureFactory {
 		public Color skin, belly, horn, glow;
 		public static DragonPalette FIRE = new DragonPalette(Color.valueOf("#b71c1c"), Color.valueOf("#ffb74d"), Color.DARK_GRAY, Color.ORANGE);
 		public static DragonPalette ICE = new DragonPalette(Color.valueOf("#0277bd"), Color.valueOf("#e1f5fe"), Color.LIGHT_GRAY, Color.CYAN);
+		public static DragonPalette BLACK = new DragonPalette(Color.valueOf("#212121"), Color.valueOf("#ffe0b2"), Color.WHITE, Color.RED);
 		public DragonPalette(Color s, Color b, Color h, Color g) { skin=s; belly=b; horn=h; glow=g; }
 	}
 
