@@ -22,119 +22,8 @@ tasks.register('generateAssetList') {
 	}
 }
 
-
-// 2. Core Project 任务 (编译与打包)
+// 2. 依赖关系绑定
 // ============================================================
-project(':core') {
-	// 变量定义
-	def exposedLibs = ["gdx", "gdx-tools", "gdx-freetype", "vis-ui"]
-	def assetsLibsDir = file("${rootProject.rootDir}/assets/engine/libs/")
-
-	// 任务D: 第三方库打包
-	tasks.register('copyEngineLibs', Copy) {
-		group = "magicdungeon"
-		description = "复制第三方包到 assets/engine/libs"
-		from configurations.compileClasspath
-		into assetsLibsDir
-		include { details ->
-			def name = details.file.name
-			if (name.contains("natives") || name.contains("sources")) return false
-			return exposedLibs.any { key -> name.matches(/^$key-\d+.*\.jar$/) }
-		}
-		duplicatesStrategy = DuplicatesStrategy.INCLUDE
-	}
-
-	// 任务E: 引擎核心库打包 (快速, 无Javadoc)
-	tasks.register('packageEngineCore', Jar) {
-		group = "magicdungeon"
-		description = "仅打包引擎核心库 (无文档, 快速)"
-		outputs.upToDateWhen { false }
-
-		from sourceSets.main.java.classesDirectory
-		dependsOn compileJava
-
-		archiveFileName = "magicdungeon.jar"
-		destinationDirectory = assetsLibsDir
-		exclude "**/*.html", "**/*.gwt.xml"
-
-		doLast {
-			println "✅ [Engine] 引擎核心库已打包 (assets/engine/libs/magicdungeon.jar)"
-		}
-	}
-
-	// 任务F: 引擎资源更新 (改为发布源码)
-	tasks.register('updateEngineLibSources') {
-		group = "magicdungeon"
-		description = "发布引擎源码 Jar 到 assets/engine/libs (供用户项目关联)"
-
-		// 依赖 sourcesJar 任务
-		dependsOn tasks.named('sourcesJar')
-
-		doLast {
-			// 1. 获取 sourcesJar 文件
-			def sourcesJarFile = tasks.sourcesJar.archiveFile.get().asFile
-			def libTargetDir = file("${rootProject.rootDir}/assets/engine/libs/")
-
-			copy {
-				from sourcesJarFile
-				into libTargetDir
-				// 重命名为标准格式，方便识别
-				rename { "magicdungeon-sources.jar" }
-			}
-			println "✅ [Engine] 源码库 (Sources) 已发布到 assets/engine/libs/magicdungeon-sources.jar"
-
-			// (原 Javadoc HTML 生成逻辑已移除，专注于源码)
-		}
-	}
-
-	// 任务G: 自动生成引擎类索引
-	tasks.register('generateEngineIndex') {
-		def outputDir = file("${rootProject.rootDir}/assets/")
-		def indexFile = file("${outputDir}/engine.index")
-
-		inputs.files(sourceSets.main.allJava)
-		outputs.file(indexFile)
-
-		doLast {
-			if (!outputDir.exists()) outputDir.mkdirs()
-			def classNames = new TreeSet()
-
-			sourceSets.main.allJava.each { File file ->
-				if (file.name.endsWith(".java") && !file.name.equals("package-info.java")) {
-					sourceSets.main.java.srcDirs.each { File srcDir ->
-						if (file.absolutePath.startsWith(srcDir.absolutePath)) {
-							def relPath = file.absolutePath.substring(srcDir.absolutePath.length() + 1)
-							def className = relPath.replace(File.separator, ".").replace(".java", "")
-							classNames.add(className)
-						}
-					}
-				}
-			}
-			indexFile.text = classNames.join("\n")
-			println ">>> [AutoIndex] 生成所有引擎类路径到 engine.index, 共 ${classNames.size()} 个类."
-		}
-	}
-
-	// 挂钩 processResources
-	// 使用 afterEvaluate 确保 Java 插件已加载且任务已创建
-	afterEvaluate {
-		if (tasks.findByName('processResources')) {
-			tasks.named('processResources').configure {
-				dependsOn 'generateEngineIndex'
-			}
-		}
-	}
-}
-
-// 3. 依赖关系绑定
-// ============================================================
-tasks.named('generateAssetList') {
-	dependsOn ':core:copyEngineLibs'
-	dependsOn ':core:packageEngineCore' // 依赖快速打包任务
-	// [修复] 确保在生成资源列表前，engine.index 已生成
-	dependsOn ':core:generateEngineIndex'
-}
-
 // 绑定消费者任务
 project(':lwjgl3') {
 	afterEvaluate { p ->
@@ -154,6 +43,110 @@ project(':examples') {
 		if (p.tasks.findByName('processResources')) p.tasks.named('processResources').configure { dependsOn rootProject.tasks.named('generateAssetList') }
 	}
 }
+
+// 原GDEngine任务, 现已不存在
+// // 3. Core Project 任务 (编译与打包)
+// // ============================================================
+// project(':core') {
+// 	// 变量定义
+// 	def exposedLibs = ["gdx", "gdx-tools", "gdx-freetype", "vis-ui"]
+// 	def assetsLibsDir = file("${rootProject.rootDir}/assets/engine/libs/")
+
+// 	// 任务D: 第三方库打包
+// 	tasks.register('copyEngineLibs', Copy) {
+// 		group = "magicdungeon"
+// 		description = "复制第三方包到 assets/engine/libs"
+// 		from configurations.compileClasspath
+// 		into assetsLibsDir
+// 		include { details ->
+// 			def name = details.file.name
+// 			if (name.contains("natives") || name.contains("sources")) return false
+// 			return exposedLibs.any { key -> name.matches(/^$key-\d+.*\.jar$/) }
+// 		}
+// 		duplicatesStrategy = DuplicatesStrategy.INCLUDE
+// 	}
+
+// 	// 任务E: 引擎核心库打包 (快速, 无Javadoc)
+// 	tasks.register('packageEngineCore', Jar) {
+// 		group = "magicdungeon"
+// 		description = "仅打包引擎核心库 (无文档, 快速)"
+// 		outputs.upToDateWhen { false }
+
+// 		from sourceSets.main.java.classesDirectory
+// 		dependsOn compileJava
+
+// 		archiveFileName = "magicdungeon.jar"
+// 		destinationDirectory = assetsLibsDir
+// 		exclude "**/*.html", "**/*.gwt.xml"
+
+// 		doLast {
+// 			println "✅ [Engine] 引擎核心库已打包 (assets/engine/libs/magicdungeon.jar)"
+// 		}
+// 	}
+
+// 	// 任务F: 引擎资源更新 (改为发布源码)
+// 	tasks.register('updateEngineLibSources') {
+// 		group = "magicdungeon"
+// 		description = "发布引擎源码 Jar 到 assets/engine/libs (供用户项目关联)"
+
+// 		// 依赖 sourcesJar 任务
+// 		dependsOn tasks.named('sourcesJar')
+
+// 		doLast {
+// 			// 1. 获取 sourcesJar 文件
+// 			def sourcesJarFile = tasks.sourcesJar.archiveFile.get().asFile
+// 			def libTargetDir = file("${rootProject.rootDir}/assets/engine/libs/")
+
+// 			copy {
+// 				from sourcesJarFile
+// 				into libTargetDir
+// 				// 重命名为标准格式，方便识别
+// 				rename { "magicdungeon-sources.jar" }
+// 			}
+// 			println "✅ [Engine] 源码库 (Sources) 已发布到 assets/engine/libs/magicdungeon-sources.jar"
+
+// 			// (原 Javadoc HTML 生成逻辑已移除，专注于源码)
+// 		}
+// 	}
+
+// 	// 任务G: 自动生成引擎类索引
+// 	tasks.register('generateEngineIndex') {
+// 		def outputDir = file("${rootProject.rootDir}/assets/")
+// 		def indexFile = file("${outputDir}/engine.index")
+
+// 		inputs.files(sourceSets.main.allJava)
+// 		outputs.file(indexFile)
+
+// 		doLast {
+// 			if (!outputDir.exists()) outputDir.mkdirs()
+// 			def classNames = new TreeSet()
+
+// 			sourceSets.main.allJava.each { File file ->
+// 				if (file.name.endsWith(".java") && !file.name.equals("package-info.java")) {
+// 					sourceSets.main.java.srcDirs.each { File srcDir ->
+// 						if (file.absolutePath.startsWith(srcDir.absolutePath)) {
+// 							def relPath = file.absolutePath.substring(srcDir.absolutePath.length() + 1)
+// 							def className = relPath.replace(File.separator, ".").replace(".java", "")
+// 							classNames.add(className)
+// 						}
+// 					}
+// 				}
+// 			}
+// 			indexFile.text = classNames.join("\n")
+// 			println ">>> [AutoIndex] 生成所有引擎类路径到 engine.index, 共 ${classNames.size()} 个类."
+// 		}
+// 	}
+
+// 	// 挂钩 processResources
+// 	// 使用 afterEvaluate 确保 Java 插件已加载且任务已创建
+// 	afterEvaluate {
+// 		if (tasks.findByName('processResources')) {
+// 			tasks.named('processResources').configure {
+// 				dependsOn 'generateEngineIndex'
+// 			}
+// 		}
+// 	}
+// }
 
 // ============================================================================
 //  Git Hook 自动安装 (配置阶段立即执行)

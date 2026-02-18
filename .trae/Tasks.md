@@ -1,11 +1,28 @@
 # 智能任务拾取配置:
 // - 目标拾取数(0则无上限): 0
-// - 开始时间: 2026-02-17 10:00
-// - 当前完成时间: 2026-02-17 10:15
-// - 当前已耗时: 15min
+// - 开始时间: 2026-02-18 10:00
+// - 当前完成时间: 2026-02-18 10:30
+// - 当前已耗时: 30min
 // - 当前已完成数(开始时置0): 0
 
-## Version 0.x.Next - Neon 艺术化升级
+## Version 0.x.Refactor - 地牢与存档系统重构
+> 主题: 重构数据结构与存档系统，支持目录式存档与多层地图。
+> 设计文档: [.trae/documents/designs/40_地牢与存档系统重构设计.md]
+
+### Phase 1: 核心数据与IO (Completed)
+- [x] 定义 `AreaData` 数据类
+- [x] 在 `MapIO` 实现 `LayerData` 与 `GameMapData` 的转换逻辑
+- [x] 重构 `SaveManager` 支持目录结构与 `LayerData` 导入
+    - [x] `importAssetsAreas` 支持自动转换 Legacy 格式
+    - [x] 验证 `saveLayerData` / `loadLayerData`
+
+### Phase 2: UI与流程 (Completed)
+- [x] 更新 `SaveData` 增加 `maxDepth`
+- [x] 重构 `GameScreen.enterDungeon` 统一使用 `SaveManager` 加载逻辑
+- [x] 清理 `GameScreen` 中废弃的 `visitedLevels` 缓存逻辑
+- [x] 修复 `GameScreen` 中错误的 `saveGame` 调用
+
+## Version 0.x.Next - Neon 艺术化升级 (Completed)
 > 主题: 将程序化纹理生成全面迁移至 NeonBatch 矢量绘图，提升视觉质量。
 > 设计文档: [.trae/documents/designs/35_Neon生成与艺术化升级计划.md]
 

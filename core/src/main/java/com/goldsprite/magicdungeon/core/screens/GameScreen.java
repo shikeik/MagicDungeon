@@ -36,6 +36,11 @@ import com.badlogic.gdx.math.RandomXS128;
 import com.goldsprite.magicdungeon.core.ItemState;
 import com.goldsprite.magicdungeon.core.LevelState;
 import com.goldsprite.magicdungeon.core.MonsterState;
+import com.goldsprite.magicdungeon.model.LayerData;
+import com.goldsprite.magicdungeon.model.PlayerData;
+import com.goldsprite.magicdungeon.model.SaveData;
+import com.goldsprite.magicdungeon.utils.MapIO;
+import com.goldsprite.magicdungeon.core.EquipmentState;
 
 import com.goldsprite.magicdungeon.input.InputManager;
 import com.goldsprite.magicdungeon.input.InputAction;
@@ -81,7 +86,8 @@ public class GameScreen extends GScreen {
 	private int maxDepth = 1;
 
 	// History of visited levels
-	private Map<Integer, LevelState> visitedLevels = new HashMap<>();
+    // Deprecated: Visited levels are now saved to disk immediately via SaveManager
+	// private Map<Integer, LevelState> visitedLevels = new HashMap<>();
 
 	private String cheatCodeBuffer = "";
 	public static boolean isPaused = false;
@@ -99,13 +105,20 @@ public class GameScreen extends GScreen {
 		AnimationState state;
 	}
 
-	public GameScreen() {
-		this(MathUtils.random(Long.MIN_VALUE, Long.MAX_VALUE));
-	}
+    private String saveName = "default_save";
 
-	public GameScreen(long seed) {
-		this.seed = seed;
-	}
+    public GameScreen() {
+        this(MathUtils.random(Long.MIN_VALUE, Long.MAX_VALUE));
+    }
+
+    public GameScreen(String saveName) {
+        this(MathUtils.random(Long.MIN_VALUE, Long.MAX_VALUE));
+        this.saveName = saveName;
+    }
+
+    public GameScreen(long seed) {
+        this.seed = seed;
+    }
 
 	public Player getPlayer() {
 		return player;
@@ -168,8 +181,8 @@ public class GameScreen extends GScreen {
 		this.items = new ArrayList<>();
 		this.chests = new ArrayList<>();
 
-		// Start at Camp
-		enterCamp(false);
+		// Start Game
+		loadGame();
 
 		// Ensure initial visual is generated
 		player.updateVisuals();
@@ -180,7 +193,7 @@ public class GameScreen extends GScreen {
 
 		// Set save listener for HUD save button
 		hud.setSaveListener(() -> {
-			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
+			saveGameData();
 			hud.showMessage("游戏已保存!");
 		});
 
@@ -200,9 +213,53 @@ public class GameScreen extends GScreen {
 		System.out.println("GameScreen Constructor Finished");
 	}
 
+	private void saveGameData() {
+		if (saveName == null) return;
+
+		// 1. Save Meta
+		SaveData meta = new SaveData();
+		meta.saveName = saveName;
+		meta.currentPlayerName = player.name;
+		
+		// Better load meta first to preserve createTime
+		SaveData oldMeta = SaveManager.loadSaveMeta(saveName);
+		if (oldMeta != null) {
+			meta.createTime = oldMeta.createTime;
+		} else {
+			meta.createTime = System.currentTimeMillis();
+		}
+		meta.lastPlayedTime = System.currentTimeMillis();
+		meta.currentFloor = dungeon.level;
+		meta.currentAreaId = (dungeon.level == 0) ? "camp" : "dungeon";
+		meta.maxDepth = this.maxDepth;
+		SaveManager.saveSaveMeta(meta);
+
+		// 2. Save Player Data
+		EquipmentState equipState = new EquipmentState();
+		equipState.mainHand = player.equipment.mainHand;
+		equipState.offHand = player.equipment.offHand;
+		equipState.helmet = player.equipment.helmet;
+		equipState.armor = player.equipment.armor;
+		equipState.boots = player.equipment.boots;
+		equipState.accessories = player.equipment.accessories;
+
+		PlayerData pd = new PlayerData(
+			player.name,
+			player.stats,
+			player.inventory,
+			equipState,
+			player.x,
+			player.y
+		);
+		SaveManager.savePlayerData(saveName, pd);
+
+		// 3. Save Current Level Data
+		saveCurrentLevelState();
+	}
+
 	private void saveCurrentLevelState() {
-		// Save current level state to history
-		if (dungeon.level == 0) return; // Don't save camp state
+		// Save current level state to file
+		// if (dungeon.level == 0) return; // Allow saving camp too! User said so.
 
 		List<MonsterState> monsterStates = new ArrayList<>();
 		for (Monster m : monsters) {
@@ -226,7 +283,13 @@ public class GameScreen extends GScreen {
 			));
 		}
 
-		visitedLevels.put(dungeon.level, new LevelState(monsterStates, itemStates));
+		// Build LayerData
+		LayerData data = MapIO.fromTileMap(dungeon.map, dungeon.width, dungeon.height);
+		data.monsters = monsterStates;
+		data.items = itemStates;
+
+		String areaId = (dungeon.level == 0) ? "camp" : "dungeon";
+		SaveManager.saveLayerData(saveName, areaId, dungeon.level, data);
 	}
 
 	private void enterCamp(boolean fromStairs) {
@@ -236,10 +299,11 @@ public class GameScreen extends GScreen {
 		}
 
 		dungeon.level = 0;
-		dungeon.generate();
+		loadCurrentLevel();
 
 		if (fromStairs && wasInDungeon) {
 			// Find Dungeon Entrance position
+			// Assuming loadCurrentLevel loaded the map
 			GridPoint2 entPos = findTilePosition(TileType.Dungeon_Entrance);
 			if (entPos != null) {
 				player.x = entPos.x;
@@ -249,6 +313,10 @@ public class GameScreen extends GScreen {
 				player.y = dungeon.startPos.y;
 			}
 		} else {
+			// If just started or teleported, use start pos
+			// But if we loaded a save, player pos is already set in loadGame()
+			// However, enterCamp is called when transitioning.
+			// If fromStairs=false, it means "Return to Camp" spell or similar?
 			player.x = dungeon.startPos.x;
 			player.y = dungeon.startPos.y;
 		}
@@ -256,11 +324,6 @@ public class GameScreen extends GScreen {
 		player.visualX = player.x * Constants.TILE_SIZE;
 		player.visualY = player.y * Constants.TILE_SIZE;
 
-		monsters.clear();
-		items.clear();
-		chests.clear();
-
-		spawnEntities();
 		updateCamera();
 
 		if (hud != null) hud.showMessage("回到了营地.");
@@ -295,21 +358,13 @@ public class GameScreen extends GScreen {
 
 	private void enterDungeon(int level) {
 		int prevLevel = dungeon.level;
-		if (dungeon.level > 0) {
+		if (dungeon.level >= 0) {
 			saveCurrentLevelState();
 		}
 
 		dungeon.level = level;
 
-		if (visitedLevels.containsKey(level)) {
-			// Restore
-			dungeon.generate(); // Re-generate geometry (same seed)
-			restoreLevelState(level);
-		} else {
-			// Generate New
-			dungeon.generate();
-			spawnEntities();
-		}
+		loadCurrentLevel();
 
 		// Set Player Position
 		if (level < prevLevel) {
@@ -393,175 +448,68 @@ public class GameScreen extends GScreen {
 		enterCamp(false);
 	}
 
-	private void restoreLevelState(int level) {
-		LevelState state = visitedLevels.get(level);
-		if (state == null) return;
-
-		monsters.clear();
-		for(MonsterState ms : state.monsters) {
-			MonsterType type = MonsterType.Slime;
-			try {
-				type = MonsterType.valueOf(ms.typeName);
-			} catch(IllegalArgumentException e) {
-				for(MonsterType t : MonsterType.values()) {
-					if(t.name.equals(ms.typeName)) {
-						type = t;
-						break;
-					}
-				}
-			}
-
-			Monster m = new Monster(ms.x, ms.y, type);
-			m.hp = ms.hp;
-			m.maxHp = ms.maxHp;
-			monsters.add(m);
-		}
-
-		items.clear();
-		for(ItemState is : state.items) {
-			ItemData data = ItemData.Health_Potion;
-			try {
-				data = ItemData.valueOf(is.itemName);
-			} catch(IllegalArgumentException e) {}
-
-			ItemQuality quality = ItemQuality.COMMON;
-			try {
-				if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
-			} catch(IllegalArgumentException e) {}
-
-			int atk = is.atk > 0 ? is.atk : data.atk;
-			int def = is.def > 0 ? is.def : data.def;
-			int heal = is.heal > 0 ? is.heal : data.heal;
-			int manaRegen = is.manaRegen; // New field
-
-			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal, manaRegen);
-			invItem.count = is.count > 0 ? is.count : 1;
-			items.add(new Item(is.x, is.y, invItem));
-		}
-	}
 
 
-	private void loadLevelState(LevelState state) {
-		monsters.clear();
-		for(MonsterState ms : state.monsters) {
-			MonsterType type = MonsterType.Slime;
-			try {
-				type = MonsterType.valueOf(ms.typeName);
-			} catch(IllegalArgumentException e) {
-				for(MonsterType t : MonsterType.values()) {
-					if(t.name.equals(ms.typeName)) {
-						type = t;
-						break;
-					}
-				}
-			}
 
-			Monster m = new Monster(ms.x, ms.y, type);
-			m.hp = ms.hp;
-			m.maxHp = ms.maxHp;
-			monsters.add(m);
-		}
 
-		items.clear();
-		for(ItemState is : state.items) {
-			ItemData data = ItemData.Health_Potion;
-			try {
-				data = ItemData.valueOf(is.itemName);
-			} catch(IllegalArgumentException e) {
-			}
 
-			// Restore Quality and Stats
-			ItemQuality quality = ItemQuality.COMMON;
-			try {
-				if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
-			} catch(IllegalArgumentException e) {}
+    private void nextLevel() {
+        saveCurrentLevelState();
 
-			int atk = is.atk > 0 ? is.atk : data.atk;
-			int def = is.def > 0 ? is.def : data.def;
-			int heal = is.heal > 0 ? is.heal : data.heal;
-			int manaRegen = is.manaRegen;
+        dungeon.level++;
+        if (dungeon.level > maxDepth) maxDepth = dungeon.level;
 
-			InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal, manaRegen);
-			invItem.count = is.count > 0 ? is.count : 1;
-			items.add(new Item(is.x, is.y, invItem));
-		}
-	}
+        loadCurrentLevel();
 
-	private void nextLevel() {
-		saveCurrentLevelState();
+        // Place player at stairs up
+        GridPoint2 stairsPos = findTilePosition(TileType.Stairs_Up);
+        if (stairsPos != null) {
+            player.x = stairsPos.x;
+            player.y = stairsPos.y;
+        } else {
+            player.x = dungeon.startPos.x;
+            player.y = dungeon.startPos.y;
+        }
+        
+        player.visualX = player.x * Constants.TILE_SIZE;
+        player.visualY = player.y * Constants.TILE_SIZE;
 
-		dungeon.level++;
-		dungeon.generate();
+        updateCamera();
+        updateHUDDungeonInfo();
+        playCurrentBGM();
+    }
 
-		// Check if we visited this level before
-		if (visitedLevels.containsKey(dungeon.level)) {
-			loadLevelState(visitedLevels.get(dungeon.level));
-		} else {
-			spawnEntities();
-		}
+    private void prevLevel() {
+        if (dungeon.level <= 0) return;
 
-		player.x = dungeon.startPos.x;
-		player.y = dungeon.startPos.y;
-		player.visualX = player.x * Constants.TILE_SIZE;
-		player.visualY = player.y * Constants.TILE_SIZE;
+        saveCurrentLevelState();
 
-		hud.showMessage("Descended to Floor " + dungeon.level + "!");
-		audio.playLevelUp(); // Reusing sound for now
-	}
+        dungeon.level--;
 
-	private void prevLevel() {
-		if (dungeon.level > 1) {
-			saveCurrentLevelState();
+        if (dungeon.level == 0) {
+            enterCamp(true);
+            return;
+        }
 
-			dungeon.level--;
-			dungeon.generate();
+        loadCurrentLevel();
 
-			// Check if we visited this level before
-			if (visitedLevels.containsKey(dungeon.level)) {
-				loadLevelState(visitedLevels.get(dungeon.level));
-			} else {
-				// Should theoretically always be visited if going back, but handle just in case
-				spawnEntities();
-			}
+        // Place player at stairs down
+        GridPoint2 stairsPos = findTilePosition(TileType.Stairs_Down);
+        if (stairsPos != null) {
+            player.x = stairsPos.x;
+            player.y = stairsPos.y;
+        } else {
+            player.x = dungeon.startPos.x;
+            player.y = dungeon.startPos.y;
+        }
+        
+        player.visualX = player.x * Constants.TILE_SIZE;
+        player.visualY = player.y * Constants.TILE_SIZE;
 
-            // When going up, we might want to spawn at the down stairs of the previous level?
-            // But currently MapGenerator places stairs down at end room and stairs up at start room.
-            // If we assume linear progression, going UP should land us at the DOWN stairs of the upper floor.
-            // However, our MapGenerator randomizes everything each time.
-            // So for now, let's just spawn at startPos (which is where Stairs Up is) to be safe,
-            // OR we can find the Stairs Down and spawn there to simulate "coming up from below".
-
-            // Let's spawn at Stairs Down to simulate coming back up.
-            // Find Stairs Down
-            GridPoint2 stairsDownPos = null;
-            for(int y=0; y<dungeon.height; y++) {
-                for(int x=0; x<dungeon.width; x++) {
-                    Tile t = dungeon.getTile(x, y);
-                    if(t != null && t.type == TileType.Stairs_Down) {
-                        stairsDownPos = new GridPoint2(x, y);
-                        break;
-                    }
-                }
-                if(stairsDownPos != null) break;
-            }
-
-            if (stairsDownPos != null) {
-                player.x = stairsDownPos.x;
-                player.y = stairsDownPos.y;
-            } else {
-                player.x = dungeon.startPos.x;
-                player.y = dungeon.startPos.y;
-            }
-
-			player.visualX = player.x * Constants.TILE_SIZE;
-			player.visualY = player.y * Constants.TILE_SIZE;
-
-			hud.showMessage("Ascended to Floor " + dungeon.level + "!");
-			audio.playLevelUp();
-
-			updateHUDDungeonInfo();
-		}
-	}
+        updateCamera();
+        updateHUDDungeonInfo();
+        playCurrentBGM();
+    }
 
 	private void spawnEntities() {
         monsters.clear();
@@ -782,15 +730,15 @@ public class GameScreen extends GScreen {
 		}
 
 		// Save Game
-		if (input.isJustPressed(InputAction.SAVE)) {
-			SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
-			hud.showMessage("游戏已保存!");
-		}
+        if (input.isJustPressed(InputAction.SAVE)) {
+            saveGameData();
+            hud.showMessage("游戏已保存!");
+        }
 
-		// Load Game (F9 - Default keyboard only for now, not mapped in JSON yet, adding fallback)
-		if (input.isJustPressed(InputAction.LOAD_GAME)) {
-			loadGame();
-		}
+        // Load Game (F9 - Default keyboard only for now, not mapped in JSON yet, adding fallback)
+        if (input.isJustPressed(InputAction.LOAD_GAME)) {
+            loadGame();
+        }
 
 		// Regenerate map (Reset) - R (Keyboard only for now)
 		if (input.isJustPressed(InputAction.RESET_MAP)) {
@@ -954,7 +902,7 @@ public class GameScreen extends GScreen {
 					handledInteract = true;
 				} else if (tile.type == TileType.Dungeon_Entrance) {
 					// Save current progress before switching to World Map
-					SaveManager.saveGame(player, dungeon, monsters, items, visitedLevels, maxDepth);
+					saveGameData();
 
 					// Switch to WorldMapScreen
 					getScreenManager().playTransition(() -> {
@@ -1087,7 +1035,6 @@ public class GameScreen extends GScreen {
 					player.applyDeathPenalty();
 
 					// Reset World History
-					visitedLevels.clear();
 					maxDepth = 1;
 
 					// Enter Camp
@@ -1122,7 +1069,7 @@ public class GameScreen extends GScreen {
 		dungeon.generate();
 
 		// 2. Clear History
-		visitedLevels.clear();
+		// visitedLevels.clear(); // Deprecated
 
 		// 3. Reset Player
 		// Re-create player to reset all stats and inventory
@@ -1363,79 +1310,67 @@ public class GameScreen extends GScreen {
 	}
 
 	public void loadGame() {
-		GameState state = SaveManager.loadGame();
-		if (state != null) {
-			player.stats = state.playerStats;
-			player.inventory = state.inventory;
-			dungeon.level = state.dungeonLevel;
+		// Load Meta
+		SaveData meta = SaveManager.loadSaveMeta(saveName);
+		if (meta == null) {
+			Gdx.app.error("GameScreen", "Save meta not found for: " + saveName);
+			return;
+		}
 
-			// Restore Theme
-			if (state.theme != null) {
-				try {
-					dungeon.theme = DungeonTheme.valueOf(state.theme);
-				} catch (IllegalArgumentException e) {
-					dungeon.theme = DungeonTheme.DEFAULT;
-				}
-			} else {
-				dungeon.theme = DungeonTheme.DEFAULT;
-			}
-
-			if (state.maxDepth > 0) maxDepth = state.maxDepth;
-			else maxDepth = Math.max(1, dungeon.level);
-
-			dungeon.globalSeed = state.seed; // Restore seed
+		// Load Player Data
+		PlayerData pd = SaveManager.loadPlayerData(saveName, meta.currentPlayerName);
+		if (pd != null) {
+			player.stats = pd.stats;
+			player.inventory = pd.inventory;
 
 			// Restore Equipment
-			if (state.equipment != null) {
-				player.equipment.mainHand = state.equipment.mainHand;
-				player.equipment.offHand = state.equipment.offHand;
-				player.equipment.helmet = state.equipment.helmet;
-				player.equipment.armor = state.equipment.armor;
-				player.equipment.boots = state.equipment.boots;
-				player.equipment.accessories = state.equipment.accessories;
+			if (pd.equipment != null) {
+				player.equipment.mainHand = pd.equipment.mainHand;
+				player.equipment.offHand = pd.equipment.offHand;
+				player.equipment.helmet = pd.equipment.helmet;
+				player.equipment.armor = pd.equipment.armor;
+				player.equipment.boots = pd.equipment.boots;
+				player.equipment.accessories = pd.equipment.accessories;
 
-				// Ensure accessories array is initialized if loaded state was null/old
 				if (player.equipment.accessories == null) {
 					player.equipment.accessories = new InventoryItem[3];
 				}
 			}
 
-			// Restore History
-			if (state.visitedLevels != null) {
-				visitedLevels = state.visitedLevels;
-			} else {
-				visitedLevels = new HashMap<>();
-			}
-
-			updateHUDDungeonInfo();
-
-			// Regenerate world
-			dungeon.generate();
-
-			// Restore Player Position
-			// If save has coordinates (new save), use them. Otherwise (old save), use startPos.
-			if (state.playerX != 0 || state.playerY != 0) {
-				player.x = state.playerX;
-				player.y = state.playerY;
-			} else {
-				player.x = dungeon.startPos.x;
-				player.y = dungeon.startPos.y;
-			}
-
+			player.x = (int)pd.x;
+			player.y = (int)pd.y;
 			player.visualX = player.x * Constants.TILE_SIZE;
 			player.visualY = player.y * Constants.TILE_SIZE;
+		}
 
-			// Restore Entities
-			if (state.monsters != null && state.items != null) {
-				// New save system: restore from snapshot
+		// Set current level
+		dungeon.level = meta.currentFloor;
+		this.maxDepth = Math.max(1, meta.maxDepth); // Ensure at least 1
+
+		loadCurrentLevel();
+
+		updateHUDDungeonInfo();
+		playCurrentBGM();
+	}
+
+	private void loadCurrentLevel() {
+		String areaId = (dungeon.level == 0) ? "camp" : "dungeon";
+
+		if (SaveManager.hasLayerData(saveName, areaId, dungeon.level)) {
+			LayerData data = SaveManager.loadLayerData(saveName, areaId, dungeon.level);
+			if (data != null) {
+				// Restore Map
+				dungeon.width = data.width;
+				dungeon.height = data.height;
+				dungeon.map = MapIO.toTileMap(data);
+
+				// Restore Entities
 				monsters.clear();
-				for(MonsterState ms : state.monsters) {
+				for (MonsterState ms : data.monsters) {
 					MonsterType type = MonsterType.Slime;
 					try {
-						// Try to find by Enum name first
 						type = MonsterType.valueOf(ms.typeName);
-					} catch(IllegalArgumentException e) {
-						// Fallback: search by display name (chinese) or just default
+					} catch (IllegalArgumentException e) {
 						for(MonsterType t : MonsterType.values()) {
 							if(t.name.equals(ms.typeName)) {
 								type = t;
@@ -1443,7 +1378,6 @@ public class GameScreen extends GScreen {
 							}
 						}
 					}
-
 					Monster m = new Monster(ms.x, ms.y, type);
 					m.hp = ms.hp;
 					m.maxHp = ms.maxHp;
@@ -1451,42 +1385,34 @@ public class GameScreen extends GScreen {
 				}
 
 				items.clear();
-				for(ItemState is : state.items) {
-					ItemData data = ItemData.Health_Potion;
+				for (ItemState is : data.items) {
+					com.goldsprite.magicdungeon.entities.ItemData iData = null;
 					try {
-						data = ItemData.valueOf(is.itemName);
-					} catch(IllegalArgumentException e) {
-						// Fallback logic if needed
+						iData = com.goldsprite.magicdungeon.entities.ItemData.valueOf(is.itemName);
+					} catch(Exception e) {
+						continue;
 					}
 
-					// Restore Quality and Stats
-					ItemQuality quality = ItemQuality.COMMON;
-					try {
-						if(is.quality != null) quality = ItemQuality.valueOf(is.quality);
-					} catch(IllegalArgumentException e) {}
-
-					int atk = is.atk > 0 ? is.atk : data.atk;
-					int def = is.def > 0 ? is.def : data.def;
-					int heal = is.heal > 0 ? is.heal : data.heal;
-					int manaRegen = is.manaRegen;
-
-					InventoryItem invItem = new InventoryItem(data, quality, atk, def, heal, manaRegen);
+					InventoryItem invItem = new InventoryItem(iData);
+					invItem.quality = com.goldsprite.magicdungeon.entities.ItemQuality.valueOf(is.quality);
+					invItem.atk = is.atk;
+					invItem.def = is.def;
+					invItem.heal = is.heal;
+					invItem.manaRegen = is.manaRegen;
 					invItem.count = is.count > 0 ? is.count : 1;
-					items.add(new Item(is.x, is.y, invItem));
+
+					Item item = new Item(is.x, is.y, invItem);
+					items.add(item);
 				}
 
-			} else {
-				// Old save system compatibility: regenerate randomly
-				spawnEntities();
+				chests.clear();
+				return;
 			}
-
-			// Ensure player visual is updated with loaded equipment
-			player.updateVisuals();
-
-			hud.showMessage("游戏已加载!");
-		} else {
-			hud.showMessage("未找到存档!");
 		}
+
+		// If load failed or no data, generate
+		dungeon.generate();
+		spawnEntities();
 	}
 
 	@Override

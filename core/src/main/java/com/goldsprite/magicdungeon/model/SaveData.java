@@ -10,6 +10,7 @@ public class SaveData {
     public String currentPlayerName;
     public String currentAreaId;
     public int currentFloor;
+    public int maxDepth;
 
     public SaveData() {
     }

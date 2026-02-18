@@ -13,6 +13,9 @@ import com.goldsprite.magicdungeon.utils.AssetUtils;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.goldsprite.magicdungeon.utils.MapIO;
+import com.goldsprite.magicdungeon.world.data.GameMapData;
+
 public class SaveManager {
     public static final String SAVES_ROOT = AppConstants.STORAGE_ROOT + "saves/game_saves/";
     private static final String META_FILE = "meta.json";
@@ -83,40 +86,64 @@ public class SaveManager {
      * 从 assets/maps 导入预设区域
      */
     private static void importAssetsAreas(FileHandle targetAreasDir) {
-        // 使用 AssetUtils 扫描 assets/maps 下的文件
-        // 假设结构: assets/maps/camp.json -> target/camp/floor_1.json (如果 camp.json 是单层)
-        // 或者: assets/maps/camp/floor_1.json -> target/camp/floor_1.json
-        
         String[] mapFiles = AssetUtils.listNames("maps");
         for (String fileName : mapFiles) {
-            // 这里简化处理：假设 assets/maps 下的文件都是 LayerData 格式的 JSON
-            // 且文件名格式为 <areaId>_<floor>.json 或者 <areaId>.json (默认为 floor_1)
+            // Check if it's a directory by checking if it has children in index
+            String[] subFiles = AssetUtils.listNames("maps/" + fileName);
             
-            FileHandle source = Gdx.files.internal("maps/" + fileName);
-            if (source.isDirectory()) {
-                // 如果是目录，递归复制? 目前 AssetUtils.listNames 返回的是文件名或一级目录名
-                // 如果是目录，需要再次 list
-                String[] subFiles = AssetUtils.listNames("maps/" + fileName);
+            if (subFiles.length > 0) {
+                // It is a directory (e.g. maps/stone_tower/)
                 FileHandle targetSubDir = targetAreasDir.child(fileName);
                 targetSubDir.mkdirs();
                 
                 for (String sub : subFiles) {
                     FileHandle subSource = Gdx.files.internal("maps/" + fileName + "/" + sub);
-                    if (!subSource.isDirectory()) {
-                         subSource.copyTo(targetSubDir);
-                    }
+                    // Assume sub files are not directories (flat structure for now inside area folders)
+                    processMapFile(subSource, targetSubDir.child(sub));
                 }
             } else {
-                // 是文件
+                // It is a file (e.g. maps/camp.json)
                 if (fileName.endsWith(".json")) {
-                    // 假设是 areaName.json -> areaName/floor_1.json
+                    FileHandle source = Gdx.files.internal("maps/" + fileName);
                     String areaName = fileName.replace(".json", "");
                     FileHandle targetDir = targetAreasDir.child(areaName);
                     targetDir.mkdirs();
-                    source.copyTo(targetDir.child("floor_1.json"));
+                    processMapFile(source, targetDir.child("floor_1.json"));
                 }
             }
         }
+    }
+
+    private static void processMapFile(FileHandle source, FileHandle target) {
+        // Try to load as GameMapData first (Legacy format)
+        try {
+            GameMapData gameMapData = json.fromJson(GameMapData.class, source);
+            // Simple check: GameMapData usually has grid
+            if (gameMapData != null && gameMapData.grid != null) {
+                // Convert to LayerData
+                LayerData layerData = MapIO.fromGameMapData(gameMapData);
+                saveJson(target, layerData);
+                DLog.logT("SaveManager", "Converted map " + source.name() + " to LayerData.");
+                return;
+            }
+        } catch (Exception e) {
+            // Not GameMapData or parse error
+        }
+        
+        // Try to load as LayerData (New format)
+        try {
+            LayerData layerData = json.fromJson(LayerData.class, source);
+            if (layerData != null && (layerData.floorIds != null || layerData.blockIds != null)) {
+                // Valid LayerData, copy or save
+                saveJson(target, layerData);
+                 DLog.logT("SaveManager", "Imported LayerData map " + source.name());
+                return;
+            }
+        } catch (Exception e) {
+            // Not LayerData
+        }
+        
+        DLog.logErr("SaveManager", "Failed to process map file: " + source.path());
     }
 
     public static SaveData loadSaveMeta(String saveName) {

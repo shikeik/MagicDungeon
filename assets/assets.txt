@@ -5,17 +5,13 @@ ai_draw_cmds/ice_sphere.json
 ai_draw_cmds/metallic_orb.json
 ai_draw_cmds/stone_brick.json
 engine.index
-engine/libs/gdx-1.12.1.jar
-engine/libs/gdx-freetype-1.12.1.jar
-engine/libs/gdx-tools-1.12.1.jar
-engine/libs/magicdungeon.jar
-engine/libs/vis-ui-1.5.3.jar
 fonts/HYSongYunLangHeiW-1.ttf
 fonts/NotoSansMonoCJKsc-Regular.otf
 fonts/ark-pixel-10px-monospaced-zh_cn.ttf
 greetings.png
 icon.ico
 libgdx.png
+maps/.gitkeep
 packs/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton1/v1/skeleton_v1_1.png
 packs/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton1/v1/skeleton_v1_2.png
 packs/2D Pixel Dungeon Asset Pack/Character_animation/monsters_idle/skeleton1/v1/skeleton_v1_3.png

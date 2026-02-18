@@ -62,6 +62,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.goldsprite.magicdungeon.model.LayerData;
+import com.goldsprite.magicdungeon.model.SaveData;
+import com.goldsprite.magicdungeon.systems.SaveManager;
+import com.goldsprite.magicdungeon.utils.MapIO;
+import com.goldsprite.magicdungeon.core.MonsterState;
+import com.goldsprite.magicdungeon.core.ItemState;
+import com.badlogic.gdx.files.FileHandle;
+
 /**
  * 简易营地编辑器 (CampEditorScreen)
  * 支持多层地图编辑、实体/物品投放、AI逻辑验证
@@ -70,6 +78,7 @@ public class CampEditorScreen extends GScreen {
 
     // --- 数据模型 ---
     public enum EditorMode { MAP, ITEM, ENTITY }
+    public enum EditScope { INTERNAL, LOCAL }
     
     // 实体选择包装
     public static class EntitySelection {
@@ -106,6 +115,11 @@ public class CampEditorScreen extends GScreen {
 
     // --- 状态 ---
     private EditorMode currentMode = EditorMode.MAP;
+    private EditScope currentScope = EditScope.INTERNAL;
+    private String currentSaveName = null;
+    private String currentAreaId = "camp";
+    private int currentFloor = 1; // Default floor
+
     private TileType selectedTileType = TileType.Floor;
     private EntitySelection selectedEntity = null; // Item or Monster
     private boolean showGrid = true;
@@ -138,21 +152,19 @@ public class CampEditorScreen extends GScreen {
         shapeRenderer = new ShapeRenderer();
         
         // 初始化代理 Dungeon
-        // 注意：CampEditorScreen 使用自定义的 mapLayers 逻辑
-        // 我们直接使用 renderProxy 的 map 字段作为单一的“碰撞层” (Collision Layer)
-        // 当编辑 mapLayers 时，我们会同步更新这个碰撞层
         renderProxy = new Dungeon(50, 50, 0); 
         renderProxy.level = 0; // 营地模式
         
-        // 初始化图层
-        for (int i = 0; i < 3; i++) {
-            addMapLayer();
+        // 初始化图层 (固定两层: 0=Floor, 1=Block)
+        mapLayers.clear();
+        for (int i = 0; i < 2; i++) {
+            Tile[][] layer = new Tile[50][50];
+            mapLayers.add(layer);
             if (i == 0) {
                 // 第一层填充草地
-                Tile[][] layer = mapLayers.get(0);
                 for (int x = 0; x < 50; x++) {
                     for (int y = 0; y < 50; y++) {
-                        layer[x][y] = new Tile(TileType.Grass);
+                        layer[y][x] = new Tile(TileType.Grass);
                     }
                 }
             }
@@ -248,6 +260,70 @@ public class CampEditorScreen extends GScreen {
         
         toolsContent.add(new VisLabel("Camp Editor")).pad(10).row();
 
+        // Scope Selection
+        VisTable scopeTable = new VisTable();
+        VisTextButton btnInternal = new VisTextButton("Internal", "toggle");
+        VisTextButton btnLocal = new VisTextButton("Local", "toggle");
+        ButtonGroup<VisTextButton> scopeGroup = new ButtonGroup<>(btnInternal, btnLocal);
+        
+        ChangeListener scopeListener = new ChangeListener() {
+            @Override public void changed(ChangeEvent event, Actor actor) {
+                if (btnInternal.isChecked()) currentScope = EditScope.INTERNAL;
+                else if (btnLocal.isChecked()) currentScope = EditScope.LOCAL;
+                refreshContentPanel();
+            }
+        };
+        btnInternal.addListener(scopeListener);
+        btnLocal.addListener(scopeListener);
+        btnInternal.setChecked(true);
+        
+        scopeTable.add(btnInternal).width(80).pad(2);
+        scopeTable.add(btnLocal).width(80).pad(2);
+        toolsContent.add(scopeTable).row();
+
+        // Save Selection (Visible only in Local mode ideally, but keep simple)
+        VisSelectBox<String> saveSelect = new VisSelectBox<>();
+        List<SaveData> saves = SaveManager.listSaves();
+        Array<String> saveNames = new Array<>();
+        for(SaveData s : saves) saveNames.add(s.saveName);
+        if (saveNames.size == 0) saveNames.add("No Saves");
+        saveSelect.setItems(saveNames);
+        
+        saveSelect.addListener(new ChangeListener() {
+            @Override public void changed(ChangeEvent event, Actor actor) {
+                currentSaveName = saveSelect.getSelected();
+                if ("No Saves".equals(currentSaveName)) currentSaveName = null;
+            }
+        });
+        // Initial selection
+        if (saveNames.size > 0 && !"No Saves".equals(saveNames.first())) {
+            currentSaveName = saveNames.first();
+        }
+        
+        toolsContent.add(new VisLabel("Save:")).padTop(5).row();
+        toolsContent.add(saveSelect).expandX().fillX().padBottom(5).row();
+
+        // Save/Area/Floor Inputs
+        VisTable metaTable = new VisTable();
+        metaTable.defaults().pad(2);
+        
+        VisTextField areaField = new VisTextField("camp");
+        areaField.setMessageText("Area ID");
+        areaField.setTextFieldListener((field, c) -> currentAreaId = field.getText());
+        
+        VisTextField floorField = new VisTextField("1");
+        floorField.setMessageText("Floor");
+        floorField.setTextFieldListener((field, c) -> {
+            try { currentFloor = Integer.parseInt(field.getText()); } catch(Exception e){}
+        });
+
+        metaTable.add(new VisLabel("Area:")).right();
+        metaTable.add(areaField).width(60).row();
+        metaTable.add(new VisLabel("Floor:")).right();
+        metaTable.add(floorField).width(60).row();
+        
+        toolsContent.add(metaTable).row();
+
         // 模式切换 (Map, Item, Entity)
         VisTable modeTable = new VisTable();
         VisTextButton btnModeMap = new VisTextButton("Map", "toggle");
@@ -283,13 +359,24 @@ public class CampEditorScreen extends GScreen {
         toolsContent.add(new VisLabel("--- Settings ---")).padTop(20).row();
         
         // Save Button
-        VisTextButton btnSave = new VisTextButton("Save Map");
+        VisTable saveLoadTable = new VisTable();
+        VisTextButton btnSave = new VisTextButton("Save");
         btnSave.addListener(new ChangeListener() {
             @Override public void changed(ChangeEvent event, Actor actor) { 
                 saveMap();
             }
         });
-        toolsContent.add(btnSave).fillX().pad(10).row();
+        
+        VisTextButton btnLoad = new VisTextButton("Load");
+        btnLoad.addListener(new ChangeListener() {
+            @Override public void changed(ChangeEvent event, Actor actor) { 
+                loadMap();
+            }
+        });
+        
+        saveLoadTable.add(btnSave).expandX().fillX().pad(5);
+        saveLoadTable.add(btnLoad).expandX().fillX().pad(5);
+        toolsContent.add(saveLoadTable).fillX().row();
         
         // Grid Toggle
         VisCheckBox cbGrid = new VisCheckBox("Show Grid", true);
@@ -726,50 +813,174 @@ public class CampEditorScreen extends GScreen {
     }
 
     private void saveMap() {
-        GameMapData data = new GameMapData();
-        data.width = 50;
-        data.height = 50;
-        data.themeName = DungeonTheme.DEFAULT.name();
+        // Build LayerData
+        LayerData data = new LayerData(50, 50);
         
-        // Flatten map
-        data.grid = new String[data.height][data.width];
-        for(int y=0; y<data.height; y++) {
-            for(int x=0; x<data.width; x++) {
-                Tile t = null;
-                // Top-down search to find visible tile
-                for(int i=mapLayers.size()-1; i>=0; i--) {
-                     if(mapLayers.get(i)[y][x] != null) {
-                         t = mapLayers.get(i)[y][x];
-                         break;
-                     }
-                }
-                if(t != null) {
-                    data.grid[y][x] = t.type.name();
+        // Layer 0: Floor
+        Tile[][] floorLayer = mapLayers.get(0);
+        for(int y=0; y<50; y++) {
+            for(int x=0; x<50; x++) {
+                Tile t = floorLayer[y][x];
+                if(t != null) data.floorIds[y*50+x] = t.type.name();
+            }
+        }
+        
+        // Layer 1: Block
+        if (mapLayers.size() > 1) {
+            Tile[][] blockLayer = mapLayers.get(1);
+            for(int y=0; y<50; y++) {
+                for(int x=0; x<50; x++) {
+                    Tile t = blockLayer[y][x];
+                    if(t != null) data.blockIds[y*50+x] = t.type.name();
                 }
             }
         }
         
         // Entities
-        data.entities = new ArrayList<>();
         for(Monster m : monsters) {
-            data.entities.add(new MapEntityData(m.x, m.y, m.type.name()));
+            data.monsters.add(new MonsterState(m.x, m.y, m.type.name(), m.hp, m.maxHp));
         }
         
         // Items
-        data.items = new ArrayList<>();
         for(Item item : items) {
-            data.items.add(new MapItemData(item.x, item.y, item.item.data.name()));
+            data.items.add(new ItemState(
+                item.x, item.y, item.item.data.name(), item.item.quality.name(),
+                item.item.atk, item.item.def, item.item.heal, item.item.manaRegen, item.item.count
+            ));
         }
         
-        Json json = new Json();
-        json.setOutputType(JsonWriter.OutputType.json);
-        String jsonStr = json.prettyPrint(data);
+        if (currentScope == EditScope.INTERNAL) {
+            Json json = new Json();
+            json.setOutputType(JsonWriter.OutputType.json);
+            String jsonStr = json.prettyPrint(data);
+            
+            String path = "assets/maps/" + currentAreaId + "/floor_" + currentFloor + ".json";
+            
+            FileHandle file = Gdx.files.local(path);
+            file.parent().mkdirs();
+            file.writeString(jsonStr, false);
+            System.out.println("Map saved (Internal) to " + file.file().getAbsolutePath());
+            
+        } else {
+            // Local Scope
+            if (currentSaveName == null) {
+                // Should show error or select save
+                System.err.println("No save selected!");
+                return;
+            }
+            SaveManager.saveLayerData(currentSaveName, currentAreaId, currentFloor, data);
+            System.out.println("Map saved (Local) to " + currentSaveName + "/" + currentAreaId + "/" + currentFloor);
+        }
+    }
+
+    private void loadMap() {
+        LayerData data = null;
         
-        // Save to project assets (using absolute path for now to ensure it works in IDE)
-        String path = "assets/maps/camp.json";
-        // Gdx.files.local points to project root in desktop project usually? No, it's relative to working dir.
-        // Let's try relative path first.
-        Gdx.files.local(path).writeString(jsonStr, false);
-        System.out.println("Map saved to " + Gdx.files.local(path).file().getAbsolutePath());
+        if (currentScope == EditScope.INTERNAL) {
+            String path = "assets/maps/" + currentAreaId + "/floor_" + currentFloor + ".json";
+            FileHandle file = Gdx.files.local(path);
+            if (!file.exists()) {
+                System.err.println("File not found: " + path);
+                return;
+            }
+            try {
+                data = new Json().fromJson(LayerData.class, file);
+            } catch (Exception e) {
+                System.err.println("Error loading internal map: " + e.getMessage());
+                return;
+            }
+        } else {
+            if (currentSaveName == null) {
+                System.err.println("No save selected!");
+                return;
+            }
+            if (!SaveManager.hasLayerData(currentSaveName, currentAreaId, currentFloor)) {
+                 System.err.println("Layer data not found for " + currentSaveName + " / " + currentAreaId + " / " + currentFloor);
+                 return;
+            }
+            data = SaveManager.loadLayerData(currentSaveName, currentAreaId, currentFloor);
+        }
+        
+        if (data == null) return;
+        
+        // Restore Map Layers
+        // We expect fixed 2 layers
+        // Clear current
+        for(int i=0; i<mapLayers.size(); i++) {
+            Tile[][] layer = mapLayers.get(i);
+            for(int y=0; y<50; y++) {
+                for(int x=0; x<50; x++) layer[y][x] = null;
+            }
+        }
+        
+        // Layer 0: Floor
+        if (data.floorIds != null) {
+            Tile[][] floorLayer = mapLayers.get(0);
+            for(int i=0; i<data.floorIds.length; i++) {
+                String id = data.floorIds[i];
+                if (id != null) {
+                    int x = i % data.width; // Assuming width is 50
+                    int y = i / data.width;
+                    if (x < 50 && y < 50) {
+                        try {
+                            floorLayer[y][x] = new Tile(TileType.valueOf(id));
+                        } catch(Exception e){}
+                    }
+                }
+            }
+        }
+        
+        // Layer 1: Block
+        if (data.blockIds != null) {
+            Tile[][] blockLayer = mapLayers.get(1);
+            for(int i=0; i<data.blockIds.length; i++) {
+                String id = data.blockIds[i];
+                if (id != null) {
+                    int x = i % data.width;
+                    int y = i / data.width;
+                    if (x < 50 && y < 50) {
+                        try {
+                            blockLayer[y][x] = new Tile(TileType.valueOf(id));
+                        } catch(Exception e){}
+                    }
+                }
+            }
+        }
+        
+        rebuildCollisionMap();
+        
+        // Restore Entities
+        monsters.clear();
+        items.clear();
+        spineCache.clear();
+        
+        for(MonsterState ms : data.monsters) {
+            try {
+                MonsterType type = MonsterType.valueOf(ms.typeName);
+                Monster m = new Monster(ms.x, ms.y, type);
+                m.hp = ms.hp;
+                m.maxHp = ms.maxHp;
+                m.visualX = m.x * Constants.TILE_SIZE;
+                m.visualY = m.y * Constants.TILE_SIZE;
+                monsters.add(m);
+            } catch(Exception e){}
+        }
+        
+        for(ItemState is : data.items) {
+             try {
+                ItemData id = ItemData.valueOf(is.itemName); // Assuming ItemState stores ItemData enum name
+                InventoryItem ii = new InventoryItem(id);
+                ii.quality = com.goldsprite.magicdungeon.entities.ItemQuality.valueOf(is.quality);
+                ii.atk = is.atk; ii.def = is.def; ii.heal = is.heal; ii.manaRegen = is.manaRegen;
+                ii.count = is.count > 0 ? is.count : 1;
+                
+                Item item = new Item(is.x, is.y, ii);
+                item.visualX = item.x * Constants.TILE_SIZE;
+                item.visualY = item.y * Constants.TILE_SIZE;
+                items.add(item);
+             } catch(Exception e){}
+        }
+        
+        System.out.println("Map loaded!");
     }
 }

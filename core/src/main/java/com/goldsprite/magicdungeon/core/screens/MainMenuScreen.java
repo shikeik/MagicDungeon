@@ -108,6 +108,7 @@ public class MainMenuScreen extends GScreen {
 		menuButtons.clear();
 		focusedIndex = -1;
 
+		/*
 		// 种子输入区域
 		VisTable seedTable = new VisTable();
 
@@ -135,24 +136,29 @@ public class MainMenuScreen extends GScreen {
 		seedTable.add(randomSeedBtn).width(30);
 
 		menuGroup.addActor(seedTable);
+		*/
+
+		float targetX = 50;
+		float currentY = 50;
+		float gap = 70;
 
 		currentY -= gap;
 
 		// 按钮
-		createMenuButton("开始游戏", targetX, currentY, 0.1f, new ClickListener() {
+		createMenuButton("新游戏", targetX, currentY, 0.1f, new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				startGame();
+				stage.addActor(new com.goldsprite.magicdungeon.ui.NewGameDialog());
 			}
 		});
 
 		currentY -= gap;
 
-		if (SaveManager.hasSave()) {
+		if (!com.goldsprite.magicdungeon.systems.SaveManager.listSaves().isEmpty()) {
 			createMenuButton("继续游戏", targetX, currentY, 0.2f, new ClickListener() {
 				@Override
-				public void clicked(InputEvent event, float x, float y) {
-					continueGame();
+			public void clicked(InputEvent event, float x, float y) {
+					stage.addActor(new com.goldsprite.magicdungeon.ui.LoadGameDialog());
 				}
 			});
 			currentY -= gap;
@@ -175,7 +181,7 @@ public class MainMenuScreen extends GScreen {
 		});
 
 		// 种子表动画
-		seedTable.addAction(createEntranceAction(0f));
+		// seedTable.addAction(createEntranceAction(0f));
 
 		// 初始布局
 		updateLayout();
@@ -229,6 +235,7 @@ public class MainMenuScreen extends GScreen {
 		);
 	}
 
+	/*
 	private void startGame() {
 		long seed = 0;
 		try {
@@ -252,6 +259,7 @@ public class MainMenuScreen extends GScreen {
 			gameScreen.loadGame();
 		});
 	}
+	*/
 
 	@Override
 	public void show() {

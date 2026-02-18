@@ -83,10 +83,15 @@ com.goldsprite.magicdungeon.entities.Player
 com.goldsprite.magicdungeon.entities.PlayerStats
 com.goldsprite.magicdungeon.input.InputAction
 com.goldsprite.magicdungeon.input.InputManager
+com.goldsprite.magicdungeon.model.AreaData
+com.goldsprite.magicdungeon.model.LayerData
+com.goldsprite.magicdungeon.model.PlayerData
+com.goldsprite.magicdungeon.model.SaveData
 com.goldsprite.magicdungeon.progress.ProgressLayout
 com.goldsprite.magicdungeon.progress.ProgressManager
 com.goldsprite.magicdungeon.progress.ProgressNode
 com.goldsprite.magicdungeon.progress.ProgressScreen
+com.goldsprite.magicdungeon.screens.LoadingScreen
 com.goldsprite.magicdungeon.screens.WorldMapScreen
 com.goldsprite.magicdungeon.systems.AudioSystem
 com.goldsprite.magicdungeon.systems.SaveManager
@@ -94,8 +99,11 @@ com.goldsprite.magicdungeon.tests.ScrollLayoutTestScreen
 com.goldsprite.magicdungeon.ui.CombatLogUI
 com.goldsprite.magicdungeon.ui.GameHUD
 com.goldsprite.magicdungeon.ui.ItemRenderer
+com.goldsprite.magicdungeon.ui.LoadGameDialog
+com.goldsprite.magicdungeon.ui.NewGameDialog
 com.goldsprite.magicdungeon.utils.AssetUtils
 com.goldsprite.magicdungeon.utils.Constants
+com.goldsprite.magicdungeon.utils.MapIO
 com.goldsprite.magicdungeon.utils.texturegenerator.NeonGenerator
 com.goldsprite.magicdungeon.utils.texturegenerator.NeonItemGenerator
 com.goldsprite.magicdungeon.utils.texturegenerator.NeonSpriteGenerator
@@ -112,6 +120,9 @@ com.goldsprite.magicdungeon.world.DungeonTheme
 com.goldsprite.magicdungeon.world.MapGenerator
 com.goldsprite.magicdungeon.world.Tile
 com.goldsprite.magicdungeon.world.TileType
+com.goldsprite.magicdungeon.world.data.GameMapData
+com.goldsprite.magicdungeon.world.data.MapEntityData
+com.goldsprite.magicdungeon.world.data.MapItemData
 com.goldsprite.neonskel.adapter.ecs.Component
 com.goldsprite.neonskel.adapter.ecs.SkeletonComponent
 com.goldsprite.neonskel.data.NeonAnimation

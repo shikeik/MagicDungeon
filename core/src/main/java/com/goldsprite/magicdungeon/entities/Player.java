@@ -13,7 +13,8 @@ import com.goldsprite.magicdungeon.vfx.VFXManager;
 import com.badlogic.gdx.math.MathUtils;
 
 public class Player extends Entity {
-	public float moveTimer;
+    public String name = "Player";
+    public float moveTimer;
 	public float moveDelay;
 
 	private float regenTimer = 0;
