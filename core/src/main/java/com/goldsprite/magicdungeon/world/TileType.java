@@ -13,5 +13,6 @@ public enum TileType {
 	Dungeon_Entrance,
 	Pillar,
 	Torch,
-	Window
+	Window,
+	Dirt
 }

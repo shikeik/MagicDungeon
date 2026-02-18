@@ -143,14 +143,25 @@ public class DualGridDungeonRenderer implements Disposable {
             // === 营地模式 (Level 0) ===
             // 恢复完整的自然地形渲染逻辑
 
-            // Layer 0: Dirt (Base) - Draw dirt everywhere there is a valid tile
-            renderLayer(batch, dungeon, "dirt", (t) -> t != null);
+            // Layer 0: Dirt (Base) - Only draw if TileType is explicitly Dirt
+            renderLayer(batch, dungeon, "dirt", (t) -> t != null && t.type == TileType.Dirt);
 
-            // Layer 1: Brick - Draw for indoor tiles (Floor, Wall, etc.) if any in camp
+            // Layer 0.5: Floor (Standard)
+            TextureRegion floorTex = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(TileType.Floor);
+            if (floorTex != null) {
+                for (int x = 0; x < dungeon.width; x++) {
+                    for (int y = 0; y < dungeon.height; y++) {
+                        Tile t = dungeon.getTile(x, y);
+                        if (t != null && t.type == TileType.Floor) {
+                            batch.draw(floorTex, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
+
+            // Layer 1: Brick - Draw for Wall only (removed Floor, Door, Stairs)
             renderLayer(batch, dungeon, "brick", (t) -> t != null && (
-                t.type == TileType.Floor || t.type == TileType.Wall ||
-                t.type == TileType.Door || t.type == TileType.Stairs_Up ||
-                t.type == TileType.Stairs_Down || t.type == TileType.Dungeon_Entrance
+                t.type == TileType.Wall || t.type == TileType.Torch || t.type == TileType.Window
             ));
 
             // Layer 2: Sand
@@ -158,6 +169,25 @@ public class DualGridDungeonRenderer implements Disposable {
 
             // Layer 3: Grass
             renderLayer(batch, dungeon, "grass", (t) -> t != null && t.type == TileType.Grass);
+
+            // Layer 4: Simple Objects (Tree, Door, Stairs, StonePath, etc.)
+            for (int x = 0; x < dungeon.width; x++) {
+                for (int y = 0; y < dungeon.height; y++) {
+                    Tile t = dungeon.getTile(x, y);
+                    if (t == null) continue;
+                    
+                    if (t.type == TileType.Tree || t.type == TileType.Door || 
+                        t.type == TileType.Stairs_Up || t.type == TileType.Stairs_Down || 
+                        t.type == TileType.StonePath || t.type == TileType.Dungeon_Entrance ||
+                        t.type == TileType.Pillar) {
+                            
+                        TextureRegion region = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(t.type);
+                        if (region != null) {
+                             batch.draw(region, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
 
         } else {
             // === 地牢模式 (Level > 0) ===
@@ -205,6 +235,25 @@ public class DualGridDungeonRenderer implements Disposable {
                         batch.draw(torchTex, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                     } else if (t.type == TileType.Window && windowTex != null) {
                         batch.draw(windowTex, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+            
+            // 4. Simple Tiles (Tree, Door, Stairs, StonePath, etc.)
+            for (int x = 0; x < dungeon.width; x++) {
+                for (int y = 0; y < dungeon.height; y++) {
+                    Tile t = dungeon.getTile(x, y);
+                    if (t == null) continue;
+                    
+                    if (t.type == TileType.Tree || t.type == TileType.Door || 
+                        t.type == TileType.Stairs_Up || t.type == TileType.Stairs_Down || 
+                        t.type == TileType.StonePath || t.type == TileType.Dungeon_Entrance ||
+                        t.type == TileType.Pillar) {
+                            
+                        TextureRegion region = com.goldsprite.magicdungeon.assets.TextureManager.getInstance().getTile(t.type);
+                        if (region != null) {
+                             batch.draw(region, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        }
                     }
                 }
             }
