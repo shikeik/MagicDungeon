@@ -7,24 +7,20 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.goldsprite.DebugLaunchConfig;
 import com.goldsprite.gdengine.assets.VisUIHelper;
-import com.goldsprite.gdengine.audio.SynthAudio;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.gdengine.ui.widget.single.ToastUI;
 import com.goldsprite.gdengine.testing.AutoTestManager;
-import com.goldsprite.gdengine.web.DocServer;
-import com.goldsprite.magicdungeon.input.InputAction;
-import com.goldsprite.magicdungeon.input.InputManager;
-import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
-import com.kotcrab.vis.ui.VisUI;
-
-import com.goldsprite.magicdungeon.DebugLaunchConfig;
+import com.goldsprite.gdengine.ui.widget.single.ToastUI;
 import com.goldsprite.magicdungeon.config.LaunchMode;
+import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
 import com.goldsprite.magicdungeon.testing.IGameAutoTest;
-
+import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.magicdungeon.ui.MagicDungeonLoadingRenderer;
+import com.goldsprite.magicdungeon.input.InputManager;
+import com.goldsprite.magicdungeon.input.InputAction;
 
 public class GdxLauncher extends Game {int k11;
 	private Stage toastStage;
@@ -47,7 +43,6 @@ public class GdxLauncher extends Game {int k11;
 		if (isInitialized) return;
 
 		VisUIHelper.loadWithChineseFont();
-		SynthAudio.init();
 		userType = Gdx.app.getType();
 		debug = DLog.getInstance();
 		debug.initUI();
@@ -140,8 +135,6 @@ public class GdxLauncher extends Game {int k11;
 		try{
 			ScreenManager.getInstance().dispose();
 			if (debug != null) debug.dispose();
-			if(SynthAudio.isInitialized()) SynthAudio.dispose();
-			DocServer.stopServer(); // [Fix] 停止文档服务器线程，防止 JVM 挂起
 			if(VisUI.isLoaded()) VisUI.dispose();
 		}catch (Throwable ignored){} finally {
 			System.exit(0); // 莫名奇妙的visUI.dispose bug导致运行程序不结束所以这里手动强制停止

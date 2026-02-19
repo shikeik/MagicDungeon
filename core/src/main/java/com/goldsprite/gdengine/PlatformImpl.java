@@ -3,14 +3,12 @@ package com.goldsprite.gdengine;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.gdengine.web.IWebBrowser;
 
 import java.util.function.Consumer;
 
 public class PlatformImpl {
 	public static Consumer<Boolean> showSoftInputKeyBoard;
 	public static Consumer<Boolean> fullScreenEvent;
-	public static IWebBrowser webBrower;
 
 	public static ScreenManager.Orientation defaultOrientation = ScreenManager.Orientation.Portrait;
 

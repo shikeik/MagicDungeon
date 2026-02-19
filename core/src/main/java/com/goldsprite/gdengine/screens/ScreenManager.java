@@ -56,18 +56,18 @@ public class ScreenManager implements Disposable {
 	// 2. 定义回调接口 (底层不依赖 Android/Lwjgl)
 	public static Consumer<Orientation> orientationChanger;
 	public static List<Runnable> exitGame = new ArrayList<>();//声明退出游戏事件回调，需要在各平台自身实现
-    
-    // [新增] 输入系统钩子，解耦具体输入实现
-    public static Runnable inputUpdater;
-    public static Supplier<Boolean> backKeyTrigger = () -> 
-        Gdx.input.isKeyJustPressed(Input.Keys.BACK) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
+	
+	// [新增] 输入系统钩子，解耦具体输入实现
+	public static Runnable inputUpdater;
+	public static Supplier<Boolean> backKeyTrigger = () -> 
+		Gdx.input.isKeyJustPressed(Input.Keys.BACK) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE);
 
-    // [新增] Loading 渲染器接口
-    public interface LoadingRenderer {
-        void render(float delta, float alpha);
-        void setText(String text);
-    }
-    private LoadingRenderer loadingRenderer;
+	// [新增] Loading 渲染器接口
+	public interface LoadingRenderer {
+		void render(float delta, float alpha);
+		void setText(String text);
+	}
+	private LoadingRenderer loadingRenderer;
 
 	private static ScreenManager instance;
 	private final Map<Class<?>, GScreen> screens = new HashMap<>();
@@ -199,29 +199,29 @@ public class ScreenManager implements Disposable {
 	 * @param minDuration 最小转场持续时间 (秒)，防止加载过快导致动画闪烁。
 	 */
 	public void playLoadingTransition(Consumer<Runnable> loader, String tipText, float minDuration) {
-	    if (transitionState != TransitionState.NONE) return;
-	    
-	    this.loadingMinDuration = minDuration;
-	    this.loadingElapsedTime = 0f;
-	    this.loadingTaskFinished = false;
+		if (transitionState != TransitionState.NONE) return;
+		
+		this.loadingMinDuration = minDuration;
+		this.loadingElapsedTime = 0f;
+		this.loadingTaskFinished = false;
 
-        if (loadingRenderer != null) {
-            loadingRenderer.setText(tipText);
-        }
-	    
-	    playTransition(() -> {
-	        // 进入 LOADING_WAIT 状态，而不是立即 FADE_IN
-	        transitionState = TransitionState.LOADING_WAIT;
-	        
-	        // 执行加载任务
-	        if (loader != null) {
-	            loader.accept(() -> {
-	                loadingTaskFinished = true;
-	            });
-	        } else {
-	            loadingTaskFinished = true;
-	        }
-	    });
+		if (loadingRenderer != null) {
+			loadingRenderer.setText(tipText);
+		}
+		
+		playTransition(() -> {
+			// 进入 LOADING_WAIT 状态，而不是立即 FADE_IN
+			transitionState = TransitionState.LOADING_WAIT;
+			
+			// 执行加载任务
+			if (loader != null) {
+				loader.accept(() -> {
+					loadingTaskFinished = true;
+				});
+			} else {
+				loadingTaskFinished = true;
+			}
+		});
 	}
 
 	/**
@@ -246,47 +246,47 @@ public class ScreenManager implements Disposable {
 	 * 渲染(已初始化的)当前屏幕
 	 */
 	public void render() {
-        // 全局输入更新
-        if (inputUpdater != null) inputUpdater.run();
-        
-        // 全局返回键逻辑 (转场期间禁用)
-        if (transitionState == TransitionState.NONE && backKeyTrigger != null && backKeyTrigger.get()) {
-            GScreen current = getCurScreen();
-            boolean consumed = false;
-            if (current != null) {
-                consumed = current.handleBackKey();
-            }
-            
-            if (!consumed) {
-                if (!popLastScreen()) {
-                    if (exitGame != null && !exitGame.isEmpty()) exitGame.forEach(r -> r.run());
-                }
-            }
-        }
+		// 全局输入更新
+		if (inputUpdater != null) inputUpdater.run();
+		
+		// 全局返回键逻辑 (转场期间禁用)
+		if (transitionState == TransitionState.NONE && backKeyTrigger != null && backKeyTrigger.get()) {
+			GScreen current = getCurScreen();
+			boolean consumed = false;
+			if (current != null) {
+				consumed = current.handleBackKey();
+			}
+			
+			if (!consumed) {
+				if (!popLastScreen()) {
+					if (exitGame != null && !exitGame.isEmpty()) exitGame.forEach(r -> r.run());
+				}
+			}
+		}
 
-        if (curScreen == null) return; // 确保 curScreen 不为 null
+		if (curScreen == null) return; // 确保 curScreen 不为 null
 
-        if (!curScreen.isInitialized()) return;
+		if (!curScreen.isInitialized()) return;
 
-        float delta = Gdx.graphics.getDeltaTime();
-        curScreen.getUIViewport().apply();
-        curScreen.render(delta);
-        
-        // 渲染转场效果
-        renderTransition(delta);
-    }
-    
-    /**
-     * 获取当前屏幕的 Stage (便捷方法)
-     */
-    public Stage getStage() {
-        if (curScreen != null) {
-            return curScreen.getStage();
-        }
-        return null;
-    }
+		float delta = Gdx.graphics.getDeltaTime();
+		curScreen.getUIViewport().apply();
+		curScreen.render(delta);
+		
+		// 渲染转场效果
+		renderTransition(delta);
+	}
+	
+	/**
+	 * 获取当前屏幕的 Stage (便捷方法)
+	 */
+	public Stage getStage() {
+		if (curScreen != null) {
+			return curScreen.getStage();
+		}
+		return null;
+	}
 
-    private void renderTransition(float delta) {
+	private void renderTransition(float delta) {
 		if (transitionState == TransitionState.NONE) return;
 
 		transitionTime += delta;
@@ -303,22 +303,22 @@ public class ScreenManager implements Disposable {
 				
 				// 如果中间回调没有改变状态（例如改为 LOADING_WAIT），则默认切换到 FADE_IN
 				if (transitionState == TransitionState.FADE_OUT) {
-				    transitionState = TransitionState.FADE_IN;
+					transitionState = TransitionState.FADE_IN;
 				}
 				
 				transitionTime = 0f;
 				alpha = 1f; // 保持全黑一帧
 			}
 		} else if (transitionState == TransitionState.LOADING_WAIT) {
-		    // 保持全黑，显示加载动画
-		    alpha = 1f;
-		    loadingElapsedTime += delta;
-		    
-		    if (loadingElapsedTime >= loadingMinDuration && loadingTaskFinished) {
-		        // 加载完成且满足最小时长，开始 Fade In
-		        transitionState = TransitionState.FADE_IN;
-		        transitionTime = 0f;
-		    }
+			// 保持全黑，显示加载动画
+			alpha = 1f;
+			loadingElapsedTime += delta;
+			
+			if (loadingElapsedTime >= loadingMinDuration && loadingTaskFinished) {
+				// 加载完成且满足最小时长，开始 Fade In
+				transitionState = TransitionState.FADE_IN;
+				transitionTime = 0f;
+			}
 		} else if (transitionState == TransitionState.FADE_IN) {
 			alpha = 1f - Math.min(1f, transitionTime / transitionDuration);
 			if (transitionTime >= transitionDuration) {
@@ -351,7 +351,7 @@ public class ScreenManager implements Disposable {
 			
 			// 如果处于 LOADING_WAIT 状态，绘制加载动画
 			if (transitionState == TransitionState.LOADING_WAIT && loadingRenderer != null) {
-			    loadingRenderer.render(delta, alpha);
+				loadingRenderer.render(delta, alpha);
 			}
 			
 			Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -547,62 +547,62 @@ public class ScreenManager implements Disposable {
 		imp.removeProcessor(screenImp);
 	}
 
-    /**
-     * 清空屏幕历史栈
-     */
-    public void clearStack() {
-        screenHistory.clear();
-    }
+	/**
+	 * 清空屏幕历史栈
+	 */
+	public void clearStack() {
+		screenHistory.clear();
+	}
 
-    /**
-     * 回退到指定类型的屏幕（如果有的话）。
-     * 会一直 pop 直到栈顶是目标类型的屏幕，然后将其作为当前屏幕。
-     * @return true 如果成功回退，false 如果栈中未找到该类型屏幕
-     */
-    public boolean popTo(Class<? extends GScreen> targetScreenClass) {
-        if (curScreen != null && targetScreenClass.isInstance(curScreen)) return true;
+	/**
+	 * 回退到指定类型的屏幕（如果有的话）。
+	 * 会一直 pop 直到栈顶是目标类型的屏幕，然后将其作为当前屏幕。
+	 * @return true 如果成功回退，false 如果栈中未找到该类型屏幕
+	 */
+	public boolean popTo(Class<? extends GScreen> targetScreenClass) {
+		if (curScreen != null && targetScreenClass.isInstance(curScreen)) return true;
 
-        int targetIndex = -1;
-        // 从栈顶向下查找
-        for (int i = screenHistory.size() - 1; i >= 0; i--) {
-            if (targetScreenClass.isInstance(screenHistory.get(i))) {
-                targetIndex = i;
-                break;
-            }
-        }
+		int targetIndex = -1;
+		// 从栈顶向下查找
+		for (int i = screenHistory.size() - 1; i >= 0; i--) {
+			if (targetScreenClass.isInstance(screenHistory.get(i))) {
+				targetIndex = i;
+				break;
+			}
+		}
 
-        if (targetIndex == -1) return false;
+		if (targetIndex == -1) return false;
 
-        // 移除目标之上的所有屏幕
-        while (screenHistory.size() > targetIndex + 1) {
-            screenHistory.pop();
-        }
+		// 移除目标之上的所有屏幕
+		while (screenHistory.size() > targetIndex + 1) {
+			screenHistory.pop();
+		}
 
-        // 此时栈顶就是目标屏幕，弹出并显示
-        return popLastScreen();
-    }
+		// 此时栈顶就是目标屏幕，弹出并显示
+		return popLastScreen();
+	}
 
-    /**
-     * 获取当前屏幕栈信息
-     * 格式: ScreenA -> ScreenB -> ScreenC
-     */
-    public String getScreenStackInfo() {
-        StringBuilder sb = new StringBuilder();
-        if (screenHistory.isEmpty()) {
-            //sb.append("[Empty]");
-        } else {
-            for (int i = 0; i < screenHistory.size(); i++) {
-                sb.append(screenHistory.get(i).getClass().getSimpleName());
-                sb.append(" -> ");
-            }
-        }
-        
-        if (curScreen != null) {
-            sb.append(curScreen.getClass().getSimpleName());
-        } else {
-            sb.append("null");
-        }
-        
-        return sb.toString();
-    }
+	/**
+	 * 获取当前屏幕栈信息
+	 * 格式: ScreenA -> ScreenB -> ScreenC
+	 */
+	public String getScreenStackInfo() {
+		StringBuilder sb = new StringBuilder();
+		if (screenHistory.isEmpty()) {
+			//sb.append("[Empty]");
+		} else {
+			for (int i = 0; i < screenHistory.size(); i++) {
+				sb.append(screenHistory.get(i).getClass().getSimpleName());
+				sb.append(" -> ");
+			}
+		}
+		
+		if (curScreen != null) {
+			sb.append(curScreen.getClass().getSimpleName());
+		} else {
+			sb.append("null");
+		}
+		
+		return sb.toString();
+	}
 }

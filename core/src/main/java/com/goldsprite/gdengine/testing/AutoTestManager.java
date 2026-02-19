@@ -12,175 +12,175 @@ import java.util.function.Supplier;
  * 模仿 CLogAssert 风格，支持时间线任务执行
  */
 public class AutoTestManager {
-    public static boolean ENABLED = false;
-    
-    private static final AutoTestManager INSTANCE = new AutoTestManager();
-    private final Array<TestTask> taskQueue = new Array<>();
-    private TestTask currentTask;
-    private float totalTime = 0;
+	public static boolean ENABLED = false;
+	
+	private static final AutoTestManager INSTANCE = new AutoTestManager();
+	private final Array<TestTask> taskQueue = new Array<>();
+	private TestTask currentTask;
+	private float totalTime = 0;
 
-    private AutoTestManager() {}
+	private AutoTestManager() {}
 
-    public static AutoTestManager getInstance() {
-        return INSTANCE;
-    }
+	public static AutoTestManager getInstance() {
+		return INSTANCE;
+	}
 
-    public void update(float delta) {
-        if (!ENABLED) return;
+	public void update(float delta) {
+		if (!ENABLED) return;
 
-        totalTime += delta;
+		totalTime += delta;
 
-        if (currentTask != null) {
-            currentTask.update(delta);
-            if (currentTask.isFinished()) {
-                log("[PASS] 任务完成: " + currentTask.name);
-                currentTask = null;
-            }
-        } else {
-            if (taskQueue.size > 0) {
-                currentTask = taskQueue.removeIndex(0);
-                log("[START] 开始任务: " + currentTask.name);
-                currentTask.start();
-            } else {
-                // No more tasks
-            }
-        }
-    }
+		if (currentTask != null) {
+			currentTask.update(delta);
+			if (currentTask.isFinished()) {
+				log("[PASS] 任务完成: " + currentTask.name);
+				currentTask = null;
+			}
+		} else {
+			if (taskQueue.size > 0) {
+				currentTask = taskQueue.removeIndex(0);
+				log("[START] 开始任务: " + currentTask.name);
+				currentTask.start();
+			} else {
+				// No more tasks
+			}
+		}
+	}
 
-    public void add(TestTask task) {
-        taskQueue.add(task);
-    }
-    
-    public void addWait(float seconds) {
-        add(new WaitTask(seconds));
-    }
-    
-    public void addAction(String name, Runnable action) {
-        add(new ActionTask(name, action));
-    }
+	public void add(TestTask task) {
+		taskQueue.add(task);
+	}
+	
+	public void addWait(float seconds) {
+		add(new WaitTask(seconds));
+	}
+	
+	public void addAction(String name, Runnable action) {
+		add(new ActionTask(name, action));
+	}
 
-    public void log(String msg) {
-        System.out.println("[AutoTest] " + msg);
-    }
+	public void log(String msg) {
+		System.out.println("[AutoTest] " + msg);
+	}
 
-    public void logPass(String msg) {
-        System.out.println("[PASS] " + msg);
-    }
+	public void logPass(String msg) {
+		System.out.println("[PASS] " + msg);
+	}
 
-    public void logFail(String msg) {
-        System.err.println("[FAIL] " + msg);
-    }
+	public void logFail(String msg) {
+		System.err.println("[FAIL] " + msg);
+	}
 
-    // --- Task Classes ---
+	// --- Task Classes ---
 
-    public static abstract class TestTask {
-        protected String name;
-        protected boolean finished = false;
+	public static abstract class TestTask {
+		protected String name;
+		protected boolean finished = false;
 
-        public TestTask(String name) {
-            this.name = name;
-        }
+		public TestTask(String name) {
+			this.name = name;
+		}
 
-        public void start() {}
-        public void update(float delta) {}
-        public boolean isFinished() { return finished; }
-    }
+		public void start() {}
+		public void update(float delta) {}
+		public boolean isFinished() { return finished; }
+	}
 
-    public static class WaitTask extends TestTask {
-        private float duration;
-        private float timer;
+	public static class WaitTask extends TestTask {
+		private float duration;
+		private float timer;
 
-        public WaitTask(float duration) {
-            super("Wait " + duration + "s");
-            this.duration = duration;
-        }
+		public WaitTask(float duration) {
+			super("Wait " + duration + "s");
+			this.duration = duration;
+		}
 
-        @Override
-        public void update(float delta) {
-            timer += delta;
-            if (timer >= duration) finished = true;
-        }
-    }
+		@Override
+		public void update(float delta) {
+			timer += delta;
+			if (timer >= duration) finished = true;
+		}
+	}
 
-    public static class ActionTask extends TestTask {
-        private Runnable action;
+	public static class ActionTask extends TestTask {
+		private Runnable action;
 
-        public ActionTask(String name, Runnable action) {
-            super(name);
-            this.action = action;
-        }
+		public ActionTask(String name, Runnable action) {
+			super(name);
+			this.action = action;
+		}
 
-        @Override
-        public void start() {
-            try {
-                action.run();
-                AutoTestManager.getInstance().logPass(name);
-            } catch (Exception e) {
-                AutoTestManager.getInstance().logFail(name + " - " + e.getMessage());
-                e.printStackTrace();
-            }
-            finished = true;
-        }
-    }
-    
-    public static class AssertTask extends TestTask {
-        private BooleanSupplier condition;
-        
-        public AssertTask(String name, BooleanSupplier condition) {
-            super("Assert: " + name);
-            this.condition = condition;
-        }
-        
-        @Override
-        public void start() {
-            if (condition.getAsBoolean()) {
-                AutoTestManager.getInstance().logPass(name);
-            } else {
-                AutoTestManager.getInstance().logFail(name);
-            }
-            finished = true;
-        }
-    }
+		@Override
+		public void start() {
+			try {
+				action.run();
+				AutoTestManager.getInstance().logPass(name);
+			} catch (Exception e) {
+				AutoTestManager.getInstance().logFail(name + " - " + e.getMessage());
+				e.printStackTrace();
+			}
+			finished = true;
+		}
+	}
+	
+	public static class AssertTask extends TestTask {
+		private BooleanSupplier condition;
+		
+		public AssertTask(String name, BooleanSupplier condition) {
+			super("Assert: " + name);
+			this.condition = condition;
+		}
+		
+		@Override
+		public void start() {
+			if (condition.getAsBoolean()) {
+				AutoTestManager.getInstance().logPass(name);
+			} else {
+				AutoTestManager.getInstance().logFail(name);
+			}
+			finished = true;
+		}
+	}
 
-    public static class DragTask extends TestTask {
-        private float startX, startY, endX, endY, duration;
-        private float timer;
+	public static class DragTask extends TestTask {
+		private float startX, startY, endX, endY, duration;
+		private float timer;
 
-        public DragTask(float startX, float startY, float endX, float endY, float duration) {
-            super("Drag " + startX + "," + startY + " -> " + endX + "," + endY);
-            this.startX = startX;
-            this.startY = startY;
-            this.endX = endX;
-            this.endY = endY;
-            this.duration = duration;
-        }
+		public DragTask(float startX, float startY, float endX, float endY, float duration) {
+			super("Drag " + startX + "," + startY + " -> " + endX + "," + endY);
+			this.startX = startX;
+			this.startY = startY;
+			this.endX = endX;
+			this.endY = endY;
+			this.duration = duration;
+		}
 
-        @Override
-        public void start() {
-            InputProcessor ip = Gdx.input.getInputProcessor();
-            if (ip != null) {
-                ip.touchDown((int)startX, (int)startY, 0, Input.Buttons.LEFT);
-            }
-        }
+		@Override
+		public void start() {
+			InputProcessor ip = Gdx.input.getInputProcessor();
+			if (ip != null) {
+				ip.touchDown((int)startX, (int)startY, 0, Input.Buttons.LEFT);
+			}
+		}
 
-        @Override
-        public void update(float delta) {
-            timer += delta;
-            float alpha = Math.min(1, timer / duration);
-            float currentX = startX + (endX - startX) * alpha;
-            float currentY = startY + (endY - startY) * alpha;
-            
-            InputProcessor ip = Gdx.input.getInputProcessor();
-            if (ip != null) {
-                ip.touchDragged((int)currentX, (int)currentY, 0);
-            }
+		@Override
+		public void update(float delta) {
+			timer += delta;
+			float alpha = Math.min(1, timer / duration);
+			float currentX = startX + (endX - startX) * alpha;
+			float currentY = startY + (endY - startY) * alpha;
+			
+			InputProcessor ip = Gdx.input.getInputProcessor();
+			if (ip != null) {
+				ip.touchDragged((int)currentX, (int)currentY, 0);
+			}
 
-            if (timer >= duration) {
-                if (ip != null) {
-                    ip.touchUp((int)endX, (int)endY, 0, Input.Buttons.LEFT);
-                }
-                finished = true;
-            }
-        }
-    }
+			if (timer >= duration) {
+				if (ip != null) {
+					ip.touchUp((int)endX, (int)endY, 0, Input.Buttons.LEFT);
+				}
+				finished = true;
+			}
+		}
+	}
 }

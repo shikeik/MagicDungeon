@@ -2,7 +2,6 @@ package com.goldsprite.magicdungeon.screens;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
-import com.goldsprite.magicdungeon.core.screens.MainMenuScreen;
 import java.util.Map;
 
 /**
@@ -15,7 +14,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		// --- 核心场景 ---
 		// [修改] 开始游戏指向预加载屏幕，以实现统一资源加载
-		map.put("开始游戏", PreloaderScreen.class);
+		map.put("开始游戏", null);
 
 		map.put("", null); // 分隔线
 

@@ -357,7 +357,7 @@ public abstract class GScreen extends ScreenAdapter {
 	 * 默认返回 null。
 	 */
 	public Stage getStage() {
-	    return stage;
+		return stage;
 	}
 
 	@Override

@@ -11,40 +11,40 @@ import com.kotcrab.vis.ui.widget.VisScrollPane;
  */
 public class HoverFocusScrollPane extends VisScrollPane {
 
-    public HoverFocusScrollPane(Actor widget) {
-        super(widget);
-        initListener();
-    }
+	public HoverFocusScrollPane(Actor widget) {
+		super(widget);
+		initListener();
+	}
 
-    public HoverFocusScrollPane(Actor widget, ScrollPaneStyle style) {
-        super(widget, style);
-        initListener();
-    }
+	public HoverFocusScrollPane(Actor widget, ScrollPaneStyle style) {
+		super(widget, style);
+		initListener();
+	}
 
-    public HoverFocusScrollPane(Actor widget, String styleName) {
-        super(widget, styleName);
-        initListener();
-    }
+	public HoverFocusScrollPane(Actor widget, String styleName) {
+		super(widget, styleName);
+		initListener();
+	}
 
-    private void initListener() {
-        addListener(new InputListener() {
-            @Override
-            public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-                if (pointer == -1) { // 鼠标移动，非触摸
-                    if (getStage() != null) {
-                        getStage().setScrollFocus(HoverFocusScrollPane.this);
-                    }
-                }
-            }
+	private void initListener() {
+		addListener(new InputListener() {
+			@Override
+			public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+				if (pointer == -1) { // 鼠标移动，非触摸
+					if (getStage() != null) {
+						getStage().setScrollFocus(HoverFocusScrollPane.this);
+					}
+				}
+			}
 
-            @Override
-            public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-                if (pointer == -1) {
-                    if (getStage() != null && getStage().getScrollFocus() == HoverFocusScrollPane.this) {
-                        getStage().setScrollFocus(null);
-                    }
-                }
-            }
-        });
-    }
+			@Override
+			public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+				if (pointer == -1) {
+					if (getStage() != null && getStage().getScrollFocus() == HoverFocusScrollPane.this) {
+						getStage().setScrollFocus(null);
+					}
+				}
+			}
+		});
+	}
 }

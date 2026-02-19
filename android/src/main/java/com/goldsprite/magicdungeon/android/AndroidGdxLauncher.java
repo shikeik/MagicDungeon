@@ -24,13 +24,11 @@ import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
 
 import com.goldsprite.magicdungeon.input.InputManager;
-import com.goldsprite.gdengine.log.DLog; // Import InputManager
+import com.goldsprite.gdengine.log.DLog;
 
 public class AndroidGdxLauncher extends AndroidApplication {
 	private static AndroidGdxLauncher ctx;
 
-	// ... (保留原有的 Layout 变量: rootFrame, overlayLayer 等) ...
-	// 略去 Layout 变量定义，保持原样即可
 	private FrameLayout rootFrame;
 	private RelativeLayout overlayLayer;
 	private View gameView;
@@ -56,8 +54,6 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
 		PlatformImpl.AndroidExternalStoragePath = Environment.getExternalStorageDirectory().getAbsolutePath();
 		PlatformImpl.defaultOrientation = isPortrait ? ScreenManager.Orientation.Portrait : ScreenManager.Orientation.Landscape;
-		// 在 onCreate 里的 injectCompilerAndStart() 或 startEngine() 调用之前：
-		PlatformImpl.webBrower = new AndroidWebBrowser(this);
 
 		// 实现虚拟键盘回调支持
 		setupViewportListener();
@@ -78,11 +74,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		cfg.useImmersiveMode = true;
 		cfg.numSamples = 2;
 
-		// ---------------------------------------------------------
-		// 1. 立即初始化 GDX (传入 null compiler)
-		// 这样 AndroidApplication 内部的 input/graphics 就会被创建
-		// onResume 就不会崩了
-		// ---------------------------------------------------------
+		// 初始化gdx
 		gdxLauncher = new GdxLauncher();
 
 		gameView = initializeForView(gdxLauncher, cfg);
