@@ -22,7 +22,8 @@ import com.goldsprite.GdxLauncher;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
 
-import com.goldsprite.magicdungeon.input.InputManager; // Import InputManager
+import com.goldsprite.magicdungeon.input.InputManager;
+import com.goldsprite.gdengine.log.DLog; // Import InputManager
 
 public class AndroidGdxLauncher extends AndroidApplication {
 	private static AndroidGdxLauncher ctx;
@@ -140,10 +141,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			// if (virtualKeyboard != null && virtualKeyboard.isVisible()) {
-			// 	virtualKeyboard.setKeyboardVisibility(false);
-			// }
-
+			DLog.log("onKeyDown 安卓Back键");
 			// 返回 true 拦截事件，阻止系统默认的 finish() 行为
 			return true;
 		}

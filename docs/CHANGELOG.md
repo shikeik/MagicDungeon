@@ -12,6 +12,7 @@
 - 计划: 启动了 [Neon 生成与艺术化升级计划] (版本 0.x.Next)。
 
 ### 修复 (Fixed)
+- 修复安卓虚拟手柄切换时背景灰没有铺满全屏的问题: 视口刷新但GScreen drawScreenBack忘了更新投影矩阵
 - 修复了 `LoadGameDialog` 中的代码规范问题 (全限定名、缩进)。
 - 优化了 `LoadGameDialog` 中 `SimpleDateFormat` 的实例化开销。
 - 修复了 `NeonGenTestScreen` 中的闪退问题 (FrameBuffer 销毁逻辑与异常捕获)。

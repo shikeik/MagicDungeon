@@ -17,6 +17,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import java.util.Stack;
+import com.goldsprite.gdengine.log.DLog;
 
 
 /**
@@ -76,6 +77,8 @@ public abstract class GScreen extends ScreenAdapter {
 	}
 
 	public boolean handleBackKey() {
+
+		DLog.log("handleBackKey 安卓Back键");
 		// 1. 优先关闭顶层 Modal Dialog
 		if (!dialogStack.isEmpty()) {
 			BaseDialog top = dialogStack.peek();
@@ -278,6 +281,7 @@ public abstract class GScreen extends ScreenAdapter {
 	}
 
 	protected void drawScreenBack() {
+		stage.getBatch().setProjectionMatrix(uiViewport.getCamera().combined);
 		stage.getBatch().begin();
 		stage.getBatch().drawRect(0, 0, getViewSize().x, getViewSize().y, 0, 0, screenBackColor, true);
 		stage.getBatch().end();
