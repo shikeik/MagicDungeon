@@ -356,7 +356,8 @@ public class GameScreen extends GScreen {
     public void rebuildScene(WorldMapScreen.DungeonNode node, Runnable onFinish) {
         Gdx.app.postRunnable(() -> {
             try {
-                dungeon.level = Math.max(1, node.minLv);
+                dungeon.level = 1; // Always start at level 1 for new area
+                dungeon.baseLevel = Math.max(1, node.minLv); // Set area base difficulty
                 dungeon.areaId = node.id; // Set correct Area ID
                 dungeon.theme = node.theme;
                 dungeon.generate();
@@ -588,7 +589,9 @@ public class GameScreen extends GScreen {
 		if (dungeon.level == 0) return;
 
 		// Difficulty Multiplier
-		float difficulty = 1.0f + (dungeon.level - 1) * 0.2f; // 20% harder per level
+		// Combined level = current floor + area base difficulty
+		int effectiveLevel = dungeon.level + (dungeon.baseLevel - 1);
+		float difficulty = 1.0f + (effectiveLevel - 1) * 0.2f; // 20% harder per level
 
 		RandomXS128 monsterRng = dungeon.getMonsterRNG();
 		RandomXS128 itemRng = dungeon.getItemRNG();
@@ -723,7 +726,8 @@ public class GameScreen extends GScreen {
 		if (hud == null || dungeon == null) return;
 		float difficulty = 1.0f;
 		if (dungeon.level > 0) {
-			difficulty = 1.0f + (dungeon.level - 1) * 0.2f;
+			int effectiveLevel = dungeon.level + (dungeon.baseLevel - 1);
+			difficulty = 1.0f + (effectiveLevel - 1) * 0.2f;
 		}
 		String themeName = dungeon.theme != null ? dungeon.theme.name : "未知";
 		hud.updateDungeonInfo(dungeon.level, themeName, difficulty);
@@ -1398,6 +1402,7 @@ public class GameScreen extends GScreen {
         if (dungeon.areaId == null || dungeon.areaId.isEmpty()) {
             dungeon.areaId = (dungeon.level == 0) ? "camp" : "dungeon";
         }
+        dungeon.baseLevel = getAreaBaseLevel(dungeon.areaId);
 		this.maxDepth = Math.max(1, meta.maxDepth); // Ensure at least 1
 
 		loadCurrentLevel();
@@ -1515,8 +1520,18 @@ public class GameScreen extends GScreen {
 		if (hud != null) hud.dispose();
 		if (audio != null) {
 			audio.stopBGM();
-			audio.dispose();
+		audio.dispose();
 		}
 		super.dispose();
 	}
+
+    private int getAreaBaseLevel(String areaId) {
+        if (areaId == null) return 1;
+        switch (areaId) {
+            case "forest": return 3;
+            case "desert": return 10;
+            case "castle": return 20;
+            default: return 1;
+        }
+    }
 }

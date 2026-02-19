@@ -15,21 +15,14 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class DLog {
-	private static DLog instance;
-
 	public static final String passStr = "Y";
+	private static final float LOGICAL_SHORT = 540f;
+	private static final float LOGICAL_LONG = 960f;
 	public static boolean singleMode = false;
 	public static String singleTag = "Default";
-
 	// [新增] 黑白名单模式控制
 	public static boolean isBlackListMode = true; // 默认黑名单模式
 	public static List<String> blackList = new CopyOnWriteArrayList<>(); // 黑名单列表
-
-	static {
-		blackList.add("拦截");
-		// blackList.add("InputManager");
-	}
-
 	public static String[] showTags = {
 		"Default Y",
 		"拦截 N",
@@ -55,19 +48,22 @@ public class DLog {
 
 	// 数据层 (构造时即可用)
 	public static List<String> logMessages = new CopyOnWriteArrayList<>();
-	private static List<String> logInfos = new CopyOnWriteArrayList<>();
 	public static boolean showDebugUI = true;
 	public static boolean shortcuts = true;
 	static int maxLogsCache = 100;
-
-	// 表现层 (延后初始化)
-	private Stage stage;
-	public DebugConsole console;
-
 	// 视口配置
 	static float scl = 2.5f;
-	private static final float LOGICAL_SHORT = 540f;
-	private static final float LOGICAL_LONG = 960f;
+	private static DLog instance;
+	private static final List<String> logInfos = new CopyOnWriteArrayList<>();
+
+	static {
+		blackList.add("拦截");
+		blackList.add("InputManager");
+	}
+
+	public DebugConsole console;
+	// 表现层 (延后初始化)
+	private Stage stage;
 
 	// [修改] 构造函数只做最基础的数据准备，绝对不碰 UI
 	public DLog() {
@@ -79,50 +75,16 @@ public class DLog {
 		return instance;
 	}
 
-	/**
-	 * [新增] 显式 UI 初始化方法
-	 * 必须在 VisUIHelper.loadWithChineseFont() 之后调用
-	 */
-	public void initUI() {
-		if (stage != null) return; // 防止重复初始化
-
-		// [修改] 初始默认横屏
-		stage = new Stage(new ExtendViewport(LOGICAL_LONG*scl, LOGICAL_SHORT*scl));
-
-		console = new DebugConsole();
-		stage.addActor(console);
-
-		registerInput();
-
-		// 打印一条调试信息验证顺序
-//		log("DebugUI UI Initialized.");
-	}
-
-	private void registerInput() {
-		Gdx.app.postRunnable(() -> {
-			try {
-				ScreenManager sm = ScreenManager.getInstance();
-				if (sm != null && sm.getImp() != null) {
-					sm.getImp().addProcessor(0, stage);
-//					log("DebugUI Input Registered at Top.");
-				} else {
-//					log("Warning: ScreenManager not ready for DebugUI input.");
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		});
-	}
-
-	// --- 数据接口 ---
-
 	public static List<String> getAllLogs() {
 		return logMessages;
 	}
 
 	public static List<String> getLogs() {
-		return getInstance().logMessages;
+		getInstance();
+		return logMessages;
 	}
+
+	// --- 数据接口 ---
 
 	public static String getInfoString() {
 		StringBuilder sb = new StringBuilder();
@@ -130,17 +92,21 @@ public class DLog {
 		sb.append("\nHeap: ").append(Gdx.app.getJavaHeap() / 1024 / 1024).append("MB");
 		sb.append("\nFPS: ").append(Gdx.graphics.getFramesPerSecond());
 
-		if (!getInstance().logInfos.isEmpty()) {
+		getInstance();
+		if (!logInfos.isEmpty()) {
 			sb.append("\n--- Monitors ---\n");
-			sb.append(String.join("\n", getInstance().logInfos));
+			getInstance();
+			sb.append(String.join("\n", logInfos));
 		}
 		return sb.toString();
 	}
+
 	public static void clearInfo() {
-		if(getInstance() != null) getInstance().logInfos.clear();
+		if (getInstance() != null) {
+			getInstance();
+			logInfos.clear();
+		}
 	}
-
-
 
 	public static void log(Object... values) {
 		logT("Default", values);
@@ -148,8 +114,8 @@ public class DLog {
 
 	public static void logT(String tag, Object... values) {
 		if (banTag(tag)) {
-			if(showTags[1].equals("拦截 Y"))
-				logT("拦截", "被拦截的: "+formatString(values));
+			if (showTags[1].equals("拦截 Y"))
+				logT("拦截", "被拦截的: " + formatString(values));
 			return;
 		}
 
@@ -170,11 +136,11 @@ public class DLog {
 	public static void logErr(Object... values) {
 		logErrT("Default", values);
 	}
-	public static void logErrT(String tag, Object... values){
+
+	public static void logErrT(String tag, Object... values) {
 		values[0] = "[RED]" + values[0];
 		logT(tag, values);
 	}
-
 
 	public static void info(Object... values) {
 		infoT("Default", values);
@@ -216,6 +182,7 @@ public class DLog {
 
 	/**
 	 * 格式化当前时间（Java 8+ 推荐）
+	 *
 	 * @param pattern 时间格式，如 "HH:mm:ss:SSS"
 	 * @return 格式化后的时间字符串
 	 */
@@ -247,6 +214,41 @@ public class DLog {
 		}
 	}
 
+	/**
+	 * [新增] 显式 UI 初始化方法
+	 * 必须在 VisUIHelper.loadWithChineseFont() 之后调用
+	 */
+	public void initUI() {
+		if (stage != null) return; // 防止重复初始化
+
+		// [修改] 初始默认横屏
+		stage = new Stage(new ExtendViewport(LOGICAL_LONG * scl, LOGICAL_SHORT * scl));
+
+		console = new DebugConsole();
+		stage.addActor(console);
+
+		registerInput();
+
+		// 打印一条调试信息验证顺序
+//		log("DebugUI UI Initialized.");
+	}
+
+	private void registerInput() {
+		Gdx.app.postRunnable(() -> {
+			try {
+				ScreenManager sm = ScreenManager.getInstance();
+				if (sm != null && sm.getImp() != null) {
+					sm.getImp().addProcessor(0, stage);
+//					log("DebugUI Input Registered at Top.");
+				} else {
+//					log("Warning: ScreenManager not ready for DebugUI input.");
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
+	}
+
 	public void render() {
 		// [修改] 如果 UI 还没初始化，直接跳过渲染，但数据收集依然正常工作
 		if (!showDebugUI || stage == null) return;
@@ -262,11 +264,11 @@ public class DLog {
 		scl = PlatformImpl.isAndroidUser() ? 1.4f : 2f;
 		ExtendViewport vp = (ExtendViewport) stage.getViewport();
 		if (h > w) {
-			vp.setMinWorldWidth(LOGICAL_SHORT*scl);
-			vp.setMinWorldHeight(LOGICAL_LONG*scl);
+			vp.setMinWorldWidth(LOGICAL_SHORT * scl);
+			vp.setMinWorldHeight(LOGICAL_LONG * scl);
 		} else {
-			vp.setMinWorldWidth(LOGICAL_LONG*scl);
-			vp.setMinWorldHeight(LOGICAL_SHORT*scl);
+			vp.setMinWorldWidth(LOGICAL_LONG * scl);
+			vp.setMinWorldHeight(LOGICAL_SHORT * scl);
 		}
 		vp.update(w, h, true);
 	}

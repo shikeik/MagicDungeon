@@ -13,6 +13,7 @@ public class Dungeon {
 	public int level;
     // [Refactor] Separate Area ID (e.g. "camp", "misty_forest", "castle")
     public String areaId = "camp";
+    public int baseLevel = 1; // 区域基础等级 (难度系数)
 	public Tile[][] map;
 	public GridPoint2 startPos;
 	public long globalSeed;
