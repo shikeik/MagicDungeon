@@ -9,6 +9,7 @@ import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,21 +46,34 @@ public class AndroidGdxLauncher extends AndroidApplication {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		//android 初始配置
 		ctx = this;
 		ScreenUtils.hideBlackBar(this);
 		UncaughtExceptionActivity.setUncaughtExceptionHandler(this, AndroidGdxLauncher.class);
 
-		PlatformImpl.AndroidExternalStoragePath = Environment.getExternalStorageDirectory().getAbsolutePath();
-
+		// 平台实现 初始配置
 		boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+		PlatformImpl.AndroidExternalStoragePath = Environment.getExternalStorageDirectory().getAbsolutePath();
 		PlatformImpl.defaultOrientation = isPortrait ? ScreenManager.Orientation.Portrait : ScreenManager.Orientation.Landscape;
+		// 在 onCreate 里的 injectCompilerAndStart() 或 startEngine() 调用之前：
+		PlatformImpl.webBrower = new AndroidWebBrowser(this);
 
+		// 实现虚拟键盘回调支持
 		setupViewportListener();
 
-		// 在 onCreate 里的 injectCompilerAndStart() 或 startEngine() 调用之前：
- 		PlatformImpl.webBrower = new AndroidWebBrowser(this);
+		// GLog注册logcat输出端
+		DLog.registerLogOutput((level, tag, msg) -> {
+			switch (level) {
+				case ERROR -> Log.e(tag, msg);
+				case WARN -> Log.w(tag, msg);
+				case INFO -> Log.i(tag, msg);
+				case DEBUG -> Log.d(tag, msg);
+			}
+		});
 
-		 //gdx启动配置
+
+	 	// gdx启动配置
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useImmersiveMode = true;
 		cfg.numSamples = 2;

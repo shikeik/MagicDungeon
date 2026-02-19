@@ -65,7 +65,7 @@ public class GdxLauncher extends Game {int k4;
 		ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
 
 		// Catch Android Back Key
-		Gdx.input.setCatchKey(Input.Keys.BACK, true);
+//		Gdx.input.setCatchKey(Input.Keys.BACK, true);
 
 		// 确保 toastStage 能接收输入 (插入到最前面)
 		sm.getImp().addProcessor(0, toastStage);

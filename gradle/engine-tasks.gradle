@@ -206,7 +206,7 @@ fi
 		hookFile.setBytes(unixContent.getBytes("UTF-8"))
 
 		hookFile.setExecutable(true)
-		println "✅ Git Commit Hook (commit-msg) 已更新 (规则: feat/fix/perf/docs/refactor/chore/test)。"
+		println "✅ Git Commit Hook (commit-msg) 已更新 (规则: feat/fix/perf/docs/refactor/chore/test/assets)。"
 	} catch (Exception ignored) {
 		// 忽略异常，防止非Git环境报错
 	}

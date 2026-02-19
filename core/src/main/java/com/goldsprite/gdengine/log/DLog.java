@@ -108,6 +108,28 @@ public class DLog {
 		}
 	}
 
+	// [新增] 日志等级枚举
+	public enum Level {
+		DEBUG, INFO, WARN, ERROR
+	}
+
+	// [新增] 日志输出接口
+	@FunctionalInterface
+	public interface LogOutput {
+		void onLog(Level level, String tag, String msg);
+	}
+
+	private static final List<LogOutput> outputs = new CopyOnWriteArrayList<>();
+
+	/**
+	 * 注册额外的日志输出端 (如 Android Logcat, iOS SystemLog, Server)
+	 */
+	public static void registerLogOutput(LogOutput output) {
+		if (output != null && !outputs.contains(output)) {
+			outputs.add(output);
+		}
+	}
+
 	public static void log(Object... values) {
 		logT("Default", values);
 	}
@@ -119,18 +141,30 @@ public class DLog {
 			return;
 		}
 
-		String msg = String.format("[%s] %s", tag, formatString(values));
-		msg = String.format("[%s] %s", formatTime("HH:mm:ss:SSS"), msg);// 添加时间戳
-		if (tag.equals("UserProject")) msg = "[ORANGE]" + msg; // (临时代码, 便于用户区分日志) 橙色标记用户项目日志
-		msg = "[WHITE]" + msg; // 重置颜色标记
+		// 1. 格式化纯净内容
+		String content = formatString(values);
 
-		logger.setLevel(Logger.NONE);
-		logger.info(msg);
+		// 2. 分发到注册的输出端 (传递纯净内容，由输出端决定如何展示 Tag/Time)
+		for (LogOutput output : outputs) {
+			output.onLog(Level.DEBUG, tag, content);
+		}
 
-		//提供给UI
-		logMessages.add(/*"NONE: " + */msg);
-		//打印到控制台
-		System.out.println(msg);
+		// 3. 构建内部 UI 和控制台使用的完整消息 (带时间、Tag、颜色)
+		String time = formatTime("HH:mm:ss:SSS");
+		String fullMsg = String.format("[%s] [%s] %s", time, tag, content);
+		
+		if (tag.equals("UserProject")) fullMsg = "[ORANGE]" + fullMsg; // (临时代码, 便于用户区分日志) 橙色标记用户项目日志
+		fullMsg = "[WHITE]" + fullMsg; // 重置颜色标记
+
+		// TODO: 移除旧的 logger 逻辑，改用上面的 outputs 分发
+		// logger.setLevel(Logger.NONE);
+		// logger.info(msg);
+
+		// 输出到内置UI
+		logMessages.add(fullMsg);
+
+		// 打印到控制台 (System.out)
+		System.out.println(fullMsg);
 	}
 
 	public static void logErr(Object... values) {
@@ -138,8 +172,28 @@ public class DLog {
 	}
 
 	public static void logErrT(String tag, Object... values) {
-		values[0] = "[RED]" + values[0];
-		logT(tag, values);
+		// 1. 格式化纯净内容
+		String content = formatString(values);
+
+		// 2. 分发到注册的输出端
+		for (LogOutput output : outputs) {
+			output.onLog(Level.ERROR, tag, content);
+		}
+
+		// 3. 构建内部 UI 和控制台使用的完整消息
+		// 注意: 为了保持 logT 的颜色逻辑，这里手动加红，但 logT 内部也有颜色处理，需要小心
+		// 原有逻辑是 values[0] = "[RED]" + values[0]; 然后调 logT
+		// 但现在我们要拆分逻辑，所以最好独立处理
+		
+		String time = formatTime("HH:mm:ss:SSS");
+		String fullMsg = String.format("[%s] [%s] %s", time, tag, content);
+		fullMsg = "[RED]" + fullMsg;
+
+		// 输出到内置UI
+		logMessages.add(fullMsg);
+
+		// 打印到控制台
+		System.err.println(fullMsg);
 	}
 
 	public static void info(Object... values) {
