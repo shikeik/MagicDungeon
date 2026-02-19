@@ -26,7 +26,7 @@ import com.goldsprite.magicdungeon.testing.IGameAutoTest;
 
 import com.goldsprite.magicdungeon.ui.MagicDungeonLoadingRenderer;
 
-public class GdxLauncher extends Game {int k4;
+public class GdxLauncher extends Game {int k11;
 	private Stage toastStage;
 	public DLog debug;
 	private Application.ApplicationType userType;

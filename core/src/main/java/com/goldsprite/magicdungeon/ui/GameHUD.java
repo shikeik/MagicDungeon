@@ -1419,7 +1419,7 @@ public class GameHUD implements Disposable {
 				if (getStage() != null) {
 					float toolbarH = (toolbarTable != null) ? toolbarTable.getHeight() : 50;
 					// 留有一定右上margin (比如 10), 且在 toolbar 下方
-					setPosition(getStage().getWidth() - getWidth() - 10, getStage().getHeight() - getHeight() - toolbarH - 10);
+					setPosition(getStage().getWidth() - getWidth() - 10-300, getStage().getHeight() - getHeight() - toolbarH - 10 -240);
 				}
 			}
 		};

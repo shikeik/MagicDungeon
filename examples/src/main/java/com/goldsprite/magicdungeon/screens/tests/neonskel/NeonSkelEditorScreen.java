@@ -623,8 +623,8 @@ public class NeonSkelEditorScreen extends GScreen {
         
         // 更新相机视口大小以匹配游戏区域
         OrthographicCamera cam = getWorldCamera();
-        cam.viewportWidth = w;
-        cam.viewportHeight = h;
+        //cam.viewportWidth = w;
+        //cam.viewportHeight = h;
         cam.update();
 
         Rectangle scissor = new Rectangle();

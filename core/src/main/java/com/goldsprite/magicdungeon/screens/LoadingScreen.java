@@ -100,6 +100,8 @@ public class LoadingScreen extends GScreen {
         animationState.apply(skeleton);
         skeleton.updateWorldTransform();
 
+		worldCamera.update();
+		polyBatch.setProjectionMatrix(worldCamera.combined);
         polyBatch.begin();
         skeletonRenderer.draw(polyBatch, skeleton);
         polyBatch.end();
