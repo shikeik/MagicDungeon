@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import fi.iki.elonen.NanoHTTPD;
-import java.awt.Desktop;
 import java.net.URI;
 
 /**
