@@ -46,7 +46,7 @@ echo "排除规则: $EXCLUDE_PATTERN"
 SCRIPT_NAME=$(basename "$0")
 
 # cd到docs目录
-cd CHILD_DIR
+cd $CHILD_DIR
 
 # 逻辑解释：
 # 1. find ...             -> 找文件

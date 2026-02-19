@@ -25,11 +25,11 @@ user-invocable: true
 
 ## Phase 3: Implement & Verify (实现与验证)
 **目标**: 编写代码并确保质量。
-1. 遵循 LibGDX 规范（坐标原点、资源 dispose）。
+1. 遵循代码规范。
 2. 运行验证：执行 `./gradlew lwjgl3:run` 和 `./gradlew assemble`。
 
 ## Phase 4: Deliver & Cleanup (交付与清理)
 **目标**: 规范化提交。
 1. 更新 `CHANGELOG.md`。
-2. 编写 `commit_msg.txt`，执行 `git commit -F`（禁止 Push）。
+2. 编写 `commit-msg.txt`，执行 `git commit -F commit-msg.txt`（禁止 Push）, 保留`commit-msg.txt`文件。
 3. 标记 `Tasks.md` 任务为完成，移动到 Done 区域。

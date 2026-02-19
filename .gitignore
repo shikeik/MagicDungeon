@@ -9,7 +9,6 @@ build/
 .idea/
 /.shikeik/
 /.lwjgl/
-commit_msg.txt
 
 # Outputs & Temp Files
 /outputs/

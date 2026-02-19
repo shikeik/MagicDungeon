@@ -14,6 +14,6 @@ description: 交付与版本环节
     - **格式**: `type(scope): summary` (必须中文)。
         - `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`.
     - **操作**:
-        1. 编写 `commit_msg.txt`。
-        2. 执行 `git commit -F commit_msg.txt`。
+        1. 编写 `commit-msg.txt`。
+        2. 执行 `git commit -F commit-msg.txt`。
     - **禁止 Push**: 仅本地提交。
