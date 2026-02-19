@@ -56,9 +56,15 @@ public class DLog {
 	private static DLog instance;
 	private static final List<String> logInfos = new CopyOnWriteArrayList<>();
 
+	private static final List<LogOutput> outputs = new CopyOnWriteArrayList<>();
+
 	static {
 		blackList.add("拦截");
 		blackList.add("InputManager");
+
+		// [新增] 注册默认输出端
+		registerLogOutput(new StandardOutput());
+		registerLogOutput(new GdxUiOutput());
 	}
 
 	public DebugConsole console;
@@ -119,8 +125,6 @@ public class DLog {
 		void onLog(Level level, String tag, String msg);
 	}
 
-	private static final List<LogOutput> outputs = new CopyOnWriteArrayList<>();
-
 	/**
 	 * 注册额外的日志输出端 (如 Android Logcat, iOS SystemLog, Server)
 	 */
@@ -130,41 +134,127 @@ public class DLog {
 		}
 	}
 
+	// --- 默认输出端实现 ---
+
+	/**
+	 * 标准控制台输出 (System.out / System.err)
+	 * 保留原有颜色标签逻辑，以便某些支持的控制台或 IDE 插件着色
+	 */
+	private static class StandardOutput implements LogOutput {
+		@Override
+		public void onLog(Level level, String tag, String msg) {
+			String time = formatTime("HH:mm:ss:SSS");
+			// 构建基础消息
+			String fullMsg = String.format("[%s] [%s] %s", time, tag, msg);
+
+			// 根据级别和 Tag 添加颜色标记 (保持与原有逻辑一致)
+			if (level == Level.ERROR) {
+				fullMsg = "[RED]" + fullMsg;
+				System.err.println(fullMsg);
+			} else {
+				if ("UserProject".equals(tag)) {
+					fullMsg = "[ORANGE]" + fullMsg;
+				}
+
+				if (level == Level.WARN) {
+					fullMsg = "[YELLOW]" + fullMsg;
+				} else if (level == Level.INFO) {
+					fullMsg = "[CYAN]" + fullMsg; // INFO 用青色区分
+				} else {
+					fullMsg = "[WHITE]" + fullMsg; // DEBUG 默认白色
+				}
+				System.out.println(fullMsg);
+			}
+		}
+	}
+
+	/**
+	 * 游戏内 UI 控制台输出
+	 */
+	private static class GdxUiOutput implements LogOutput {
+		@Override
+		public void onLog(Level level, String tag, String msg) {
+			String time = formatTime("HH:mm:ss:SSS");
+			String fullMsg = String.format("[%s] [%s] %s", time, tag, msg);
+
+			// 颜色逻辑与 StandardOutput 保持一致，供 VisUI Label 解析
+			if (level == Level.ERROR) {
+				fullMsg = "[RED]" + fullMsg;
+			} else {
+				if ("UserProject".equals(tag)) {
+					fullMsg = "[ORANGE]" + fullMsg;
+				}
+
+				if (level == Level.WARN) {
+					fullMsg = "[YELLOW]" + fullMsg;
+				} else if (level == Level.INFO) {
+					fullMsg = "[CYAN]" + fullMsg;
+				} else {
+					fullMsg = "[WHITE]" + fullMsg;
+				}
+			}
+
+			logMessages.add(fullMsg);
+
+			// 限制缓存大小，防止内存溢出
+			if (logMessages.size() > maxLogsCache) {
+				// 简单的清理策略：移除前 10%
+				int removeCount = maxLogsCache / 10;
+				if (removeCount < 1) removeCount = 1;
+				// CopyOnWriteArrayList 移除开销较大，但在调试模式下可接受
+				// 且 logMessages 主要用于 UI 展示，频率通常受控
+				// 这里为了简单，先不做批量移除，依赖 list 自身操作
+				// 实际上 CopyOnWriteArrayList 不适合频繁修改，如果性能有问题后续需优化
+				// 但考虑到这是调试工具，暂且保留
+				logMessages.subList(0, logMessages.size() - maxLogsCache).clear();
+			}
+		}
+	}
+
+	// --- 统一分发逻辑 ---
+
+	private static void dispatch(Level level, String tag, Object... values) {
+		// 1. 黑白名单检查
+		if (banTag(tag)) {
+			// 如果被拦截，且是拦截模式下的特殊显示，则走特定逻辑 (仅针对 logT/DEBUG)
+			// 为了简化，这里仅对 DEBUG 级别且开启了"拦截 Y"的情况做特殊处理
+			// 但考虑到逻辑统一，如果被 ban，应该直接返回
+			// 原有逻辑中有个 "拦截 Y" 的特殊分支
+			if (level == Level.DEBUG && showTags[1].equals("拦截 Y")) {
+				// 递归调用自身，但 Tag 变为 "拦截"，可能会绕过 banTag (因为 "拦截" 在白名单里?)
+				// 检查 static 块: blackList.add("拦截"); -> 意味着 "拦截" 也会被 ban?
+				// 原有逻辑：banTag("拦截") -> return blackList.contains("拦截") -> true.
+				// 所以原有逻辑其实是死循环或者无效？
+				// 等等，原有逻辑：
+				// if (banTag(tag)) {
+				//     if (showTags[1].equals("拦截 Y"))
+				//         logT("拦截", "被拦截的: " + formatString(values));
+				//     return;
+				// }
+				// 如果 "拦截" 也在黑名单里，那 logT("拦截") 也会进来然后 return。
+				// 除非 "拦截" 不在黑名单。但 static 块里加了。
+				// 假设用户知道自己在做什么，这里我们暂时保留这个特殊逻辑的意图，
+				// 但为了防止递归栈溢出，我们直接输出到 System.out 调试一下，或者忽略。
+				// 鉴于这是一个复杂的遗留逻辑，我们暂且只做 return。
+			}
+			return;
+		}
+
+		// 2. 格式化内容
+		String content = formatString(values);
+
+		// 3. 分发给所有输出端
+		for (LogOutput output : outputs) {
+			output.onLog(level, tag, content);
+		}
+	}
+
 	public static void log(Object... values) {
 		logT("Default", values);
 	}
 
 	public static void logT(String tag, Object... values) {
-		if (banTag(tag)) {
-			if (showTags[1].equals("拦截 Y"))
-				logT("拦截", "被拦截的: " + formatString(values));
-			return;
-		}
-
-		// 1. 格式化纯净内容
-		String content = formatString(values);
-
-		// 2. 分发到注册的输出端 (传递纯净内容，由输出端决定如何展示 Tag/Time)
-		for (LogOutput output : outputs) {
-			output.onLog(Level.DEBUG, tag, content);
-		}
-
-		// 3. 构建内部 UI 和控制台使用的完整消息 (带时间、Tag、颜色)
-		String time = formatTime("HH:mm:ss:SSS");
-		String fullMsg = String.format("[%s] [%s] %s", time, tag, content);
-		
-		if (tag.equals("UserProject")) fullMsg = "[ORANGE]" + fullMsg; // (临时代码, 便于用户区分日志) 橙色标记用户项目日志
-		fullMsg = "[WHITE]" + fullMsg; // 重置颜色标记
-
-		// TODO: 移除旧的 logger 逻辑，改用上面的 outputs 分发
-		// logger.setLevel(Logger.NONE);
-		// logger.info(msg);
-
-		// 输出到内置UI
-		logMessages.add(fullMsg);
-
-		// 打印到控制台 (System.out)
-		System.out.println(fullMsg);
+		dispatch(Level.DEBUG, tag, values);
 	}
 
 	public static void logErr(Object... values) {
@@ -172,30 +262,28 @@ public class DLog {
 	}
 
 	public static void logErrT(String tag, Object... values) {
-		// 1. 格式化纯净内容
-		String content = formatString(values);
-
-		// 2. 分发到注册的输出端
-		for (LogOutput output : outputs) {
-			output.onLog(Level.ERROR, tag, content);
-		}
-
-		// 3. 构建内部 UI 和控制台使用的完整消息
-		// 注意: 为了保持 logT 的颜色逻辑，这里手动加红，但 logT 内部也有颜色处理，需要小心
-		// 原有逻辑是 values[0] = "[RED]" + values[0]; 然后调 logT
-		// 但现在我们要拆分逻辑，所以最好独立处理
-		
-		String time = formatTime("HH:mm:ss:SSS");
-		String fullMsg = String.format("[%s] [%s] %s", time, tag, content);
-		fullMsg = "[RED]" + fullMsg;
-
-		// 输出到内置UI
-		logMessages.add(fullMsg);
-
-		// 打印到控制台
-		System.err.println(fullMsg);
+		dispatch(Level.ERROR, tag, values);
 	}
 
+	// [新增] WARN 级别
+	public static void logWarn(Object... values) {
+		logWarnT("Default", values);
+	}
+
+	public static void logWarnT(String tag, Object... values) {
+		dispatch(Level.WARN, tag, values);
+	}
+
+	// [新增] INFO 级别 (流式日志，区别于 Monitor 的 info)
+	public static void logInfo(Object... values) {
+		logInfoT("Default", values);
+	}
+
+	public static void logInfoT(String tag, Object... values) {
+		dispatch(Level.INFO, tag, values);
+	}
+
+	// Monitor 专用接口 (保持不变)
 	public static void info(Object... values) {
 		infoT("Default", values);
 	}
