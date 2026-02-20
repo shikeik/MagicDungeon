@@ -1,6 +1,8 @@
-feat(world): 重构地牢生成以支持多区域主题
+feat: 实现核心数据模型与单元测试
 
-- 实现基于 DungeonTheme 的纹理变体生成 (墙壁/地板)
-- 重构 MapGenerator 支持主题化装饰 (火把/窗户/植物概率)
-- 配置区域专属怪物分布 (森林狼/沙漠骷髅等)
-- 升级存档系统以支持地牢主题状态保存
+- 新增属性系统: StatType/StatData/StatCalculator (点数公式、固定点、自由点、装备加成、百分比增益、ASP/MOV上限)
+- 新增战斗引擎: CombatEngine/DamageType/WeaponRange (物理/魔法伤害、穿透衰减Math.round)
+- 新增成长系统: GrowthCalculator (累积经验曲线、等级反推、进度条)
+- 新增死亡惩罚: DeathPenalty (20%经验/50%金币/自由点均匀扣除)
+- 新增63个单元测试全部通过 (StatData/CombatEngine/GrowthCalculator/DeathPenalty)
+- CLogAssert新增浮点delta比较方法

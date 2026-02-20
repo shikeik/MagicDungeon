@@ -1,0 +1,126 @@
+package com.goldsprite.magicdungeon.tests;
+
+import com.goldsprite.magicdungeon.CLogAssert;
+import com.goldsprite.magicdungeon.core.combat.CombatEngine;
+import com.goldsprite.magicdungeon.core.combat.WeaponRange;
+import org.junit.Test;
+
+/**
+ * 战斗引擎单元测试。
+ * <p>
+ * 验证：物理/魔法伤害公式、无保底机制、穿透衰减。
+ */
+public class CombatEngineTest {
+
+    // ========== 物理伤害 ==========
+
+    @Test
+    public void 测试_物理伤害基础() {
+        // ATK=10, DEF=3 => 7
+        CLogAssert.assertEquals("10-3=7", 7, CombatEngine.calcPhysicalDamage(10, 3));
+    }
+
+    @Test
+    public void 测试_物理伤害无保底() {
+        // ATK=5, DEF=10 => 0（不是负数）
+        CLogAssert.assertEquals("5-10=0(无保底)", 0, CombatEngine.calcPhysicalDamage(5, 10));
+    }
+
+    @Test
+    public void 测试_物理伤害刚好相等() {
+        CLogAssert.assertEquals("10-10=0", 0, CombatEngine.calcPhysicalDamage(10, 10));
+    }
+
+    @Test
+    public void 测试_防御高1点即无伤() {
+        // 魔塔核心：DEF > ATK 就是 0
+        CLogAssert.assertEquals("10-11=0", 0, CombatEngine.calcPhysicalDamage(10, 11));
+    }
+
+    // ========== 魔法伤害 ==========
+
+    @Test
+    public void 测试_魔法伤害基础() {
+        // magATK=10, DEF=6 => MDEF=3 => 10-3=7
+        CLogAssert.assertEquals("魔法10 vs DEF6(MDEF3) = 7", 7,
+            CombatEngine.calcMagicDamage(10, 6));
+    }
+
+    @Test
+    public void 测试_魔法伤害比物理更容易破防() {
+        // DEF=10 => MDEF=5
+        // 物理 ATK=8: 8-10=0（破不了防）
+        // 魔法 ATK=8: 8-5=3（能破防）
+        CLogAssert.assertEquals("物理 8 vs DEF10 = 0", 0,
+            CombatEngine.calcPhysicalDamage(8, 10));
+        CLogAssert.assertEquals("魔法 8 vs DEF10(MDEF5) = 3", 3,
+            CombatEngine.calcMagicDamage(8, 10));
+    }
+
+    @Test
+    public void 测试_魔法MDEF向下取整() {
+        // DEF=7 => MDEF=3（7/2=3.5 向下取整）
+        // magATK=5 => 5-3=2
+        CLogAssert.assertEquals("魔法5 vs DEF7(MDEF3) = 2", 2,
+            CombatEngine.calcMagicDamage(5, 7));
+    }
+
+    // ========== 穿透衰减 ==========
+
+    @Test
+    public void 测试_穿透第1个目标无衰减() {
+        CLogAssert.assertEquals("第1个 100%", 100, CombatEngine.calcPierceDamage(100, 0));
+    }
+
+    @Test
+    public void 测试_穿透第2个目标70百分比() {
+        CLogAssert.assertEquals("第2个 70%", 70, CombatEngine.calcPierceDamage(100, 1));
+    }
+
+    @Test
+    public void 测试_穿透第3个目标49百分比() {
+        CLogAssert.assertEquals("第3个 49%", 49, CombatEngine.calcPierceDamage(100, 2));
+    }
+
+    @Test
+    public void 测试_穿透第4个目标约34百分比() {
+        int dmg = CombatEngine.calcPierceDamage(100, 3);
+        CLogAssert.assertTrue("第4个 ≈ 34%", dmg >= 33 && dmg <= 35);
+    }
+
+    @Test
+    public void 测试_穿透全路径伤害数组() {
+        int[] damages = CombatEngine.calcPierceAllDamages(100, 4);
+        CLogAssert.assertEquals("路径长度 = 4", 4, damages.length);
+        CLogAssert.assertEquals("第1个 = 100", 100, damages[0]);
+        CLogAssert.assertEquals("第2个 = 70", 70, damages[1]);
+        CLogAssert.assertEquals("第3个 = 49", 49, damages[2]);
+        CLogAssert.assertTrue("第4个 ≈ 34", damages[3] >= 33 && damages[3] <= 35);
+    }
+
+    // ========== 武器范围枚举 ==========
+
+    @Test
+    public void 测试_近战属性() {
+        CLogAssert.assertEquals("近战范围 = 1", 1, WeaponRange.MELEE.range);
+        CLogAssert.assertFalse("近战 无穿透", WeaponRange.MELEE.piercing);
+    }
+
+    @Test
+    public void 测试_长柄属性() {
+        CLogAssert.assertEquals("长柄范围 = 2", 2, WeaponRange.POLEARM.range);
+        CLogAssert.assertTrue("长柄 可穿透", WeaponRange.POLEARM.piercing);
+    }
+
+    @Test
+    public void 测试_能量弹属性() {
+        CLogAssert.assertEquals("能量弹范围 = 5", 5, WeaponRange.ENERGY.range);
+        CLogAssert.assertFalse("能量弹 无穿透", WeaponRange.ENERGY.piercing);
+    }
+
+    @Test
+    public void 测试_箭矢属性() {
+        CLogAssert.assertEquals("箭矢范围 = 5", 5, WeaponRange.ARROW.range);
+        CLogAssert.assertTrue("箭矢 可穿透", WeaponRange.ARROW.piercing);
+    }
+}

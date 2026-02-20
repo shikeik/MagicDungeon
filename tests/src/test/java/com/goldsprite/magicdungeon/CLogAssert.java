@@ -35,4 +35,14 @@ public class CLogAssert {
 			Assert.assertEquals(msg, expected, actual);
 		}
 	}
+
+	/** 浮点数比较（允许误差 delta） */
+	public static void assertEquals(String msg, float expected, float actual, float delta) {
+		if (Math.abs(expected - actual) <= delta) {
+			System.out.println("✅ PASS: " + msg + " [Value: " + actual + "]");
+		} else {
+			System.err.println("❌ FAIL: " + msg + " (Expected: " + expected + ", Actual: " + actual + ", Delta: " + delta + ")");
+			Assert.assertEquals(msg, expected, actual, delta);
+		}
+	}
 }
