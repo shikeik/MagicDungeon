@@ -8,22 +8,22 @@ package com.goldsprite.magicdungeon.core.stats;
  */
 public enum StatType {
     /** 生命值，1属性点 = 20 */
-    HP(20),
+    HP(20f),
     /** 魔法值，1属性点 = 10 */
-    MP(10),
+    MP(10f),
     /** 攻击力，1属性点 = 1 */
-    ATK(1),
+    ATK(1f),
     /** 防御力，1属性点 = 1 */
-    DEF(1),
+    DEF(1f),
     /** 攻速（百分比），不可加点 */
-    ASP(0),
+    ASP(0f),
     /** 移速（百分比），不可加点 */
-    MOV(0);
+    MOV(0f);
 
     /** 每1属性点对应的数值增量 */
-    public final int valuePerPoint;
+    public final float valuePerPoint;
 
-    StatType(int valuePerPoint) {
+    StatType(float valuePerPoint) {
         this.valuePerPoint = valuePerPoint;
     }
 

@@ -24,8 +24,8 @@ public final class CombatEngine {
      * @param defenderDef 防御方的防御力（DEF 或 MDEF）
      * @return 最终伤害值（>=0）
      */
-    public static int calcDamage(float attackerAtk, float defenderDef) {
-        return Math.max(0, (int) (attackerAtk - defenderDef));
+    public static float calcDamage(float attackerAtk, float defenderDef) {
+        return Math.max(0f, attackerAtk - defenderDef);
     }
 
     /**
@@ -35,7 +35,7 @@ public final class CombatEngine {
      * @param def 防御方 DEF
      * @return 伤害值
      */
-    public static int calcPhysicalDamage(float atk, float def) {
+    public static float calcPhysicalDamage(float atk, float def) {
         return calcDamage(atk, def);
     }
 
@@ -46,8 +46,8 @@ public final class CombatEngine {
      * @param def 防御方 DEF（MDEF 将自动计算为 DEF/2）
      * @return 伤害值
      */
-    public static int calcMagicDamage(float magAtk, float def) {
-        int mdef = (int) (def / 2);
+    public static float calcMagicDamage(float magAtk, float def) {
+        float mdef = def / 2f;
         return calcDamage(magAtk, mdef);
     }
 
@@ -58,9 +58,9 @@ public final class CombatEngine {
      * @param targetIndex 目标序号（从0开始，0=第1个目标）
      * @return 衰减后的伤害
      */
-    public static int calcPierceDamage(int baseDamage, int targetIndex) {
+    public static float calcPierceDamage(float baseDamage, int targetIndex) {
         if (targetIndex <= 0) return baseDamage;
-        return (int) Math.round(baseDamage * Math.pow(PIERCE_DECAY, targetIndex));
+        return (float) (baseDamage * Math.pow(PIERCE_DECAY, targetIndex));
     }
 
     /**
@@ -70,8 +70,8 @@ public final class CombatEngine {
      * @param targetCount 路径上的目标数量
      * @return 每个目标受到的伤害数组
      */
-    public static int[] calcPierceAllDamages(int baseDamage, int targetCount) {
-        int[] damages = new int[targetCount];
+    public static float[] calcPierceAllDamages(float baseDamage, int targetCount) {
+        float[] damages = new float[targetCount];
         for (int i = 0; i < targetCount; i++) {
             damages[i] = calcPierceDamage(baseDamage, i);
         }

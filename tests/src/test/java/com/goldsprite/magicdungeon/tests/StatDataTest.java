@@ -100,12 +100,12 @@ public class StatDataTest {
     public void 测试_MDEF等于DEF除2() {
         StatData data = new StatData();
         data.setLevel(5);
-        // DEF = (5+1) × 1 = 6 => MDEF = 3
-        CLogAssert.assertEquals("5级 MDEF = 3", 3, data.getMDEF());
+        // DEF = (5+1) × 1 = 6 => MDEF = 3.0
+        CLogAssert.assertEquals("5级 MDEF = 3.0", 3.0f, data.getMDEF());
 
         data.addFreePoints(StatType.DEF, 3);
-        // DEF = (6 + 3) × 1 = 9 => MDEF = 4（向下取整）
-        CLogAssert.assertEquals("5级+3自由DEF MDEF = 4", 4, data.getMDEF());
+        // DEF = (6 + 3) × 1 = 9 => MDEF = 4.5
+        CLogAssert.assertEquals("5级+3自由DEF MDEF = 4.5", 4.5f, data.getMDEF());
     }
 
     // ========== 装备与百分比 ==========

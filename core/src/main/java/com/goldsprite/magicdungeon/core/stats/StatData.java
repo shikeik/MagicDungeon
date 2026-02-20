@@ -201,8 +201,8 @@ public class StatData {
     public float getATK() { return getFinalValue(StatType.ATK); }
     /** 获取最终 DEF */
     public float getDEF() { return getFinalValue(StatType.DEF); }
-    /** 魔法防御 = DEF / 2（向下取整） */
-    public int getMDEF() { return (int) (getDEF() / 2); }
+    /** 魔法防御 = DEF / 2 */
+    public float getMDEF() { return getDEF() / 2f; }
     /** 获取最终 ASP 倍率 */
     public float getASP() { return getFinalValue(StatType.ASP); }
     /** 获取最终 MOV 倍率 */
@@ -216,7 +216,7 @@ public class StatData {
     @Override
     public String toString() {
         return String.format(
-            "Lv.%d | HP:%.0f MP:%.0f ATK:%.0f DEF:%.0f MDEF:%d | ASP:%.0f%% MOV:%.0f%% | 自由点:%d/%d",
+            "Lv.%d | HP:%.0f MP:%.0f ATK:%.0f DEF:%.0f MDEF:%.1f | ASP:%.0f%% MOV:%.0f%% | 自由点:%d/%d",
             level, getHP(), getMP(), getATK(), getDEF(), getMDEF(),
             getASP() * 100, getMOV() * 100,
             getRemainingFreePoints(), getMaxFreePoints()

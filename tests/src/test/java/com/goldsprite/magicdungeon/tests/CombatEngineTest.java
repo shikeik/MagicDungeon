@@ -1,9 +1,10 @@
 package com.goldsprite.magicdungeon.tests;
 
+import org.junit.Test;
+
 import com.goldsprite.magicdungeon.CLogAssert;
 import com.goldsprite.magicdungeon.core.combat.CombatEngine;
 import com.goldsprite.magicdungeon.core.combat.WeaponRange;
-import org.junit.Test;
 
 /**
  * 战斗引擎单元测试。
@@ -17,24 +18,24 @@ public class CombatEngineTest {
     @Test
     public void 测试_物理伤害基础() {
         // ATK=10, DEF=3 => 7
-        CLogAssert.assertEquals("10-3=7", 7, CombatEngine.calcPhysicalDamage(10, 3));
+        CLogAssert.assertEquals("10-3=7", 7f, CombatEngine.calcPhysicalDamage(10, 3));
     }
 
     @Test
     public void 测试_物理伤害无保底() {
         // ATK=5, DEF=10 => 0（不是负数）
-        CLogAssert.assertEquals("5-10=0(无保底)", 0, CombatEngine.calcPhysicalDamage(5, 10));
+        CLogAssert.assertEquals("5-10=0(无保底)", 0f, CombatEngine.calcPhysicalDamage(5, 10));
     }
 
     @Test
     public void 测试_物理伤害刚好相等() {
-        CLogAssert.assertEquals("10-10=0", 0, CombatEngine.calcPhysicalDamage(10, 10));
+        CLogAssert.assertEquals("10-10=0", 0f, CombatEngine.calcPhysicalDamage(10, 10));
     }
 
     @Test
     public void 测试_防御高1点即无伤() {
         // 魔塔核心：DEF > ATK 就是 0
-        CLogAssert.assertEquals("10-11=0", 0, CombatEngine.calcPhysicalDamage(10, 11));
+        CLogAssert.assertEquals("10-11=0", 0f, CombatEngine.calcPhysicalDamage(10, 11));
     }
 
     // ========== 魔法伤害 ==========
@@ -42,7 +43,7 @@ public class CombatEngineTest {
     @Test
     public void 测试_魔法伤害基础() {
         // magATK=10, DEF=6 => MDEF=3 => 10-3=7
-        CLogAssert.assertEquals("魔法10 vs DEF6(MDEF3) = 7", 7,
+        CLogAssert.assertEquals("魔法10 vs DEF6(MDEF3) = 7", 7f,
             CombatEngine.calcMagicDamage(10, 6));
     }
 
@@ -51,17 +52,17 @@ public class CombatEngineTest {
         // DEF=10 => MDEF=5
         // 物理 ATK=8: 8-10=0（破不了防）
         // 魔法 ATK=8: 8-5=3（能破防）
-        CLogAssert.assertEquals("物理 8 vs DEF10 = 0", 0,
+        CLogAssert.assertEquals("物理 8 vs DEF10 = 0", 0f,
             CombatEngine.calcPhysicalDamage(8, 10));
-        CLogAssert.assertEquals("魔法 8 vs DEF10(MDEF5) = 3", 3,
+        CLogAssert.assertEquals("魔法 8 vs DEF10(MDEF5) = 3", 3f,
             CombatEngine.calcMagicDamage(8, 10));
     }
 
     @Test
-    public void 测试_魔法MDEF向下取整() {
-        // DEF=7 => MDEF=3（7/2=3.5 向下取整）
-        // magATK=5 => 5-3=2
-        CLogAssert.assertEquals("魔法5 vs DEF7(MDEF3) = 2", 2,
+    public void 测试_魔法MDEF精确计算() {
+        // DEF=7 => MDEF=3.5
+        // magATK=5 => 5-3.5=1.5
+        CLogAssert.assertEquals("魔法5 vs DEF7(MDEF3.5) = 1.5", 1.5f,
             CombatEngine.calcMagicDamage(5, 7));
     }
 
@@ -69,33 +70,33 @@ public class CombatEngineTest {
 
     @Test
     public void 测试_穿透第1个目标无衰减() {
-        CLogAssert.assertEquals("第1个 100%", 100, CombatEngine.calcPierceDamage(100, 0));
+        CLogAssert.assertEquals("第1个 100%", 100f, CombatEngine.calcPierceDamage(100f, 0));
     }
 
     @Test
     public void 测试_穿透第2个目标70百分比() {
-        CLogAssert.assertEquals("第2个 70%", 70, CombatEngine.calcPierceDamage(100, 1));
+        CLogAssert.assertEquals("第2个 70%", 70f, CombatEngine.calcPierceDamage(100f, 1), 0.01f);
     }
 
     @Test
     public void 测试_穿透第3个目标49百分比() {
-        CLogAssert.assertEquals("第3个 49%", 49, CombatEngine.calcPierceDamage(100, 2));
+        CLogAssert.assertEquals("第3个 49%", 49f, CombatEngine.calcPierceDamage(100f, 2), 0.01f);
     }
 
     @Test
     public void 测试_穿透第4个目标约34百分比() {
-        int dmg = CombatEngine.calcPierceDamage(100, 3);
-        CLogAssert.assertTrue("第4个 ≈ 34%", dmg >= 33 && dmg <= 35);
+        float dmg = CombatEngine.calcPierceDamage(100f, 3);
+        CLogAssert.assertTrue("第4个 ≈ 34%", dmg >= 33f && dmg <= 35f);
     }
 
     @Test
     public void 测试_穿透全路径伤害数组() {
-        int[] damages = CombatEngine.calcPierceAllDamages(100, 4);
+        float[] damages = CombatEngine.calcPierceAllDamages(100f, 4);
         CLogAssert.assertEquals("路径长度 = 4", 4, damages.length);
-        CLogAssert.assertEquals("第1个 = 100", 100, damages[0]);
-        CLogAssert.assertEquals("第2个 = 70", 70, damages[1]);
-        CLogAssert.assertEquals("第3个 = 49", 49, damages[2]);
-        CLogAssert.assertTrue("第4个 ≈ 34", damages[3] >= 33 && damages[3] <= 35);
+        CLogAssert.assertEquals("第1个 = 100", 100f, damages[0]);
+        CLogAssert.assertEquals("第2个 ≈ 70", 70f, damages[1], 0.01f);
+        CLogAssert.assertEquals("第3个 ≈ 49", 49f, damages[2], 0.01f);
+        CLogAssert.assertTrue("第4个 ≈ 34", damages[3] >= 33f && damages[3] <= 35f);
     }
 
     // ========== 武器范围枚举 ==========
