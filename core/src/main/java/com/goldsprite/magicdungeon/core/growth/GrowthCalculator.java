@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.core.growth;
+package com.goldsprite.magicdungeon2.core.growth;
 
 /**
  * 经验与等级计算器。

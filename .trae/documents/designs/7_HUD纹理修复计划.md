@@ -32,8 +32,8 @@
 
 ## 3. 执行计划
 
-1.  修改 `core/src/main/java/com/goldsprite/magicdungeon/ui/GameHUD.java`。
-2.  修改 `core/src/main/java/com/goldsprite/magicdungeon/core/screens/GameScreen.java`。
+1.  修改 `core/src/main/java/com.goldsprite.magicdungeon2/ui/GameHUD.java`。
+2.  修改 `core/src/main/java/com.goldsprite.magicdungeon2/core/screens/GameScreen.java`。
 3.  验证修复结果（代码逻辑检查）。
 
 ## 4. 预期结果

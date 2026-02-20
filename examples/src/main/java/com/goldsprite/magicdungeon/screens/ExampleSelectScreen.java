@@ -1,11 +1,11 @@
-package com.goldsprite.magicdungeon.screens;
+package com.goldsprite.magicdungeon2.screens;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 import java.util.Map;
 
 /**
- * MagicDungeon 开发主入口
+ * MagicDungeon2 开发主入口
  * 策略：只展示核心工具，旧有的业务逻辑归档至二级菜单
  */
 public class ExampleSelectScreen extends BaseSelectionScreen {

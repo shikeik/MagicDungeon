@@ -6,7 +6,7 @@ tasks.register('previewDocs', JavaExec) {
     classpath = project(':core').sourceSets.main.runtimeClasspath
 
     // 指定主类
-    mainClass = 'com.goldsprite.magicdungeon.core.web.DocServer'
+    mainClass = 'com.goldsprite.magicdungeon2.core.web.DocServer'
 
     // 传递参数 (文档根目录)
     // 注意：这里指向项目根目录下的 docs/engine_docs

@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.core.combat;
+package com.goldsprite.magicdungeon2.core.combat;
 
 /**
  * 武器范围类型。

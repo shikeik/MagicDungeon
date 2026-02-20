@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.android;
+package com.goldsprite.magicdungeon2.android;
 
 import android.Manifest;
 import android.content.Intent;
@@ -23,7 +23,7 @@ import com.goldsprite.GdxLauncher;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
 
-import com.goldsprite.magicdungeon.input.InputManager;
+import com.goldsprite.magicdungeon2.input.InputManager;
 import com.goldsprite.gdengine.log.DLog;
 
 public class AndroidGdxLauncher extends AndroidApplication {

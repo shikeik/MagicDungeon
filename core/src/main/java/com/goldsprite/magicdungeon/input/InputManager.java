@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.input;
+package com.goldsprite.magicdungeon2.input;
 
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
@@ -13,7 +13,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.DLog;
-import com.goldsprite.magicdungeon.AppConstants;
+import com.goldsprite.magicdungeon2.AppConstants;
 
 import java.util.ArrayList;
 import java.util.HashMap;

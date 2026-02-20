@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.lwjgl3;
+package com.goldsprite.magicdungeon2.lwjgl3;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
@@ -7,7 +7,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.GdxLauncher;
-import com.goldsprite.magicdungeon.BuildConfig;
+import com.goldsprite.magicdungeon2.BuildConfig;
 
 /**
  * Launches the desktop (LWJGL3) application.

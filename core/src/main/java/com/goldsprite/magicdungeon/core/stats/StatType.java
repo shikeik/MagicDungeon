@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.core.stats;
+package com.goldsprite.magicdungeon2.core.stats;
 
 /**
  * 六大核心属性类型枚举。

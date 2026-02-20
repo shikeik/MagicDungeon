@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.core.combat;
+package com.goldsprite.magicdungeon2.core.combat;
 
 /**
  * 战斗引擎 — 纯数值计算，不依赖任何图形库。

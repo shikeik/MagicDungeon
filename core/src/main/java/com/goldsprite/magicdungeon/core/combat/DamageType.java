@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.core.combat;
+package com.goldsprite.magicdungeon2.core.combat;
 
 /**
  * 伤害类型枚举。

@@ -194,10 +194,10 @@ public class ThreadedDownload {
 	public static void download(Runnable onFinish) {
 		if(true) return; // 这个类暂时用不上了, 后面下载模板时再改造和启用
 		// ... (保持原本的 URL 设置) ...
-//        String DOWNLOAD_URL = "https://github.com/shikeik/MagicDungeon/releases/download/"+BuildConfig.DEV_VERSION+"/engine_docs.zip";
-		String DOWNLOAD_URL = "https://edgeone.gh-proxy.org/https://github.com/shikeik/MagicDungeon/releases/download/1.10.12.10/engine_docs.zip";
-//        String DOWNLOAD_URL = "https://cdn.gh-proxy.org/https://github.com/shikeik/MagicDungeon/releases/download/1.10.12.10/engine_docs.zip";
-//        String DOWNLOAD_URL = "https://bgithub.xyz/shikeik/MagicDungeon/releases/download/1.10.12.10/engine_docs.zip";
+//        String DOWNLOAD_URL = "https://github.com/shikeik/MagicDungeon2/releases/download/"+BuildConfig.DEV_VERSION+"/engine_docs.zip";
+		String DOWNLOAD_URL = "https://edgeone.gh-proxy.org/https://github.com/shikeik/MagicDungeon2/releases/download/1.10.12.10/engine_docs.zip";
+//        String DOWNLOAD_URL = "https://cdn.gh-proxy.org/https://github.com/shikeik/MagicDungeon2/releases/download/1.10.12.10/engine_docs.zip";
+//        String DOWNLOAD_URL = "https://bgithub.xyz/shikeik/MagicDungeon2/releases/download/1.10.12.10/engine_docs.zip";
 		String SAVE_PATH = ""/*DocServer.getEngineDocPath()*/;
 
 		ProgressListener listener = (percentage, message) -> {

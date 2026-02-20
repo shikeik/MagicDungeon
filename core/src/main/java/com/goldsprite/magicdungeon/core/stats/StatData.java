@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.core.stats;
+package com.goldsprite.magicdungeon2.core.stats;
 
 import java.util.EnumMap;
 

@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.config;
+package com.goldsprite.magicdungeon2.config;
 
 public enum LaunchMode {
 	NORMAL,

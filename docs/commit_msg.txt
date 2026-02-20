@@ -1,8 +1,9 @@
-refactor: 属性与伤害系统int全面改为float
+chore: 项目重命名 MagicDungeon → MagicDungeon2 并重置版本为 0.1.2
 
-- StatType.valuePerPoint: int→float, 支持小数加点比例
-- StatData.getMDEF(): int→float, 移除向下取整(DEF=9→MDEF=4.5)
-- CombatEngine: calcDamage/calcPhysicalDamage/calcMagicDamage返回float
-- CombatEngine: calcPierceDamage参数+返回float, calcPierceAllDamages返回float[]
-- CombatEngine: MDEF不再截断, 魔法伤害精度提升
-- 同步更新StatDataTest/CombatEngineTest所有断言为float
+- 全局替换项目名 MagicDungeon → MagicDungeon2 (86个文件)
+- projectPackage: com.goldsprite.magicdungeon → com.goldsprite.magicdungeon2
+- projectVersion: 0.9.0 → 0.1.2
+- 更新 .run 配置、build.gradle、gradle.properties、README、启动器等
+- 重命名 LoadingRenderer → MagicDungeon2LoadingRenderer
+- 新增 magicdungeon2.BuildConfig、globalFileNameAndContentReplace.sh
+- 同步更新所有文档、脚本、测试中的项目名引用

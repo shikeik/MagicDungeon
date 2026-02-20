@@ -21,7 +21,7 @@ INCLUDE_PATTERN="\.gradle$|gradle\.properties$"
 # ============================
 # 这里的配置和之前一样：
 #   /build/  表示排除包含 /build/ 的路径
-EXCLUDE_PATTERN="/MagicDungeon/|/build/|/bin/|/\.git/|/target/|/\.idea/|/out/|/assets/|\.png$|\.jpg$"
+EXCLUDE_PATTERN="/MagicDungeon2/|/build/|/bin/|/\.git/|/target/|/\.idea/|/out/|/assets/|\.png$|\.jpg$"
 
 # ============================
 # 3. 输出文件名

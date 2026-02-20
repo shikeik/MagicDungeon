@@ -21,7 +21,7 @@ INCLUDE_PATTERN="\.*$"
 # ============================
 # 这里的配置和之前一样：
 #   /build/  表示排除包含 /build/ 的路径
-EXCLUDE_PATTERN="\.sh|Project.*\.txt$|/MagicDungeon/|/build/|/bin/|/\.git/|/target/|/\.idea/|/out/|/assets/|/javadoc/|\.png$|\.jpg$|changelog\.json$"
+EXCLUDE_PATTERN="\.sh|Project.*\.txt$|/MagicDungeon2/|/build/|/bin/|/\.git/|/target/|/\.idea/|/out/|/assets/|/javadoc/|\.png$|\.jpg$|changelog\.json$"
 
 # ============================
 # 3.0. 执行源相对路径 ./ 为当前

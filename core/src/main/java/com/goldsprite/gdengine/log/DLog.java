@@ -6,7 +6,7 @@ import com.badlogic.gdx.utils.Logger;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.magicdungeon.BuildConfig;
+import com.goldsprite.magicdungeon2.BuildConfig;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -31,7 +31,7 @@ public class DLog {
 		"ToastUI Y",
 		"ZipDownLoader Y",
 
-		//MagicDungeon
+		//MagicDungeon2
 		"VirtualKeyboard Y",
 		"Settings Y",
 		"InputManager Y",

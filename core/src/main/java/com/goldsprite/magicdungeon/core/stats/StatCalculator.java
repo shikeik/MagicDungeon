@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.core.stats;
+package com.goldsprite.magicdungeon2.core.stats;
 
 /**
  * 属性计算器 — 纯静态工具类。

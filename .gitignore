@@ -12,7 +12,7 @@ build/
 
 # Outputs & Temp Files
 /outputs/
-!/outputs/MagicDungeon.exe4j
+!/outputs/MagicDungeon2.exe4j
 /changes.diff
 /changes.txt
 /git_logs.txt
@@ -25,7 +25,7 @@ Project*.txt
 /logs.txt
 
 # Game Data Root
-/MagicDungeon/
+/MagicDungeon2/
 
 ## Java:
 *.class

@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.ui;
+package com.goldsprite.magicdungeon2.ui;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -16,7 +16,7 @@ import com.esotericsoftware.spine.SkeletonRenderer;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.VisUI;
 
-public class MagicDungeonLoadingRenderer implements ScreenManager.LoadingRenderer {
+public class MagicDungeon2LoadingRenderer implements ScreenManager.LoadingRenderer {
 	private PolygonSpriteBatch polyBatch;
 	private SpriteBatch batch;
 	private SkeletonRenderer skeletonRenderer;

@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.android;
+package com.goldsprite.magicdungeon2.android;
 
 import android.app.Activity;
 import android.app.AlertDialog;

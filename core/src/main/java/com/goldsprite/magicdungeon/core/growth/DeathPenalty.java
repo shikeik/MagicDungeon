@@ -1,7 +1,7 @@
-package com.goldsprite.magicdungeon.core.growth;
+package com.goldsprite.magicdungeon2.core.growth;
 
-import com.goldsprite.magicdungeon.core.stats.StatData;
-import com.goldsprite.magicdungeon.core.stats.StatType;
+import com.goldsprite.magicdungeon2.core.stats.StatData;
+import com.goldsprite.magicdungeon2.core.stats.StatType;
 
 /**
  * 死亡惩罚处理器。

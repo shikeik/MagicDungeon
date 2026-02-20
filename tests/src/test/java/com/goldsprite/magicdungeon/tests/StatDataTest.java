@@ -1,11 +1,11 @@
-package com.goldsprite.magicdungeon.tests;
+package com.goldsprite.magicdungeon2.tests;
 
 import org.junit.Test;
 
-import com.goldsprite.magicdungeon.CLogAssert;
-import com.goldsprite.magicdungeon.core.stats.StatCalculator;
-import com.goldsprite.magicdungeon.core.stats.StatData;
-import com.goldsprite.magicdungeon.core.stats.StatType;
+import com.goldsprite.magicdungeon2.CLogAssert;
+import com.goldsprite.magicdungeon2.core.stats.StatCalculator;
+import com.goldsprite.magicdungeon2.core.stats.StatData;
+import com.goldsprite.magicdungeon2.core.stats.StatType;
 
 /**
  * 属性系统单元测试。

@@ -5,6 +5,19 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本控制 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
 
+## [0.1.2] - 2026-02-20
+
+### 变更 (Changed)
+- 项目重命名: MagicDungeon → MagicDungeon2 (全局 86 个文件)
+- 版本重置: 0.9.0 → 0.1.2
+- 包名更新: com.goldsprite.magicdungeon → com.goldsprite.magicdungeon2
+- 重命名 LoadingRenderer → MagicDungeon2LoadingRenderer
+- 同步更新所有构建配置、运行配置、文档、脚本中的项目名引用
+
+### 新增 (Added)
+- 新增 `magicdungeon2.BuildConfig` 独立包名配置
+- 新增 `globalFileNameAndContentReplace.sh` 全局文件名+内容替换脚本
+
 ## [未发布] (Unreleased)
 
 ### 新增 (Added)

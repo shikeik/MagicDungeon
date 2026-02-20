@@ -14,13 +14,13 @@ import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.gdengine.ui.widget.single.ToastUI;
-import com.goldsprite.magicdungeon.config.LaunchMode;
-import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
-import com.goldsprite.magicdungeon.testing.IGameAutoTest;
+import com.goldsprite.magicdungeon2.config.LaunchMode;
+import com.goldsprite.magicdungeon2.screens.ExampleSelectScreen;
+import com.goldsprite.magicdungeon2.testing.IGameAutoTest;
 import com.kotcrab.vis.ui.VisUI;
-import com.goldsprite.magicdungeon.ui.MagicDungeonLoadingRenderer;
-import com.goldsprite.magicdungeon.input.InputManager;
-import com.goldsprite.magicdungeon.input.InputAction;
+import com.goldsprite.magicdungeon2.ui.MagicDungeon2LoadingRenderer;
+import com.goldsprite.magicdungeon2.input.InputManager;
+import com.goldsprite.magicdungeon2.input.InputAction;
 
 public class GdxLauncher extends Game {int k11;
 	private Stage toastStage;
@@ -52,7 +52,7 @@ public class GdxLauncher extends Game {int k11;
 		ScreenManager sm = new ScreenManager()
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);
-		sm.setLoadingRenderer(new MagicDungeonLoadingRenderer());
+		sm.setLoadingRenderer(new MagicDungeon2LoadingRenderer());
 
 		// [修复] 全局配置输入更新钩子，确保 InputManager 在启动时立即生效
 		// 解决初次进入演示屏手柄无法操作及鼠标锁定后无法解锁的问题

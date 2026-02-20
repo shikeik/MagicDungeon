@@ -1,10 +1,10 @@
 package com.goldsprite;
 
 import com.goldsprite.gdengine.screens.GScreen;
-import com.goldsprite.magicdungeon.config.LaunchMode;
-import com.goldsprite.magicdungeon.testing.IGameAutoTest;
-import com.goldsprite.magicdungeon.testing.GameAutoTests;
-import com.goldsprite.magicdungeon.screens.ExampleSelectScreen;
+import com.goldsprite.magicdungeon2.config.LaunchMode;
+import com.goldsprite.magicdungeon2.testing.IGameAutoTest;
+import com.goldsprite.magicdungeon2.testing.GameAutoTests;
+import com.goldsprite.magicdungeon2.screens.ExampleSelectScreen;
 
 /**
  * 调试启动配置

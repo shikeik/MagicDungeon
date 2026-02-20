@@ -8,8 +8,8 @@
             "type": "java",
             "name": "Lwjgl3Launcher",
             "request": "launch",
-            "mainClass": "com.goldsprite.magicdungeon.lwjgl3.Lwjgl3Launcher",
-            "projectName": "MagicDungeon-lwjgl3"
+            "mainClass": "com.goldsprite.magicdungeon2.lwjgl3.Lwjgl3Launcher",
+            "projectName": "MagicDungeon2-lwjgl3"
         },
         {
             "type": "java",
@@ -21,7 +21,7 @@
             "type": "java",
             "name": "Main",
             "request": "launch",
-            "mainClass": "com.goldsprite.magicdungeon.Main",
+            "mainClass": "com.goldsprite.magicdungeon2.Main",
             "projectName": "tests"
         }
     ]

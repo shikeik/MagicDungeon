@@ -1,10 +1,10 @@
-package com.goldsprite.magicdungeon.tests;
+package com.goldsprite.magicdungeon2.tests;
 
 import org.junit.Test;
 
-import com.goldsprite.magicdungeon.CLogAssert;
-import com.goldsprite.magicdungeon.core.combat.CombatEngine;
-import com.goldsprite.magicdungeon.core.combat.WeaponRange;
+import com.goldsprite.magicdungeon2.CLogAssert;
+import com.goldsprite.magicdungeon2.core.combat.CombatEngine;
+import com.goldsprite.magicdungeon2.core.combat.WeaponRange;
 
 /**
  * 战斗引擎单元测试。

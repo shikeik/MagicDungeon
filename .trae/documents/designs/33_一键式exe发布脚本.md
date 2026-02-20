@@ -27,21 +27,21 @@ gradlew oneClickRelease
     ```bash
     gradlew :lwjgl3:packageApp
     ```
-    成功后，你会看到 `outputs/dist/MagicDungeon` 文件夹。
+    成功后，你会看到 `outputs/dist/MagicDungeon2` 文件夹。
 
 2.  **配置 Enigma Virtual Box**:
     打开 Enigma Virtual Box (GUI界面)，进行以下设置：
-    *   **Enter Input File Name**: 选择 `outputs/dist/MagicDungeon/MagicDungeon.exe` (这是 jpackage 生成的主程序)。
-    *   **Enter Output File Name**: 设置为你想要的发布路径，例如 `release/MagicDungeon.exe`。
+    *   **Enter Input File Name**: 选择 `outputs/dist/MagicDungeon2/MagicDungeon2.exe` (这是 jpackage 生成的主程序)。
+    *   **Enter Output File Name**: 设置为你想要的发布路径，例如 `release/MagicDungeon2.exe`。
     *   **添加虚拟文件**:
-        *   在下方的 "Files" 列表中，将整个 `outputs/dist/MagicDungeon` 文件夹拖进去。
-        *   **重要**: 确保目录结构正确。通常你应该把 `outputs/dist/MagicDungeon` 目录下的所有内容（app, runtime, MagicDungeon.exe等）都包含在内。
-        *   建议设置：将 `outputs/dist/MagicDungeon` 文件夹拖入后，选择 "Default Folder" (默认文件夹)。
+        *   在下方的 "Files" 列表中，将整个 `outputs/dist/MagicDungeon2` 文件夹拖进去。
+        *   **重要**: 确保目录结构正确。通常你应该把 `outputs/dist/MagicDungeon2` 目录下的所有内容（app, runtime, MagicDungeon2.exe等）都包含在内。
+        *   建议设置：将 `outputs/dist/MagicDungeon2` 文件夹拖入后，选择 "Default Folder" (默认文件夹)。
     *   **压缩设置 (可选)**: 点击 "Compression"，启用压缩以减小体积。
 
 3.  **保存模板**:
     *   点击菜单栏 `File` -> `Save Project As...`。
-    *   保存为 `template.evb`，**必须放在项目根目录下** (`e:\WorkSpaces\Libgdx_WSpace\Projs\MagicDungeon\template.evb`)。
+    *   保存为 `template.evb`，**必须放在项目根目录下** (`e:\WorkSpaces\Libgdx_WSpace\Projs\MagicDungeon2\template.evb`)。
     *   **注意**: 建议在保存前，将文件路径修改为相对路径（如果 Enigma 支持），或者确保你的项目路径不会变动。
 
 4.  **验证一键发布**:
@@ -67,5 +67,5 @@ gradlew oneClickRelease
     ```
 
 2.  **template.evb 路径问题**:
-    如果 `jpackage` 输出的文件结构发生变化（例如 jar 包名字变了），你可能需要重新更新 `template.evb`。为了避免这种情况，脚本中固定了输出目录名为 `MagicDungeon`，但 jar 包名带有版本号。
+    如果 `jpackage` 输出的文件结构发生变化（例如 jar 包名字变了），你可能需要重新更新 `template.evb`。为了避免这种情况，脚本中固定了输出目录名为 `MagicDungeon2`，但 jar 包名带有版本号。
     *   **建议**: 在 Enigma 中添加文件时，如果可能，尽量使用通配符或者确保版本号变动不影响结构。或者每次发版前检查一下 evb。

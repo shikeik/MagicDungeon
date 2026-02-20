@@ -1,4 +1,4 @@
-$path = "e:\WorkSpaces\Libgdx_WSpace\Projs\MagicDungeon\.trae\documents"
+$path = "e:\WorkSpaces\Libgdx_WSpace\Projs\MagicDungeon2\.trae\documents"
 if (Test-Path $path) {
     # 获取所有文件，排除脚本自身
     $files = Get-ChildItem $path | Where-Object { $_.Name -ne "rename_docs.ps1" } | Sort-Object CreationTime

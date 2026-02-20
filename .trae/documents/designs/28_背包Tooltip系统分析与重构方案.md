@@ -96,4 +96,4 @@
     *   在键盘导航逻辑中，强制切换回 `KEYBOARD` 模式。
 
 ---
-*本文档由 AI 助手生成，用于指导 MagicDungeon 项目背包系统的 UI 重构 (v2)。*
+*本文档由 AI 助手生成，用于指导 MagicDungeon2 项目背包系统的 UI 重构 (v2)。*

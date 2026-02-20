@@ -1,13 +1,13 @@
-package com.goldsprite.magicdungeon.tests;
+package com.goldsprite.magicdungeon2.tests;
 
 import org.junit.Test;
 
-import com.goldsprite.magicdungeon.CLogAssert;
-import com.goldsprite.magicdungeon.core.growth.DeathPenalty;
-import com.goldsprite.magicdungeon.core.growth.DeathPenalty.DeathResult;
-import com.goldsprite.magicdungeon.core.growth.GrowthCalculator;
-import com.goldsprite.magicdungeon.core.stats.StatData;
-import com.goldsprite.magicdungeon.core.stats.StatType;
+import com.goldsprite.magicdungeon2.CLogAssert;
+import com.goldsprite.magicdungeon2.core.growth.DeathPenalty;
+import com.goldsprite.magicdungeon2.core.growth.DeathPenalty.DeathResult;
+import com.goldsprite.magicdungeon2.core.growth.GrowthCalculator;
+import com.goldsprite.magicdungeon2.core.stats.StatData;
+import com.goldsprite.magicdungeon2.core.stats.StatType;
 
 /**
  * 死亡惩罚单元测试。

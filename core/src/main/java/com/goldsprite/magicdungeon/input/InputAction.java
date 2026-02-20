@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.input;
+package com.goldsprite.magicdungeon2.input;
 
 public enum InputAction {
 	MOVE_UP,

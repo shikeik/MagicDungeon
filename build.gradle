@@ -40,7 +40,7 @@ allprojects {
 
 subprojects {
 	version = '$projectVersion'
-	ext.appName = 'MagicDungeon'
+	ext.appName = 'MagicDungeon2'
 	repositories {
 		google()
 		jcenter()
@@ -73,7 +73,7 @@ subprojects {
 	}
 }
 
-eclipse.project.name = 'MagicDungeon' + '-parent'
+eclipse.project.name = 'MagicDungeon2' + '-parent'
 
 // ============================================================
 // 统一构建调度中心 (Build Orchestration)

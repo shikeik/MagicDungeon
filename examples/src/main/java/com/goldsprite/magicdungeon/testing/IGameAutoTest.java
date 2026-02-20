@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon.testing;
+package com.goldsprite.magicdungeon2.testing;
 
 /**
  * 统一的自动测试接口

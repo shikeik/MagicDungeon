@@ -8,7 +8,7 @@ FILE_PATTERN="*.java"
 SEARCH_STR="com\.goldsprite\.solofight\.ui\.widget\.ToastUI"
 
 # 替换后的内容 (普通字符串，不需要转义)
-REPLACE_STR="com.goldsprite.magicdungeon.ui.widget.ToastUI"
+REPLACE_STR="com.goldsprite.magicdungeon2.ui.widget.ToastUI"
 # ===========================================
 
 # 查找当前目录下所有的指定文件

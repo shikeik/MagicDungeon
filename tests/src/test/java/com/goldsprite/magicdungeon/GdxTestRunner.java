@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon;
+package com.goldsprite.magicdungeon2;
 
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Files;

@@ -1,7 +1,7 @@
-package com.goldsprite.magicdungeon.tests;
+package com.goldsprite.magicdungeon2.tests;
 
-import com.goldsprite.magicdungeon.CLogAssert;
-import com.goldsprite.magicdungeon.core.growth.GrowthCalculator;
+import com.goldsprite.magicdungeon2.CLogAssert;
+import com.goldsprite.magicdungeon2.core.growth.GrowthCalculator;
 import org.junit.Test;
 
 /**

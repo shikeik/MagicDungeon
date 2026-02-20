@@ -1,10 +1,10 @@
 ---
 alwaysApply: false
-description: 定义 MagicDungeon 项目进行次要版本更新 (x.x -> x.x+1) 的完整生命周期。
+description: 定义 MagicDungeon2 项目进行次要版本更新 (x.x -> x.x+1) 的完整生命周期。
 ---
 # Minor 版本更新流程指南 (Minor Version Update Guide)
 
-> 本文档定义了 MagicDungeon 项目进行次要版本更新 (x.x -> x.x+1) 的完整生命周期。
+> 本文档定义了 MagicDungeon2 项目进行次要版本更新 (x.x -> x.x+1) 的完整生命周期。
 > 适用于引入新功能、重大重构或视觉升级的迭代。
 
 ## 1. 定义与触发条件
