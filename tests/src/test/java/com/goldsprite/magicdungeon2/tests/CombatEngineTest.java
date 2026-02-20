@@ -129,16 +129,16 @@ public class CombatEngineTest {
 
     @Test
     public void 测试_穿透深层衰减归零() {
-        // 100 × 0.7^15 ≈ 0.475 < 0.5 → 应归零
-        float dmg = CombatEngine.calcPierceDamage(100f, 15);
-        CLogAssert.assertEquals("第16个目标伤害应归零", 0f, dmg, 0.001f);
+        // 100 × 0.7^20 ≈ 0.0798 < 0.1 → 应归零
+        float dmg = CombatEngine.calcPierceDamage(100f, 20);
+        CLogAssert.assertEquals("第21个目标伤害应归零", 0f, dmg, 0.001f);
     }
 
     @Test
     public void 测试_穿透阈值边界保留() {
-        // 100 × 0.7^14 ≈ 0.678 > 0.5 → 应保留
-        float dmg = CombatEngine.calcPierceDamage(100f, 14);
-        CLogAssert.assertTrue("第15个目标伤害应保留", dmg > 0.5f);
+        // 100 × 0.7^19 ≈ 0.114 > 0.1 → 应保留
+        float dmg = CombatEngine.calcPierceDamage(100f, 19);
+        CLogAssert.assertTrue("第20个目标伤害应保留", dmg > 0.1f);
     }
 
     @Test

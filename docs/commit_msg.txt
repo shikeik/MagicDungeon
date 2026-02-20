@@ -1,8 +1,10 @@
-fix: StatData自由点溢出校验 + CombatEngine穿透阈值
+fix: 穿透阈值调为0.1 + xpForNextLevel改long支持300级
 
-- StatData.addFreePoints 改为boolean返回,余额不足时拒绝分配
-- 新增 StatData.validate() 用于存档加载后完整性校验
-- CombatEngine 新增 MIN_DAMAGE_THRESHOLD=0.5f,穿透衰减低于阈值归零
-- 补充9个测试: 溢出校验/validate/全管线叠加/穿透深层归零/阈值边界/第1目标豁免/90级压力/非整除扣减
+- MIN_DAMAGE_THRESHOLD 从0.5改为0.1(用户调整)
+- xpForNextLevel 返回类型 int->long, 增加溢出保护
+- totalXpForLevel/levelFromXp/xpProgress 全链路溢出保护
+- 穿透测试边界从15/14调整为20/19(匹配0.1阈值)
+- 高等级压力测试从90级提升到300级,验证溢出保护
+- 200级安全范围内反推验证一致性
 
-72个测试全部通过(原63+新增9)
+72个测试全部通过

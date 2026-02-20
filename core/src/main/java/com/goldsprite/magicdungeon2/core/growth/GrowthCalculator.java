@@ -27,12 +27,16 @@ public final class GrowthCalculator {
      * 公式：{@code floor(100 × 1.2^(level-1))}
      * <p>
      * level=0 时表示从0级升到1级，需要 {@code floor(100 × 1.2^(-1)) = 83}。
+     * <p>
+     * 结果超过 {@code Long.MAX_VALUE} 时返回 {@code Long.MAX_VALUE}（溢出保护）。
      *
      * @param level 当前等级（>=0）
      * @return 升到下一级所需经验
      */
-    public static int xpForNextLevel(int level) {
-        return (int) Math.floor(XP_BASE * Math.pow(XP_GROWTH_RATE, level - 1));
+    public static long xpForNextLevel(int level) {
+        double raw = Math.floor(XP_BASE * Math.pow(XP_GROWTH_RATE, level - 1));
+        if (raw >= (double) Long.MAX_VALUE) return Long.MAX_VALUE;
+        return (long) raw;
     }
 
     /**
@@ -61,7 +65,11 @@ public final class GrowthCalculator {
         double rate = XP_GROWTH_RATE;
         double power = Math.pow(rate, -1); // 初始指数 level=0 → 1.2^(-1)
         for (int i = 0; i < targetLevel; i++) {
-            total += (long) Math.floor(base * power);
+            double raw = Math.floor(base * power);
+            if (raw >= (double) Long.MAX_VALUE || total > Long.MAX_VALUE - (long) raw) {
+                return Long.MAX_VALUE; // 溢出保护
+            }
+            total += (long) raw;
             power *= rate;
         }
         return total;
@@ -77,8 +85,9 @@ public final class GrowthCalculator {
         int level = 0;
         long accumulated = 0;
         while (true) {
-            int needed = xpForNextLevel(level);
-            if (accumulated + needed > totalXp) break;
+            long needed = xpForNextLevel(level);
+            if (needed == Long.MAX_VALUE) break; // 溢出保护，不再升级
+            if (needed > totalXp - accumulated) break; // 经验不足以升级
             accumulated += needed;
             level++;
         }
@@ -95,8 +104,8 @@ public final class GrowthCalculator {
         int level = 0;
         long accumulated = 0;
         while (true) {
-            int needed = xpForNextLevel(level);
-            if (accumulated + needed > totalXp) {
+            long needed = xpForNextLevel(level);
+            if (needed == Long.MAX_VALUE || accumulated > totalXp - needed) {
                 return new float[]{totalXp - accumulated, needed};
             }
             accumulated += needed;

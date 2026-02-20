@@ -17,26 +17,26 @@ public class GrowthCalculatorTest {
     @Test
     public void 测试_0级到1级经验() {
         // floor(100 × 1.2^(-1)) = floor(83.33) = 83
-        int xp = GrowthCalculator.xpForNextLevel(0);
-        CLogAssert.assertEquals("0→1级需要 83 XP", 83, xp);
+        long xp = GrowthCalculator.xpForNextLevel(0);
+        CLogAssert.assertEquals("0→1级需要 83 XP", 83L, xp);
     }
 
     @Test
     public void 测试_1级到2级经验() {
         // floor(100 × 1.2^0) = 100
-        CLogAssert.assertEquals("1→2级需要 100 XP", 100, GrowthCalculator.xpForNextLevel(1));
+        CLogAssert.assertEquals("1→2级需要 100 XP", 100L, GrowthCalculator.xpForNextLevel(1));
     }
 
     @Test
     public void 测试_2级到3级经验() {
         // floor(100 × 1.2^1) = 120
-        CLogAssert.assertEquals("2→3级需要 120 XP", 120, GrowthCalculator.xpForNextLevel(2));
+        CLogAssert.assertEquals("2→3级需要 120 XP", 120L, GrowthCalculator.xpForNextLevel(2));
     }
 
     @Test
     public void 测试_10级到11级经验() {
         // floor(100 × 1.2^9) ≈ 515
-        int xp = GrowthCalculator.xpForNextLevel(10);
+        long xp = GrowthCalculator.xpForNextLevel(10);
         CLogAssert.assertTrue("10→11级经验约 515", Math.abs(xp - 515) <= 2);
     }
 
@@ -136,17 +136,30 @@ public class GrowthCalculatorTest {
 
     @Test
     public void 测试_高等级计算稳定性() {
-        // xpForNextLevel 返回 int，level >= 95 就会溢出
-        // 测试 90 级作为安全上限压力测试
-        int highLevel = 90;
+        // 测试 300 级压力，经验公式约 level 216 时单级 XP 超 Long 上限
+        // 溢出保护应返回 Long.MAX_VALUE
+        int highLevel = 300;
         long totalXp = GrowthCalculator.totalXpForLevel(highLevel);
-        CLogAssert.assertTrue("90级总经验应为正数", totalXp > 0);
+        CLogAssert.assertTrue("300级总经验应为正数", totalXp > 0);
 
+        // 溢出后 totalXpForLevel 会返回 Long.MAX_VALUE
+        CLogAssert.assertEquals("300级经验应触发溢出保护",
+            Long.MAX_VALUE, totalXp);
+
+        // 确保不崩溃，能正常反推等级
         int derived = GrowthCalculator.levelFromXp(totalXp);
-        CLogAssert.assertEquals("90级经验反推应一致", highLevel, derived);
+        CLogAssert.assertTrue("300级反推等级应为正数", derived > 0);
 
-        // 确保 xpForNextLevel 未溢出
-        int xp90 = GrowthCalculator.xpForNextLevel(90);
-        CLogAssert.assertTrue("90级升级经验应为正数", xp90 > 0);
+        // 单级 XP 溢出保护
+        long xp300 = GrowthCalculator.xpForNextLevel(300);
+        CLogAssert.assertEquals("300级升级经验应触发溢出保护",
+            Long.MAX_VALUE, xp300);
+
+        // 安全范围内的高等级仍可反推
+        int safeLevel = 200;
+        long safeXp = GrowthCalculator.totalXpForLevel(safeLevel);
+        CLogAssert.assertTrue("200级总经验应为正数", safeXp > 0 && safeXp < Long.MAX_VALUE);
+        int safeDerived = GrowthCalculator.levelFromXp(safeXp);
+        CLogAssert.assertEquals("200级经验反推应一致", safeLevel, safeDerived);
     }
 }
