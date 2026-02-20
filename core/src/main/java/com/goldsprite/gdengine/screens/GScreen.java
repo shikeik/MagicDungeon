@@ -77,8 +77,6 @@ public abstract class GScreen extends ScreenAdapter {
 	}
 
 	public boolean handleBackKey() {
-
-		DLog.log("handleBackKey 安卓Back键");
 		// 1. 优先关闭顶层 Modal Dialog
 		if (!dialogStack.isEmpty()) {
 			BaseDialog top = dialogStack.peek();
@@ -350,7 +348,7 @@ public abstract class GScreen extends ScreenAdapter {
 		visible = false;
 		getScreenManager().disableInput(getImp());
 	}
-	
+
 	/**
 	 * 获取 UI Stage。
 	 * 子类如果使用了 Stage (例如 MainMenuScreen, GameScreen), 应该重写此方法返回其 Stage。

@@ -33,8 +33,8 @@ public class Lwjgl3Launcher {
 
 	private static Lwjgl3Application createApplication() {
 
-		// [新增] 注入浏览器实现
-		PlatformImpl.webBrower = new DesktopWebBrowser();
+		// 注入浏览器实现
+//		PlatformImpl.webBrower = new DesktopWebBrowser();
 
 		// [修改] 注入到游戏主入口
 		return new Lwjgl3Application(new GdxLauncher(), getDefaultConfiguration());

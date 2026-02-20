@@ -147,7 +147,6 @@ public class AndroidGdxLauncher extends AndroidApplication {
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			DLog.log("onKeyDown 安卓Back键");
 			// 返回 true 拦截事件，阻止系统默认的 finish() 行为
 			return true;
 		}
