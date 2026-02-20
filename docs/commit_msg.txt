@@ -1,10 +1,7 @@
-fix: 穿透阈值调为0.1 + xpForNextLevel改long支持300级
+chore: v0.2.0 发版 — 核心数据模型系统
 
-- MIN_DAMAGE_THRESHOLD 从0.5改为0.1(用户调整)
-- xpForNextLevel 返回类型 int->long, 增加溢出保护
-- totalXpForLevel/levelFromXp/xpProgress 全链路溢出保护
-- 穿透测试边界从15/14调整为20/19(匹配0.1阈值)
-- 高等级压力测试从90级提升到300级,验证溢出保护
-- 200级安全范围内反推验证一致性
+- 重构系统设计案 2_0_系统设计案.md, 以实际代码为权威同步
+- 更新 CHANGELOG.md, 记录 0.2.0 全部变更
+- bumpMinor: 0.1.2 -> 0.2.0
 
-72个测试全部通过
+新增 6 个核心源文件 + 4 个测试文件, 72 个单元测试全部通过

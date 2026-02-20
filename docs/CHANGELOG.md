@@ -7,25 +7,37 @@
 
 ## [未发布(最新)] (Unreleased)
 
+---
+
+## [0.2.0] - 2026-02-21
+
 ### 新增 (Added)
 
-- 文档: 建立了 Minor 版本更新流程 (`.trae/rules/flow-version-minor.md`)。
-- 计划: 启动了 [Neon 生成与艺术化升级计划] (版本 0.x.Next)。
+- 核心数据模型系统 — 6 个源文件 + 4 个测试文件，共 72 个单元测试
+  - `StatType`: 6 大属性枚举 (HP/MP/ATK/DEF/ASP/MOV)，含 `valuePerPoint` 与 `isAllocatable`
+  - `StatData`: 属性容器与统一计算流水线，支持装备/百分比/突破加成
+  - `StatCalculator`: 等级点数公式 (`fixedPointsPerStat`, `totalFreePoints`, `totalPoints`)
+  - `CombatEngine`: 物理/魔法/穿透伤害引擎，穿透衰减 0.7，最低阈值 0.1
+  - `GrowthCalculator`: 经验-等级公式 (`100×1.2^(L-1)`)，返回 `long`，全链路溢出保护
+  - `DeathPenalty`: 死亡惩罚系统 (经验 20%/金币 50%/装备 2-5 件)，自由点循环均匀扣除
+- 文档: 重构系统设计案 `2_0_系统设计案.md`，以实际代码为权威同步
 
 ### 修复 (Fixed)
 
-- 修复安卓虚拟手柄切换时背景灰没有铺满全屏的问题: 视口刷新但GScreen drawScreenBack忘了更新投影矩阵
-- 修复了 `LoadGameDialog` 中的代码规范问题 (全限定名、缩进)。
-- 优化了 `LoadGameDialog` 中 `SimpleDateFormat` 的实例化开销。
-- 修复了 `NeonGenTestScreen` 中的闪退问题 (FrameBuffer 销毁逻辑与异常捕获)。
-- 修复了 `TextureExporter` 导致的显存泄漏问题。
-- 修复了 `GameScreen` 渲染循环中频繁切换 Batch 导致的性能损耗。
+- `StatData.addFreePoints` 增加余额校验与不可加点属性拒绝，返回 `boolean`
+- `StatData.validate()` 校验自由点分配不超限
+- `CombatEngine` 穿透衰减伤害低于 0.1 时归零（首目标豁免）
+- `GrowthCalculator.xpForNextLevel` 从 `int` 改为 `long`，防止高等级 (>95) 溢出
+- `GrowthCalculator` 全链路溢出保护 (`totalXpForLevel`/`levelFromXp`/`xpProgress`)
 
 ### 变更 (Changed)
 
-- 重构: 将 `GameHUD` 中的战斗日志逻辑提取为 `CombatLogUI`。
-- 优化: 引入 `ThemeConfig` 以减少绘图代码中的硬编码。
-- 整理: 重命名并规范化了 `.trae/optimization` 目录结构。
+- 属性与伤害系统 `int` 全面改为 `float`
+- `CombatEngine.calcMagicDamage` 改由调用方传入 MDEF（不内部计算 DEF/2）
+- ASP/MOV 统一为乘法管线: `min((base+equip)×(1+pct), 3.0) + uncapped`
+- 死亡惩罚自由点扣除改为循环均匀分配算法（每轮对有余额属性均匀扣减）
+- `StatData` 点数公式全部委托 `StatCalculator`，消除重复
+- `GrowthCalculator.totalXpForLevel` 累加优化为局部变量，避免逐级调用
 
 ---
 
