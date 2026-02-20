@@ -9,7 +9,7 @@ apply plugin: 'com.android.application'
 eclipse.project.name = appName + "-android"
 
 android {
-	namespace "com.goldsprite.magicdungeon.android"
+	namespace "com.goldsprite.magicdungeon2.android"
 	compileSdkVersion 34 // 更新到34以兼容androidx.core:core:1.12.0
 	sourceSets {
 		main {
@@ -32,7 +32,7 @@ android {
 		}
 	}
 	defaultConfig {
-		applicationId 'com.goldsprite.magicdungeon.android'
+		applicationId 'com.goldsprite.magicdungeon2.android'
 		minSdkVersion 26
 		//noinspection OldTargetApi
 		targetSdkVersion 34

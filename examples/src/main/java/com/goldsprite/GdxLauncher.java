@@ -7,7 +7,6 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import com.goldsprite.DebugLaunchConfig;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.log.DebugConsole;

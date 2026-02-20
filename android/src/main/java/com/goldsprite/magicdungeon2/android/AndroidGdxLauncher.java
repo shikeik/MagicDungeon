@@ -1,7 +1,5 @@
 package com.goldsprite.magicdungeon2.android;
 
-import android.Manifest;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
@@ -16,7 +14,6 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 
-import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.goldsprite.GdxLauncher;
