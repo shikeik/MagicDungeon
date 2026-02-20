@@ -89,10 +89,28 @@ public class StatData {
 
     /**
      * 向某属性增加指定数量的自由属性点。
+     * 分配前会检查余额，余额不足时拒绝分配。
+     *
+     * @param type  属性类型
+     * @param points 要增加的点数（必须 >= 0）
+     * @return true 分配成功，false 余额不足或参数非法
      */
-    public void addFreePoints(StatType type, int points) {
-        if (!type.isAllocatable()) return;
-        freePoints.put(type, Math.max(0, getFreePoints(type) + points));
+    public boolean addFreePoints(StatType type, int points) {
+        if (!type.isAllocatable()) return false;
+        if (points < 0) return false;
+        if (points > getRemainingFreePoints()) return false;
+        freePoints.put(type, getFreePoints(type) + points);
+        return true;
+    }
+
+    /**
+     * 校验数据完整性（自由点是否超限）。
+     * 用于存档加载后检查数据是否被篡改或损坏。
+     *
+     * @return true 数据合法，false 自由点超限
+     */
+    public boolean validate() {
+        return getRemainingFreePoints() >= 0;
     }
 
     /**

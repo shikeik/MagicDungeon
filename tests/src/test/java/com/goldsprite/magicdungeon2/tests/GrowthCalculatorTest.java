@@ -1,8 +1,9 @@
 package com.goldsprite.magicdungeon2.tests;
 
+import org.junit.Test;
+
 import com.goldsprite.magicdungeon2.CLogAssert;
 import com.goldsprite.magicdungeon2.core.growth.GrowthCalculator;
-import org.junit.Test;
 
 /**
  * 经验与等级系统单元测试。
@@ -129,5 +130,23 @@ public class GrowthCalculatorTest {
         float[] progress = GrowthCalculator.xpProgress(83);
         CLogAssert.assertEquals("1级起点: 已有 0", 0f, progress[0]);
         CLogAssert.assertEquals("1级起点: 需要 100", 100f, progress[1]);
+    }
+
+    // ========== 高等级压力测试 ==========
+
+    @Test
+    public void 测试_高等级计算稳定性() {
+        // xpForNextLevel 返回 int，level >= 95 就会溢出
+        // 测试 90 级作为安全上限压力测试
+        int highLevel = 90;
+        long totalXp = GrowthCalculator.totalXpForLevel(highLevel);
+        CLogAssert.assertTrue("90级总经验应为正数", totalXp > 0);
+
+        int derived = GrowthCalculator.levelFromXp(totalXp);
+        CLogAssert.assertEquals("90级经验反推应一致", highLevel, derived);
+
+        // 确保 xpForNextLevel 未溢出
+        int xp90 = GrowthCalculator.xpForNextLevel(90);
+        CLogAssert.assertTrue("90级升级经验应为正数", xp90 > 0);
     }
 }

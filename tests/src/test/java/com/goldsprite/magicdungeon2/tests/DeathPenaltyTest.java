@@ -127,4 +127,32 @@ public class DeathPenaltyTest {
         CLogAssert.assertEquals("等级不变 = 5", 5, data.getLevel());
         CLogAssert.assertEquals("ATK自由点不变 = 10", 10, data.getFreePoints(StatType.ATK));
     }
+
+    // ========== 非整除扣减 ==========
+
+    @Test
+    public void 测试_降级自由点非整除扣减() {
+        StatData data = new StatData();
+        data.setLevel(3); // 怹4点 = 12
+        // 初始分配：HP=4, MP=4, ATK=4, DEF=0
+        data.setFreePoints(StatType.HP, 4);
+        data.setFreePoints(StatType.MP, 4);
+        data.setFreePoints(StatType.ATK, 4);
+
+        // 降到1级，损失自由点 = (3-1)×4 = 8
+        // 循环再分配后，总自由点应精确减到8，剩余4点
+        DeathPenalty.applyLevelLoss(data, 3, 1);
+
+        int totalRemaining = data.getFreePoints(StatType.HP)
+                           + data.getFreePoints(StatType.MP)
+                           + data.getFreePoints(StatType.ATK)
+                           + data.getFreePoints(StatType.DEF);
+
+        CLogAssert.assertEquals("降级后等级 = 1", 1, data.getLevel());
+        CLogAssert.assertEquals("剩余总自由点应为 4", 4, totalRemaining);
+        CLogAssert.assertTrue("HP自由点非负", data.getFreePoints(StatType.HP) >= 0);
+        CLogAssert.assertTrue("MP自由点非负", data.getFreePoints(StatType.MP) >= 0);
+        CLogAssert.assertTrue("ATK自由点非负", data.getFreePoints(StatType.ATK) >= 0);
+        CLogAssert.assertTrue("DEF自由点非负", data.getFreePoints(StatType.DEF) >= 0);
+    }
 }

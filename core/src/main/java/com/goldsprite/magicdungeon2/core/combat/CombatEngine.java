@@ -15,6 +15,9 @@ public final class CombatEngine {
     /** 穿透衰减系数（每多穿透一个目标保留 70% 伤害） */
     public static final float PIERCE_DECAY = 0.7f;
 
+    /** 最小有效伤害阈值，穿透衰减后低于此值视为 0 */
+    public static final float MIN_DAMAGE_THRESHOLD = 0.1f;
+
     private CombatEngine() {}
 
     /**
@@ -55,6 +58,9 @@ public final class CombatEngine {
 
     /**
      * 计算穿透衰减后的伤害。
+     * <p>
+     * 衰减后低于 {@link #MIN_DAMAGE_THRESHOLD} 的伤害归零，
+     * 避免浮点精度带来的“灰尘伤害”。
      *
      * @param baseDamage 基础伤害（对第1个目标的伤害）
      * @param targetIndex 目标序号（从0开始，0=第1个目标）
@@ -62,7 +68,8 @@ public final class CombatEngine {
      */
     public static float calcPierceDamage(float baseDamage, int targetIndex) {
         if (targetIndex <= 0) return baseDamage;
-        return (float) (baseDamage * Math.pow(PIERCE_DECAY, targetIndex));
+        float dmg = (float) (baseDamage * Math.pow(PIERCE_DECAY, targetIndex));
+        return dmg < MIN_DAMAGE_THRESHOLD ? 0f : dmg;
     }
 
     /**

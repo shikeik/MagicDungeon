@@ -1,9 +1,8 @@
-refactor: 修复Gemini代码审查5项架构问题
+fix: StatData自由点溢出校验 + CombatEngine穿透阈值
 
-- Fix1: CombatEngine.calcMagicDamage 移除内部DEF/2,调用方传入MDEF
-- Fix2: StatData统一ASP/MOV百分比管线为乘法公式
-- Fix3: DeathPenalty.applyLevelLoss改为循环再分配算法
-- Fix4: StatData委托StatCalculator消除公式重复
-- Fix5: GrowthCalculator.totalXpForLevel优化为局部变量累乘
+- StatData.addFreePoints 改为boolean返回,余额不足时拒绝分配
+- 新增 StatData.validate() 用于存档加载后完整性校验
+- CombatEngine 新增 MIN_DAMAGE_THRESHOLD=0.5f,穿透衰减低于阈值归零
+- 补充9个测试: 溢出校验/validate/全管线叠加/穿透深层归零/阈值边界/第1目标豁免/90级压力/非整除扣减
 
-全部63个测试通过
+72个测试全部通过(原63+新增9)

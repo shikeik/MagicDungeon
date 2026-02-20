@@ -205,4 +205,46 @@ public class StatDataTest {
         CLogAssert.assertTrue("toString 包含 Lv.5", s.contains("Lv.5"));
         System.out.println(s);
     }
+
+    // ========== 自由点溢出校验 ==========
+
+    @Test
+    public void 测试_自由点分配余额不足应失败() {
+        StatData data = new StatData();
+        data.setLevel(1); // 4点自由点
+        // 尝试加 5 点，应该失败
+        boolean success = data.addFreePoints(StatType.ATK, 5);
+        CLogAssert.assertFalse("余额不足应拒绝分配", success);
+        CLogAssert.assertEquals("ATK点数应不变", 0, data.getFreePoints(StatType.ATK));
+    }
+
+    @Test
+    public void 测试_手动设置溢出validate检测() {
+        StatData data = new StatData();
+        data.setLevel(1); // 4点
+        data.setFreePoints(StatType.HP, 10); // 存档篡改场景
+        CLogAssert.assertFalse("自由点超限应被检测", data.validate());
+    }
+
+    @Test
+    public void 测试_正常数据validate通过() {
+        StatData data = new StatData();
+        data.setLevel(3); // 12点
+        data.addFreePoints(StatType.ATK, 5);
+        data.addFreePoints(StatType.DEF, 5);
+        CLogAssert.assertTrue("正常数据应通过校验", data.validate());
+    }
+
+    // ========== 百分比增益叠加 ==========
+
+    @Test
+    public void 测试_装备加百分比加自由点全管线() {
+        StatData data = new StatData();
+        data.setLevel(2); // 固定点 = 3
+        data.addFreePoints(StatType.ATK, 2);
+        data.setEquipFixed(StatType.ATK, 5f);
+        data.setPercentBonus(StatType.ATK, 0.5f); // +50%
+        // ATK = ((3+2)×1 + 5) × (1 + 0.5) = 10 × 1.5 = 15
+        CLogAssert.assertEquals("全管线ATK = 15", 15f, data.getATK());
+    }
 }

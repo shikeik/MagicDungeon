@@ -124,4 +124,27 @@ public class CombatEngineTest {
         CLogAssert.assertEquals("箭矢范围 = 5", 5, WeaponRange.ARROW.range);
         CLogAssert.assertTrue("箭矢 可穿透", WeaponRange.ARROW.piercing);
     }
+
+    // ========== 穿透精度与阈值 ==========
+
+    @Test
+    public void 测试_穿透深层衰减归零() {
+        // 100 × 0.7^15 ≈ 0.475 < 0.5 → 应归零
+        float dmg = CombatEngine.calcPierceDamage(100f, 15);
+        CLogAssert.assertEquals("第16个目标伤害应归零", 0f, dmg, 0.001f);
+    }
+
+    @Test
+    public void 测试_穿透阈值边界保留() {
+        // 100 × 0.7^14 ≈ 0.678 > 0.5 → 应保留
+        float dmg = CombatEngine.calcPierceDamage(100f, 14);
+        CLogAssert.assertTrue("第15个目标伤害应保留", dmg > 0.5f);
+    }
+
+    @Test
+    public void 测试_穿透第1目标不受阈值影响() {
+        // 第1个目标即使基础伤害 < 0.5 也应原样返回
+        float dmg = CombatEngine.calcPierceDamage(0.3f, 0);
+        CLogAssert.assertEquals("第1目标不受阈值影响", 0.3f, dmg, 0.001f);
+    }
 }
