@@ -102,19 +102,18 @@ public class DeathPenaltyTest {
     }
 
     @Test
-    public void 测试_降级自由点不足时扣到0() {
+    public void 测试_降级自由点不足时循环再分配() {
         StatData data = new StatData();
         data.setLevel(3);
         // 只在ATK加了全部12点自由点
         data.setFreePoints(StatType.ATK, 12);
 
-        // 降到0级，损失自由点 = 3×4 = 12, 平均每项扣3
-        // HP/MP/DEF 自由点 = 0，扣不了，只会设为0
+        // 降到0级，损失自由点 = 3×4 = 12, 全部从 ATK 扣除
         DeathPenalty.applyLevelLoss(data, 3, 0);
 
         CLogAssert.assertEquals("降级后等级 = 0", 0, data.getLevel());
         CLogAssert.assertEquals("HP自由点 = 0", 0, data.getFreePoints(StatType.HP));
-        CLogAssert.assertEquals("ATK自由点 = 9", 9, data.getFreePoints(StatType.ATK));
+        CLogAssert.assertEquals("ATK自由点 = 0", 0, data.getFreePoints(StatType.ATK));
     }
 
     @Test

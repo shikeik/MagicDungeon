@@ -170,8 +170,8 @@ public class StatDataTest {
         StatData data = new StatData();
         data.setEquipFixed(StatType.MOV, 1.0f);
         data.setPercentBonus(StatType.MOV, 0.5f);
-        // MOV = min(1.0 + 1.0 + 0.5, 3.0) = 2.5
-        CLogAssert.assertEquals("MOV = 2.5", 2.5f, data.getMOV());
+        // MOV = min((1.0 + 1.0) × (1 + 0.5), 3.0) = min(3.0, 3.0) = 3.0
+        CLogAssert.assertEquals("MOV = 3.0", 3.0f, data.getMOV());
         // ASP 不受影响
         CLogAssert.assertEquals("ASP 不变 = 1.0", 1.0f, data.getASP());
     }

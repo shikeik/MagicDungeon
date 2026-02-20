@@ -55,19 +55,19 @@ public class StatData {
 
     /**
      * 获取某属性的总固定属性点数。
-     * 基础值 = 0级附送4固定点（每项1点），之后每级每项 +1 点。
-     * 总固定点(每项) = level + 1
+     * 委托给 {@link StatCalculator#fixedPointsPerStat(int)}。
      */
     public int getFixedPoints(StatType type) {
         if (!type.isAllocatable()) return 0;
-        return level + 1;
+        return StatCalculator.fixedPointsPerStat(level);
     }
 
     /**
      * 获取全部固定属性点总计（四项之和）。
+     * 委托给 {@link StatCalculator#totalFixedPoints(int)}。
      */
     public int getTotalFixedPoints() {
-        return (level + 1) * 4;
+        return StatCalculator.totalFixedPoints(level);
     }
 
     // ============ 自由加点 ============
@@ -107,10 +107,11 @@ public class StatData {
     }
 
     /**
-     * 可用的自由属性点总额 = level × 4。
+     * 可用的自由属性点总额。
+     * 委托给 {@link StatCalculator#totalFreePoints(int)}。
      */
     public int getMaxFreePoints() {
-        return level * 4;
+        return StatCalculator.totalFreePoints(level);
     }
 
     /**
@@ -159,10 +160,9 @@ public class StatData {
      * <pre>
      * 最终值 = (固定点 × 单点值 + 自由点 × 单点值 + 装备固定) × (1 + 百分比)
      * </pre>
-     * 对于 ASP/MOV:
+     * 对于 ASP/MOV（统一乘法管线）:
      * <pre>
-     * 基础 = 1.0（100%）
-     * 加成后 = min(基础 + 装备固定 + 百分比, SPEED_CAP) + 突破加成
+     * 加成后 = min((基础 + 装备固定) × (1 + 百分比), SPEED_CAP) + 突破加成
      * </pre>
      */
     public float getFinalValue(StatType type) {
@@ -186,7 +186,8 @@ public class StatData {
         float base = 1.0f; // 100% 基础
         float equip = getEquipFixed(type);
         float pct = getPercentBonus(type);
-        float capped = Math.min(base + equip + pct, SPEED_CAP);
+        // 统一使用乘法管线：(base + equip) × (1 + pct)，再裁剪到上限
+        float capped = Math.min((base + equip) * (1f + pct), SPEED_CAP);
         float uncapped = getUncappedBonus(type);
         return capped + uncapped;
     }
@@ -208,9 +209,9 @@ public class StatData {
     /** 获取最终 MOV 倍率 */
     public float getMOV() { return getFinalValue(StatType.MOV); }
 
-    /** 获取总属性点数 = 8L + 4 */
+    /** 获取总属性点数。委托给 {@link StatCalculator#totalPoints(int)}。 */
     public int getTotalPoints() {
-        return 8 * level + 4;
+        return StatCalculator.totalPoints(level);
     }
 
     @Override

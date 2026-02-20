@@ -6,7 +6,7 @@ package com.goldsprite.magicdungeon2.core.combat;
  * 核心公式（魔塔式无保底）：
  * <ul>
  *   <li>物理伤害 = max(0, ATK - DEF)</li>
- *   <li>魔法伤害 = max(0, ATK_mag - MDEF)，其中 MDEF = DEF / 2</li>
+ *   <li>魔法伤害 = max(0, ATK_mag - MDEF)，调用方传入 MDEF</li>
  *   <li>穿透衰减 = D_base × 0.7^(n-1)</li>
  * </ul>
  */
@@ -41,13 +41,15 @@ public final class CombatEngine {
 
     /**
      * 计算魔法伤害。
+     * <p>
+     * 调用方需自行传入 MDEF（通常由 {@code StatData.getMDEF()} 获得），
+     * 本方法不再内部计算 DEF/2，以避免双重除法陷阱。
      *
      * @param magAtk 攻击方的魔法攻击力
-     * @param def 防御方 DEF（MDEF 将自动计算为 DEF/2）
+     * @param mdef 防御方的魔法防御力（MDEF）
      * @return 伤害值
      */
-    public static float calcMagicDamage(float magAtk, float def) {
-        float mdef = def / 2f;
+    public static float calcMagicDamage(float magAtk, float mdef) {
         return calcDamage(magAtk, mdef);
     }
 

@@ -1,9 +1,9 @@
-chore: 项目重命名 MagicDungeon → MagicDungeon2 并重置版本为 0.1.2
+refactor: 修复Gemini代码审查5项架构问题
 
-- 全局替换项目名 MagicDungeon → MagicDungeon2 (86个文件)
-- projectPackage: com.goldsprite.magicdungeon → com.goldsprite.magicdungeon2
-- projectVersion: 0.9.0 → 0.1.2
-- 更新 .run 配置、build.gradle、gradle.properties、README、启动器等
-- 重命名 LoadingRenderer → MagicDungeon2LoadingRenderer
-- 新增 magicdungeon2.BuildConfig、globalFileNameAndContentReplace.sh
-- 同步更新所有文档、脚本、测试中的项目名引用
+- Fix1: CombatEngine.calcMagicDamage 移除内部DEF/2,调用方传入MDEF
+- Fix2: StatData统一ASP/MOV百分比管线为乘法公式
+- Fix3: DeathPenalty.applyLevelLoss改为循环再分配算法
+- Fix4: StatData委托StatCalculator消除公式重复
+- Fix5: GrowthCalculator.totalXpForLevel优化为局部变量累乘
+
+全部63个测试通过

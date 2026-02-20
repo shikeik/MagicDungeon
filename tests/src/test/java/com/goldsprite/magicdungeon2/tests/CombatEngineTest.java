@@ -42,28 +42,28 @@ public class CombatEngineTest {
 
     @Test
     public void 测试_魔法伤害基础() {
-        // magATK=10, DEF=6 => MDEF=3 => 10-3=7
-        CLogAssert.assertEquals("魔法10 vs DEF6(MDEF3) = 7", 7f,
-            CombatEngine.calcMagicDamage(10, 6));
+        // magATK=10, MDEF=3 => 10-3=7
+        CLogAssert.assertEquals("魔法10 vs MDEF3 = 7", 7f,
+            CombatEngine.calcMagicDamage(10, 3));
     }
 
     @Test
     public void 测试_魔法伤害比物理更容易破防() {
-        // DEF=10 => MDEF=5
+        // DEF=10 => MDEF=5（调用方计算）
         // 物理 ATK=8: 8-10=0（破不了防）
         // 魔法 ATK=8: 8-5=3（能破防）
         CLogAssert.assertEquals("物理 8 vs DEF10 = 0", 0f,
             CombatEngine.calcPhysicalDamage(8, 10));
-        CLogAssert.assertEquals("魔法 8 vs DEF10(MDEF5) = 3", 3f,
-            CombatEngine.calcMagicDamage(8, 10));
+        CLogAssert.assertEquals("魔法 8 vs MDEF5 = 3", 3f,
+            CombatEngine.calcMagicDamage(8, 5));
     }
 
     @Test
     public void 测试_魔法MDEF精确计算() {
-        // DEF=7 => MDEF=3.5
+        // MDEF=3.5（调用方由 DEF=7 计算得出）
         // magATK=5 => 5-3.5=1.5
-        CLogAssert.assertEquals("魔法5 vs DEF7(MDEF3.5) = 1.5", 1.5f,
-            CombatEngine.calcMagicDamage(5, 7));
+        CLogAssert.assertEquals("魔法5 vs MDEF3.5 = 1.5", 1.5f,
+            CombatEngine.calcMagicDamage(5, 3.5f));
     }
 
     // ========== 穿透衰减 ==========

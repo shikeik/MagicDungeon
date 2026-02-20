@@ -107,16 +107,29 @@ public final class DeathPenalty {
 
         if (lostFreePoints <= 0) return;
 
-        // 平均扣除：从已分配的自由点中均匀扣减
+        // 循环再分配扣除：确保总扣除量精确等于 lostFreePoints
         StatType[] allocatable = StatType.ALLOCATABLE;
-        int perStat = lostFreePoints / allocatable.length;
-        int remainder = lostFreePoints % allocatable.length;
+        int remaining = lostFreePoints;
+        // 多轮扣除，直到全部扣完或所有属性均为0
+        while (remaining > 0) {
+            // 统计仍有自由点的属性数量，仅在有点数的属性间均分
+            int activeCount = 0;
+            for (StatType type : allocatable) {
+                if (statData.getFreePoints(type) > 0) activeCount++;
+            }
+            if (activeCount == 0) break; // 所有属性已为0
 
-        for (int i = 0; i < allocatable.length; i++) {
-            StatType type = allocatable[i];
-            int toRemove = perStat + (i < remainder ? 1 : 0);
-            int current = statData.getFreePoints(type);
-            statData.setFreePoints(type, Math.max(0, current - toRemove));
+            int perStat = Math.max(1, remaining / activeCount);
+            int deducted = 0;
+            for (StatType type : allocatable) {
+                if (deducted >= remaining) break;
+                int current = statData.getFreePoints(type);
+                if (current <= 0) continue;
+                int toRemove = Math.min(perStat, Math.min(current, remaining - deducted));
+                statData.setFreePoints(type, current - toRemove);
+                deducted += toRemove;
+            }
+            remaining -= deducted;
         }
 
         // 更新等级
