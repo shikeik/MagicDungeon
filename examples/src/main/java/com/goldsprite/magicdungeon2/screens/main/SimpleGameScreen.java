@@ -1,12 +1,9 @@
 package com.goldsprite.magicdungeon2.screens.main;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
@@ -14,14 +11,12 @@ import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon2.assets.TextureManager;
 import com.goldsprite.magicdungeon2.core.growth.DeathPenalty;
-import com.goldsprite.magicdungeon2.core.growth.GrowthCalculator;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
 import com.goldsprite.magicdungeon2.input.virtual.VirtualControlsOverlay;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MAP_H;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MAP_W;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MP_REGEN_RATE;
-import static com.goldsprite.magicdungeon2.screens.main.GameConfig.POPUP_RISE_SPEED;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.STICK_DEADZONE;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.TILE;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_FLOOR;
@@ -39,7 +34,7 @@ import static com.goldsprite.magicdungeon2.screens.main.GameConfig.WORLD_VIEW_SI
  * - 敌人各自独立冷却，不等玩家行动
  * - 逻辑坐标(x,y)立即跳变，视觉坐标(visualX,visualY)平滑插值
  */
-public class SimpleGameScreen extends GScreen {
+public class SimpleGameScreen extends GScreen implements GameRenderer.GameState {
 	// 摇杆四向判定半角（度），默认45°，即每个方向占 90° 扇形（全覆盖）
 	private static float stickHalfAngle = 45;
 
@@ -64,6 +59,9 @@ public class SimpleGameScreen extends GScreen {
 	private GrowthHelper growthHelper;
 	private EnemyAI enemyAI;
 
+	// 渲染子系统
+	private GameRenderer renderer;
+
 	// ============ 公共访问方法（供自动测试读取状态） ============
 
 	/** 获取玩家实体 */
@@ -83,6 +81,12 @@ public class SimpleGameScreen extends GScreen {
 
 	/** 获取日志文本 */
 	public String getLogText() { return logText; }
+
+	/** 获取飘字列表 */
+	@Override public Array<DamagePopup> getPopups() { return popups; }
+
+	/** 获取死亡惩罚结果 */
+	@Override public DeathPenalty.DeathResult getDeathResult() { return deathResult; }
 
 	// ============ 向后兼容别名（过渡期后移除） ============
 	/** @deprecated 使用 {@link GameEntity} 替代 */
@@ -106,6 +110,10 @@ public class SimpleGameScreen extends GScreen {
 		buildMap();
 		spawnEntities();
 		initHelpers();
+
+		// 初始化渲染器（在 font/hudFont/helpers 准备好之后）
+		renderer = new GameRenderer(batch, font, hudFont,
+			getUICamera(), getUIViewport(), this);
 
 		// 创建虚拟触控覆盖层（Android 默认显示）
 		virtualControls = new VirtualControlsOverlay(new ExtendViewport(
@@ -209,7 +217,7 @@ public class SimpleGameScreen extends GScreen {
 		for (int i = 0; i < enemies.size; i++) {
 			enemies.get(i).updateVisuals(delta);
 		}
-		updatePopups(delta);
+		renderer.updatePopups(delta);
 
 		// 世界相机跟随玩家（使用视觉坐标更平滑）
 		OrthographicCamera worldCam = getWorldCamera();
@@ -221,17 +229,15 @@ public class SimpleGameScreen extends GScreen {
 		// 世界渲染（地图+实体+飘字）
 		batch.setProjectionMatrix(worldCam.combined);
 		batch.begin();
-		drawMap();
-		drawEntities();
-		drawPopups();
+		renderer.drawWorld();
 		batch.end();
 
 		// HUD 渲染（使用 UI 视口）
-		drawHUD();
+		renderer.drawHUD();
 
 		// 死亡覆盖层
 		if (!player.alive && deathResult != null) {
-			drawDeathOverlay();
+			renderer.drawDeathOverlay();
 		}
 
 		// 渲染虚拟触控控件（在 HUD 之上）
@@ -312,128 +318,6 @@ public class SimpleGameScreen extends GScreen {
 		}
 	}
 
-	// ============ 碰撞与查询 ============
-
-	private void updatePopups(float delta) {
-		for (int i = popups.size - 1; i >= 0; i--) {
-			DamagePopup p = popups.get(i);
-			p.timer -= delta;
-			p.y += POPUP_RISE_SPEED * delta; // 向上飘
-			if (p.timer <= 0) popups.removeIndex(i);
-		}
-	}
-
-	// ============ 渲染（使用视觉坐标） ============
-
-	private void drawMap() {
-		for (int y = 0; y < MAP_H; y++) {
-			for (int x = 0; x < MAP_W; x++) {
-				String texName;
-				switch (map[y][x]) {
-					case T_WALL: texName = "wall"; break;
-					case T_STAIRS: texName = "stairs_down"; break;
-					default: texName = "floor"; break;
-				}
-				TextureRegion tex = TextureManager.get(texName);
-				if (tex != null) {
-					batch.draw(tex, x * TILE, y * TILE, TILE, TILE);
-				} else {
-					Color c = map[y][x] == T_WALL ? Color.GRAY : Color.DARK_GRAY;
-					batch.drawRect(x * TILE, y * TILE, TILE, TILE, 0, 0, c, true);
-				}
-			}
-		}
-	}
-
-	private void drawEntities() {
-		// 绘制敌人
-		for (int i = 0; i < enemies.size; i++) {
-			GameEntity e = enemies.get(i);
-			if (!e.alive) continue;
-			drawEntity(e);
-		}
-		// 绘制玩家
-		if (player.alive) drawEntity(player);
-	}
-
-	private void drawEntity(GameEntity e) {
-		float drawX = e.visualX + e.bumpX;
-		float drawY = e.visualY + e.bumpY;
-
-		TextureRegion tex = TextureManager.get(e.texName);
-		if (tex != null) {
-			batch.draw(tex, drawX, drawY, TILE, TILE);
-		} else {
-			batch.drawRect(drawX + 2, drawY + 2, TILE - 4, TILE - 4, 0, 0, Color.CYAN, true);
-		}
-
-		// 血条
-		if (e.hp < e.getMaxHp()) {
-			float barW = TILE - 4;
-			float barH = 3;
-			float barX = drawX + 2;
-			float barY = drawY + TILE + 1;
-			batch.drawRect(barX, barY, barW, barH, 0, 0, Color.DARK_GRAY, true);
-			batch.drawRect(barX, barY, barW * (e.hp / e.getMaxHp()), barH, 0, 0,
-				e == player ? Color.GREEN : Color.RED, true);
-		}
-
-		// 冷却条（显示在实体下方）
-		if (e.moveTimer > 0) {
-			float cdRatio = e.moveTimer / e.getMoveCooldown();
-			float barW = TILE - 8;
-			float barX = drawX + 4;
-			float barY = drawY - 3;
-			batch.drawRect(barX, barY, barW, 2, 0, 0, Color.DARK_GRAY, true);
-			batch.drawRect(barX, barY, barW * (1 - cdRatio), 2, 0, 0, Color.SKY, true);
-		}
-	}
-
-	private void drawPopups() {
-		for (int i = 0; i < popups.size; i++) {
-			DamagePopup p = popups.get(i);
-			float alpha = Math.min(p.timer * 2, 1f);
-			Color c = new Color(p.color.r, p.color.g, p.color.b, alpha);
-			font.setColor(c);
-			font.draw(batch, p.text, p.x - 10, p.y);
-		}
-		font.setColor(Color.WHITE);
-	}
-
-	private void drawHUD() {
-		batch.setProjectionMatrix(getUICamera().combined);
-		batch.begin();
-
-		float vh = getUIViewport().getWorldHeight();
-
-		// 第1行: 等级 + HP + MP + XP
-		float[] xpProg = GrowthCalculator.xpProgress(player.totalXp);
-		hudFont.setColor(Color.WHITE);
-		hudFont.draw(batch, String.format(
-			"Lv.%d | HP:%.0f/%.0f | MP:%.0f/%.0f | XP:%.0f/%.0f",
-			player.stats.getLevel(), player.hp, player.getMaxHp(),
-			player.mp, player.getMaxMp(),
-			xpProg[0], xpProg[1]), 10, vh - 10);
-
-		// 第2行: ATK DEF 金币 击杀
-		hudFont.setColor(Color.LIGHT_GRAY);
-		hudFont.draw(batch, String.format(
-			"ATK:%.0f | DEF:%.0f | Gold:%d | 击杀:%d | %.0fs",
-			player.stats.getATK(), player.stats.getDEF(),
-			player.gold, killCount, gameTime), 10, vh - 30);
-
-		// 第3行: 日志
-		hudFont.setColor(Color.YELLOW);
-		hudFont.draw(batch, logText, 10, vh - 50);
-
-		// 第4行: 提示
-		hudFont.setColor(Color.GRAY);
-		hudFont.draw(batch, String.format("敌人:%d | ESC返回", enemies.size), 10, vh - 70);
-		hudFont.setColor(Color.WHITE);
-
-		batch.end();
-	}
-
 	@Override
 	public void resize(int width, int height) {
 		super.resize(width, height);
@@ -457,46 +341,4 @@ public class SimpleGameScreen extends GScreen {
 		gameTime = 0;
 	}
 
-	/** 绘制死亡覆盖层 */
-	private void drawDeathOverlay() {
-		batch.setProjectionMatrix(getUICamera().combined);
-		batch.begin();
-
-		float vw = getUIViewport().getWorldWidth();
-		float vh = getUIViewport().getWorldHeight();
-
-		// 半透明黑色背景
-		batch.drawRect(0, 0, vw, vh, 0, 0, new Color(0, 0, 0, 0.7f), true);
-
-		float cx = vw / 2;
-		float cy = vh / 2;
-		float lineH = 28;
-
-		hudFont.setColor(Color.RED);
-		hudFont.draw(batch, "你被击败了！",
-			cx - 200, cy + lineH * 3, 400, Align.center, false);
-
-		hudFont.setColor(Color.WHITE);
-		hudFont.draw(batch, String.format("经验损失: -%d XP", deathResult.xpLost),
-			cx - 200, cy + lineH, 400, Align.center, false);
-
-		if (deathResult.levelBefore != deathResult.levelAfter) {
-			hudFont.setColor(Color.ORANGE);
-			hudFont.draw(batch, String.format("等级变化: Lv.%d → Lv.%d",
-				deathResult.levelBefore, deathResult.levelAfter),
-				cx - 200, cy, 400, Align.center, false);
-		}
-
-		hudFont.setColor(Color.GOLD);
-		hudFont.draw(batch, String.format("金币掉落: -%dG (可拾回:%dG)",
-			deathResult.goldDropped, deathResult.goldRecoverable),
-			cx - 200, cy - lineH, 400, Align.center, false);
-
-		hudFont.setColor(Color.GRAY);
-		hudFont.draw(batch, "按 R 键重生",
-			cx - 200, cy - lineH * 3, 400, Align.center, false);
-
-		hudFont.setColor(Color.WHITE);
-		batch.end();
-	}
 }
