@@ -180,6 +180,13 @@ public class VirtualControlsOverlay implements VirtualInputProvider, Disposable 
 	}
 
 	/**
+	 * 设置摇杆方向扇区半角（度），同步菱形指示器与移动逻辑
+	 */
+	public void setStickHalfAngle(float degrees) {
+		if (moveStick != null) moveStick.setStickHalfAngle(degrees);
+	}
+
+	/**
 	 * 屏幕尺寸变化时重新布局
 	 */
 	public void resize(int width, int height) {

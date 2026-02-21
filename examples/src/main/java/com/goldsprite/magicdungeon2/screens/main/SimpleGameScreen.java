@@ -54,7 +54,7 @@ public class SimpleGameScreen extends GScreen {
 	// 摇杆死区阈值（摇杆偏移量低于此值时不触发）
 	private static final float STICK_DEADZONE = 0.3f;
 	// 摇杆四向判定半角（度），默认22.5°，即每个方向占 45° 扇形
-	private static float stickHalfAngle = 22.5f;
+	private static float stickHalfAngle = 45;
 
 	private BitmapFont font, hudFont;
 
@@ -219,6 +219,7 @@ public class SimpleGameScreen extends GScreen {
 		// 创建虚拟触控覆盖层（Android 默认显示）
 		virtualControls = new VirtualControlsOverlay(new ExtendViewport(
 			getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight()));
+		virtualControls.setStickHalfAngle(stickHalfAngle); // 同步角度判定
 		if (imp != null) imp.addProcessor(virtualControls.getStage());
 	}
 
@@ -342,26 +343,20 @@ public class SimpleGameScreen extends GScreen {
 			return;
 		}
 
-		// 持续按键检测（按住方向键/摇杆自动重复移动）
+		// 统一通过 getAxis 读取所有输入源（键盘WASD + 手柄 + 虚拟摇杆）
+		// 不使用 isPressed(MOVE_*) 因为其内部 isAxisMappedAction 是简单阈值判定,
+		// 会绕过角度扇区检测导致表现与数据不一致
 		int dx = 0, dy = 0;
 
-		if (input.isPressed(InputAction.MOVE_UP)) dy = 1;
-		else if (input.isPressed(InputAction.MOVE_DOWN)) dy = -1;
-		else if (input.isPressed(InputAction.MOVE_LEFT)) dx = -1;
-		else if (input.isPressed(InputAction.MOVE_RIGHT)) dx = 1;
-
-		// 若键盘无输入，检查摇杆轴（虚拟摇杆或手柄）
-		if (dx == 0 && dy == 0) {
-			Vector2 axis = input.getAxis(InputManager.AXIS_LEFT);
-			if (axis.len() >= STICK_DEADZONE) {
-				// 角度判定：0°=右, 90°=上, 180°=左, 270°=下
-				float angle = (float) Math.toDegrees(Math.atan2(axis.y, axis.x));
-				if (angle < 0) angle += 360; // 归一化到0~360
-				if (angle >= 90 - stickHalfAngle && angle < 90 + stickHalfAngle) dy = 1;       // 上
-				else if (angle >= 270 - stickHalfAngle && angle < 270 + stickHalfAngle) dy = -1; // 下
-				else if (angle >= 180 - stickHalfAngle && angle < 180 + stickHalfAngle) dx = -1; // 左
-				else if (angle < stickHalfAngle || angle >= 360 - stickHalfAngle) dx = 1;       // 右
-			}
+		Vector2 axis = input.getAxis(InputManager.AXIS_LEFT);
+		if (axis.len() >= STICK_DEADZONE) {
+			// 角度判定：0°=右, 90°=上, 180°=左, 270°=下
+			float angle = (float) Math.toDegrees(Math.atan2(axis.y, axis.x));
+			if (angle < 0) angle += 360; // 归一化到0~360
+			if (angle >= 90 - stickHalfAngle && angle < 90 + stickHalfAngle) dy = 1;       // 上
+			else if (angle >= 270 - stickHalfAngle && angle < 270 + stickHalfAngle) dy = -1; // 下
+			else if (angle >= 180 - stickHalfAngle && angle < 180 + stickHalfAngle) dx = -1; // 左
+			else if (angle < stickHalfAngle || angle >= 360 - stickHalfAngle) dx = 1;       // 右
 		}
 
 		if (dx == 0 && dy == 0) return;
