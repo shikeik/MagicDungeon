@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.esotericsoftware.spine.AnimationState;
 import com.esotericsoftware.spine.AnimationStateData;
 import com.esotericsoftware.spine.Skeleton;
+import com.goldsprite.gdengine.log.DLog;
 import com.esotericsoftware.spine.SkeletonData;
 import com.esotericsoftware.spine.SkeletonJson;
 import com.esotericsoftware.spine.SkeletonRenderer;
@@ -54,7 +55,8 @@ public class MagicDungeon2LoadingRenderer implements ScreenManager.LoadingRender
 			animationState = new AnimationState(stateData);
 			animationState.setAnimation(0, "move", true); // "move" or "run"? LoadingScreen used "move"
 		} catch (Exception e) {
-			Gdx.app.error("LoadingRenderer", "Failed to load spine", e);
+			DLog.logErrT("LoadingRenderer", "加载Spine失败: " + e.getMessage());
+			e.printStackTrace();
 		}
 		
 		initialized = true;

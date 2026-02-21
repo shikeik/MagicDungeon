@@ -6,6 +6,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.utils.Array;
+import com.goldsprite.gdengine.log.DLog;
 
 /**
  * 全局自动测试管理器
@@ -70,15 +71,15 @@ public class AutoTestManager {
 	}
 
 	public void log(String msg) {
-		System.out.println("[AutoTest] " + msg);
+		DLog.logT("AutoTest", msg);
 	}
 
 	public void logPass(String msg) {
-		System.out.println("[PASS] " + msg);
+		DLog.logT("AutoTest", "[PASS] " + msg);
 	}
 
 	public void logFail(String msg) {
-		System.err.println("[FAIL] " + msg);
+		DLog.logErrT("AutoTest", "[FAIL] " + msg);
 	}
 
 	// --- Task Classes ---
