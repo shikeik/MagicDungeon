@@ -12,9 +12,8 @@ package com.goldsprite.magicdungeon2.core.growth;
  *   <li>20→21级：约 3200 XP</li>
  * </ul>
  *
- * @deprecated 尚未接入游戏循环。游戏中没有经验获取/升级流程，待实装后移除此注解。
+ * @see com.goldsprite.magicdungeon2.core.stats.StatCalculator
  */
-@Deprecated
 public final class GrowthCalculator {
 
     /** 经验公式基数 */

@@ -16,9 +16,8 @@ import com.goldsprite.magicdungeon2.core.stats.StatType;
  *   <li>装备掉落：随机 2~5 件背包装备直接消失（由上层调用方处理）</li>
  * </ul>
  *
- * @deprecated 尚未接入游戏循环。玩家死亡后仅"按R重置"，无经验/金币/装备惩罚。待实装后移除此注解。
+ * @see GrowthCalculator
  */
-@Deprecated
 public final class DeathPenalty {
 
     /** 经验掉落比例 */
