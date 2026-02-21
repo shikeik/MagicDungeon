@@ -10,9 +10,12 @@
 ### 新增 (Added)
 
 - **简易地牢游戏场景** (`SimpleGameScreen`)
-  - 9×9 网格地图，回合制移动 + 近战战斗
-  - 4 种敌人 (slime/skeleton/bat/wolf)，各有独立属性
-  - 伤害飘字、血条、HUD 状态栏、楼梯重置
+  - 9×9 网格地图，半即时制冷却驱动格子移动 + 近战战斗
+  - `Entity` 冷却系统: `moveTimer`/`moveDelay`，按住方向键自动重复移动
+  - `visualX/Y` 平滑插值 + `bumpX/Y` 攻击碰撞动画
+  - 4 种敌人 (slime/skeleton/bat/wolf)，各有独立冷却和属性
+  - 敌人独立AI: 仇恨范围追踪、冷却独立更新，支持多人联机扩展
+  - 伤害飘字、血条、冷却条、HUD 显示击杀数和游戏时间、楼梯重置
   - `ExampleSelectScreen` "开始游戏" 入口对接
 - **AI 绘制回放编辑器** (`AIDrawReplayScreen`)
   - JSON 绘制计划逐步回放，可视化绘制过程
@@ -20,8 +23,9 @@
   - 文件选择器 + 命令信息面板
   - `TestSelectionScreen` 新增 "AI绘制回放编辑器" 入口
 - **人类模拟可视化自动测试** (`HumanSimulatorTest`)
-  - 基于 `AutoTestManager` 时间线任务队列，模拟玩家进入地牢、移动、打怪
+  - 基于 `AutoTestManager` 时间线任务队列，模拟玩家按住方向键移动、打怪
   - 7 阶段测试流程: 初始验证 → 击杀 slime → 击杀 wolf → 战斗状态检查 → 清扫 → 最终断言
+  - 使用 `simulatePress` + `addWait` + `simulateRelease` 模拟半即时制持续按键
   - `DebugLaunchConfig` AUTO_TEST 模式直接启动
 - **基础配置与工具类**
   - `ThemeConfig`: 主题颜色配置
@@ -31,14 +35,17 @@
 ### 修复 (Fixed)
 
 - 修复 `SimpleGameScreen` LibGDX Array 嵌套迭代器异常 (`#iterator() cannot be used nested`)
-  - `enemyTurn()` 中 foreach 调用 `canMove()` 导致迭代器重入
   - 所有 `Array<Entity>` / `Array<DamagePopup>` 的 foreach 改为索引循环
 - 移除未使用的 `Vector2` 导入
-- 修复逻辑不统一代码
 
 ### 变更 (Changed)
 
-- `SimpleGameScreen.Entity` / `DamagePopup` 改为 `public static class`，添加公共 getter 供自动测试访问
+- `SimpleGameScreen` 从回合制改为半即时制冷却驱动系统
+  - `isPressed()` 持续按键替代 `isJustPressed()` 单次触发
+  - 敌人独立 `moveTimer` 冷却，不再等待玩家回合
+  - HUD 从 "回合数" 改为 "击杀数 + 游戏时间"
+- `SimpleGameScreen.Entity` / `DamagePopup` 改为 `public static class`，添加公共 getter
+- `HumanSimulatorTest` 适配半即时制按住+释放模式
 - `GameAutoTests.run()` 启用 `HumanSimulatorTest`
 
 ---
