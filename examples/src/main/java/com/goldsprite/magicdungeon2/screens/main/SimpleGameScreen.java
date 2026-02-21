@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
@@ -14,20 +13,13 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon2.assets.TextureManager;
-import com.goldsprite.magicdungeon2.core.combat.CombatEngine;
-import com.goldsprite.magicdungeon2.core.combat.WeaponRange;
 import com.goldsprite.magicdungeon2.core.growth.DeathPenalty;
 import com.goldsprite.magicdungeon2.core.growth.GrowthCalculator;
-import com.goldsprite.magicdungeon2.core.stats.StatType;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
 import com.goldsprite.magicdungeon2.input.virtual.VirtualControlsOverlay;
-import static com.goldsprite.magicdungeon2.screens.main.GameConfig.GOLD_XP_RATIO;
-import static com.goldsprite.magicdungeon2.screens.main.GameConfig.IDLE_CD_FACTOR;
-import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MAGIC_MP_COST;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MAP_H;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MAP_W;
-import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MP_FAIL_CD_FACTOR;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MP_REGEN_RATE;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.POPUP_RISE_SPEED;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.STICK_DEADZONE;
@@ -35,7 +27,6 @@ import static com.goldsprite.magicdungeon2.screens.main.GameConfig.TILE;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_FLOOR;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_STAIRS;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_WALL;
-import static com.goldsprite.magicdungeon2.screens.main.GameConfig.WANDER_CHANCE;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.WORLD_VIEW_SIZE;
 
 /**
@@ -67,6 +58,11 @@ public class SimpleGameScreen extends GScreen {
 
 	// 虚拟触控控件
 	private VirtualControlsOverlay virtualControls;
+
+	// 逻辑子系统
+	private CombatHelper combatHelper;
+	private GrowthHelper growthHelper;
+	private EnemyAI enemyAI;
 
 	// ============ 公共访问方法（供自动测试读取状态） ============
 
@@ -109,6 +105,7 @@ public class SimpleGameScreen extends GScreen {
 		TextureManager.init();
 		buildMap();
 		spawnEntities();
+		initHelpers();
 
 		// 创建虚拟触控覆盖层（Android 默认显示）
 		virtualControls = new VirtualControlsOverlay(new ExtendViewport(
@@ -161,6 +158,30 @@ public class SimpleGameScreen extends GScreen {
 		enemies.addAll(EnemyDefs.createDefaultEnemies());
 	}
 
+	/** 初始化逻辑子系统（在 player/map/enemies 准备好之后调用） */
+	private void initHelpers() {
+		// 成长系统
+		growthHelper = new GrowthHelper(player, popups, text -> logText = text);
+		// 战斗系统
+		combatHelper = new CombatHelper(map, enemies, popups, player, new CombatHelper.CombatListener() {
+			@Override
+			public void onEnemyKilled(GameEntity enemy) {
+				killCount++;
+				growthHelper.onEnemyKilled(enemy, killCount);
+			}
+			@Override
+			public void onPlayerDeath() {
+				deathResult = growthHelper.handlePlayerDeath();
+			}
+			@Override
+			public void onLogUpdate(String text) {
+				logText = text;
+			}
+		});
+		// 敌人AI
+		enemyAI = new EnemyAI(map, enemies, player, combatHelper);
+	}
+
 	@Override
 	public void render0(float delta) {
 		ScreenUtils.clear(0.05f, 0.05f, 0.08f, 1);
@@ -171,7 +192,7 @@ public class SimpleGameScreen extends GScreen {
 		if (player.alive) {
 			gameTime += delta;
 			updatePlayer(delta);
-			updateEnemies(delta);
+			enemyAI.update(delta);
 			// MP 自然回复
 			player.mp = Math.min(player.getMaxMp(),
 				player.mp + player.getMaxMp() * MP_REGEN_RATE * delta);
@@ -228,7 +249,11 @@ public class SimpleGameScreen extends GScreen {
 
 		// 魔法攻击检测 (J键 / ATTACK)
 		if (input.isJustPressed(InputAction.ATTACK)) {
-			performMagicAttack();
+			if (combatHelper.performMagicAttack()) {
+				player.moveTimer = player.getAttackCooldown();
+			} else {
+				player.moveTimer = player.getAttackCooldown() * GameConfig.MP_FAIL_CD_FACTOR;
+			}
 			return;
 		}
 
@@ -255,7 +280,7 @@ public class SimpleGameScreen extends GScreen {
 		player.faceDy = dy;
 
 		// 尝试武器范围攻击（Bump式物理攻击）
-		if (performRangedAttack(player, dx, dy)) {
+		if (combatHelper.performRangedAttack(player, dx, dy)) {
 			player.moveTimer = player.getAttackCooldown();
 			return;
 		}
@@ -287,102 +312,7 @@ public class SimpleGameScreen extends GScreen {
 		}
 	}
 
-	/** 更新所有敌人（各自独立冷却） */
-	private void updateEnemies(float delta) {
-		for (int i = enemies.size - 1; i >= 0; i--) {
-			GameEntity e = enemies.get(i);
-			if (!e.alive) continue;
-
-			e.moveTimer -= delta;
-			if (e.moveTimer > 0) continue; // 冷却中，跳过
-
-			// 先检查是否可以在当前位置远程攻击玩家
-			if (tryAttackPlayer(e)) {
-				e.moveTimer = e.getAttackCooldown();
-				continue;
-			}
-
-			// AI决策：检测玩家距离
-			float dist = Math.abs(player.x - e.x) + Math.abs(player.y - e.y); // 曼哈顿距离
-
-			int dx = 0, dy = 0;
-			if (dist <= e.aggroRange) {
-				// 追踪玩家
-				dx = Integer.signum(player.x - e.x);
-				dy = Integer.signum(player.y - e.y);
-			} else {
-				// 随机游荡
-				if (MathUtils.randomBoolean(WANDER_CHANCE)) { // 随机游荡
-					switch (MathUtils.random(3)) {
-						case 0: dx = 1; break;
-						case 1: dx = -1; break;
-						case 2: dy = 1; break;
-						case 3: dy = -1; break;
-					}
-				}
-			}
-
-			if (dx == 0 && dy == 0) {
-				e.moveTimer = e.getMoveCooldown() * IDLE_CD_FACTOR; // 空闲时缩短等待
-				continue;
-			}
-
-			// 随机选择水平或垂直方向
-			boolean horizontal = MathUtils.randomBoolean();
-			int mx, my;
-			if (horizontal) {
-				mx = dx; my = 0;
-				if (mx == 0 || !canMove(e, mx, 0)) { mx = 0; my = dy; }
-			} else {
-				mx = 0; my = dy;
-				if (my == 0 || !canMove(e, 0, my)) { mx = dx; my = 0; }
-			}
-
-			int nx = e.x + mx, ny = e.y + my;
-
-			// 走到玩家格子 = 近战攻击
-			if (nx == player.x && ny == player.y) {
-				e.triggerBump(mx, my);
-				float dmg = Math.max(1, CombatEngine.calcPhysicalDamage(e.stats.getATK(), player.stats.getDEF()));
-				player.hp -= dmg;
-				popups.add(new DamagePopup(
-					player.visualX + TILE * 0.5f,
-					player.visualY + TILE * 1.2f,
-					String.format("-%.0f", dmg), Color.RED));
-
-				if (player.hp <= 0) {
-					handlePlayerDeath();
-				}
-			} else if (canMove(e, mx, my)) {
-				e.x = nx;
-				e.y = ny;
-			}
-
-			e.moveTimer = e.getMoveCooldown();
-		}
-	}
-
 	// ============ 碰撞与查询 ============
-
-	private boolean canMove(GameEntity e, int dx, int dy) {
-		int nx = e.x + dx, ny = e.y + dy;
-		if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false;
-		if (map[ny][nx] == T_WALL) return false;
-		// 不能走到其他敌人身上
-		for (int i = 0; i < enemies.size; i++) {
-			GameEntity other = enemies.get(i);
-			if (other != e && other.alive && other.x == nx && other.y == ny) return false;
-		}
-		return true;
-	}
-
-	private GameEntity findEnemy(int x, int y) {
-		for (int i = 0; i < enemies.size; i++) {
-			GameEntity e = enemies.get(i);
-			if (e.alive && e.x == x && e.y == y) return e;
-		}
-		return null;
-	}
 
 	private void updatePopups(float delta) {
 		for (int i = popups.size - 1; i >= 0; i--) {
@@ -516,202 +446,15 @@ public class SimpleGameScreen extends GScreen {
 		if (virtualControls != null) virtualControls.dispose();
 	}
 
-	// ============ 新增战斗系统方法 ============
-
-	/** 执行方向范围攻击（支持射程和穿透），返回是否命中 */
-	private boolean performRangedAttack(GameEntity attacker, int dx, int dy) {
-		WeaponRange wr = attacker.weaponRange;
-		Array<GameEntity> hitTargets = new Array<>();
-
-		// 沿攻击方向扫描目标
-		for (int r = 1; r <= wr.range; r++) {
-			int cx = attacker.x + dx * r;
-			int cy = attacker.y + dy * r;
-			if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) break;
-			if (map[cy][cx] == T_WALL) break;
-			GameEntity target = findEnemy(cx, cy);
-			if (target != null) {
-				hitTargets.add(target);
-				if (!wr.piercing) break; // 非穿透只命中第一个
-			}
-		}
-
-		if (hitTargets.size == 0) return false;
-
-		attacker.triggerBump(dx, dy);
-		GameEntity first = hitTargets.get(0);
-		float baseDmg = Math.max(1, CombatEngine.calcPhysicalDamage(
-			attacker.stats.getATK(), first.stats.getDEF()));
-
-		for (int i = 0; i < hitTargets.size; i++) {
-			GameEntity target = hitTargets.get(i);
-			float dmg = wr.piercing ? CombatEngine.calcPierceDamage(baseDmg, i) : baseDmg;
-			if (dmg < CombatEngine.MIN_DAMAGE_THRESHOLD) continue;
-
-			target.hp -= dmg;
-			Color popColor = (wr.piercing && i > 0) ? Color.ORANGE : Color.YELLOW;
-			popups.add(new DamagePopup(
-				target.visualX + TILE * 0.5f,
-				target.visualY + TILE,
-				String.format("-%.0f", dmg), popColor));
-
-			if (target.hp <= 0) {
-				target.alive = false;
-				enemies.removeValue(target, true);
-				killCount++;
-				onEnemyKilled(target);
-			} else {
-				logText = String.format("攻击 %s: %.0f伤害 (HP:%.0f/%.0f)",
-					target.texName, dmg, target.hp, target.getMaxHp());
-			}
-		}
-		return true;
-	}
-
-	/** 魔法攻击：消耗MP，沿面朝方向发射魔法弹 */
-	private void performMagicAttack() {
-		if (player.mp < MAGIC_MP_COST) {
-			popups.add(new DamagePopup(
-				player.visualX + TILE * 0.5f,
-				player.visualY + TILE * 1.2f,
-				"MP不足", Color.BLUE));
-			player.moveTimer = player.getAttackCooldown() * MP_FAIL_CD_FACTOR; // 短冷却防连按
-			return;
-		}
-
-		int dx = player.faceDx, dy = player.faceDy;
-		if (dx == 0 && dy == 0) dy = 1; // 默认朝上
-
-		player.mp -= MAGIC_MP_COST;
-		boolean hit = false;
-
-		// 魔法攻击使用ENERGY范围（5格，无穿透），伤害类型为魔法
-		for (int r = 1; r <= WeaponRange.ENERGY.range; r++) {
-			int cx = player.x + dx * r;
-			int cy = player.y + dy * r;
-			if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) break;
-			if (map[cy][cx] == T_WALL) break;
-			GameEntity target = findEnemy(cx, cy);
-			if (target != null) {
-				float dmg = Math.max(1, CombatEngine.calcMagicDamage(
-					player.stats.getATK(), target.stats.getMDEF()));
-				target.hp -= dmg;
-				popups.add(new DamagePopup(
-					target.visualX + TILE * 0.5f,
-					target.visualY + TILE,
-					String.format("-%.0f", dmg), Color.PURPLE));
-
-				if (target.hp <= 0) {
-					target.alive = false;
-					enemies.removeValue(target, true);
-					killCount++;
-					onEnemyKilled(target);
-				} else {
-					logText = String.format("魔法攻击 %s: %.0f伤害 (HP:%.0f/%.0f)",
-						target.texName, dmg, target.hp, target.getMaxHp());
-				}
-				hit = true;
-				break; // ENERGY无穿透
-			}
-		}
-
-		if (!hit) logText = "魔法射向虚空...";
-		player.moveTimer = player.getAttackCooldown();
-	}
-
-	/** 敌人尝试远程攻击玩家（检查四方向射程内是否有玩家） */
-	private boolean tryAttackPlayer(GameEntity e) {
-		if (e.weaponRange.range <= 1) return false; // MELEE不需远程检查，由移动逻辑处理
-
-		int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
-		for (int[] d : dirs) {
-			for (int r = 1; r <= e.weaponRange.range; r++) {
-				int cx = e.x + d[0] * r, cy = e.y + d[1] * r;
-				if (cx < 0 || cy < 0 || cx >= MAP_W || cy >= MAP_H) break;
-				if (map[cy][cx] == T_WALL) break;
-				if (cx == player.x && cy == player.y) {
-					e.triggerBump(d[0], d[1]);
-					float dmg = Math.max(1, CombatEngine.calcPhysicalDamage(
-						e.stats.getATK(), player.stats.getDEF()));
-					player.hp -= dmg;
-					popups.add(new DamagePopup(
-						player.visualX + TILE * 0.5f,
-						player.visualY + TILE * 1.2f,
-						String.format("-%.0f", dmg), Color.RED));
-					if (player.hp <= 0) handlePlayerDeath();
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	// ============ 成长系统方法 ============
-
-	/** 处理玩家死亡（计算惩罚） */
-	private void handlePlayerDeath() {
-		player.alive = false;
-		deathResult = DeathPenalty.calcPenalty(player.totalXp, player.gold);
-		DeathPenalty.applyLevelLoss(player.stats, deathResult.levelBefore, deathResult.levelAfter);
-		player.totalXp = deathResult.xpAfter;
-		player.gold = Math.max(0, player.gold - deathResult.goldDropped);
-		logText = "你被击败了...按R重生";
-	}
-
-	/** 击杀敌人时的奖励处理 */
-	private void onEnemyKilled(GameEntity enemy) {
-		player.totalXp += enemy.xpReward;
-		player.gold += (int)(enemy.xpReward * GOLD_XP_RATIO); // 金币 = 经验 × 系数
-
-		int oldLevel = player.stats.getLevel();
-		int newLevel = GrowthCalculator.levelFromXp(player.totalXp);
-
-		if (newLevel > oldLevel) {
-			player.stats.setLevel(newLevel);
-			autoAllocateFreePoints(player);
-			player.hp = player.getMaxHp(); // 升级回满
-			player.mp = player.getMaxMp();
-
-			popups.add(new DamagePopup(
-				player.visualX + TILE * 0.5f,
-				player.visualY + TILE * 1.5f,
-				"升级! Lv." + newLevel, Color.GOLD));
-			logText = String.format("升级至 Lv.%d！属性全面提升！", newLevel);
-		} else {
-			logText = String.format("击败 %s！(+%dXP, 击杀:%d)",
-				enemy.texName, enemy.xpReward, killCount);
-		}
-	}
-
-	/** 自动均匀分配自由属性点到HP/ATK/DEF */
-	private void autoAllocateFreePoints(GameEntity e) {
-		StatType[] targets = {StatType.HP, StatType.ATK, StatType.DEF};
-		while (e.stats.getRemainingFreePoints() > 0) {
-			boolean allocated = false;
-			for (StatType type : targets) {
-				if (e.stats.getRemainingFreePoints() <= 0) break;
-				if (e.stats.addFreePoints(type, 1)) allocated = true;
-			}
-			if (!allocated) break; // 安全退出
-		}
-	}
-
 	/** 死亡后重生 */
 	private void respawnAfterDeath() {
 		buildMap();
-		player.x = 4; player.y = 4;
-		player.visualX = player.x * TILE;
-		player.visualY = player.y * TILE;
-		player.hp = player.getMaxHp();
-		player.mp = player.getMaxMp();
-		player.alive = true;
-		player.moveTimer = 0;
+		growthHelper.resetPlayerForRespawn();
 		enemies.clear();
 		spawnEnemies();
 		killCount = 0;
 		deathResult = null;
 		gameTime = 0;
-		logText = "重生！继续冒险...";
 	}
 
 	/** 绘制死亡覆盖层 */
