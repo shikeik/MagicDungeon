@@ -2,10 +2,9 @@ package com.goldsprite;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon2.config.LaunchMode;
+import com.goldsprite.magicdungeon2.screens.SimpleGameScreen;
+import com.goldsprite.magicdungeon2.testing.HumanSimulatorTest;
 import com.goldsprite.magicdungeon2.testing.IGameAutoTest;
-import com.goldsprite.magicdungeon2.testing.GameAutoTests;
-import com.goldsprite.magicdungeon2.screens.ExampleSelectScreen;
-import com.goldsprite.magicdungeon2.testing.PlayerStatsTest;
 
 /**
  * 调试启动配置
@@ -18,9 +17,9 @@ public class DebugLaunchConfig {
 	public static LaunchMode currentMode = LaunchMode.AUTO_TEST;
 	
 	/** 目标启动场景 (仅在 DIRECT_SCENE 或 AUTO_TEST 模式下有效) */
-	public static Class<? extends GScreen> targetScreen = null;
+	public static Class<? extends GScreen> targetScreen = SimpleGameScreen.class;
 	
 	/** 自动测试类 (仅在 AUTO_TEST 模式下有效) */
-	public static Class<? extends IGameAutoTest> autoTestClass = PlayerStatsTest.class;
+	public static Class<? extends IGameAutoTest> autoTestClass = HumanSimulatorTest.class;
 
 }

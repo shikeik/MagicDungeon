@@ -8,6 +8,6 @@ public class GameAutoTests implements IGameAutoTest {
 	@Override
 	public void run() {
 		// 使用新的人类模拟测试流程
-		//new HumanSimulatorTest().run();
+		new HumanSimulatorTest().run();
 	}
 }

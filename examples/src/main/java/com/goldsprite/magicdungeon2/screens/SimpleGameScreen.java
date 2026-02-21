@@ -44,15 +44,32 @@ public class SimpleGameScreen extends GScreen {
 	private String logText = "移动: WASD/方向键 | 走向敌人即攻击";
 	private int turnCount = 0;
 
-	/** 简易实体 */
-	static class Entity {
-		int x, y;
-		String texName;
-		StatData stats;
-		float hp, maxHp;
-		boolean alive = true;
+	// ============ 公共访问方法（供自动测试读取状态） ============
 
-		Entity(int x, int y, String texName, float hp, float atk, float def) {
+	/** 获取玩家实体 */
+	public Entity getPlayer() { return player; }
+
+	/** 获取敌人列表 */
+	public Array<Entity> getEnemies() { return enemies; }
+
+	/** 获取地图数据 */
+	public int[][] getMap() { return map; }
+
+	/** 获取回合数 */
+	public int getTurnCount() { return turnCount; }
+
+	/** 获取日志文本 */
+	public String getLogText() { return logText; }
+
+	/** 简易实体 */
+	public static class Entity {
+		public int x, y;
+		public String texName;
+		public StatData stats;
+		public float hp, maxHp;
+		public boolean alive = true;
+
+		public Entity(int x, int y, String texName, float hp, float atk, float def) {
 			this.x = x;
 			this.y = y;
 			this.texName = texName;
@@ -67,7 +84,7 @@ public class SimpleGameScreen extends GScreen {
 	}
 
 	/** 伤害飘字 */
-	static class DamagePopup {
+	public static class DamagePopup {
 		float x, y, timer;
 		String text;
 		Color color;
