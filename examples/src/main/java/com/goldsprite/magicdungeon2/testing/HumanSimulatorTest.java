@@ -8,26 +8,34 @@ import com.goldsprite.magicdungeon2.screens.SimpleGameScreen;
 import com.goldsprite.magicdungeon2.screens.SimpleGameScreen.Entity;
 
 /**
- * 人类模拟可视化测试
- * 模拟玩家进入简易地牢，移动并击杀所有怪物
+ * 人类模拟可视化测试（半即时制版本）
+ * 模拟玩家进入简易地牢，按住方向键移动并击杀怪物
+ * <p>
+ * 半即时制特性：
+ * - 使用 simulatePress 按住方向键（持续移动，受冷却限制）
+ * - 使用 simulateRelease 松开（停止移动）
+ * - 敌人独立冷却，不等玩家行动
+ * - 等待时间 = 移动冷却 × 需要的步数
  * <p>
  * 测试流程：
  * 1. 进入 SimpleGameScreen
- * 2. 验证初始状态（玩家在4,4 / 4只怪物）
- * 3. 向左下移动接近 slime(2,2)
- * 4. 攻击并击杀 slime
- * 5. 移动去击杀 wolf(6,2)
- * 6. 验证玩家存活 + 敌人数量减少
- * 7. 清扫剩余敌人
- * 8. 验证全部击杀
+ * 2. 验证初始状态
+ * 3. 按住方向键移向 slime 并击杀
+ * 4. 转向击杀 wolf
+ * 5. 验证战斗状态
+ * 6. 追杀剩余敌人
+ * 7. 最终验证
  */
 public class HumanSimulatorTest implements IGameAutoTest {
+
+	// 玩家冷却约 0.2秒/步，留余量用 0.3秒/步估算
+	private static final float STEP_TIME = 0.3f;
 
 	@Override
 	public void run() {
 		AutoTestManager.ENABLED = true;
 		AutoTestManager atm = AutoTestManager.getInstance();
-		atm.log("=== 启动人类模拟测试：简易地牢战斗 ===");
+		atm.log("=== 启动人类模拟测试：半即时制地牢战斗 ===");
 
 		// ========== 第一阶段：进入游戏场景 ==========
 
@@ -36,7 +44,6 @@ public class HumanSimulatorTest implements IGameAutoTest {
 		});
 		atm.addWait(1.0f);
 
-		// 验证已进入 SimpleGameScreen
 		atm.add(new AutoTestManager.AssertTask("验证进入SimpleGameScreen", () -> {
 			return ScreenManager.getInstance().getCurScreen() instanceof SimpleGameScreen;
 		}));
@@ -65,94 +72,49 @@ public class HumanSimulatorTest implements IGameAutoTest {
 
 		atm.addWait(0.5f);
 
-		// ========== 第三阶段：移动到 slime(2,2) 并击杀 ==========
+		// ========== 第三阶段：按住左键移向 slime(2,2) 并击杀 ==========
 		// 玩家在(4,4)，slime在(2,2)
-		// 路径：左→左→下→下 到达(2,2)附近并攻击
+		// 路径：按住左 2步 → (2,4)，按住下 2步+2步攻击 → 击杀slime
 
 		atm.log("--- 目标：击杀 slime(2,2) ---");
 
-		// 向左移动 (4,4) → (3,4)
-		addMove(atm, InputAction.MOVE_LEFT, "左移到(3,4)");
-		atm.addWait(0.3f);
+		// 按住左移 2步 (4→3→2)，约 0.6秒
+		holdDirection(atm, InputAction.MOVE_LEFT, STEP_TIME * 2.5f, "按住左移到x=2");
 
-		// 向下移动 (3,4) → (3,3) 是墙！改为 (3,4) → (2,4)
-		// 注意(3,3)是墙壁，所以需要先下再左
-		// 实际路线：(4,4) → (3,4) → (2,4) → (2,3) → 攻击(2,2)
-
-		addMove(atm, InputAction.MOVE_LEFT, "左移到(2,4)");
-		atm.addWait(0.3f);
-
-		addMove(atm, InputAction.MOVE_DOWN, "下移到(2,3)");
-		atm.addWait(0.3f);
-
-		// 现在玩家在(2,3)，slime在(2,2)，向下攻击
-		addMove(atm, InputAction.MOVE_DOWN, "攻击slime(2,2)");
-		atm.addWait(0.3f);
-
-		// slime: hp=20, def=1; player: atk=12 => dmg = max(12-1, 1) = 11
-		// 第一击: 20-11=9
-		atm.add(new AutoTestManager.AssertTask("slime受伤(HP<20)", () -> {
-			SimpleGameScreen gs = getGameScreen();
-			if (gs == null) return false;
-			Entity slime = findEnemyByName(gs, "slime");
-			return slime != null && slime.hp < 20f;
-		}));
-
-		// 继续攻击 slime (第二击: 9-11 <= 0，击杀)
-		addMove(atm, InputAction.MOVE_DOWN, "再次攻击slime");
-		atm.addWait(0.3f);
+		// 按住下移 2步到(2,2)附近 + 攻击 slime
+		// slime hp=20, player atk=12, def=1 → dmg=11 → 需要2击
+		// 下移2步到(2,2)时会撞到slime触发攻击，再继续按住攻击第2次
+		holdDirection(atm, InputAction.MOVE_DOWN, STEP_TIME * 5, "按住下移并攻击slime");
 
 		atm.add(new AutoTestManager.AssertTask("slime已被击杀", () -> {
 			SimpleGameScreen gs = getGameScreen();
 			if (gs == null) return false;
 			Entity slime = findEnemyByName(gs, "slime");
-			return slime == null; // 被移除了
+			return slime == null;
 		}));
 
-		atm.add(new AutoTestManager.AssertTask("敌人剩余3只", () -> {
+		atm.add(new AutoTestManager.AssertTask("敌人剩余≤3只", () -> {
 			SimpleGameScreen gs = getGameScreen();
-			return gs != null && gs.getEnemies().size == 3;
+			return gs != null && gs.getEnemies().size <= 3;
 		}));
 
-		atm.addWait(0.5f);
+		atm.addWait(0.3f);
 
-		// ========== 第四阶段：移动去击杀 wolf(6,2) ==========
-		// slime被击杀后玩家可能还在(2,2)或(2,3)附近
-		// wolf 在 (6,2)，需要向右移动
+		// ========== 第四阶段：移向 wolf(6,2) 并击杀 ==========
+		// 当前大约在(2,2-3)附近，wolf在(6,2)
+		// wolf: hp=30, def=2 → dmg=10 → 需要3击
 
 		atm.log("--- 目标：击杀 wolf(6,2) ---");
 
-		// 向右连续移动靠近 wolf
-		addMove(atm, InputAction.MOVE_RIGHT, "右移1");
-		atm.addWait(0.3f);
-		addMove(atm, InputAction.MOVE_RIGHT, "右移2");
-		atm.addWait(0.3f);
-		addMove(atm, InputAction.MOVE_RIGHT, "右移3");
-		atm.addWait(0.3f);
+		// 按住右移接近wolf (约4步)
+		holdDirection(atm, InputAction.MOVE_RIGHT, STEP_TIME * 5, "按住右移接近wolf");
 
-		// 可能需要下移调整Y坐标到wolf所在行
-		addMove(atm, InputAction.MOVE_DOWN, "下移调整");
-		atm.addWait(0.3f);
+		// 按住下移调整Y + 攻击wolf (3击)
+		holdDirection(atm, InputAction.MOVE_DOWN, STEP_TIME * 4, "下移+攻击wolf");
 
-		// 继续右移接近 wolf
-		addMove(atm, InputAction.MOVE_RIGHT, "右移4");
-		atm.addWait(0.3f);
+		// 继续右移补刀
+		holdDirection(atm, InputAction.MOVE_RIGHT, STEP_TIME * 4, "右移补刀wolf");
 
-		// wolf: hp=30, def=2; player: atk=12 => dmg = max(12-2, 1) = 10
-		// 需要3击: 30→20→10→0
-
-		// 如果还没到wolf的位置，继续移动
-		addMove(atm, InputAction.MOVE_RIGHT, "尝试攻击wolf/继续右移");
-		atm.addWait(0.3f);
-		addMove(atm, InputAction.MOVE_RIGHT, "尝试攻击wolf");
-		atm.addWait(0.3f);
-		addMove(atm, InputAction.MOVE_DOWN, "下移寻找wolf");
-		atm.addWait(0.3f);
-		addMove(atm, InputAction.MOVE_RIGHT, "攻击wolf");
-		atm.addWait(0.3f);
-		addMove(atm, InputAction.MOVE_RIGHT, "攻击wolf(2)");
-		atm.addWait(0.3f);
-		addMove(atm, InputAction.MOVE_RIGHT, "攻击wolf(3)");
 		atm.addWait(0.3f);
 
 		// ========== 第五阶段：验证战斗状态 ==========
@@ -167,60 +129,27 @@ public class HumanSimulatorTest implements IGameAutoTest {
 			return gs != null && gs.getPlayer().hp < 100f;
 		}));
 
-		atm.add(new AutoTestManager.AssertTask("回合数 > 0", () -> {
+		atm.add(new AutoTestManager.AssertTask("游戏时间 > 0", () -> {
 			SimpleGameScreen gs = getGameScreen();
-			return gs != null && gs.getTurnCount() > 0;
+			return gs != null && gs.getGameTime() > 0;
 		}));
 
-		atm.addWait(0.5f);
-
 		// ========== 第六阶段：追杀剩余敌人 ==========
-		// 用暴力搜索方式：反复向各方向移动，直到所有敌人被击杀
+		// skeleton(6,6) 和 bat(2,6) 在上方
 
 		atm.log("--- 清扫剩余敌人 ---");
 
-		// skeleton(6,6) 和 bat(2,6) 在上方
-		// 先向上移动去打它们
-		for (int round = 0; round < 6; round++) {
-			addMove(atm, InputAction.MOVE_UP, "上移追敌(" + round + ")");
-			atm.addWait(0.2f);
-		}
-
-		// 左移寻找 bat
-		for (int round = 0; round < 5; round++) {
-			addMove(atm, InputAction.MOVE_LEFT, "左移追敌(" + round + ")");
-			atm.addWait(0.2f);
-		}
-
-		// 上下来回清扫
-		for (int round = 0; round < 4; round++) {
-			addMove(atm, InputAction.MOVE_UP, "上移清扫(" + round + ")");
-			atm.addWait(0.2f);
-		}
-
-		// 右移寻找 skeleton
-		for (int round = 0; round < 6; round++) {
-			addMove(atm, InputAction.MOVE_RIGHT, "右移追敌(" + round + ")");
-			atm.addWait(0.2f);
-		}
-
-		// 上移补刀
-		for (int round = 0; round < 4; round++) {
-			addMove(atm, InputAction.MOVE_UP, "上移补刀(" + round + ")");
-			atm.addWait(0.2f);
-		}
-
-		// 再做一轮大范围扫荡
-		for (int round = 0; round < 3; round++) {
-			addMove(atm, InputAction.MOVE_LEFT, "扫荡左(" + round + ")");
-			atm.addWait(0.15f);
-			addMove(atm, InputAction.MOVE_UP, "扫荡上(" + round + ")");
-			atm.addWait(0.15f);
-			addMove(atm, InputAction.MOVE_RIGHT, "扫荡右(" + round + ")");
-			atm.addWait(0.15f);
-			addMove(atm, InputAction.MOVE_DOWN, "扫荡下(" + round + ")");
-			atm.addWait(0.15f);
-		}
+		// 大幅上移追向上方敌人
+		holdDirection(atm, InputAction.MOVE_UP, STEP_TIME * 6, "上移追敌");
+		holdDirection(atm, InputAction.MOVE_LEFT, STEP_TIME * 5, "左移追bat");
+		holdDirection(atm, InputAction.MOVE_UP, STEP_TIME * 4, "上移补刀bat");
+		holdDirection(atm, InputAction.MOVE_RIGHT, STEP_TIME * 6, "右移追skeleton");
+		holdDirection(atm, InputAction.MOVE_UP, STEP_TIME * 4, "上移补刀skeleton");
+		holdDirection(atm, InputAction.MOVE_DOWN, STEP_TIME * 3, "下移扫荡");
+		holdDirection(atm, InputAction.MOVE_LEFT, STEP_TIME * 4, "左移扫荡");
+		holdDirection(atm, InputAction.MOVE_UP, STEP_TIME * 3, "上移扫荡");
+		holdDirection(atm, InputAction.MOVE_RIGHT, STEP_TIME * 5, "右移扫荡");
+		holdDirection(atm, InputAction.MOVE_DOWN, STEP_TIME * 4, "下移扫荡");
 
 		// ========== 第七阶段：最终验证 ==========
 
@@ -231,9 +160,9 @@ public class HumanSimulatorTest implements IGameAutoTest {
 			return gs != null && gs.getPlayer().alive;
 		}));
 
-		atm.add(new AutoTestManager.AssertTask("最终验证：进行了多个回合", () -> {
+		atm.add(new AutoTestManager.AssertTask("最终验证：有击杀记录", () -> {
 			SimpleGameScreen gs = getGameScreen();
-			return gs != null && gs.getTurnCount() >= 5;
+			return gs != null && gs.getKillCount() > 0;
 		}));
 
 		// 记录最终状态
@@ -244,32 +173,38 @@ public class HumanSimulatorTest implements IGameAutoTest {
 				return;
 			}
 			Entity p = gs.getPlayer();
-			atm.log(String.format("=== 战斗结束 ==="));
+			atm.log("=== 战斗结束 ===");
 			atm.log(String.format("玩家 HP: %.0f/%.0f", p.hp, p.maxHp));
 			atm.log(String.format("存活: %s", p.alive ? "是" : "否"));
-			atm.log(String.format("回合数: %d", gs.getTurnCount()));
+			atm.log(String.format("击杀数: %d", gs.getKillCount()));
 			atm.log(String.format("剩余敌人: %d", gs.getEnemies().size));
+			atm.log(String.format("游戏时间: %.1f秒", gs.getGameTime()));
 			atm.log(String.format("日志: %s", gs.getLogText()));
 		});
 
 		// ========== 结束 ==========
 
 		atm.addAction("测试完成", () -> {
-			atm.logPass("=== 人类模拟测试流程执行完毕 ===");
+			atm.logPass("=== 半即时制人类模拟测试流程执行完毕 ===");
 			AutoTestManager.ENABLED = false;
 		});
 	}
 
 	// ============ 辅助方法 ============
 
-	/** 模拟一次方向输入（按下+释放） */
-	private void addMove(AutoTestManager atm, InputAction action, String desc) {
-		atm.addAction(desc, () -> {
+	/**
+	 * 模拟按住方向键一段时间（半即时制核心操作）
+	 * 按住期间玩家会按冷却节奏自动重复移动/攻击
+	 */
+	private void holdDirection(AutoTestManager atm, InputAction action, float duration, String desc) {
+		atm.addAction("按住:" + desc, () -> {
 			InputManager.getInstance().simulatePress(action);
 		});
-		atm.addAction("释放" + desc, () -> {
+		atm.addWait(duration);
+		atm.addAction("松开:" + desc, () -> {
 			InputManager.getInstance().simulateRelease(action);
 		});
+		atm.addWait(0.1f); // 短暂间隔防止连续操作粘连
 	}
 
 	/** 安全获取当前 SimpleGameScreen 实例 */

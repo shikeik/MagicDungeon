@@ -22,7 +22,13 @@ import com.goldsprite.magicdungeon2.input.InputManager;
 
 /**
  * 简易地牢游戏场景
- * 小型网格地图 + 玩家/怪物 + 回合制移动战斗
+ * 小型网格地图 + 玩家/怪物 + 半即时制（冷却驱动）
+ * <p>
+ * 核心机制：
+ * - 按住方向键持续移动，受 moveTimer 冷却限制
+ * - 走向敌人格子自动攻击（Bump Attack）
+ * - 敌人各自独立冷却，不等玩家行动
+ * - 逻辑坐标(x,y)立即跳变，视觉坐标(visualX,visualY)平滑插值
  */
 public class SimpleGameScreen extends GScreen {
 	// 地图尺寸
@@ -31,6 +37,11 @@ public class SimpleGameScreen extends GScreen {
 
 	// 图块类型
 	private static final int T_FLOOR = 0, T_WALL = 1, T_STAIRS = 2;
+
+	// 视觉插值速度（像素/秒）
+	private static final float VISUAL_SPEED = 256f;
+	// Bump 攻击动画衰减系数
+	private static final float BUMP_DECAY = 10f;
 
 	private NeonBatch batch;
 	private OrthographicCamera camera;
@@ -41,8 +52,9 @@ public class SimpleGameScreen extends GScreen {
 	private Entity player;
 	private Array<Entity> enemies = new Array<>();
 	private Array<DamagePopup> popups = new Array<>();
-	private String logText = "移动: WASD/方向键 | 走向敌人即攻击";
-	private int turnCount = 0;
+	private String logText = "移动: 按住WASD/方向键 | 走向敌人即攻击";
+	private float gameTime = 0; // 游戏运行时间（秒）
+	private int killCount = 0;  // 击杀数
 
 	// ============ 公共访问方法（供自动测试读取状态） ============
 
@@ -55,31 +67,85 @@ public class SimpleGameScreen extends GScreen {
 	/** 获取地图数据 */
 	public int[][] getMap() { return map; }
 
-	/** 获取回合数 */
-	public int getTurnCount() { return turnCount; }
+	/** 获取游戏时间（秒） */
+	public float getGameTime() { return gameTime; }
+
+	/** 获取击杀数 */
+	public int getKillCount() { return killCount; }
 
 	/** 获取日志文本 */
 	public String getLogText() { return logText; }
 
-	/** 简易实体 */
+	/**
+	 * 简易实体（半即时制）
+	 * 每个实体维护独立的移动冷却计时器和视觉插值坐标
+	 */
 	public static class Entity {
-		public int x, y;
+		// --- 逻辑状态 ---
+		public int x, y;            // 网格坐标（立即跳变）
 		public String texName;
 		public StatData stats;
 		public float hp, maxHp;
 		public boolean alive = true;
 
-		public Entity(int x, int y, String texName, float hp, float atk, float def) {
+		// --- 冷却系统 ---
+		public float moveTimer = 0;  // 当前冷却剩余时间（秒）
+		public float moveDelay;      // 基础冷却间隔（秒）
+
+		// --- 视觉插值 ---
+		public float visualX, visualY;   // 渲染像素坐标（平滑追赶逻辑坐标）
+		public float bumpX, bumpY;       // Bump 攻击偏移（衰减动画）
+
+		// --- 敌人AI ---
+		public float aggroRange = 6f;    // 仇恨范围（格子距离）
+
+		public Entity(int x, int y, String texName, float hp, float atk, float def, float moveDelay) {
 			this.x = x;
 			this.y = y;
 			this.texName = texName;
 			this.hp = hp;
 			this.maxHp = hp;
+			this.moveDelay = moveDelay;
+			this.visualX = x * TILE;
+			this.visualY = y * TILE;
 			stats = new StatData();
 			stats.setLevel(1);
 			stats.setEquipFixed(StatType.HP, hp - StatType.HP.valuePerPoint);
 			stats.setEquipFixed(StatType.ATK, atk - StatType.ATK.valuePerPoint);
 			stats.setEquipFixed(StatType.DEF, def - StatType.DEF.valuePerPoint);
+		}
+
+		/** 获取实际冷却时间（受 ASP 属性加速） */
+		public float getEffectiveCooldown() {
+			float asp = stats.getASP(); // 默认 1.0，越高越快
+			return moveDelay / Math.max(asp, 0.1f);
+		}
+
+		/** 更新视觉坐标（平滑追赶逻辑坐标） */
+		public void updateVisuals(float dt) {
+			float targetX = x * TILE;
+			float targetY = y * TILE;
+
+			// 线性插值到目标位置
+			float distX = targetX - visualX;
+			float distY = targetY - visualY;
+			float move = VISUAL_SPEED * dt;
+
+			if (Math.abs(distX) <= move) visualX = targetX;
+			else visualX += Math.signum(distX) * move;
+
+			if (Math.abs(distY) <= move) visualY = targetY;
+			else visualY += Math.signum(distY) * move;
+
+			// Bump 动画衰减
+			bumpX += (0 - bumpX) * BUMP_DECAY * dt;
+			bumpY += (0 - bumpY) * BUMP_DECAY * dt;
+		}
+
+		/** 触发 Bump 攻击动画（向目标方向弹一下） */
+		public void triggerBump(int dx, int dy) {
+			bumpX = dx * TILE * 0.3f;
+			bumpY = dy * TILE * 0.3f;
 		}
 	}
 
@@ -132,23 +198,46 @@ public class SimpleGameScreen extends GScreen {
 
 	private void spawnEntities() {
 		enemies.clear();
-		player = new Entity(4, 4, "player", 100, 12, 5);
-		enemies.add(new Entity(2, 2, "slime", 20, 4, 1));
-		enemies.add(new Entity(6, 6, "skeleton", 35, 8, 3));
-		enemies.add(new Entity(2, 6, "bat", 15, 6, 1));
-		enemies.add(new Entity(6, 2, "wolf", 30, 10, 2));
+		killCount = 0;
+		// 玩家：HP=100, ATK=12, DEF=5, 冷却0.2秒
+		player = new Entity(4, 4, "player", 100, 12, 5, 0.2f);
+		// 敌人：各有不同的移动冷却（慢怪1秒/步，快怪0.4秒/步）
+		enemies.add(new Entity(2, 2, "slime", 20, 4, 1, 1.0f));     // 最慢
+		enemies.add(new Entity(6, 6, "skeleton", 35, 8, 3, 0.8f));
+		enemies.add(new Entity(2, 6, "bat", 15, 6, 1, 0.4f));       // 最快
+		enemies.add(new Entity(6, 2, "wolf", 30, 10, 2, 0.6f));
 	}
 
 	@Override
 	public void render(float delta) {
 		ScreenUtils.clear(0.05f, 0.05f, 0.08f, 1);
-		handleInput();
+
+		if (player.alive) {
+			gameTime += delta;
+			updatePlayer(delta);
+			updateEnemies(delta);
+		} else {
+			// 死亡后检测重置
+			InputManager input = InputManager.getInstance();
+			if (input.isJustPressed(InputAction.RESET_MAP)) {
+				buildMap();
+				spawnEntities();
+				gameTime = 0;
+				logText = "地牢重置！继续冒险...";
+			}
+		}
+
+		// 更新所有实体的视觉插值
+		player.updateVisuals(delta);
+		for (int i = 0; i < enemies.size; i++) {
+			enemies.get(i).updateVisuals(delta);
+		}
 		updatePopups(delta);
 
-		// 摄像机跟随玩家
+		// 摄像机跟随玩家（使用视觉坐标更平滑）
 		camera.position.set(
-			(player.x + 0.5f) * TILE,
-			(player.y + 0.5f) * TILE, 0);
+			player.visualX + TILE * 0.5f,
+			player.visualY + TILE * 0.5f, 0);
 		viewport.apply();
 		camera.update();
 
@@ -162,69 +251,107 @@ public class SimpleGameScreen extends GScreen {
 		drawHUD();
 	}
 
-	private void handleInput() {
+	// ============ 半即时制核心逻辑 ============
+
+	/** 更新玩家（冷却驱动） */
+	private void updatePlayer(float delta) {
+		player.moveTimer -= delta;
+		if (player.moveTimer > 0) return; // 冷却中，忽略输入
+
+		// 持续按键检测（按住方向键自动重复移动）
 		InputManager input = InputManager.getInstance();
 		int dx = 0, dy = 0;
 
-		if (input.isJustPressed(InputAction.MOVE_UP)) dy = 1;
-		else if (input.isJustPressed(InputAction.MOVE_DOWN)) dy = -1;
-		else if (input.isJustPressed(InputAction.MOVE_LEFT)) dx = -1;
-		else if (input.isJustPressed(InputAction.MOVE_RIGHT)) dx = 1;
+		if (input.isPressed(InputAction.MOVE_UP)) dy = 1;
+		else if (input.isPressed(InputAction.MOVE_DOWN)) dy = -1;
+		else if (input.isPressed(InputAction.MOVE_LEFT)) dx = -1;
+		else if (input.isPressed(InputAction.MOVE_RIGHT)) dx = 1;
 
 		if (dx == 0 && dy == 0) return;
 
 		int nx = player.x + dx, ny = player.y + dy;
-		if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return;
-		if (map[ny][nx] == T_WALL) return;
+		if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) {
+			player.moveTimer = player.getEffectiveCooldown(); // 撞边界也消耗冷却
+			return;
+		}
+		if (map[ny][nx] == T_WALL) {
+			player.moveTimer = player.getEffectiveCooldown(); // 撞墙也消耗冷却
+			return;
+		}
 
 		// 检查目标格子是否有敌人
 		Entity target = findEnemy(nx, ny);
 		if (target != null) {
-			// 战斗
+			// Bump 攻击
+			player.triggerBump(dx, dy);
 			float dmg = CombatEngine.calcDamage(player.stats.getATK(), target.stats.getDEF());
 			dmg = Math.max(dmg, 1);
 			target.hp -= dmg;
 			popups.add(new DamagePopup(
-				(target.x + 0.5f) * TILE,
-				(target.y + 1.0f) * TILE,
+				target.visualX + TILE * 0.5f,
+				target.visualY + TILE,
 				String.format("-%.0f", dmg), Color.YELLOW));
 
 			if (target.hp <= 0) {
 				target.alive = false;
 				enemies.removeValue(target, true);
-				logText = String.format("击败了 %s！", target.texName);
+				killCount++;
+				logText = String.format("击败了 %s！(击杀:%d)", target.texName, killCount);
 			} else {
 				logText = String.format("攻击 %s: %.0f伤害 (HP:%.0f/%.0f)",
 					target.texName, dmg, target.hp, target.maxHp);
 			}
+			player.moveTimer = player.getEffectiveCooldown();
 		} else {
 			// 移动
 			player.x = nx;
 			player.y = ny;
+			player.moveTimer = player.getEffectiveCooldown();
 
 			// 踩到楼梯
 			if (map[ny][nx] == T_STAIRS) {
 				logText = "踏上楼梯... 重置地图！";
 				buildMap();
 				spawnEntities();
-				return;
 			}
 		}
-
-		turnCount++;
-		enemyTurn();
 	}
 
-	private void enemyTurn() {
-		for (int i = 0; i < enemies.size; i++) {
+	/** 更新所有敌人（各自独立冷却） */
+	private void updateEnemies(float delta) {
+		for (int i = enemies.size - 1; i >= 0; i--) {
 			Entity e = enemies.get(i);
 			if (!e.alive) continue;
 
-			// 简单AI：向玩家靠近
-			int dx = Integer.signum(player.x - e.x);
-			int dy = Integer.signum(player.y - e.y);
+			e.moveTimer -= delta;
+			if (e.moveTimer > 0) continue; // 冷却中，跳过
 
-			// 随机选择水平或垂直方向移动
+			// AI决策：检测玩家距离
+			float dist = Math.abs(player.x - e.x) + Math.abs(player.y - e.y); // 曼哈顿距离
+
+			int dx = 0, dy = 0;
+			if (dist <= e.aggroRange) {
+				// 追踪玩家
+				dx = Integer.signum(player.x - e.x);
+				dy = Integer.signum(player.y - e.y);
+			} else {
+				// 随机游荡
+				if (MathUtils.randomBoolean(0.3f)) { // 30%概率移动
+					switch (MathUtils.random(3)) {
+						case 0: dx = 1; break;
+						case 1: dx = -1; break;
+						case 2: dy = 1; break;
+						case 3: dy = -1; break;
+					}
+				}
+			}
+
+			if (dx == 0 && dy == 0) {
+				e.moveTimer = e.getEffectiveCooldown() * 0.5f; // 空闲时缩短等待
+				continue;
+			}
+
+			// 随机选择水平或垂直方向
 			boolean horizontal = MathUtils.randomBoolean();
 			int mx, my;
 			if (horizontal) {
@@ -239,12 +366,13 @@ public class SimpleGameScreen extends GScreen {
 
 			// 走到玩家格子 = 攻击
 			if (nx == player.x && ny == player.y) {
+				e.triggerBump(mx, my);
 				float dmg = CombatEngine.calcDamage(e.stats.getATK(), player.stats.getDEF());
 				dmg = Math.max(dmg, 1);
 				player.hp -= dmg;
 				popups.add(new DamagePopup(
-					(player.x + 0.5f) * TILE,
-					(player.y + 1.2f) * TILE,
+					player.visualX + TILE * 0.5f,
+					player.visualY + TILE * 1.2f,
 					String.format("-%.0f", dmg), Color.RED));
 
 				if (player.hp <= 0) {
@@ -255,8 +383,12 @@ public class SimpleGameScreen extends GScreen {
 				e.x = nx;
 				e.y = ny;
 			}
+
+			e.moveTimer = e.getEffectiveCooldown();
 		}
 	}
+
+	// ============ 碰撞与查询 ============
 
 	private boolean canMove(Entity e, int dx, int dy) {
 		int nx = e.x + dx, ny = e.y + dy;
@@ -285,17 +417,9 @@ public class SimpleGameScreen extends GScreen {
 			p.y += 30 * delta; // 向上飘
 			if (p.timer <= 0) popups.removeIndex(i);
 		}
-
-		// 重置逻辑
-		if (!player.alive) {
-			InputManager input = InputManager.getInstance();
-			if (input.isJustPressed(InputAction.RESET_MAP)) {
-				buildMap();
-				spawnEntities();
-				logText = "地牢重置！继续冒险...";
-			}
-		}
 	}
+
+	// ============ 渲染（使用视觉坐标） ============
 
 	private void drawMap() {
 		for (int y = 0; y < MAP_H; y++) {
@@ -329,22 +453,35 @@ public class SimpleGameScreen extends GScreen {
 	}
 
 	private void drawEntity(Entity e) {
+		float drawX = e.visualX + e.bumpX;
+		float drawY = e.visualY + e.bumpY;
+
 		TextureRegion tex = TextureManager.get(e.texName);
 		if (tex != null) {
-			batch.draw(tex, e.x * TILE, e.y * TILE, TILE, TILE);
+			batch.draw(tex, drawX, drawY, TILE, TILE);
 		} else {
-			batch.drawRect(e.x * TILE + 2, e.y * TILE + 2, TILE - 4, TILE - 4, 0, 0, Color.CYAN, true);
+			batch.drawRect(drawX + 2, drawY + 2, TILE - 4, TILE - 4, 0, 0, Color.CYAN, true);
 		}
 
 		// 血条
 		if (e.hp < e.maxHp) {
 			float barW = TILE - 4;
 			float barH = 3;
-			float barX = e.x * TILE + 2;
-			float barY = (e.y + 1) * TILE + 1;
+			float barX = drawX + 2;
+			float barY = drawY + TILE + 1;
 			batch.drawRect(barX, barY, barW, barH, 0, 0, Color.DARK_GRAY, true);
 			batch.drawRect(barX, barY, barW * (e.hp / e.maxHp), barH, 0, 0,
 				e == player ? Color.GREEN : Color.RED, true);
+		}
+
+		// 冷却条（显示在实体下方）
+		if (e.moveTimer > 0) {
+			float cdRatio = e.moveTimer / e.getEffectiveCooldown();
+			float barW = TILE - 8;
+			float barX = drawX + 4;
+			float barY = drawY - 3;
+			batch.drawRect(barX, barY, barW, 2, 0, 0, Color.DARK_GRAY, true);
+			batch.drawRect(barX, barY, barW * (1 - cdRatio), 2, 0, 0, Color.SKY, true);
 		}
 	}
 
@@ -368,10 +505,10 @@ public class SimpleGameScreen extends GScreen {
 		float top = Gdx.graphics.getHeight();
 		hudFont.setColor(Color.WHITE);
 		hudFont.draw(batch, String.format(
-			"HP: %.0f/%.0f | ATK: %.0f | DEF: %.0f | 回合: %d",
+			"HP: %.0f/%.0f | ATK: %.0f | DEF: %.0f | 击杀: %d | %.0fs",
 			player.hp, player.maxHp,
 			player.stats.getATK(), player.stats.getDEF(),
-			turnCount), 10, top - 10);
+			killCount, gameTime), 10, top - 10);
 
 		hudFont.setColor(Color.LIGHT_GRAY);
 		hudFont.draw(batch, logText, 10, top - 30);
