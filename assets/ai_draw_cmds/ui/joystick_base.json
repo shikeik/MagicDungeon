@@ -1,0 +1,11 @@
+{
+  "name": "joystick_base",
+  "width": 128,
+  "height": 128,
+  "commands": [
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.48, 0, 0], "color": "#1a1a2e", "segments": 32, "filled": true },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.48, 0, 0], "color": "#3a3a5e", "segments": 32, "filled": false },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.44, 0, 0], "color": "#2a2a4e", "segments": 32, "filled": false },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.12, 0, 0], "color": "#3a3a5e", "segments": 16, "filled": false }
+  ]
+}

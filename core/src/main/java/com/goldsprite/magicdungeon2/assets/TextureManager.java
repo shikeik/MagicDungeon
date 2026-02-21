@@ -37,38 +37,55 @@ public class TextureManager {
 
     /**
      * 初始化纹理管理器
-     * 扫描 ai_draw_cmds/ 目录下所有 .json 文件，
+     * 递归扫描 ai_draw_cmds/ 目录及其子目录下所有 .json 文件，
      * 逐一执行 AIDrawExecutor 生成 TextureRegion 并缓存。
+     *
+     * 子目录中的纹理使用路径前缀作为缓存键：
+     *   ai_draw_cmds/player.json       → 缓存键 "player"
+     *   ai_draw_cmds/ui/btn_attack.json → 缓存键 "ui/btn_attack"
      */
     public static void init() {
         if (initialized) return;
 
         AssetUtils.loadIndex();
-        String[] files = AssetUtils.listNames(DRAW_CMD_DIR);
-
-        int loaded = 0;
-        for (String fileName : files) {
-            if (!fileName.endsWith(".json")) continue;
-
-            // 提取名称（去除 .json 后缀）
-            String name = fileName.substring(0, fileName.length() - 5);
-
-            try {
-                String jsonText = Gdx.files.internal(DRAW_CMD_DIR + "/" + fileName).readString("UTF-8");
-                TextureRegion region = AIDrawExecutor.generateFromJson(jsonText);
-                if (region != null) {
-                    cache.put(name, region);
-                    loaded++;
-                } else {
-                    DLog.logT(TAG, "⚠ 生成返回 null: %s", name);
-                }
-            } catch (Exception e) {
-                DLog.logT(TAG, "❌ 加载失败 [%s]: %s", name, e.getMessage());
-            }
-        }
+        int[] counter = {0};
+        loadDirectory(DRAW_CMD_DIR, "", counter);
 
         initialized = true;
-        DLog.logT(TAG, "✓ 纹理管理器初始化完成: 已加载 %d/%d", loaded, files.length);
+        DLog.logT(TAG, "✓ 纹理管理器初始化完成: 已加载 %d 个纹理", counter[0]);
+    }
+
+    /**
+     * 递归加载指定目录下的 JSON 绘制计划
+     * @param dirPath 目录的 assets 相对路径（如 "ai_draw_cmds" 或 "ai_draw_cmds/ui"）
+     * @param prefix  缓存键前缀（如 "" 或 "ui/"）
+     * @param counter 已加载计数器（数组引用以便递归累加）
+     */
+    private static void loadDirectory(String dirPath, String prefix, int[] counter) {
+        String[] entries = AssetUtils.listNames(dirPath);
+        for (String entry : entries) {
+            if (entry.endsWith(".json")) {
+                // JSON 文件 → 生成纹理
+                String name = prefix + entry.substring(0, entry.length() - 5);
+                try {
+                    String jsonText = Gdx.files.internal(dirPath + "/" + entry).readString("UTF-8");
+                    TextureRegion region = AIDrawExecutor.generateFromJson(jsonText);
+                    if (region != null) {
+                        cache.put(name, region);
+                        counter[0]++;
+                    } else {
+                        DLog.logT(TAG, "⚠ 生成返回 null: %s", name);
+                    }
+                } catch (Exception e) {
+                    DLog.logT(TAG, "❌ 加载失败 [%s]: %s", name, e.getMessage());
+                }
+            } else {
+                // 非 JSON → 可能是子目录，递归扫描
+                String subDir = dirPath + "/" + entry;
+                String subPrefix = prefix + entry + "/";
+                loadDirectory(subDir, subPrefix, counter);
+            }
+        }
     }
 
     /**
@@ -86,7 +103,8 @@ public class TextureManager {
 
     /**
      * 动态加载单个 JSON 绘制计划（热加载）
-     * @param name JSON 文件名（不含 .json 后缀）
+     * 支持路径前缀，如 "ui/joystick_base" → ai_draw_cmds/ui/joystick_base.json
+     * @param name 纹理名称（支持路径前缀，不含 .json 后缀）
      * @return 生成的 TextureRegion，失败返回 null
      */
     public static TextureRegion loadSingle(String name) {

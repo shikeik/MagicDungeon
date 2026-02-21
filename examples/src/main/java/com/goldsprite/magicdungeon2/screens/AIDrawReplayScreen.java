@@ -3,7 +3,6 @@ package com.goldsprite.magicdungeon2.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
@@ -13,7 +12,8 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
-import com.badlogic.gdx.utils.Scaling;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.ui.widget.HoverFocusScrollPane;
@@ -23,9 +23,12 @@ import com.goldsprite.magicdungeon2.ai.AIDrawPlan;
 import com.goldsprite.magicdungeon2.utils.AssetUtils;
 import com.goldsprite.magicdungeon2.utils.texturegenerator.NeonGenerator;
 import com.kotcrab.vis.ui.VisUI;
-import com.kotcrab.vis.ui.widget.*;
-import com.badlogic.gdx.utils.Json;
-import com.badlogic.gdx.utils.Array;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisSelectBox;
+import com.kotcrab.vis.ui.widget.VisSlider;
+import com.kotcrab.vis.ui.widget.VisSplitPane;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 
 /**
  * AI 绘制回放编辑器
@@ -91,13 +94,28 @@ public class AIDrawReplayScreen extends GScreen {
 
 	private void loadFileList() {
 		AssetUtils.loadIndex();
-		String[] raw = AssetUtils.listNames("ai_draw_cmds");
 		Array<String> jsonFiles = new Array<>();
-		for (String f : raw) {
-			if (f.endsWith(".json")) jsonFiles.add(f.replace(".json", ""));
-		}
+		scanDirectory("ai_draw_cmds", "", jsonFiles);
 		jsonFiles.sort();
 		fileNames = jsonFiles.toArray(String.class);
+	}
+
+	/**
+	 * 递归扫描目录，收集所有 JSON 文件名（带路径前缀）
+	 * @param dirPath  assets 相对路径（如 "ai_draw_cmds" 或 "ai_draw_cmds/ui"）
+	 * @param prefix   显示名前缀（如 "" 或 "ui/"）
+	 * @param outFiles 输出列表
+	 */
+	private void scanDirectory(String dirPath, String prefix, Array<String> outFiles) {
+		String[] raw = AssetUtils.listNames(dirPath);
+		for (String f : raw) {
+			if (f.endsWith(".json")) {
+				outFiles.add(prefix + f.replace(".json", ""));
+			} else {
+				// 可能是子目录，递归扫描
+				scanDirectory(dirPath + "/" + f, prefix + f + "/", outFiles);
+			}
+		}
 	}
 
 	private void loadPlan(String name) {

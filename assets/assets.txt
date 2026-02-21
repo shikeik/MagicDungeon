@@ -22,6 +22,12 @@ ai_draw_cmds/stairs_up.json
 ai_draw_cmds/stone_brick.json
 ai_draw_cmds/sword.json
 ai_draw_cmds/torch.json
+ai_draw_cmds/ui/btn_attack.json
+ai_draw_cmds/ui/btn_back.json
+ai_draw_cmds/ui/btn_interact.json
+ai_draw_cmds/ui/btn_skill.json
+ai_draw_cmds/ui/joystick_base.json
+ai_draw_cmds/ui/joystick_knob.json
 ai_draw_cmds/wall.json
 ai_draw_cmds/wolf.json
 engine.index

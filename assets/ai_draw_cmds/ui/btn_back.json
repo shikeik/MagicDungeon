@@ -1,0 +1,11 @@
+{
+  "name": "btn_back",
+  "width": 64,
+  "height": 64,
+  "commands": [
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.45, 0, 0], "color": "#4a4a4a", "segments": 24, "filled": true },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.45, 0, 0], "color": "#888888", "segments": 24, "filled": false },
+    { "type": "drawTriangle", "args": [0.25, 0.50, 0.55, 0.72, 0.55, 0.28], "color": "#cccccc", "filled": true },
+    { "type": "drawRect", "args": [0.50, 0.38, 0.22, 0.24, 0, 0], "color": "#cccccc", "filled": true }
+  ]
+}

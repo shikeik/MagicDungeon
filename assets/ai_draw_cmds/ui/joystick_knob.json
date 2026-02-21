@@ -1,0 +1,11 @@
+{
+  "name": "joystick_knob",
+  "width": 64,
+  "height": 64,
+  "commands": [
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.42, 0, 0], "color": "#5a5a8a", "segments": 24, "filled": true },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.42, 0, 0], "color": "#8888bb", "segments": 24, "filled": false },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.30, 0, 0], "color": "#6a6a9a", "segments": 20, "filled": true },
+    { "type": "drawCircle", "args": [0.45, 0.55, 0.10, 0, 0], "color": "#9999cc", "segments": 12, "filled": true }
+  ]
+}

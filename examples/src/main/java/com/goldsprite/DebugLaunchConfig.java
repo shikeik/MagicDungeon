@@ -12,13 +12,13 @@ import com.goldsprite.magicdungeon2.testing.IGameAutoTest;
  * 注意：提交代码时请确保 LaunchMode 为 NORMAL
  */
 public class DebugLaunchConfig {
-	
+
 	/** 当前启动模式 */
-	public static LaunchMode currentMode = LaunchMode.AUTO_TEST;
-	
+	public static LaunchMode currentMode = LaunchMode.NORMAL;
+
 	/** 目标启动场景 (仅在 DIRECT_SCENE 或 AUTO_TEST 模式下有效) */
 	public static Class<? extends GScreen> targetScreen = SimpleGameScreen.class;
-	
+
 	/** 自动测试类 (仅在 AUTO_TEST 模式下有效) */
 	public static Class<? extends IGameAutoTest> autoTestClass = HumanSimulatorTest.class;
 

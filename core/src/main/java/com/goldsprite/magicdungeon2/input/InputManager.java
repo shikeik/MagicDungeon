@@ -16,9 +16,11 @@ import com.badlogic.gdx.controllers.ControllerListener;
 import com.badlogic.gdx.controllers.ControllerMapping;
 import com.badlogic.gdx.controllers.Controllers;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon2.AppConstants;
 
@@ -29,12 +31,35 @@ public class InputManager {
 	private final Map<InputAction, List<Integer>> controllerMappings = new HashMap<>();
 	private boolean isVirtualGamepad = false;
 
-	// Global Input Mode State
+	// === 输入类型枚举 (取代旧 InputMode) ===
+	// KEYBOARD: 键鼠组合 (PC默认 / Android外接)
+	// GAMEPAD:  物理手柄 (Xbox / PS / Switch)
+	// TOUCH:    纯触控 (Android 虚拟摇杆/按钮)
+	public enum InputType {
+		KEYBOARD,
+		GAMEPAD,
+		TOUCH
+	}
+	private InputType currentInputType = InputType.KEYBOARD;
+
+	// 保留旧枚举别名以兼容外部代码
+	/** @deprecated 请使用 {@link InputType} 代替 */
+	@Deprecated
 	public enum InputMode {
 		MOUSE,
 		KEYBOARD // Includes Controller
 	}
+	/** @deprecated 请使用 {@link #getInputType()} 代替 */
+	@Deprecated
 	private InputMode currentInputMode = InputMode.MOUSE;
+
+	// === 信号注入缓存 (供 VirtualInputProvider / Scene2D UI 调用) ===
+	private final Vector2 injectedAxisLeft = new Vector2();
+	private final Vector2 injectedAxisRight = new Vector2();
+
+	// 轴向常量
+	public static final int AXIS_LEFT = 0;
+	public static final int AXIS_RIGHT = 1;
 
 	// State Tracking
 	private final Set<Integer> currentButtons = new HashSet<>();
@@ -74,6 +99,80 @@ public class InputManager {
 
 	public void simulateKeyRelease(int keycode) {
 		simulatedKeys.remove(keycode);
+	}
+
+	// === 信号注入接口 (供 Scene2D 虚拟控件调用) ===
+
+	/**
+	 * 注入动作信号 (对应虚拟按钮按下/松开)
+	 * 调用此方法会自动切换 InputType 为 TOUCH
+	 */
+	public void injectAction(InputAction action, boolean isPressed) {
+		if (isPressed) {
+			if (!simulatedActions.contains(action)) {
+				simulatedJustPressedActions.add(action);
+			}
+			simulatedActions.add(action);
+			setInputType(InputType.TOUCH);
+		} else {
+			simulatedActions.remove(action);
+		}
+	}
+
+	/**
+	 * 注入轴向信号 (对应虚拟摇杆)
+	 * @param axisId AXIS_LEFT 或 AXIS_RIGHT
+	 * @param x 水平分量 [-1, 1]
+	 * @param y 垂直分量 [-1, 1]
+	 */
+	public void injectAxis(int axisId, float x, float y) {
+		if (axisId == AXIS_LEFT) {
+			injectedAxisLeft.set(x, y);
+		} else if (axisId == AXIS_RIGHT) {
+			injectedAxisRight.set(x, y);
+		}
+		if (Math.abs(x) > 0.1f || Math.abs(y) > 0.1f) {
+			setInputType(InputType.TOUCH);
+		}
+	}
+
+	/**
+	 * 获取合并后的左摇杆轴向值
+	 * 自动合并 键盘WASD / 手柄摇杆 / 虚拟摇杆 的输入
+	 */
+	public Vector2 getAxis(int axisId) {
+		Vector2 result = new Vector2();
+
+		if (axisId == AXIS_LEFT) {
+			// 1. 键盘方向键
+			if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) result.y += 1;
+			if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) result.y -= 1;
+			if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) result.x -= 1;
+			if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) result.x += 1;
+
+			// 2. 手柄摇杆
+			if (Controllers.getControllers().size > 0) {
+				Controller c = Controllers.getControllers().first();
+				float cx = c.getAxis(AXIS_X);
+				float cy = -c.getAxis(AXIS_Y); // Y轴通常反转
+				if (Math.abs(cx) > DEADZONE || Math.abs(cy) > DEADZONE) {
+					result.x += cx;
+					result.y += cy;
+				}
+			}
+
+			// 3. 虚拟摇杆注入
+			result.x += injectedAxisLeft.x;
+			result.y += injectedAxisLeft.y;
+
+		} else if (axisId == AXIS_RIGHT) {
+			// 仅虚拟注入（右摇杆暂不绑定键盘）
+			result.set(injectedAxisRight);
+		}
+
+		// 钳制到单位圆
+		if (result.len2() > 1f) result.nor();
+		return result;
 	}
 
 	/**
@@ -216,10 +315,15 @@ public class InputManager {
 		// If controller connected -> Keyboard Mode (Gamepad friendly)
 		// Else -> Mouse Mode (PC friendly)
 		if (hasConnectedController()) {
-			DLog.logT("InputManager", "Controller detected on startup. Setting mode to KEYBOARD.");
+			DLog.logT("InputManager", "Controller detected on startup. Setting type to GAMEPAD.");
+			setInputType(InputType.GAMEPAD);
 			setInputMode(InputMode.KEYBOARD);
+		} else if (PlatformImpl.isAndroidUser()) {
+			DLog.logT("InputManager", "Android platform detected. Setting type to TOUCH.");
+			setInputType(InputType.TOUCH);
 		} else {
-			DLog.logT("InputManager", "No controller detected on startup. Setting mode to MOUSE.");
+			DLog.logT("InputManager", "No controller detected on startup. Setting type to KEYBOARD.");
+			setInputType(InputType.KEYBOARD);
 			setInputMode(InputMode.MOUSE);
 		}
 	}
@@ -257,13 +361,43 @@ public class InputManager {
 
 		if (mode == InputMode.KEYBOARD) {
 			// Lock cursor
-			Gdx.input.setCursorCatched(true);
+			if (!PlatformImpl.isAndroidUser()) Gdx.input.setCursorCatched(true);
 			DLog.logT("InputManager", "InputMode -> KEYBOARD (Cursor Locked)");
 		} else {
 			// Unlock cursor
 			Gdx.input.setCursorCatched(false);
 			DLog.logT("InputManager", "InputMode -> MOUSE (Cursor Unlocked)");
 		}
+	}
+
+	/**
+	 * 设置当前输入类型 (新架构)
+	 * 驱动 UI 表现，如提示图标切换、虚拟控件显隐
+	 */
+	public void setInputType(InputType type) {
+		if (currentInputType == type) return;
+		currentInputType = type;
+		DLog.logT("InputManager", "InputType -> " + type);
+
+		// 同步旧模式以保持兼容
+		switch (type) {
+			case KEYBOARD:
+				setInputMode(InputMode.MOUSE);
+				break;
+			case GAMEPAD:
+				setInputMode(InputMode.KEYBOARD);
+				break;
+			case TOUCH:
+				// 触控模式下不锁定光标
+				if (currentInputMode != InputMode.MOUSE) {
+					setInputMode(InputMode.MOUSE);
+				}
+				break;
+		}
+	}
+
+	public InputType getInputType() {
+		return currentInputType;
 	}
 
 	public InputMode getInputMode() {
@@ -301,10 +435,15 @@ public class InputManager {
 		previousButtons.addAll(currentButtons);
 		currentButtons.clear();
 
-		// Check Mouse Movement to switch back to MOUSE mode
+		// Check Mouse Movement to switch back to KEYBOARD type (键鼠模式)
 		// Only if significant movement to avoid jitter
-		if (Math.abs(Gdx.input.getDeltaX()) > 2 || Math.abs(Gdx.input.getDeltaY()) > 2 || Gdx.input.isTouched()) {
-			 setInputMode(InputMode.MOUSE);
+		if (!PlatformImpl.isAndroidUser()) {
+			if (Math.abs(Gdx.input.getDeltaX()) > 2 || Math.abs(Gdx.input.getDeltaY()) > 2 || Gdx.input.isTouched()) {
+				setInputMode(InputMode.MOUSE);
+				if (currentInputType != InputType.KEYBOARD) {
+					setInputType(InputType.KEYBOARD);
+				}
+			}
 		}
 
 		if (Controllers.getControllers().size == 0) return;
@@ -817,32 +956,51 @@ public class InputManager {
 	public boolean isPressed(InputAction action) {
 		if (inputBlocked) return false;
 
-		// 检查模拟输入（自动化测试用）
+		// 1. 检查模拟/注入输入（自动化测试 + 虚拟控件）
 		if (simulatedActions.contains(action)) return true;
 
-		// Check Keyboard
+		// 2. 检查虚拟摇杆轴向注入 → 映射为方向动作
+		if (isAxisMappedAction(action, injectedAxisLeft)) return true;
+
+		// 3. Check Keyboard
 		List<Integer> keys = keyboardMappings.get(action);
 		if (keys != null) {
 			for (int key : keys) {
 				if (Gdx.input.isKeyPressed(key)) {
 					setInputMode(InputMode.KEYBOARD);
+					setInputType(InputType.KEYBOARD);
 					return true;
 				}
 			}
 		}
 
-		// Check Controller
+		// 4. Check Controller
 		List<Integer> buttons = controllerMappings.get(action);
 		if (buttons != null) {
 			for (int btn : buttons) {
 				if (currentButtons.contains(btn)) {
 					setInputMode(InputMode.KEYBOARD);
+					setInputType(InputType.GAMEPAD);
 					return true;
 				}
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * 检查轴向注入是否映射到指定的方向动作
+	 */
+	private boolean isAxisMappedAction(InputAction action, Vector2 axis) {
+		float threshold = DEADZONE;
+		switch (action) {
+			case MOVE_UP:    case UI_UP:    return axis.y > threshold;
+			case MOVE_DOWN:  case UI_DOWN:  return axis.y < -threshold;
+			case MOVE_LEFT:  case UI_LEFT:  return axis.x < -threshold;
+			case MOVE_RIGHT: case UI_RIGHT: return axis.x > threshold;
+			default: return false;
+		}
 	}
 
 	public boolean isJustPressed(InputAction action) {
@@ -855,6 +1013,7 @@ public class InputManager {
 			for (int key : keys) {
 				if (Gdx.input.isKeyJustPressed(key)) {
 					setInputMode(InputMode.KEYBOARD);
+					setInputType(InputType.KEYBOARD);
 					DLog.logT("InputManager", "Action JustPressed: " + action + " (Key: " + Input.Keys.toString(key) + ")");
 					return true;
 				}
@@ -867,6 +1026,7 @@ public class InputManager {
 			for (int btn : buttons) {
 				if (currentButtons.contains(btn) && !previousButtons.contains(btn)) {
 					setInputMode(InputMode.KEYBOARD);
+					setInputType(InputType.GAMEPAD);
 					DLog.logT("InputManager", "Action JustPressed: " + action + " (Btn: " + btn + ")");
 					return true;
 				}

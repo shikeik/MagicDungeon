@@ -1,0 +1,12 @@
+{
+  "name": "btn_skill",
+  "width": 64,
+  "height": 64,
+  "commands": [
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.45, 0, 0], "color": "#1a3a6b", "segments": 24, "filled": true },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.45, 0, 0], "color": "#4488cc", "segments": 24, "filled": false },
+    { "type": "drawTriangle", "args": [0.50, 0.82, 0.22, 0.32, 0.78, 0.32], "color": "#66bbff", "filled": true },
+    { "type": "drawTriangle", "args": [0.50, 0.18, 0.22, 0.68, 0.78, 0.68], "color": "#4499dd", "filled": true },
+    { "type": "drawCircle", "args": [0.50, 0.50, 0.10, 0, 0], "color": "#aaddff", "segments": 12, "filled": true }
+  ]
+}

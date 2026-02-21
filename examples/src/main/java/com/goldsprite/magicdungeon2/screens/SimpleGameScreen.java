@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
@@ -19,6 +20,7 @@ import com.goldsprite.magicdungeon2.core.stats.StatData;
 import com.goldsprite.magicdungeon2.core.stats.StatType;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
+import com.goldsprite.magicdungeon2.input.virtual.VirtualControlsOverlay;
 
 /**
  * 简易地牢游戏场景
@@ -52,9 +54,12 @@ public class SimpleGameScreen extends GScreen {
 	private Entity player;
 	private Array<Entity> enemies = new Array<>();
 	private Array<DamagePopup> popups = new Array<>();
-	private String logText = "移动: 按住WASD/方向键 | 走向敌人即攻击";
+	private String logText = "移动: 按住WASD/方向键/摇杆 | 走向敌人即攻击";
 	private float gameTime = 0; // 游戏运行时间（秒）
 	private int killCount = 0;  // 击杀数
+
+	// 虚拟触控控件
+	private VirtualControlsOverlay virtualControls;
 
 	// ============ 公共访问方法（供自动测试读取状态） ============
 
@@ -177,6 +182,10 @@ public class SimpleGameScreen extends GScreen {
 		TextureManager.init();
 		buildMap();
 		spawnEntities();
+
+		// 创建虚拟触控覆盖层（Android 默认显示）
+		virtualControls = new VirtualControlsOverlay(new ExtendViewport(400, 400));
+		if (imp != null) imp.addProcessor(virtualControls.getStage());
 	}
 
 	private void buildMap() {
@@ -211,6 +220,9 @@ public class SimpleGameScreen extends GScreen {
 	@Override
 	public void render(float delta) {
 		ScreenUtils.clear(0.05f, 0.05f, 0.08f, 1);
+
+		// 更新虚拟触控控件
+		if (virtualControls != null) virtualControls.update(delta);
 
 		if (player.alive) {
 			gameTime += delta;
@@ -249,6 +261,9 @@ public class SimpleGameScreen extends GScreen {
 		batch.end();
 
 		drawHUD();
+
+		// 渲染虚拟触控控件（在 HUD 之上）
+		if (virtualControls != null) virtualControls.render();
 	}
 
 	// ============ 半即时制核心逻辑 ============
@@ -258,7 +273,7 @@ public class SimpleGameScreen extends GScreen {
 		player.moveTimer -= delta;
 		if (player.moveTimer > 0) return; // 冷却中，忽略输入
 
-		// 持续按键检测（按住方向键自动重复移动）
+		// 持续按键检测（按住方向键/摇杆自动重复移动）
 		InputManager input = InputManager.getInstance();
 		int dx = 0, dy = 0;
 
@@ -266,6 +281,19 @@ public class SimpleGameScreen extends GScreen {
 		else if (input.isPressed(InputAction.MOVE_DOWN)) dy = -1;
 		else if (input.isPressed(InputAction.MOVE_LEFT)) dx = -1;
 		else if (input.isPressed(InputAction.MOVE_RIGHT)) dx = 1;
+
+		// 若键盘无输入，检查摇杆轴（虚拟摇杆或手柄）
+		if (dx == 0 && dy == 0) {
+			Vector2 axis = input.getAxis(InputManager.AXIS_LEFT);
+			float threshold = 0.3f;
+			if (Math.abs(axis.x) > Math.abs(axis.y)) {
+				if (axis.x > threshold) dx = 1;
+				else if (axis.x < -threshold) dx = -1;
+			} else {
+				if (axis.y > threshold) dy = 1;
+				else if (axis.y < -threshold) dy = -1;
+			}
+		}
 
 		if (dx == 0 && dy == 0) return;
 
@@ -524,11 +552,13 @@ public class SimpleGameScreen extends GScreen {
 	@Override
 	public void resize(int width, int height) {
 		viewport.update(width, height);
+		if (virtualControls != null) virtualControls.resize(width, height);
 	}
 
 	@Override
 	public void dispose() {
 		super.dispose();
 		if (batch != null) batch.dispose();
+		if (virtualControls != null) virtualControls.dispose();
 	}
 }
