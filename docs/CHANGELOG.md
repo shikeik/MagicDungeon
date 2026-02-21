@@ -9,13 +9,41 @@
 
 ### 新增 (Added)
 
+- **简易地牢游戏场景** (`SimpleGameScreen`)
+  - 9×9 网格地图，回合制移动 + 近战战斗
+  - 4 种敌人 (slime/skeleton/bat/wolf)，各有独立属性
+  - 伤害飘字、血条、HUD 状态栏、楼梯重置
+  - `ExampleSelectScreen` "开始游戏" 入口对接
+- **AI 绘制回放编辑器** (`AIDrawReplayScreen`)
+  - JSON 绘制计划逐步回放，可视化绘制过程
+  - 时间线控制: 进度条、步进 (|< < > >|)、播放/暂停、倍速 (1/2/4/8x)
+  - 文件选择器 + 命令信息面板
+  - `TestSelectionScreen` 新增 "AI绘制回放编辑器" 入口
+- **人类模拟可视化自动测试** (`HumanSimulatorTest`)
+  - 基于 `AutoTestManager` 时间线任务队列，模拟玩家进入地牢、移动、打怪
+  - 7 阶段测试流程: 初始验证 → 击杀 slime → 击杀 wolf → 战斗状态检查 → 清扫 → 最终断言
+  - `DebugLaunchConfig` AUTO_TEST 模式直接启动
+- **基础配置与工具类**
+  - `ThemeConfig`: 主题颜色配置
+  - `Constants`: 全局常量
+  - `NeonGenerator`: NeonBatch 绘制辅助工具
+
 ### 修复 (Fixed)
+
+- 修复 `SimpleGameScreen` LibGDX Array 嵌套迭代器异常 (`#iterator() cannot be used nested`)
+  - `enemyTurn()` 中 foreach 调用 `canMove()` 导致迭代器重入
+  - 所有 `Array<Entity>` / `Array<DamagePopup>` 的 foreach 改为索引循环
+- 移除未使用的 `Vector2` 导入
+- 修复逻辑不统一代码
 
 ### 变更 (Changed)
 
+- `SimpleGameScreen.Entity` / `DamagePopup` 改为 `public static class`，添加公共 getter 供自动测试访问
+- `GameAutoTests.run()` 启用 `HumanSimulatorTest`
+
 ---
 
-## [0.3.0] - 2025-07-17
+## [0.3.0] - 2026-02-21
 
 ### 新增 (Added)
 
