@@ -16,7 +16,7 @@ import com.goldsprite.gdengine.ui.widget.single.ToastUI;
 import com.goldsprite.magicdungeon2.config.LaunchMode;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
-import com.goldsprite.magicdungeon2.screens.ExampleSelectScreen;
+import com.goldsprite.magicdungeon2.screens.basics.ExampleSelectScreen;
 import com.goldsprite.magicdungeon2.testing.IGameAutoTest;
 import com.goldsprite.magicdungeon2.ui.MagicDungeon2LoadingRenderer;
 import com.kotcrab.vis.ui.VisUI;

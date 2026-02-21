@@ -2,7 +2,7 @@ package com.goldsprite;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon2.config.LaunchMode;
-import com.goldsprite.magicdungeon2.screens.SimpleGameScreen;
+import com.goldsprite.magicdungeon2.screens.main.SimpleGameScreen;
 import com.goldsprite.magicdungeon2.testing.HumanSimulatorTest;
 import com.goldsprite.magicdungeon2.testing.IGameAutoTest;
 

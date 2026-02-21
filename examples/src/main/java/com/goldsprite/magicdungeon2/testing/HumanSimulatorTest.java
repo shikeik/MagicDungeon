@@ -4,8 +4,8 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
-import com.goldsprite.magicdungeon2.screens.SimpleGameScreen;
-import com.goldsprite.magicdungeon2.screens.SimpleGameScreen.Entity;
+import com.goldsprite.magicdungeon2.screens.main.SimpleGameScreen;
+import com.goldsprite.magicdungeon2.screens.main.SimpleGameScreen.Entity;
 
 /**
  * 人类模拟可视化测试（半即时制版本）

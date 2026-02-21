@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon2.screens;
+package com.goldsprite.magicdungeon2.screens.main;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;

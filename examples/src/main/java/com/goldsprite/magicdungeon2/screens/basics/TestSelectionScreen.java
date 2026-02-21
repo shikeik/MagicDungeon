@@ -1,9 +1,11 @@
-package com.goldsprite.magicdungeon2.screens;
+package com.goldsprite.magicdungeon2.screens.basics;
 
 import java.util.Map;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
+import com.goldsprite.magicdungeon2.screens.tests.AIDrawReplayScreen;
+import com.goldsprite.magicdungeon2.screens.tests.TexturePreviewScreen;
 
 public class TestSelectionScreen extends BaseSelectionScreen {
 	@Override
