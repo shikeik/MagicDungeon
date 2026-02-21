@@ -2,7 +2,6 @@ package com.goldsprite.magicdungeon2.input.virtual;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
@@ -65,15 +64,11 @@ public class VirtualControlsOverlay implements VirtualInputProvider, Disposable 
 		TextureRegion sklTex = TextureManager.get("ui/btn_skill");
 		TextureRegion bckTex = TextureManager.get("ui/btn_back");
 
-		// 若纹理不存在，构建一个透明的最小 Style 防止 NPE
+		// baseTex/knobTex 可为 null，VirtualJoystick 内部有 fallback 圆形绘制
 		if (baseTex == null || knobTex == null) {
-			DLog.logT(TAG, "⚠ 摇杆纹理未找到，使用简易 Style");
-			Touchpad.TouchpadStyle fallbackStyle = new Touchpad.TouchpadStyle();
-			// Touchpad 允许 background 和 knob 为 null（只是不绘制）
-			moveStick = new VirtualJoystick(DEADZONE, fallbackStyle, InputManager.AXIS_LEFT);
-		} else {
-			moveStick = new VirtualJoystick(baseTex, knobTex, DEADZONE, InputManager.AXIS_LEFT);
+			DLog.logT(TAG, "⚠ 摇杆纹理未找到，使用 fallback 圆形");
 		}
+		moveStick = new VirtualJoystick(baseTex, knobTex, DEADZONE, InputManager.AXIS_LEFT);
 
 		// 按钮尺寸暂定为 64，layoutControls() 时会重新设置
 		float defaultSize = 64f;
@@ -102,10 +97,18 @@ public class VirtualControlsOverlay implements VirtualInputProvider, Disposable 
 		float shortSide = Math.min(vw, vh);
 		float margin = shortSide * MARGIN_RATIO;
 
-		// 摇杆
-		float stickSize = shortSide * JOYSTICK_SIZE_RATIO;
-		moveStick.setSize(stickSize, stickSize);
-		moveStick.setPosition(margin, margin);
+		// 摇杆：可视圆 + 扩展矩形触摸区域
+		float stickDiameter = shortSide * JOYSTICK_SIZE_RATIO;
+		float stickRadius = stickDiameter / 2f;
+		float touchPadding = stickRadius * 0.75f; // 圆外额外触摸边距
+		float rectW = stickDiameter + touchPadding * 2;
+		float rectH = stickDiameter + touchPadding * 2;
+		moveStick.setJoystickRadius(stickRadius);
+		moveStick.setSize(rectW, rectH);
+		// 保持摇杆圆心位于 (margin + stickRadius, margin + stickRadius)
+		moveStick.setPosition(
+			Math.max(0, margin - touchPadding),
+			Math.max(0, margin - touchPadding));
 
 		// 按钮
 		float btnSize = shortSide * BUTTON_SIZE_RATIO;
@@ -186,6 +189,7 @@ public class VirtualControlsOverlay implements VirtualInputProvider, Disposable 
 
 	@Override
 	public void dispose() {
+		if (moveStick != null) moveStick.dispose();
 		stage.dispose();
 	}
 }
