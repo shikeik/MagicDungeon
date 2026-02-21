@@ -1,5 +1,11 @@
 package com.goldsprite.gdengine.log;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Logger;
@@ -7,12 +13,6 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.magicdungeon2.BuildConfig;
-
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public class DLog {
 	public static final String passStr = "Y";
@@ -138,31 +138,92 @@ public class DLog {
 
 	/**
 	 * 标准控制台输出 (System.out / System.err)
-	 * 保留原有颜色标签逻辑，以便某些支持的控制台或 IDE 插件着色
+	 * 使用 ANSI 转义码在 IDE 控制台和终端中显示颜色
+	 * <p>
+	 * 注意事项：
+	 * - IntelliJ IDEA / VS Code / Windows Terminal 原生支持 ANSI
+	 * - Android Logcat 不支持 ANSI，会自动降级为纯文本
+	 * - System.err 在多数 IDE 中已自带红色高亮，仅追加 ANSI 以保持一致性
 	 */
 	private static class StandardOutput implements LogOutput {
+		// ANSI 转义码常量
+		private static final String RESET  = "\033[0m";
+		private static final String RED    = "\033[91m";   // 亮红
+		private static final String GREEN  = "\033[92m";   // 亮绿（PASS）
+		private static final String YELLOW = "\033[93m";   // 亮黄（WARN）
+		private static final String CYAN   = "\033[96m";   // 亮青（INFO）
+		private static final String WHITE  = "\033[97m";   // 亮白（DEBUG）
+		private static final String ORANGE = "\033[38;5;208m"; // 256色橙色
+		private static final String GRAY   = "\033[90m";   // 暗灰（时间戳）
+
+		// 是否启用 ANSI 颜色（Android Logcat 不支持）
+		private static final boolean ANSI_ENABLED = !isAndroidRuntime();
+
+		private static boolean isAndroidRuntime() {
+			try {
+				Class.forName("android.os.Build");
+				return true;
+			} catch (ClassNotFoundException e) {
+				return false;
+			}
+		}
+
 		@Override
 		public void onLog(Level level, String tag, String msg) {
 			String time = formatTime("HH:mm:ss:SSS");
-			// 构建基础消息
-			String fullMsg = String.format("[%s] [%s] %s", time, tag, msg);
 
-			// 根据级别和 Tag 添加颜色标记 (保持与原有逻辑一致)
+			if (!ANSI_ENABLED) {
+				// Android 等不支持 ANSI 的平台：纯文本输出
+				String plain = String.format("[%s] [%s] [%s] %s", level.name(), time, tag, msg);
+				if (level == Level.ERROR) {
+					System.err.println(plain);
+				} else {
+					System.out.println(plain);
+				}
+				return;
+			}
+
+			// 根据级别选择颜色
+			String levelColor;
+			String levelLabel;
+			switch (level) {
+				case ERROR:
+					levelColor = RED;
+					levelLabel = "ERROR";
+					break;
+				case WARN:
+					levelColor = YELLOW;
+					levelLabel = "WARN ";
+					break;
+				case INFO:
+					levelColor = CYAN;
+					levelLabel = "INFO ";
+					break;
+				default:
+					levelColor = WHITE;
+					levelLabel = "DEBUG";
+					break;
+			}
+
+			// Tag 特殊着色
+			String tagColor = levelColor;
+			if ("UserProject".equals(tag)) {
+				tagColor = ORANGE;
+			} else if ("AutoTest".equals(tag)) {
+				// AutoTest 的 PASS/FAIL 已通过 level 区分，Tag 用绿色突出
+				tagColor = GREEN;
+			}
+
+			// 组装带 ANSI 颜色的消息: [灰色时间] [彩色级别] [Tag颜色Tag] 消息
+			String fullMsg = String.format("%s[%s]%s %s[%s]%s %s[%s]%s %s%s%s",
+				GRAY, time, RESET,
+				levelColor, levelLabel, RESET,
+				tagColor, tag, RESET,
+				levelColor, msg, RESET);
+
 			if (level == Level.ERROR) {
-				fullMsg = "[RED]" + fullMsg;
 				System.err.println(fullMsg);
 			} else {
-				if ("UserProject".equals(tag)) {
-					fullMsg = "[ORANGE]" + fullMsg;
-				}
-
-				if (level == Level.WARN) {
-					fullMsg = "[YELLOW]" + fullMsg;
-				} else if (level == Level.INFO) {
-					fullMsg = "[CYAN]" + fullMsg; // INFO 用青色区分
-				} else {
-					fullMsg = "[WHITE]" + fullMsg; // DEBUG 默认白色
-				}
 				System.out.println(fullMsg);
 			}
 		}

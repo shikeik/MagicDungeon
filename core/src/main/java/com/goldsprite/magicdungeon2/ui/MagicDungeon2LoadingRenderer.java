@@ -10,10 +10,10 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.esotericsoftware.spine.AnimationState;
 import com.esotericsoftware.spine.AnimationStateData;
 import com.esotericsoftware.spine.Skeleton;
-import com.goldsprite.gdengine.log.DLog;
 import com.esotericsoftware.spine.SkeletonData;
 import com.esotericsoftware.spine.SkeletonJson;
 import com.esotericsoftware.spine.SkeletonRenderer;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.VisUI;
 
