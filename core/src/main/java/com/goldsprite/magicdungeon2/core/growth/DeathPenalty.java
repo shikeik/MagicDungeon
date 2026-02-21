@@ -134,5 +134,7 @@ public final class DeathPenalty {
 
         // 更新等级
         statData.setLevel(levelAfter);
+		
+		// TODO: 这里增加掉级详情告知信息: ps: 你已回落至 5->3 级: Hp 200->150, ...自由点8 -> 3...
     }
 }

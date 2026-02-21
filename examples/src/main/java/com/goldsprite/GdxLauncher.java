@@ -21,7 +21,7 @@ import com.goldsprite.magicdungeon2.ui.MagicDungeon2LoadingRenderer;
 import com.goldsprite.magicdungeon2.input.InputManager;
 import com.goldsprite.magicdungeon2.input.InputAction;
 
-public class GdxLauncher extends Game {int k11;
+public class GdxLauncher extends Game {int k1;
 	private Stage toastStage;
 	public DLog debug;
 	private Application.ApplicationType userType;
