@@ -19,6 +19,7 @@ public class StatData {
     /** 自由加点分配的属性点数（每项） */
     private final EnumMap<StatType, Integer> freePoints = new EnumMap<>(StatType.class);
 
+	// TODO: 以下三个设计感觉都不满意，理论上应该是只有两种：点数属性，百分比属性，点数属性根据属性值表固定，百分比属性根据最终点数属性(包括角色自身与装备道具等加成)在此基础上追加百分比属性(多个同类百分比相加, 最终应用到点数属性，百分比之间互不叠加), 取消突破上限加成设定
     /** 装备提供的固定加成值 */
     private final EnumMap<StatType, Float> equipFixed = new EnumMap<>(StatType.class);
 

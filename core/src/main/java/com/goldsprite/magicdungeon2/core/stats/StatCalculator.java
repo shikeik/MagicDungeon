@@ -22,7 +22,7 @@ public final class StatCalculator {
      * = (level + 1) × 4
      */
     public static int totalFixedPoints(int level) {
-        return (level + 1) * 4;
+        return fixedPointsPerStat(level) * 4;
     }
 
     /**
@@ -38,7 +38,7 @@ public final class StatCalculator {
      * = 8L + 4
      */
     public static int totalPoints(int level) {
-        return 8 * level + 4;
+        return totalFixedPoints(level) + totalFreePoints(level);
     }
 
     /**
