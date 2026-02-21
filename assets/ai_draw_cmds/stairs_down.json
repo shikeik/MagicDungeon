@@ -1,0 +1,15 @@
+{
+  "name": "stairs_down",
+  "width": 32,
+  "height": 32,
+  "commands": [
+    { "type": "drawRect", "args": [0, 0, 1, 1, 0, 0], "color": "#2a2a2a", "filled": true },
+    { "type": "drawRect", "args": [0.1, 0.7, 0.8, 0.15, 0, 0], "color": "#666666", "filled": true },
+    { "type": "drawRect", "args": [0.2, 0.5, 0.6, 0.15, 0, 0], "color": "#5a5a5a", "filled": true },
+    { "type": "drawRect", "args": [0.3, 0.3, 0.4, 0.15, 0, 0], "color": "#505050", "filled": true },
+    { "type": "drawRect", "args": [0.4, 0.1, 0.2, 0.15, 0, 0], "color": "#444444", "filled": true },
+    { "type": "drawRect", "args": [0.1, 0.82, 0.8, 0.03, 0, 0], "color": "#888888", "filled": true },
+    { "type": "drawRect", "args": [0.2, 0.62, 0.6, 0.03, 0, 0], "color": "#777777", "filled": true },
+    { "type": "drawRect", "args": [0.3, 0.42, 0.4, 0.03, 0, 0], "color": "#666666", "filled": true }
+  ]
+}

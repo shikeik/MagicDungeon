@@ -1,0 +1,15 @@
+{
+  "name": "door",
+  "width": 32,
+  "height": 32,
+  "commands": [
+    { "type": "drawRect", "args": [0, 0, 1, 1, 0, 0], "color": "#3a3a3a", "filled": true },
+    { "type": "drawRect", "args": [0.15, 0.05, 0.7, 0.9, 0, 0], "color": "#6b4226", "filled": true },
+    { "type": "drawRect", "args": [0.2, 0.1, 0.6, 0.8, 0, 0], "color": "#8b5a2b", "filled": true },
+    { "type": "drawRect", "args": [0.2, 0.1, 0.6, 0.03, 0, 0], "color": "#a0703c", "filled": true },
+    { "type": "drawLine", "args": [0.5, 0.1, 0.5, 0.9, 0.02], "color": "#5a3a18" },
+    { "type": "drawCircle", "args": [0.7, 0.5, 0.04, 0, 0], "color": "#ffd700", "segments": 8, "filled": true },
+    { "type": "drawRect", "args": [0.15, 0.05, 0.7, 0.03, 0, 0], "color": "#4a3218", "filled": true },
+    { "type": "drawRect", "args": [0.15, 0.92, 0.7, 0.03, 0, 0], "color": "#4a3218", "filled": true }
+  ]
+}

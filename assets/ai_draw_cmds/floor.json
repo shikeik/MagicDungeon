@@ -1,0 +1,16 @@
+{
+  "name": "floor",
+  "width": 32,
+  "height": 32,
+  "commands": [
+    { "type": "drawRect", "args": [0, 0, 1, 1, 0, 0], "color": "#3a3a3a", "filled": true },
+    { "type": "drawRect", "args": [0.04, 0.04, 0.42, 0.42, 0, 0], "color": "#484848", "filled": true },
+    { "type": "drawRect", "args": [0.54, 0.04, 0.42, 0.42, 0, 0], "color": "#454545", "filled": true },
+    { "type": "drawRect", "args": [0.04, 0.54, 0.42, 0.42, 0, 0], "color": "#434343", "filled": true },
+    { "type": "drawRect", "args": [0.54, 0.54, 0.42, 0.42, 0, 0], "color": "#474747", "filled": true },
+    { "type": "drawRect", "args": [0.04, 0.04, 0.42, 0.03, 0, 0], "color": "#555555", "filled": true },
+    { "type": "drawRect", "args": [0.54, 0.04, 0.42, 0.03, 0, 0], "color": "#555555", "filled": true },
+    { "type": "drawRect", "args": [0.04, 0.54, 0.42, 0.03, 0, 0], "color": "#555555", "filled": true },
+    { "type": "drawRect", "args": [0.54, 0.54, 0.42, 0.03, 0, 0], "color": "#555555", "filled": true }
+  ]
+}

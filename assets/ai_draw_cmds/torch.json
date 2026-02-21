@@ -1,0 +1,13 @@
+{
+  "name": "torch",
+  "width": 32,
+  "height": 32,
+  "commands": [
+    { "type": "drawRect", "args": [0.42, 0.05, 0.16, 0.45, 0, 0], "color": "#6b4226", "filled": true },
+    { "type": "drawRect", "args": [0.44, 0.08, 0.12, 0.4, 0, 0], "color": "#8b5a2b", "filled": true },
+    { "type": "drawRadialGradientCircle", "args": [0.5, 0.65, 0.2], "color": "#ffaa00", "color2": "#ff440060", "segments": 16 },
+    { "type": "drawCircle", "args": [0.5, 0.65, 0.12, 0, 0], "color": "#ffdd44", "segments": 12, "filled": true },
+    { "type": "drawCircle", "args": [0.5, 0.7, 0.06, 0, 0], "color": "#ffffff", "segments": 8, "filled": true },
+    { "type": "drawTriangle", "args": [0.45, 0.65, 0.5, 0.85, 0.55, 0.65], "color": "#ff6600", "filled": true }
+  ]
+}

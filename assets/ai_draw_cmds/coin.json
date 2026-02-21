@@ -1,0 +1,13 @@
+{
+  "name": "coin",
+  "width": 32,
+  "height": 32,
+  "commands": [
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.35, 0, 0], "color": "#daa520", "segments": 20, "filled": true },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.3, 0, 0], "color": "#ffd700", "segments": 20, "filled": true },
+    { "type": "drawRadialGradientCircle", "args": [0.45, 0.45, 0.1], "color": "#ffee88", "color2": "#ffd700", "segments": 12 },
+    { "type": "drawCircle", "args": [0.5, 0.5, 0.15, 0, 0.01], "color": "#cc9900", "segments": 16 },
+    { "type": "drawRect", "args": [0.44, 0.38, 0.12, 0.24, 0, 0], "color": "#cc9900", "filled": true },
+    { "type": "drawRect", "args": [0.38, 0.44, 0.24, 0.12, 0, 0], "color": "#cc9900", "filled": true }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "boss_dragon",
+  "width": 64,
+  "height": 64,
+  "commands": [
+    { "type": "drawRadialGradientCircle", "args": [0.5, 0.4, 0.35], "color": "#880000", "color2": "#220000", "segments": 32 },
+    { "type": "drawCircle", "args": [0.5, 0.4, 0.3, 0, 0], "color": "#aa2222", "segments": 24, "filled": true },
+    { "type": "drawCircle", "args": [0.5, 0.65, 0.18, 0, 0], "color": "#cc3333", "segments": 20, "filled": true },
+    { "type": "drawTriangle", "args": [0.35, 0.82, 0.42, 0.95, 0.38, 0.82], "color": "#dd4444", "filled": true },
+    { "type": "drawTriangle", "args": [0.62, 0.82, 0.58, 0.95, 0.65, 0.82], "color": "#dd4444", "filled": true },
+    { "type": "drawCircle", "args": [0.42, 0.68, 0.05, 0, 0], "color": "#ffdd00", "segments": 10, "filled": true },
+    { "type": "drawCircle", "args": [0.58, 0.68, 0.05, 0, 0], "color": "#ffdd00", "segments": 10, "filled": true },
+    { "type": "drawCircle", "args": [0.42, 0.68, 0.02, 0, 0], "color": "#000000", "segments": 8, "filled": true },
+    { "type": "drawCircle", "args": [0.58, 0.68, 0.02, 0, 0], "color": "#000000", "segments": 8, "filled": true },
+    { "type": "drawTriangle", "args": [0.05, 0.5, 0.25, 0.75, 0.15, 0.35], "color": "#992222", "filled": true },
+    { "type": "drawTriangle", "args": [0.95, 0.5, 0.75, 0.75, 0.85, 0.35], "color": "#992222", "filled": true },
+    { "type": "drawRect", "args": [0.1, 0.05, 0.12, 0.2, 0, 0], "color": "#993333", "filled": true },
+    { "type": "drawRect", "args": [0.78, 0.05, 0.12, 0.2, 0, 0], "color": "#993333", "filled": true }
+  ]
+}
