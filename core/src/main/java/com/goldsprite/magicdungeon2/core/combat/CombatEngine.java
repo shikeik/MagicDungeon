@@ -37,7 +37,9 @@ public final class CombatEngine {
      * @param atk 攻击方 ATK
      * @param def 防御方 DEF
      * @return 伤害值
+     * @deprecated 与 calcDamage 完全等价，游戏中未使用。直接调用 {@link #calcDamage} 即可。
      */
+    @Deprecated
     public static float calcPhysicalDamage(float atk, float def) {
         return calcDamage(atk, def);
     }
@@ -51,7 +53,9 @@ public final class CombatEngine {
      * @param magAtk 攻击方的魔法攻击力
      * @param mdef 防御方的魔法防御力（MDEF）
      * @return 伤害值
+     * @deprecated 尚未接入游戏循环。无魔法伤害系统。
      */
+    @Deprecated
     public static float calcMagicDamage(float magAtk, float mdef) {
         return calcDamage(magAtk, mdef);
     }
@@ -65,7 +69,9 @@ public final class CombatEngine {
      * @param baseDamage 基础伤害（对第1个目标的伤害）
      * @param targetIndex 目标序号（从0开始，0=第1个目标）
      * @return 衰减后的伤害
+     * @deprecated 尚未接入游戏循环。无穿透武器系统。
      */
+    @Deprecated
     public static float calcPierceDamage(float baseDamage, int targetIndex) {
         if (targetIndex <= 0) return baseDamage;
         float dmg = (float) (baseDamage * Math.pow(PIERCE_DECAY, targetIndex));
@@ -78,7 +84,9 @@ public final class CombatEngine {
      * @param baseDamage 基础伤害
      * @param targetCount 路径上的目标数量
      * @return 每个目标受到的伤害数组
+     * @deprecated 尚未接入游戏循环。无穿透武器系统。
      */
+    @Deprecated
     public static float[] calcPierceAllDamages(float baseDamage, int targetCount) {
         float[] damages = new float[targetCount];
         for (int i = 0; i < targetCount; i++) {

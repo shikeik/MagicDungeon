@@ -174,7 +174,7 @@ public class HumanSimulatorTest implements IGameAutoTest {
 			}
 			Entity p = gs.getPlayer();
 			atm.log("=== 战斗结束 ===");
-			atm.log(String.format("玩家 HP: %.0f/%.0f", p.hp, p.maxHp));
+			atm.log(String.format("玩家 HP: %.0f/%.0f", p.hp, p.getMaxHp()));
 			atm.log(String.format("存活: %s", p.alive ? "是" : "否"));
 			atm.log(String.format("击杀数: %d", gs.getKillCount()));
 			atm.log(String.format("剩余敌人: %d", gs.getEnemies().size));

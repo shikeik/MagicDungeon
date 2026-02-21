@@ -2,7 +2,10 @@ package com.goldsprite.magicdungeon2.core.combat;
 
 /**
  * 武器范围类型。
+ *
+ * @deprecated 尚未接入游戏循环。当前攻击系统仅支持邻接格bump攻击，无射程/穿透机制。待实装后移除此注解。
  */
+@Deprecated
 public enum WeaponRange {
     /** 普通近战：4方向邻接1格，无穿透 */
     MELEE(1, false),

@@ -16,6 +16,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon2.assets.TextureManager;
 import com.goldsprite.magicdungeon2.core.combat.CombatEngine;
+import com.goldsprite.magicdungeon2.core.stats.StatCalculator;
 import com.goldsprite.magicdungeon2.core.stats.StatData;
 import com.goldsprite.magicdungeon2.core.stats.StatType;
 import com.goldsprite.magicdungeon2.input.InputAction;
@@ -90,7 +91,7 @@ public class SimpleGameScreen extends GScreen {
 		public int x, y;            // 网格坐标（立即跳变）
 		public String texName;
 		public StatData stats;
-		public float hp, maxHp;
+		public float hp;             // 当前生命值（maxHp 由 stats.getHP() 驱动）
 		public boolean alive = true;
 
 		// --- 冷却系统 ---
@@ -108,17 +109,22 @@ public class SimpleGameScreen extends GScreen {
 			this.x = x;
 			this.y = y;
 			this.texName = texName;
-			this.hp = hp;
-			this.maxHp = hp;
 			this.moveDelay = moveDelay;
 			this.visualX = x * TILE;
 			this.visualY = y * TILE;
+
+			// 初始化 StatData 并反推 equipFixed，使 stats 成为属性唯一数据源
 			stats = new StatData();
 			stats.setLevel(1);
-			stats.setEquipFixed(StatType.HP, hp - StatType.HP.valuePerPoint);
-			stats.setEquipFixed(StatType.ATK, atk - StatType.ATK.valuePerPoint);
-			stats.setEquipFixed(StatType.DEF, def - StatType.DEF.valuePerPoint);
+			float fixedPts = StatCalculator.fixedPointsPerStat(1);
+			stats.setEquipFixed(StatType.HP, hp - fixedPts * StatType.HP.valuePerPoint);
+			stats.setEquipFixed(StatType.ATK, atk - fixedPts * StatType.ATK.valuePerPoint);
+			stats.setEquipFixed(StatType.DEF, def - fixedPts * StatType.DEF.valuePerPoint);
+			this.hp = getMaxHp(); // 当前HP初始化为最大值
 		}
+
+		/** 最大生命值（由 StatData 驱动） */
+		public float getMaxHp() { return stats.getHP(); }
 
 		/** 获取实际冷却时间（受 ASP 属性加速） */
 		public float getEffectiveCooldown() {
@@ -327,7 +333,7 @@ public class SimpleGameScreen extends GScreen {
 				logText = String.format("击败了 %s！(击杀:%d)", target.texName, killCount);
 			} else {
 				logText = String.format("攻击 %s: %.0f伤害 (HP:%.0f/%.0f)",
-					target.texName, dmg, target.hp, target.maxHp);
+					target.texName, dmg, target.hp, target.getMaxHp());
 			}
 			player.moveTimer = player.getEffectiveCooldown();
 		} else {
@@ -494,13 +500,13 @@ public class SimpleGameScreen extends GScreen {
 		}
 
 		// 血条
-		if (e.hp < e.maxHp) {
+		if (e.hp < e.getMaxHp()) {
 			float barW = TILE - 4;
 			float barH = 3;
 			float barX = drawX + 2;
 			float barY = drawY + TILE + 1;
 			batch.drawRect(barX, barY, barW, barH, 0, 0, Color.DARK_GRAY, true);
-			batch.drawRect(barX, barY, barW * (e.hp / e.maxHp), barH, 0, 0,
+			batch.drawRect(barX, barY, barW * (e.hp / e.getMaxHp()), barH, 0, 0,
 				e == player ? Color.GREEN : Color.RED, true);
 		}
 
@@ -536,7 +542,7 @@ public class SimpleGameScreen extends GScreen {
 		hudFont.setColor(Color.WHITE);
 		hudFont.draw(batch, String.format(
 			"HP: %.0f/%.0f | ATK: %.0f | DEF: %.0f | 击杀: %d | %.0fs",
-			player.hp, player.maxHp,
+			player.hp, player.getMaxHp(),
 			player.stats.getATK(), player.stats.getDEF(),
 			killCount, gameTime), 10, top - 10);
 

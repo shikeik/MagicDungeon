@@ -215,17 +215,20 @@ public class StatData {
 
     /** 获取最终 HP */
     public float getHP() { return getFinalValue(StatType.HP); }
-    /** 获取最终 MP */
+    /** 获取最终 MP @deprecated 游戏中无MP消耗系统，待实装后移除 */
+    @Deprecated
     public float getMP() { return getFinalValue(StatType.MP); }
     /** 获取最终 ATK */
     public float getATK() { return getFinalValue(StatType.ATK); }
     /** 获取最终 DEF */
     public float getDEF() { return getFinalValue(StatType.DEF); }
-    /** 魔法防御 = DEF / 2 */
+    /** 魔法防御 = DEF / 2 @deprecated 游戏中无魔法伤害系统，待实装后移除 */
+    @Deprecated
     public float getMDEF() { return getDEF() / 2f; }
     /** 获取最终 ASP 倍率 */
     public float getASP() { return getFinalValue(StatType.ASP); }
-    /** 获取最终 MOV 倍率 */
+    /** 获取最终 MOV 倍率 @deprecated 游戏中未读取MOV，移速为硬编码moveDelay。待实装后移除 */
+    @Deprecated
     public float getMOV() { return getFinalValue(StatType.MOV); }
 
     /** 获取总属性点数。委托给 {@link StatCalculator#totalPoints(int)}。 */
