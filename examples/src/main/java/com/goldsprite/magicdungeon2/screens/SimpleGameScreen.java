@@ -200,7 +200,8 @@ public class SimpleGameScreen extends GScreen {
 	}
 
 	private void enemyTurn() {
-		for (Entity e : enemies) {
+		for (int i = 0; i < enemies.size; i++) {
+			Entity e = enemies.get(i);
 			if (!e.alive) continue;
 
 			// 简单AI：向玩家靠近
@@ -246,14 +247,16 @@ public class SimpleGameScreen extends GScreen {
 		if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return false;
 		if (map[ny][nx] == T_WALL) return false;
 		// 不能走到其他敌人身上
-		for (Entity other : enemies) {
+		for (int i = 0; i < enemies.size; i++) {
+			Entity other = enemies.get(i);
 			if (other != e && other.alive && other.x == nx && other.y == ny) return false;
 		}
 		return true;
 	}
 
 	private Entity findEnemy(int x, int y) {
-		for (Entity e : enemies) {
+		for (int i = 0; i < enemies.size; i++) {
+			Entity e = enemies.get(i);
 			if (e.alive && e.x == x && e.y == y) return e;
 		}
 		return null;
@@ -300,7 +303,8 @@ public class SimpleGameScreen extends GScreen {
 
 	private void drawEntities() {
 		// 绘制敌人
-		for (Entity e : enemies) {
+		for (int i = 0; i < enemies.size; i++) {
+			Entity e = enemies.get(i);
 			if (!e.alive) continue;
 			drawEntity(e);
 		}
@@ -329,7 +333,8 @@ public class SimpleGameScreen extends GScreen {
 	}
 
 	private void drawPopups() {
-		for (DamagePopup p : popups) {
+		for (int i = 0; i < popups.size; i++) {
+			DamagePopup p = popups.get(i);
 			float alpha = Math.min(p.timer * 2, 1f);
 			Color c = new Color(p.color.r, p.color.g, p.color.b, alpha);
 			font.setColor(c);
