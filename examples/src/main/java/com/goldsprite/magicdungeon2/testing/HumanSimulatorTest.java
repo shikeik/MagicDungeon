@@ -4,8 +4,8 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
+import com.goldsprite.magicdungeon2.screens.main.GameEntity;
 import com.goldsprite.magicdungeon2.screens.main.SimpleGameScreen;
-import com.goldsprite.magicdungeon2.screens.main.SimpleGameScreen.Entity;
 
 /**
  * 人类模拟可视化测试（半即时制版本）
@@ -89,7 +89,7 @@ public class HumanSimulatorTest implements IGameAutoTest {
 		atm.add(new AutoTestManager.AssertTask("slime已被击杀", () -> {
 			SimpleGameScreen gs = getGameScreen();
 			if (gs == null) return false;
-			Entity slime = findEnemyByName(gs, "slime");
+			GameEntity slime = findEnemyByName(gs, "slime");
 			return slime == null;
 		}));
 
@@ -172,7 +172,7 @@ public class HumanSimulatorTest implements IGameAutoTest {
 				atm.logFail("无法获取游戏屏幕");
 				return;
 			}
-			Entity p = gs.getPlayer();
+			GameEntity p = gs.getPlayer();
 			atm.log("=== 战斗结束 ===");
 			atm.log(String.format("玩家 HP: %.0f/%.0f", p.hp, p.getMaxHp()));
 			atm.log(String.format("存活: %s", p.alive ? "是" : "否"));
@@ -217,10 +217,10 @@ public class HumanSimulatorTest implements IGameAutoTest {
 	}
 
 	/** 在敌人列表中按名字查找 */
-	private Entity findEnemyByName(SimpleGameScreen gs, String name) {
+	private GameEntity findEnemyByName(SimpleGameScreen gs, String name) {
 		var enemies = gs.getEnemies();
 		for (int i = 0; i < enemies.size; i++) {
-			Entity e = enemies.get(i);
+			GameEntity e = enemies.get(i);
 			if (e.alive && e.texName.equals(name)) return e;
 		}
 		return null;
