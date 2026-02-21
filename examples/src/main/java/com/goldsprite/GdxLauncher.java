@@ -14,12 +14,12 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.gdengine.ui.widget.single.ToastUI;
 import com.goldsprite.magicdungeon2.config.LaunchMode;
+import com.goldsprite.magicdungeon2.input.InputAction;
+import com.goldsprite.magicdungeon2.input.InputManager;
 import com.goldsprite.magicdungeon2.screens.ExampleSelectScreen;
 import com.goldsprite.magicdungeon2.testing.IGameAutoTest;
-import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.magicdungeon2.ui.MagicDungeon2LoadingRenderer;
-import com.goldsprite.magicdungeon2.input.InputManager;
-import com.goldsprite.magicdungeon2.input.InputAction;
+import com.kotcrab.vis.ui.VisUI;
 
 public class GdxLauncher extends Game {int k1;
 	private Stage toastStage;
@@ -74,22 +74,26 @@ public class GdxLauncher extends Game {int k1;
 			case DIRECT_SCENE:
 			case AUTO_TEST:
 				if (DebugLaunchConfig.targetScreen != null) {
-					DLog.log("启动模式: 自动测试 -> 场景: " + DebugLaunchConfig.targetScreen.getSimpleName());
-					sm.goScreen(DebugLaunchConfig.targetScreen);
-				}
-				if(DebugLaunchConfig.currentMode == LaunchMode.DIRECT_SCENE) break;
+					String sceneName = DebugLaunchConfig.targetScreen.getSimpleName();
+					boolean isAutoTest = DebugLaunchConfig.currentMode == LaunchMode.AUTO_TEST;
+					DLog.log("启动模式: " + (isAutoTest ? "自动测试" : "直接场景") + " -> 场景: " + sceneName);
 
-				// 自动测试模式继续执行测试用例
-				if (DebugLaunchConfig.autoTestClass != null) {
-					DLog.log("启动模式: 自动测试 -> 用例: " + DebugLaunchConfig.autoTestClass.getSimpleName());
-					try {
-						// 使用反射实例化测试类
-						// 注意：测试类必须有无参构造函数
-						IGameAutoTest test = DebugLaunchConfig.autoTestClass.getDeclaredConstructor().newInstance();
-						test.run();
-					} catch (Exception e) {
-						DLog.logErr("无法实例化测试用例: " + e.getMessage());
-						e.printStackTrace();
+					// 使用加载转场（小人动画）进入目标场景，加载完所有资源后再完成转场
+					sm.playLoadingTransition((finishCallback) -> {
+						sm.goScreen(DebugLaunchConfig.targetScreen);
+						finishCallback.run();
+					}, "正在进入 " + sceneName + " ...", 1.5f);
+
+					// 自动测试模式：注册测试用例（ATM任务会等待转场完成后再执行断言）
+					if (isAutoTest && DebugLaunchConfig.autoTestClass != null) {
+						DLog.log("启动模式: 自动测试 -> 用例: " + DebugLaunchConfig.autoTestClass.getSimpleName());
+						try {
+							IGameAutoTest test = DebugLaunchConfig.autoTestClass.getDeclaredConstructor().newInstance();
+							test.run();
+						} catch (Exception e) {
+							DLog.logErr("无法实例化测试用例: " + e.getMessage());
+							e.printStackTrace();
+						}
 					}
 				}
 				break;

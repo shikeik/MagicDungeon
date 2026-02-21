@@ -37,16 +37,16 @@ public class HumanSimulatorTest implements IGameAutoTest {
 		AutoTestManager atm = AutoTestManager.getInstance();
 		atm.log("=== 启动人类模拟测试：半即时制地牢战斗 ===");
 
-		// ========== 第一阶段：进入游戏场景 ==========
+		// ========== 第一阶段：等待加载转场完成并验证进入游戏场景 ==========
+		// GdxLauncher 已通过 playLoadingTransition 进入 SimpleGameScreen
+		// 这里等待转场动画结束 + 屏幕就绪后再开始测试操作
 
-		atm.addAction("进入SimpleGameScreen", () -> {
-			ScreenManager.getInstance().goScreen(SimpleGameScreen.class);
-		});
-		atm.addWait(1.0f);
+		atm.addWaitCondition("等待转场完成并进入SimpleGameScreen", () -> {
+			return !ScreenManager.getInstance().isTransitioning()
+				&& ScreenManager.getInstance().getCurScreen() instanceof SimpleGameScreen;
+		}, 15f); // 15秒超时（含加载转场时间）
 
-		atm.add(new AutoTestManager.AssertTask("验证进入SimpleGameScreen", () -> {
-			return ScreenManager.getInstance().getCurScreen() instanceof SimpleGameScreen;
-		}));
+		atm.addWait(0.5f); // 额外等待半秒确保画面稳定
 
 		// ========== 第二阶段：验证初始状态 ==========
 

@@ -21,4 +21,17 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 		// --- 功能测试 ---
 		map.put("测试", TestSelectionScreen.class);
 	}
+
+	@Override
+	protected void onScreenSelected(Class<? extends GScreen> screenClass) {
+		if (screenClass == SimpleGameScreen.class) {
+			// 进入游戏场景使用加载转场（小人动画），加载完所有资源后再完成转场
+			getScreenManager().playLoadingTransition((finishCallback) -> {
+				getScreenManager().replaceScreen(screenClass);
+				finishCallback.run();
+			}, "正在加载地牢资源...", 1.5f);
+		} else {
+			super.onScreenSelected(screenClass);
+		}
+	}
 }

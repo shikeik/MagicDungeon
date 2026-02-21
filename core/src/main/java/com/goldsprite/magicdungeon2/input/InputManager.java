@@ -1,5 +1,12 @@
 package com.goldsprite.magicdungeon2.input;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -14,13 +21,6 @@ import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon2.AppConstants;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class InputManager {
 	private static String INPUTACTIONS_FILE = "input_actions.json";
@@ -816,6 +816,9 @@ public class InputManager {
 
 	public boolean isPressed(InputAction action) {
 		if (inputBlocked) return false;
+
+		// 检查模拟输入（自动化测试用）
+		if (simulatedActions.contains(action)) return true;
 
 		// Check Keyboard
 		List<Integer> keys = keyboardMappings.get(action);
