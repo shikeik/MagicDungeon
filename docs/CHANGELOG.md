@@ -7,46 +7,55 @@
 
 ## [未发布(最新)] (Unreleased)
 
+---
+
+## [0.4.0] - 2026-02-22
+
 ### 新增 (Added)
 
-- **简易地牢游戏场景** (`SimpleGameScreen`)
-  - 9×9 网格地图，半即时制冷却驱动格子移动 + 近战战斗
-  - `Entity` 冷却系统: `moveTimer`/`moveDelay`，按住方向键自动重复移动
-  - `visualX/Y` 平滑插值 + `bumpX/Y` 攻击碰撞动画
-  - 4 种敌人 (slime/skeleton/bat/wolf)，各有独立冷却和属性
-  - 敌人独立AI: 仇恨范围追踪、冷却独立更新，支持多人联机扩展
-  - 伤害飘字、血条、冷却条、HUD 显示击杀数和游戏时间、楼梯重置
-  - `ExampleSelectScreen` "开始游戏" 入口对接
-- **AI 绘制回放编辑器** (`AIDrawReplayScreen`)
-  - JSON 绘制计划逐步回放，可视化绘制过程
-  - 时间线控制: 进度条、步进 (|< < > >|)、播放/暂停、倍速 (1/2/4/8x)
-  - 文件选择器 + 命令信息面板
-  - `TestSelectionScreen` 新增 "AI绘制回放编辑器" 入口
-- **人类模拟可视化自动测试** (`HumanSimulatorTest`)
-  - 基于 `AutoTestManager` 时间线任务队列，模拟玩家按住方向键移动、打怪
-  - 7 阶段测试流程: 初始验证 → 击杀 slime → 击杀 wolf → 战斗状态检查 → 清扫 → 最终断言
-  - 使用 `simulatePress` + `addWait` + `simulateRelease` 模拟半即时制持续按键
-  - `DebugLaunchConfig` AUTO_TEST 模式直接启动
-- **基础配置与工具类**
-  - `ThemeConfig`: 主题颜色配置
-  - `Constants`: 全局常量
-  - `NeonGenerator`: NeonBatch 绘制辅助工具
+- **虚拟摇杆增强**
+  - 菱形方向指示器，进入扇区时点亮对应方向
+  - 可配置 `stickHalfAngle` 扇区半角（默认 45°，全覆盖）
+  - 扩展矩形触摸区域，提升移动端操控体验
+  - VirtualJoystick 从 Touchpad 重写为自定义 Widget
+- **核心系统接入**（`SimpleGameScreen` 对接核心数据模型）
+  - 等级系统: 击杀获取经验、自动升级、升级自动分配属性点
+  - 死亡惩罚系统: 经验损失 20%，死亡覆盖层 UI 显示详情
+  - 重生系统: R 键重生，地图/敌人重置，保留玩家进度
+  - 视口统一: 世界相机 ExtendViewport(400,400) + UI 分离
+  - MP 系统: 自然回复 + 魔法攻击消耗，MP 不足时短冷却
+- **三阶段架构重构**（`SimpleGameScreen` 871 行 → 345 行，减少 60%）
+  - `GameEntity`: 从 Entity 内部类提取为独立顶级类
+  - `DamagePopup`: 伤害飘字数据类
+  - `EnemyDefs`: 敌人/玩家属性配置工厂
+  - `GameConfig`: 20+ 命名常量（替代魔法数字）
+  - `CombatHelper`: 统一战斗扫描/伤害/击杀，CombatListener 回调接口
+  - `GrowthHelper`: 经验/升级/死亡惩罚/重生逻辑，GrowthListener 回调接口
+  - `EnemyAI`: 敌人 AI 更新循环（冷却/追击/徘徊/碰撞检测）
+  - `GameRenderer`: 渲染器，通过 GameState 只读接口与逻辑解耦
+- **输入系统重构**
+  - `InputManager`: 统一键盘 WASD + 手柄 + 虚拟摇杆轴输入
+  - atan2 角度扇区检测替代简单阈值判定，修复方向偏移 Bug
+  - 消除 `isPressed(MOVE_*)` 与 `getAxis()` 数据/显示不一致问题
+- **其他**
+  - `DLog` 控制台输出支持 ANSI 颜色
+  - 统一日志输出为 `DLog`
+  - 纹理重绘与第二转场效果
+  - 无等待渐变转场 (`playOverlayFade`)
 
 ### 修复 (Fixed)
 
-- 修复 `SimpleGameScreen` LibGDX Array 嵌套迭代器异常 (`#iterator() cannot be used nested`)
-  - 所有 `Array<Entity>` / `Array<DamagePopup>` 的 foreach 改为索引循环
-- 移除未使用的 `Vector2` 导入
+- 修复摇杆四向判定偏移（菱形分割 → atan2 角度检测）
+- 修复 `isPressed(MOVE_*)` 内部 `isAxisMappedAction` 简单阈值拦截导致方向不一致
+- 修复 `stickHalfAngle` 在 Screen 与 VirtualJoystick 之间不同步
+- 修正主类名称以匹配新包结构
 
 ### 变更 (Changed)
 
-- `SimpleGameScreen` 从回合制改为半即时制冷却驱动系统
-  - `isPressed()` 持续按键替代 `isJustPressed()` 单次触发
-  - 敌人独立 `moveTimer` 冷却，不再等待玩家回合
-  - HUD 从 "回合数" 改为 "击杀数 + 游戏时间"
-- `SimpleGameScreen.Entity` / `DamagePopup` 改为 `public static class`，添加公共 getter
-- `HumanSimulatorTest` 适配半即时制按住+释放模式
-- `GameAutoTests.run()` 启用 `HumanSimulatorTest`
+- `SimpleGameScreen` 全面重构: God Object 拆分为 8 个职责单一的类
+- `Entity` 标记为 `@Deprecated`，由 `GameEntity` 替代
+- 移动输入统一为 `getAxis()` + atan2 路径，移除 `isPressed(MOVE_*)` 用于移动
+- `VirtualJoystick` 从继承 Touchpad 改为自定义 Widget
 
 ---
 
