@@ -15,6 +15,34 @@
 
 ---
 
+## [0.3.0] - 2025-07-17
+
+### 新增 (Added)
+
+- **JSON 数据驱动绘制系统** — 完全替代硬编码纹理生成器
+  - `AIDrawPlan` / `AIDrawCommand`: JSON 绘制计划与命令数据结构
+  - `AIDrawMethodRegistry`: 反射扫描 NeonBatch 方法，MethodHandle 动态调用
+  - `AIDrawExecutor`: JSON 文本 → TextureRegion 执行引擎，支持 FBO 导出
+- **JSON 纹理管理器与资源工具**
+  - `TextureManager`: JSON 驱动纹理管理器，自动扫描 `ai_draw_cmds/`，按需生成并缓存
+  - `AssetUtils`: assets.txt 索引扫描器，按目录前缀批量获取资源路径
+  - `TextureExporter`: FBO → PNG 纹理导出工具
+- **20 个 JSON 绘制计划** (数据驱动所有游戏纹理)
+  - 角色: player
+  - 怪物: slime, skeleton, bat, wolf, orc, boss_dragon
+  - 图块: wall, floor, door, stairs_down, stairs_up, torch, pillar
+  - 物品: health_potion, mana_potion, sword, shield, coin, chest
+- **纹理预览测试界面**
+  - `TexturePreviewScreen`: 网格预览所有 JSON 绘制纹理
+  - `TestSelectionScreen` 新增入口注册
+
+### 变更 (Changed)
+
+- 移除所有硬编码纹理生成器 (NeonSpriteGenerator / NeonItemGenerator / NeonTileGenerator)
+- 纹理生成全面转向 JSON 绘制指令驱动，支持热更新
+
+---
+
 ## [0.2.0] - 2026-02-21
 
 ### 新增 (Added)
