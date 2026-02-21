@@ -336,11 +336,13 @@ public class SimpleGameScreen extends GScreen {
 			player.y = ny;
 			player.moveTimer = player.getEffectiveCooldown();
 
-			// 踩到楼梯
+			// 踩到楼梯 — 使用无等待渐变转场
 			if (map[ny][nx] == T_STAIRS) {
-				logText = "踏上楼梯... 重置地图！";
-				buildMap();
-				spawnEntities();
+				logText = "踏上楼梯... 前往下一层！";
+				getScreenManager().playOverlayFade(() -> {
+					buildMap();
+					spawnEntities();
+				}, 0.6f);
 			}
 		}
 	}

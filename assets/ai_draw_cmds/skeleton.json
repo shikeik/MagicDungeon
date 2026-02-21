@@ -1,19 +1,48 @@
 {
   "name": "skeleton",
-  "width": 32,
-  "height": 32,
+  "width": 128,
+  "height": 128,
   "commands": [
-    { "type": "drawRect", "args": [0.25, 0.0, 0.15, 0.25, 0, 0], "color": "#e0e0d0", "filled": true },
-    { "type": "drawRect", "args": [0.6, 0.0, 0.15, 0.25, 0, 0], "color": "#e0e0d0", "filled": true },
-    { "type": "drawRect", "args": [0.2, 0.25, 0.6, 0.08, 0, 0], "color": "#d0d0c0", "filled": true },
-    { "type": "drawRect", "args": [0.3, 0.25, 0.4, 0.3, 0, 0], "color": "#e8e8d8", "filled": true },
-    { "type": "drawRect", "args": [0.35, 0.35, 0.3, 0.04, 0, 0], "color": "#222222", "filled": true },
-    { "type": "drawRect", "args": [0.35, 0.42, 0.3, 0.04, 0, 0], "color": "#222222", "filled": true },
-    { "type": "drawRect", "args": [0.08, 0.32, 0.22, 0.1, 0, 0], "color": "#d8d8c8", "filled": true },
-    { "type": "drawRect", "args": [0.7, 0.32, 0.22, 0.1, 0, 0], "color": "#d8d8c8", "filled": true },
-    { "type": "drawCircle", "args": [0.5, 0.7, 0.17, 0, 0], "color": "#f0f0e0", "segments": 16, "filled": true },
-    { "type": "drawCircle", "args": [0.4, 0.72, 0.05, 0, 0], "color": "#880000", "segments": 8, "filled": true },
-    { "type": "drawCircle", "args": [0.6, 0.72, 0.05, 0, 0], "color": "#880000", "segments": 8, "filled": true },
-    { "type": "drawRect", "args": [0.38, 0.6, 0.24, 0.04, 0, 0], "color": "#222222", "filled": true }
+    {"type": "drawTriangle", "args": [0.28, 0.14, 0.50, 0.52, 0.72, 0.14], "color": "#2a2a35", "filled": true},
+
+    {"type": "drawRect", "args": [0.34, 0.04, 0.08, 0.24, 0, 0], "color": "#d8d0c0", "filled": true},
+    {"type": "drawRect", "args": [0.58, 0.04, 0.08, 0.24, 0, 0], "color": "#d8d0c0", "filled": true},
+    {"type": "drawCircle", "args": [0.38, 0.16, 0.028, 0, 0], "color": "#c8c0b0", "segments": 8, "filled": true},
+    {"type": "drawCircle", "args": [0.62, 0.16, 0.028, 0, 0], "color": "#c8c0b0", "segments": 8, "filled": true},
+    {"type": "drawRect", "args": [0.31, 0.02, 0.14, 0.04, 0, 0], "color": "#c0b8a8", "filled": true},
+    {"type": "drawRect", "args": [0.55, 0.02, 0.14, 0.04, 0, 0], "color": "#c0b8a8", "filled": true},
+
+    {"type": "drawRect", "args": [0.32, 0.26, 0.36, 0.06, 0, 0], "color": "#d0c8b8", "filled": true},
+
+    {"type": "drawRect", "args": [0.33, 0.30, 0.34, 0.22, 0, 0], "color": "#e0d8c8", "filled": true},
+    {"type": "drawRect", "args": [0.35, 0.34, 0.30, 0.022, 0, 0], "color": "#3a3540", "filled": true},
+    {"type": "drawRect", "args": [0.35, 0.39, 0.30, 0.022, 0, 0], "color": "#3a3540", "filled": true},
+    {"type": "drawRect", "args": [0.35, 0.44, 0.30, 0.022, 0, 0], "color": "#3a3540", "filled": true},
+    {"type": "drawRect", "args": [0.48, 0.30, 0.04, 0.22, 0, 0], "color": "#c8c0b0", "filled": true},
+
+    {"type": "drawRect", "args": [0.20, 0.30, 0.08, 0.18, 0, 0], "color": "#d0c8b8", "filled": true},
+    {"type": "drawRect", "args": [0.72, 0.30, 0.08, 0.18, 0, 0], "color": "#d0c8b8", "filled": true},
+    {"type": "drawCircle", "args": [0.24, 0.30, 0.025, 0, 0], "color": "#c0b8a8", "segments": 8, "filled": true},
+    {"type": "drawCircle", "args": [0.76, 0.30, 0.025, 0, 0], "color": "#c0b8a8", "segments": 8, "filled": true},
+
+    {"type": "drawArc", "args": [0.12, 0.30, 0.18, 50, 80, 0.018], "color": "#a0a0b0", "segments": 12},
+    {"type": "drawArc", "args": [0.12, 0.30, 0.17, 50, 80, 0.006], "color": "#d0d0e0", "segments": 12},
+
+    {"type": "drawCircle", "args": [0.50, 0.68, 0.14, 0, 0], "color": "#f0e8d8", "segments": 20, "filled": true},
+    {"type": "drawRect", "args": [0.40, 0.56, 0.20, 0.08, 0, 0], "color": "#e8e0d0", "filled": true},
+
+    {"type": "drawCircle", "args": [0.42, 0.70, 0.038, 0, 0], "color": "#1a1520", "segments": 10, "filled": true},
+    {"type": "drawCircle", "args": [0.58, 0.70, 0.038, 0, 0], "color": "#1a1520", "segments": 10, "filled": true},
+    {"type": "drawCircle", "args": [0.42, 0.70, 0.020, 0, 0], "color": "#ff2222", "segments": 8, "filled": true},
+    {"type": "drawCircle", "args": [0.58, 0.70, 0.020, 0, 0], "color": "#ff2222", "segments": 8, "filled": true},
+    {"type": "drawCircle", "args": [0.425, 0.71, 0.007, 0, 0], "color": "#ff8888", "segments": 6, "filled": true},
+    {"type": "drawCircle", "args": [0.585, 0.71, 0.007, 0, 0], "color": "#ff8888", "segments": 6, "filled": true},
+    {"type": "drawTriangle", "args": [0.48, 0.66, 0.52, 0.66, 0.50, 0.63], "color": "#2a2530", "filled": true},
+    {"type": "drawRect", "args": [0.42, 0.57, 0.04, 0.025, 0, 0], "color": "#f8f0e0", "filled": true},
+    {"type": "drawRect", "args": [0.48, 0.57, 0.04, 0.025, 0, 0], "color": "#f8f0e0", "filled": true},
+    {"type": "drawRect", "args": [0.54, 0.57, 0.04, 0.025, 0, 0], "color": "#f8f0e0", "filled": true},
+    {"type": "drawLine", "args": [0.40, 0.57, 0.60, 0.57, 0.008], "color": "#2a2530"},
+
+    {"type": "save", "filename": "skeleton"}
   ]
 }

@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.math.Matrix4;
 import com.esotericsoftware.spine.AnimationState;
 import com.esotericsoftware.spine.AnimationStateData;
 import com.esotericsoftware.spine.Skeleton;
@@ -69,19 +70,24 @@ public class MagicDungeon2LoadingRenderer implements ScreenManager.LoadingRender
 
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
-		
-		// Update Spine
+
+		// 每帧更新投影矩阵以适配窗口 resize
+		Matrix4 screenProjection = new Matrix4().setToOrtho2D(0, 0, w, h);
+		polyBatch.setProjectionMatrix(screenProjection);
+		batch.setProjectionMatrix(screenProjection);
+
+		// 更新 Spine 动画
 		skeleton.setPosition(w / 2, h / 2 - 50);
 		animationState.update(delta);
 		animationState.apply(skeleton);
 		skeleton.updateWorldTransform();
 		
-		// Draw
+		// 绘制 Spine
 		polyBatch.begin();
 		skeletonRenderer.draw(polyBatch, skeleton);
 		polyBatch.end();
 		
-		// Draw Text
+		// 绘制提示文字
 		batch.begin();
 		
 		if (VisUI.isLoaded()) {
@@ -89,7 +95,7 @@ public class MagicDungeon2LoadingRenderer implements ScreenManager.LoadingRender
 			Color oldColor = font.getColor().cpy();
 			font.setColor(Color.WHITE);
 			
-			// Calculate center
+			// 文字居中
 			GlyphLayout layout = new GlyphLayout(font, loadingText);
 			float textX = (w - layout.width) / 2;
 			float textY = (h / 2) - 80;

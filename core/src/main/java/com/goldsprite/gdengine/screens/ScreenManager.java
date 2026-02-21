@@ -50,7 +50,8 @@ public class ScreenManager implements Disposable {
 		NONE,
 		FADE_OUT, // 透明 -> 黑
 		FADE_IN,   // 黑 -> 透明
-		LOADING_WAIT // 等待加载完成 (显示 LoadingOverlay)
+		LOADING_WAIT, // 等待加载完成 (显示 LoadingOverlay)
+		OVERLAY_FADE  // 无等待渐变（立即执行操作，黑幕渐出）
 	}
 
 	// 2. 定义回调接口 (底层不依赖 Android/Lwjgl)
@@ -237,6 +238,36 @@ public class ScreenManager implements Disposable {
 		this.onTransitionMiddle = onMiddle;
 		this.onTransitionEnd = onEnd;
 	}
+
+	/**
+	 * 无等待式渐变转场 (Overlay Fade)
+	 * <p>
+	 * 适用于不需要等待的轻量操作（如切换地牢层级、重置地图）。
+	 * 立即执行操作，然后从全黑覆盖层开始渐变淡出，期间游戏正常运行不阻塞。
+	 * </p>
+	 * @param action 立即执行的操作（如关卡重建）
+	 */
+	public void playOverlayFade(Runnable action) {
+		playOverlayFade(action, transitionDuration);
+	}
+
+	/**
+	 * 无等待式渐变转场 (Overlay Fade)
+	 * @param action 立即执行的操作
+	 * @param fadeDuration 渐变持续时间（秒）
+	 */
+	public void playOverlayFade(Runnable action, float fadeDuration) {
+		// 立即执行操作（不等待淡出）
+		if (action != null) action.run();
+
+		// 从全黑开始渐变淡出
+		this.transitionState = TransitionState.OVERLAY_FADE;
+		this.transitionTime = 0f;
+		this.overlayFadeDuration = fadeDuration;
+	}
+
+	/** 无等待渐变的持续时长 */
+	private float overlayFadeDuration = 0.5f;
 	
 	public boolean isTransitioning() {
 		return transitionState != TransitionState.NONE;
@@ -328,6 +359,13 @@ public class ScreenManager implements Disposable {
 					onTransitionEnd.run();
 					onTransitionEnd = null;
 				}
+				alpha = 0f;
+			}
+		} else if (transitionState == TransitionState.OVERLAY_FADE) {
+			// 无等待渐变：从全黑直接淡出，不阻塞游戏
+			alpha = 1f - Math.min(1f, transitionTime / overlayFadeDuration);
+			if (transitionTime >= overlayFadeDuration) {
+				transitionState = TransitionState.NONE;
 				alpha = 0f;
 			}
 		}

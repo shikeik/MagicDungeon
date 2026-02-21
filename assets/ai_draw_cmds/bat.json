@@ -1,15 +1,40 @@
 {
   "name": "bat",
-  "width": 32,
-  "height": 32,
+  "width": 128,
+  "height": 128,
   "commands": [
-    { "type": "drawTriangle", "args": [0.0, 0.35, 0.3, 0.7, 0.15, 0.35], "color": "#443355", "filled": true },
-    { "type": "drawTriangle", "args": [1.0, 0.35, 0.7, 0.7, 0.85, 0.35], "color": "#443355", "filled": true },
-    { "type": "drawCircle", "args": [0.5, 0.5, 0.18, 0, 0], "color": "#554466", "segments": 16, "filled": true },
-    { "type": "drawCircle", "args": [0.5, 0.5, 0.15, 0, 0], "color": "#665577", "segments": 16, "filled": true },
-    { "type": "drawCircle", "args": [0.42, 0.55, 0.04, 0, 0], "color": "#ff2222", "segments": 8, "filled": true },
-    { "type": "drawCircle", "args": [0.58, 0.55, 0.04, 0, 0], "color": "#ff2222", "segments": 8, "filled": true },
-    { "type": "drawTriangle", "args": [0.42, 0.68, 0.46, 0.75, 0.44, 0.68], "color": "#665577", "filled": true },
-    { "type": "drawTriangle", "args": [0.56, 0.68, 0.54, 0.75, 0.58, 0.68], "color": "#665577", "filled": true }
+    {"type": "drawTriangle", "args": [0.03, 0.30, 0.35, 0.65, 0.40, 0.40], "color": "#3a2848", "filled": true},
+    {"type": "drawTriangle", "args": [0.08, 0.32, 0.33, 0.60, 0.38, 0.42], "color": "#4a3858", "filled": true},
+    {"type": "drawLine", "args": [0.38, 0.48, 0.05, 0.32, 0.012], "color": "#5a4868"},
+    {"type": "drawLine", "args": [0.36, 0.52, 0.03, 0.42, 0.012], "color": "#5a4868"},
+    {"type": "drawLine", "args": [0.35, 0.58, 0.10, 0.52, 0.012], "color": "#5a4868"},
+
+    {"type": "drawTriangle", "args": [0.97, 0.30, 0.65, 0.65, 0.60, 0.40], "color": "#3a2848", "filled": true},
+    {"type": "drawTriangle", "args": [0.92, 0.32, 0.67, 0.60, 0.62, 0.42], "color": "#4a3858", "filled": true},
+    {"type": "drawLine", "args": [0.62, 0.48, 0.95, 0.32, 0.012], "color": "#5a4868"},
+    {"type": "drawLine", "args": [0.64, 0.52, 0.97, 0.42, 0.012], "color": "#5a4868"},
+    {"type": "drawLine", "args": [0.65, 0.58, 0.90, 0.52, 0.012], "color": "#5a4868"},
+
+    {"type": "drawCircle", "args": [0.50, 0.45, 0.14, 0, 0], "color": "#4a3858", "segments": 16, "filled": true},
+    {"type": "drawOval", "args": [0.50, 0.42, 0.10, 0.08, 0, 0], "color": "#6a5878", "segments": 12, "filled": true},
+    {"type": "drawCircle", "args": [0.44, 0.34, 0.022, 0, 0], "color": "#5a4868", "segments": 8, "filled": true},
+    {"type": "drawCircle", "args": [0.56, 0.34, 0.022, 0, 0], "color": "#5a4868", "segments": 8, "filled": true},
+
+    {"type": "drawTriangle", "args": [0.38, 0.56, 0.42, 0.70, 0.45, 0.56], "color": "#5a4868", "filled": true},
+    {"type": "drawTriangle", "args": [0.55, 0.56, 0.58, 0.70, 0.62, 0.56], "color": "#5a4868", "filled": true},
+    {"type": "drawTriangle", "args": [0.39, 0.57, 0.42, 0.66, 0.44, 0.57], "color": "#8a6888", "filled": true},
+    {"type": "drawTriangle", "args": [0.56, 0.57, 0.58, 0.66, 0.61, 0.57], "color": "#8a6888", "filled": true},
+
+    {"type": "drawCircle", "args": [0.43, 0.50, 0.035, 0, 0], "color": "#ff1111", "segments": 10, "filled": true},
+    {"type": "drawCircle", "args": [0.57, 0.50, 0.035, 0, 0], "color": "#ff1111", "segments": 10, "filled": true},
+    {"type": "drawCircle", "args": [0.43, 0.495, 0.018, 0, 0], "color": "#990000", "segments": 8, "filled": true},
+    {"type": "drawCircle", "args": [0.57, 0.495, 0.018, 0, 0], "color": "#990000", "segments": 8, "filled": true},
+    {"type": "drawCircle", "args": [0.44, 0.51, 0.007, 0, 0], "color": "#ffaaaa", "segments": 6, "filled": true},
+    {"type": "drawCircle", "args": [0.58, 0.51, 0.007, 0, 0], "color": "#ffaaaa", "segments": 6, "filled": true},
+
+    {"type": "drawTriangle", "args": [0.46, 0.42, 0.47, 0.36, 0.48, 0.42], "color": "#ffffff", "filled": true},
+    {"type": "drawTriangle", "args": [0.52, 0.42, 0.53, 0.36, 0.54, 0.42], "color": "#ffffff", "filled": true},
+
+    {"type": "save", "filename": "bat"}
   ]
 }

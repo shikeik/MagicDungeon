@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.magicdungeon2.ai.AIDrawExecutor;
 import com.goldsprite.magicdungeon2.utils.AssetUtils;
+import com.goldsprite.magicdungeon2.utils.texturegenerator.TextureExporter;
 
 /**
  * JSON 驱动的纹理管理器
@@ -73,6 +74,9 @@ public class TextureManager {
                     if (region != null) {
                         cache.put(name, region);
                         counter[0]++;
+                        // 自动导出到 TempTexes/（如果 PNG 不存在则导出）
+                        String exportName = name.replace("/", "_");
+                        TextureExporter.exportToDisk(region.getTexture(), exportName);
                     } else {
                         DLog.logT(TAG, "⚠ 生成返回 null: %s", name);
                     }
@@ -114,6 +118,9 @@ public class TextureManager {
             TextureRegion region = AIDrawExecutor.generateFromJson(jsonText);
             if (region != null) {
                 cache.put(name, region);
+                // 自动导出纹理到 TempTexes/
+                String exportName = name.replace("/", "_");
+                TextureExporter.exportToDisk(region.getTexture(), exportName);
                 DLog.logT(TAG, "✓ 热加载成功: %s", name);
             }
             return region;
