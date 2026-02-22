@@ -23,6 +23,7 @@ import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_FLOOR;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_STAIRS;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_WALL;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.WORLD_VIEW_SIZE;
+import com.goldsprite.gdengine.PlatformImpl;
 
 /**
  * 简易地牢游戏场景
@@ -99,6 +100,13 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 	}
 
 	@Override
+	protected void initViewport() {
+		uiViewportScale = PlatformImpl.isDesktopUser()? 1: 0.65f;
+		worldScale = PlatformImpl.isDesktopUser()? 1: 0.7f;
+		super.initViewport();
+	}
+
+	@Override
 	public void create() {
 		// 使用 GScreen 提供的 batch、worldCamera、uiViewport，不再自建
 		autoCenterWorldCamera = false; // 我们手动控制相机跟随玩家
@@ -122,20 +130,20 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 		if (imp != null) imp.addProcessor(virtualControls.getStage());
 	}
 
-	@Override
-	protected void resizeWorldCamera(boolean centerCamera) {
-		if (worldCamera == null) return;
-		// 保持与旧版 ExtendViewport(400,400) 相同的世界视野
-		float aspect = (float) Gdx.graphics.getWidth() / Math.max(Gdx.graphics.getHeight(), 1);
-		if (aspect >= 1) {
-			worldCamera.viewportHeight = WORLD_VIEW_SIZE;
-			worldCamera.viewportWidth = WORLD_VIEW_SIZE * aspect;
-		} else {
-			worldCamera.viewportWidth = WORLD_VIEW_SIZE;
-			worldCamera.viewportHeight = WORLD_VIEW_SIZE / aspect;
-		}
-		worldCamera.update();
-	}
+//	@Override
+//	protected void resizeWorldCamera(boolean centerCamera) {
+//		if (worldCamera == null) return;
+//		// 保持与旧版 ExtendViewport(400,400) 相同的世界视野
+//		float aspect = (float) Gdx.graphics.getWidth() / Math.max(Gdx.graphics.getHeight(), 1);
+//		if (aspect >= 1) {
+//			worldCamera.viewportHeight = WORLD_VIEW_SIZE;
+//			worldCamera.viewportWidth = WORLD_VIEW_SIZE * aspect;
+//		} else {
+//			worldCamera.viewportWidth = WORLD_VIEW_SIZE;
+//			worldCamera.viewportHeight = WORLD_VIEW_SIZE / aspect;
+//		}
+//		worldCamera.update();
+//	}
 
 	private void buildMap() {
 		map = new int[MAP_H][MAP_W];
@@ -254,7 +262,7 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 		InputManager input = InputManager.getInstance();
 
 		// 魔法攻击检测 (J键 / ATTACK)
-		if (input.isJustPressed(InputAction.ATTACK)) {
+		if (input.isJustPressed(InputAction.ATTACK)) {int k;
 			if (combatHelper.performMagicAttack()) {
 				player.moveTimer = player.getAttackCooldown();
 			} else {

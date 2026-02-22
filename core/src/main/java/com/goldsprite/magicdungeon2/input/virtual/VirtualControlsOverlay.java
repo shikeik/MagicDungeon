@@ -115,12 +115,12 @@ public class VirtualControlsOverlay implements VirtualInputProvider, Disposable 
 		float btnSpacing = btnSize * 0.3f; // 按钮间距
 
 		// 右下角菱形布局的中心点
-		float centerX = vw - margin - btnSize - btnSpacing;
+		float centerX = vw - margin - btnSize - btnSpacing - 70;
 		float centerY = margin + btnSize + btnSpacing;
 
 		// 右 = Attack (主攻击, 最常用)
 		attackBtn.setSize(btnSize, btnSize);
-		attackBtn.setPosition(centerX + btnSize + btnSpacing, centerY - btnSize / 2);
+		attackBtn.setPosition(centerX + btnSize/2 + btnSpacing, centerY - btnSize / 2);
 
 		// 下 = Interact
 		interactBtn.setSize(btnSize, btnSize);
@@ -132,7 +132,7 @@ public class VirtualControlsOverlay implements VirtualInputProvider, Disposable 
 
 		// 左 = Back
 		backBtn.setSize(btnSize, btnSize);
-		backBtn.setPosition(centerX - btnSize - btnSpacing, centerY - btnSize / 2);
+		backBtn.setPosition(centerX - btnSize/2- btnSpacing, centerY - btnSize / 2);
 	}
 
 	// === VirtualInputProvider 实现 ===

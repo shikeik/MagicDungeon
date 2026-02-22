@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.magicdungeon2.AppConstants;
+import com.goldsprite.gdengine.log.DLog;
 
 /**
  * 纹理导出工具
@@ -49,13 +50,15 @@ public class TextureExporter {
                 batch.draw(texture, 0, 0, w, h, 0, 0, w, h, false, true);
                 batch.end();
 
-                pixmap = ScreenUtils.getFrameBufferPixmap(0, 0, w, h);
+                pixmap = Pixmap.createFromFrameBuffer(0, 0, w, h);
                 fbo.end();
 
                 FileHandle dir = AppConstants.getLocalFile("TempTexes");
                 if (!dir.exists()) dir.mkdirs();
                 FileHandle file = dir.child(filename + ".png");
-                PixmapIO.writePNG(file, pixmap);
+                boolean flip = true;
+				PixmapIO.writePNG(file, pixmap, 0, flip);int k6;
+				//DLog.log("导出 %s", flip);
 
                 Gdx.app.log("TextureExporter", "已导出: " + file.file().getAbsolutePath());
             } catch (Exception e) {

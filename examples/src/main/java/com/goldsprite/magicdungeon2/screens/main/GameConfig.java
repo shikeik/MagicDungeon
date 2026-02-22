@@ -10,9 +10,9 @@ public final class GameConfig {
 
 	// ============ 地图 ============
 	/** 地图宽度（格子数） */
-	public static final int MAP_W = 9;
+	public static final int MAP_W = 15;
 	/** 地图高度（格子数） */
-	public static final int MAP_H = 9;
+	public static final int MAP_H = 15;
 	/** 格子像素尺寸 */
 	public static final int TILE = 32;
 

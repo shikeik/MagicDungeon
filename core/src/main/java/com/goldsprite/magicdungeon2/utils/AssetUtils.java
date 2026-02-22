@@ -11,8 +11,8 @@ import com.goldsprite.gdengine.log.DLog;
  * 资源清单工具类
  *
  * 通过 assets.txt 索引扫描资源文件列表。
- * 在 Android/GWT 等平台上无法直接列目录，
- * 因此使用预生成的 assets.txt 作为文件索引。
+ * 在 pc internal内部 无法直接列目录，
+ * 因此统一使用预生成的 assets.txt 作为文件索引。
  */
 public class AssetUtils {
     private static final Set<String> fileIndex = new HashSet<>();
