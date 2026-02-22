@@ -112,3 +112,66 @@ if (enableGraalNative == 'true') {
 
 // [新增] 引入 jpackage 打包任务
 apply from: "${rootProject.projectDir}/gradle/jpackage.gradle"
+
+// ==================================================================
+// [新增] 双开测试任务 - 同时启动两个应用实例，便于联机调试
+// ==================================================================
+tasks.register('runDual') {
+	dependsOn 'classes'
+	group = 'application'
+	description = '同时启动两个应用实例，便于 LAN 联机测试'
+
+	doLast {
+		def cp = sourceSets.main.runtimeClasspath.asPath
+		def javaExe = Jvm.current().javaExecutable.absolutePath
+		def workDir = rootProject.projectDir
+
+		def jvmBase = []
+		if (os.contains('mac')) jvmBase += '-XstartOnFirstThread'
+
+		// 实例1 - 窗口偏左 (房主)
+		def cmd1 = [javaExe] + jvmBase + [
+			'-cp', cp,
+			'-Dapp.instance=1',
+			'-Dapp.window.title=实例1-房主',
+			'-Dapp.window.x=50',
+			'-Dapp.window.y=80',
+			mainClassName
+		]
+
+		// 实例2 - 窗口偏右 (客户端)
+		def cmd2 = [javaExe] + jvmBase + [
+			'-cp', cp,
+			'-Dapp.instance=2',
+			'-Dapp.window.title=实例2-客户端',
+			'-Dapp.window.x=820',
+			'-Dapp.window.y=80',
+			mainClassName
+		]
+
+		logger.lifecycle("========== 启动实例1 (房主) ==========")
+		def p1 = new ProcessBuilder(cmd1)
+			.directory(workDir)
+			.inheritIO()
+			.redirectErrorStream(true)
+			.start()
+
+		// 稍等片刻，避免两个窗口同时初始化竞争资源
+		Thread.sleep(1500)
+
+		logger.lifecycle("========== 启动实例2 (客户端) ==========")
+		def p2 = new ProcessBuilder(cmd2)
+			.directory(workDir)
+			.inheritIO()
+			.redirectErrorStream(true)
+			.start()
+
+		logger.lifecycle("两个实例已启动，关闭任一窗口后此任务将等待全部退出...")
+
+		// 等待两个进程都结束
+		p1.waitFor()
+		p2.waitFor()
+
+		logger.lifecycle("双开测试结束。")
+	}
+}

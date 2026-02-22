@@ -31,11 +31,16 @@ public class GameRenderer {
 		int[][] getMap();
 		GameEntity getPlayer();
 		Array<GameEntity> getEnemies();
-		Array<DamagePopup> getPopups();
-		String getLogText();
+		Array<GameEntity> getRemotePlayers();
+		DeathPenalty.DeathResult getDeathResult();
 		float getGameTime();
 		int getKillCount();
-		DeathPenalty.DeathResult getDeathResult();
+		String getLogText();
+		Array<DamagePopup> getPopups();
+		boolean isShowLanMenu();
+		boolean isLanConnected();
+		String getLanStatus();
+		int getLanPlayerCount();
 	}
 
 	private final NeonBatch batch;
@@ -87,20 +92,31 @@ public class GameRenderer {
 		}
 	}
 
-	/** 绘制所有实体（敌人+玩家） */
+	/** 绘制所有实体（敌人+玩家+远程玩家） */
 	private void drawEntities() {
 		Array<GameEntity> enemies = state.getEnemies();
 		GameEntity player = state.getPlayer();
+		Array<GameEntity> remotePlayers = state.getRemotePlayers();
+
 		for (int i = 0; i < enemies.size; i++) {
 			GameEntity e = enemies.get(i);
 			if (!e.alive) continue;
-			drawEntity(e, player);
+			drawEntity(e, player, false);
 		}
-		if (player.alive) drawEntity(player, player);
+
+		if (remotePlayers != null) {
+			for (int i = 0; i < remotePlayers.size; i++) {
+				GameEntity e = remotePlayers.get(i);
+				if (!e.alive) continue;
+				drawEntity(e, player, true);
+			}
+		}
+
+		if (player.alive) drawEntity(player, player, false);
 	}
 
 	/** 绘制单个实体（贴图+血条+冷却条） */
-	private void drawEntity(GameEntity e, GameEntity player) {
+	private void drawEntity(GameEntity e, GameEntity player, boolean isRemotePlayer) {
 		float drawX = e.visualX + e.bumpX;
 		float drawY = e.visualY + e.bumpY;
 
@@ -108,7 +124,8 @@ public class GameRenderer {
 		if (tex != null) {
 			batch.draw(tex, drawX, drawY, TILE, TILE);
 		} else {
-			batch.drawRect(drawX + 2, drawY + 2, TILE - 4, TILE - 4, 0, 0, Color.CYAN, true);
+			Color c = isRemotePlayer ? Color.ORANGE : Color.CYAN;
+			batch.drawRect(drawX + 2, drawY + 2, TILE - 4, TILE - 4, 0, 0, c, true);
 		}
 
 		// 血条
@@ -119,7 +136,7 @@ public class GameRenderer {
 			float barY = drawY + TILE + 1;
 			batch.drawRect(barX, barY, barW, barH, 0, 0, Color.DARK_GRAY, true);
 			batch.drawRect(barX, barY, barW * (e.hp / e.getMaxHp()), barH, 0, 0,
-				e == player ? Color.GREEN : Color.RED, true);
+				e == player ? Color.GREEN : (isRemotePlayer ? Color.YELLOW : Color.RED), true);
 		}
 
 		// 冷却条（显示在实体下方）
@@ -228,6 +245,49 @@ public class GameRenderer {
 		hudFont.setColor(Color.GRAY);
 		hudFont.draw(batch, "按 R 键重生",
 			cx - 200, cy - lineH * 3, 400, Align.center, false);
+
+		hudFont.setColor(Color.WHITE);
+		batch.end();
+	}
+
+	// ============ 联机覆盖层 ============
+
+	/** 绘制联机菜单覆盖层 */
+	public void drawLanOverlay() {
+		if (!state.isShowLanMenu()) return;
+
+		batch.setProjectionMatrix(uiCamera.combined);
+		batch.begin();
+
+		float vw = uiViewport.getWorldWidth();
+		float vh = uiViewport.getWorldHeight();
+
+		// 半透明黑色背景
+		batch.drawRect(0, 0, vw, vh, 0, 0, new Color(0, 0, 0, 0.8f), true);
+
+		float cx = vw / 2;
+		float cy = vh / 2;
+		float lineH = 28;
+
+		font.setColor(Color.CYAN);
+		font.draw(batch, "联 机 菜 单", cx - 200, cy + lineH * 4, 400, Align.center, false);
+
+		hudFont.setColor(Color.WHITE);
+		hudFont.draw(batch, "状态: " + (state.isLanConnected() ? state.getLanStatus() : "未连接"),
+			cx - 200, cy + lineH * 2, 400, Align.center, false);
+		hudFont.draw(batch, "玩家数: " + state.getLanPlayerCount(),
+			cx - 200, cy + lineH, 400, Align.center, false);
+
+		hudFont.setColor(Color.YELLOW);
+		if (!state.isLanConnected()) {
+			hudFont.draw(batch, "按 [H] 创建房间", cx - 200, cy - lineH, 400, Align.center, false);
+			hudFont.draw(batch, "按 [C] 加入房间(本地)", cx - 200, cy - lineH * 2, 400, Align.center, false);
+		} else {
+			hudFont.draw(batch, "按 [X] 断开连接", cx - 200, cy - lineH, 400, Align.center, false);
+		}
+
+		hudFont.setColor(Color.GRAY);
+		hudFont.draw(batch, "按 [TAB] 关闭菜单", cx - 200, cy - lineH * 4, 400, Align.center, false);
 
 		hudFont.setColor(Color.WHITE);
 		batch.end();

@@ -1,12 +1,15 @@
 package com.goldsprite.magicdungeon2.screens.main;
 
-import com.badlogic.gdx.Gdx;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.magicdungeon2.assets.TextureManager;
@@ -14,6 +17,9 @@ import com.goldsprite.magicdungeon2.core.growth.DeathPenalty;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
 import com.goldsprite.magicdungeon2.input.virtual.VirtualControlsOverlay;
+import com.goldsprite.magicdungeon2.network.lan.LanMultiplayerService;
+import com.goldsprite.magicdungeon2.network.lan.LanNetworkEvent;
+import com.goldsprite.magicdungeon2.network.lan.LanRoomPlayer;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MAP_H;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MAP_W;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.MP_REGEN_RATE;
@@ -22,8 +28,6 @@ import static com.goldsprite.magicdungeon2.screens.main.GameConfig.TILE;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_FLOOR;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_STAIRS;
 import static com.goldsprite.magicdungeon2.screens.main.GameConfig.T_WALL;
-import static com.goldsprite.magicdungeon2.screens.main.GameConfig.WORLD_VIEW_SIZE;
-import com.goldsprite.gdengine.PlatformImpl;
 
 /**
  * 简易地牢游戏场景
@@ -38,6 +42,14 @@ import com.goldsprite.gdengine.PlatformImpl;
 public class SimpleGameScreen extends GScreen implements GameRenderer.GameState {
 	// 摇杆四向判定半角（度），默认45°，即每个方向占 90° 扇形（全覆盖）
 	private static float stickHalfAngle = 45;
+
+	/**
+	 * 构造方法
+	 * @param lanService 联机服务（可为 null 表示单人模式）
+	 */
+	public SimpleGameScreen(LanMultiplayerService lanService) {
+		this.lanService = lanService;
+	}
 
 	private BitmapFont font, hudFont;
 
@@ -63,6 +75,11 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 	// 渲染子系统
 	private GameRenderer renderer;
 
+	// 联机子系统（可为 null 表示单人模式）
+	private LanMultiplayerService lanService;
+	private Array<GameEntity> remotePlayers = new Array<>();
+	private ConcurrentHashMap<Integer, GameEntity> remotePlayerMap = new ConcurrentHashMap<>();
+
 	// ============ 公共访问方法（供自动测试读取状态） ============
 
 	/** 获取玩家实体 */
@@ -70,6 +87,9 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 
 	/** 获取敌人列表 */
 	public Array<GameEntity> getEnemies() { return enemies; }
+
+	/** 获取远程玩家列表 */
+	@Override public Array<GameEntity> getRemotePlayers() { return remotePlayers; }
 
 	/** 获取地图数据 */
 	public int[][] getMap() { return map; }
@@ -85,6 +105,11 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 
 	/** 获取飘字列表 */
 	@Override public Array<DamagePopup> getPopups() { return popups; }
+
+	@Override public boolean isShowLanMenu() { return false; }
+	@Override public boolean isLanConnected() { return lanService != null && lanService.isConnected(); }
+	@Override public String getLanStatus() { return lanService != null ? lanService.getMode().toString() : "单人"; }
+	@Override public int getLanPlayerCount() { return lanService != null ? lanService.getRemotePlayerCount() + 1 : 1; }
 
 	/** 获取死亡惩罚结果 */
 	@Override public DeathPenalty.DeathResult getDeathResult() { return deathResult; }
@@ -226,6 +251,7 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 		for (int i = 0; i < enemies.size; i++) {
 			enemies.get(i).updateVisuals(delta);
 		}
+		updateLan(delta);
 		renderer.updatePopups(delta);
 
 		// 世界相机跟随玩家（使用视觉坐标更平滑）
@@ -251,6 +277,55 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 
 		// 渲染虚拟触控控件（在 HUD 之上）
 		if (virtualControls != null) virtualControls.render();
+
+		// HUD 上显示联机状态提示
+		if (lanService != null && lanService.isConnected()) {
+			batch.setProjectionMatrix(getUICamera().combined);
+			batch.begin();
+			hudFont.setColor(com.badlogic.gdx.graphics.Color.CYAN);
+			hudFont.draw(batch, "联机中: " + lanService.getMode() + " | 玩家: " + (lanService.getRemotePlayerCount() + 1),
+				10, getUIViewport().getWorldHeight() - 90);
+			hudFont.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+			batch.end();
+		}
+	}
+
+	// ============ 联机逻辑 ============
+	private void updateLan(float delta) {
+		if (lanService == null || !lanService.isConnected()) return;
+
+		// 处理网络事件
+		List<LanNetworkEvent> events = lanService.drainEvents();
+		for (LanNetworkEvent e : events) {
+			if (e.getType() == LanNetworkEvent.Type.CHAT) {
+				logText = "[联机] " + e.getMessage();
+			} else if (e.getType() == LanNetworkEvent.Type.INFO) {
+				logText = "[系统] " + e.getMessage();
+			}
+		}
+
+		// 发送本地状态
+		if (player.alive) {
+			lanService.sendLocalState(player.x, player.y, player.visualX, player.visualY, "idle");
+		}
+
+		// 更新远程玩家
+		List<LanRoomPlayer> lanPlayers = lanService.getRemotePlayers();
+		remotePlayers.clear();
+		for (LanRoomPlayer lp : lanPlayers) {
+			GameEntity re = remotePlayerMap.get(lp.getGuid());
+			if (re == null) {
+				re = new GameEntity((int)lp.getX(), (int)lp.getY(), "player", 100, 10, 5, 0.2f, 0, com.goldsprite.magicdungeon2.core.combat.WeaponRange.MELEE);
+				remotePlayerMap.put(lp.getGuid(), re);
+			}
+			// 更新逻辑坐标和视觉坐标
+			re.x = (int)lp.getX();
+			re.y = (int)lp.getY();
+			// 简单插值
+			re.visualX += (lp.getVx() - re.visualX) * 10f * delta;
+			re.visualY += (lp.getVy() - re.visualY) * 10f * delta;
+			remotePlayers.add(re);
+		}
 	}
 
 	// ============ 半即时制核心逻辑 ============
@@ -337,6 +412,10 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 	public void dispose() {
 		super.dispose();
 		if (virtualControls != null) virtualControls.dispose();
+		if (lanService != null) {
+			lanService.stop();
+			lanService = null;
+		}
 	}
 
 	/** 死亡后重生 */

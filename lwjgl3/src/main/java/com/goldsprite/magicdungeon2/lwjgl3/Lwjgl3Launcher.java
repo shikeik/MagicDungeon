@@ -4,9 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.goldsprite.GdxLauncher;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.GdxLauncher;
 import com.goldsprite.magicdungeon2.BuildConfig;
 
 /**
@@ -17,6 +17,12 @@ public class Lwjgl3Launcher {
 	static float scl = 1.5f;
 	public static final float WORLD_WIDTH = 960 * scl;
 	public static final float WORLD_HEIGHT = 540 * scl;
+
+	// 双开测试支持：通过系统属性区分实例
+	public static final String INSTANCE_ID = System.getProperty("app.instance", "0");
+	public static final String WINDOW_TITLE_SUFFIX = System.getProperty("app.window.title", "");
+	public static final int WINDOW_X = Integer.getInteger("app.window.x", -1);
+	public static final int WINDOW_Y = Integer.getInteger("app.window.y", -1);
 
 	public static void main(String[] args) {
 		if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
@@ -42,9 +48,21 @@ public class Lwjgl3Launcher {
 
 	private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
 		Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-		configuration.setTitle(BuildConfig.PROJECT_NAME+" - V" + BuildConfig.DEV_VERSION);
+
+		// 窗口标题：双开时附加实例标识
+		String title = BuildConfig.PROJECT_NAME + " - V" + BuildConfig.DEV_VERSION;
+		if (!WINDOW_TITLE_SUFFIX.isEmpty()) {
+			title += "  [" + WINDOW_TITLE_SUFFIX + "]";
+		}
+		configuration.setTitle(title);
+
 		Graphics.DisplayMode primaryMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
 		configuration.setWindowedMode((int) WORLD_WIDTH, (int) WORLD_HEIGHT);
+
+		// 双开时指定窗口位置，避免重叠
+		if (WINDOW_X >= 0 && WINDOW_Y >= 0) {
+			configuration.setWindowPosition(WINDOW_X, WINDOW_Y);
+		}
 		configuration.setDecorated(true);
 		configuration.setResizable(true);
 
