@@ -40,6 +40,7 @@ public class LanPlaygroundScreen extends ExampleGScreen {
     private VisTextField syncIntervalInput;
     private VisTextField interpDelayInput;
     private VisCheckBox interpEnabledCheck;
+    private VisCheckBox rawPosEnabledCheck;
 
     private VisLabel statusLabel;
     private VisLabel playersLabel;
@@ -87,6 +88,7 @@ public class LanPlaygroundScreen extends ExampleGScreen {
         syncIntervalInput = new VisTextField("50");
         interpDelayInput = new VisTextField("80");
         interpEnabledCheck = new VisCheckBox("开启平滑(绿色)", true);
+        rawPosEnabledCheck = new VisCheckBox("显示原始位置(红色)", false);
 
         VisTextButton hostBtn = new VisTextButton("启动房主");
         VisTextButton joinBtn = new VisTextButton("加入房间");
@@ -192,11 +194,12 @@ public class LanPlaygroundScreen extends ExampleGScreen {
         root.add(new VisLabel("插值延迟(ms)")).left();
         root.add(interpDelayInput).width(80).padRight(8);
         root.add(interpEnabledCheck).left().padRight(8);
-        root.add(applyConfigBtn).left();
+        root.add(rawPosEnabledCheck).left();
         root.row().padTop(8);
 
-        root.add(chatInput).left().colspan(4).expandX().fillX().padRight(6);
-        root.add(chatBtn).left().colspan(2);
+        root.add(chatInput).left().colspan(3).expandX().fillX().padRight(6);
+        root.add(chatBtn).left().padRight(6);
+        root.add(applyConfigBtn).left().colspan(2);
         root.row().padTop(8);
 
         root.add(playersLabel).left().colspan(6).expandX().fillX();
@@ -248,9 +251,11 @@ public class LanPlaygroundScreen extends ExampleGScreen {
 
         for (NetworkTransform state : remoteInterpStates.values()) {
             // 红色：无平滑（直接使用最新收到的位置）
-            float[] rawPos = state.getRawPosition();
-            shapeRenderer.setColor(Color.valueOf("E74C3C"));
-            shapeRenderer.circle(rawPos[0], rawPos[1], 10f);
+            if (rawPosEnabledCheck.isChecked()) {
+                float[] rawPos = state.getRawPosition();
+                shapeRenderer.setColor(Color.valueOf("E74C3C"));
+                shapeRenderer.circle(rawPos[0], rawPos[1], 10f);
+            }
 
             // 绿色：有平滑（使用插值后的位置）
             if (state.isInterpolationEnabled()) {
