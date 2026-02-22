@@ -99,10 +99,11 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 		}
 	}
 
+	private float uiScl = 0.65f, worldScl = 0.6f;
 	@Override
 	protected void initViewport() {
-		uiViewportScale = PlatformImpl.isDesktopUser()? 1: 0.65f;
-		worldScale = PlatformImpl.isDesktopUser()? 1: 0.7f;
+		uiViewportScale = uiScl * (PlatformImpl.isDesktopUser()? 1: 0.9f);
+		worldScale = worldScl * (PlatformImpl.isDesktopUser()? 1: 0.9f);
 		super.initViewport();
 	}
 
