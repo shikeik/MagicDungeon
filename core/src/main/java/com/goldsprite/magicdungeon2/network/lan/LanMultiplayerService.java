@@ -58,9 +58,12 @@ public class LanMultiplayerService {
         String localIp = resolveLocalIp();
         server = new Server();
         server.startAsync(new InetSocketAddress("0.0.0.0", serverPort), new InetSocketAddress(localIp, serverPort), false);
-        registerServerSubscribers();
+        
+        if (!registerServerSubscribers()) {
+            stop();
+            return;
+        }
 
-        sleepSilently(150);
         startClientInternal(playerName, localIp, serverPort);
         mode = Mode.HOST;
 
@@ -121,20 +124,22 @@ public class LanMultiplayerService {
         handler.addSubscriber(BroadcastResponsePacket.class, packet -> eventQueue.offer(LanNetworkEvent.chat(packet.getMessage())));
     }
 
-    private void registerServerSubscribers() {
-        if (server == null) return;
-        PacketsHandler handler = server.getPacketsHandler();
-        if (handler == null) {
-            sleepSilently(120);
+    private boolean registerServerSubscribers() {
+        if (server == null) return false;
+        PacketsHandler handler = null;
+        for (int i = 0; i < 30; i++) { // 最多等待 3 秒
             handler = server.getPacketsHandler();
+            if (handler != null) break;
+            sleepSilently(100);
         }
         if (handler == null) {
-            eventQueue.offer(LanNetworkEvent.error("房主处理器初始化失败"));
-            return;
+            eventQueue.offer(LanNetworkEvent.error("房主处理器初始化超时"));
+            return false;
         }
 
         handler.addSubscriber(LanPlayerSyncRequestPacket.class, this::onPlayerSyncRequest);
         handler.addSubscriber(LanRoomPlayersRequestPacket.class, this::onRoomPlayersRequest);
+        return true;
     }
 
     private void onPlayerSyncRequest(LanPlayerSyncRequestPacket packet) {
