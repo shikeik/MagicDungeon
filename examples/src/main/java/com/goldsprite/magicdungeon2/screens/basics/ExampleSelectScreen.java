@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
+import com.goldsprite.magicdungeon2.assets.TextureManager;
 import com.goldsprite.magicdungeon2.screens.main.LanLobbyScreen;
 import com.goldsprite.magicdungeon2.screens.main.SimpleGameScreen;
 
@@ -35,8 +36,12 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 				finishCallback.run();
 			}, "正在加载地牢资源...", 1.5f);
 		} else if (screenClass == LanLobbyScreen.class) {
-			// 联机大厅：直接进入（不需要加载资源）
-			getScreenManager().goScreen(screenClass);
+			// 联机大厅：先加载资源，加载完再进大厅，之后开始游戏只需渐变转场
+			getScreenManager().playLoadingTransition((finishCallback) -> {
+				TextureManager.init(); // 预加载纹理资源
+				getScreenManager().goScreen(LanLobbyScreen.class);
+				finishCallback.run();
+			}, "正在加载游戏资源...", 1.5f);
 		} else {
 			super.onScreenSelected(screenClass);
 		}

@@ -10,6 +10,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.goldsprite.magicdungeon2.network.lan.packet.LanCommands;
+import com.goldsprite.magicdungeon2.network.lan.packet.LanGameStartBroadcastPacket;
+import com.goldsprite.magicdungeon2.network.lan.packet.LanGameStartRequestPacket;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanPlayerStateSnapshot;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanPlayerSyncBroadcastPacket;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanPlayerSyncRequestPacket;
@@ -121,7 +123,20 @@ public class LanMultiplayerService {
             eventQueue.offer(LanNetworkEvent.info("房间成员刷新: " + packet.getPlayers().size()));
         });
 
-        handler.addSubscriber(BroadcastResponsePacket.class, packet -> eventQueue.offer(LanNetworkEvent.chat(packet.getMessage())));
+        handler.addSubscriber(BroadcastResponsePacket.class, packet -> {
+            String msg = packet.getMessage();
+            // 检测特殊命令前缀
+            if (CMD_GAME_START.equals(msg)) {
+                eventQueue.offer(LanNetworkEvent.gameStart("房主已开始游戏！"));
+            } else {
+                eventQueue.offer(LanNetworkEvent.chat(msg));
+            }
+        });
+
+        // 保留自定义包订阅作为备用（如果框架支持的话也会触发）
+        handler.addSubscriber(LanGameStartBroadcastPacket.class, packet -> {
+            eventQueue.offer(LanNetworkEvent.gameStart("房主已开始游戏！"));
+        });
     }
 
     private boolean registerServerSubscribers() {
@@ -139,7 +154,17 @@ public class LanMultiplayerService {
 
         handler.addSubscriber(LanPlayerSyncRequestPacket.class, this::onPlayerSyncRequest);
         handler.addSubscriber(LanRoomPlayersRequestPacket.class, this::onRoomPlayersRequest);
+        handler.addSubscriber(LanGameStartRequestPacket.class, this::onGameStartRequest);
         return true;
+    }
+
+    /** 服务器收到房主的"开始游戏"请求，向所有客户端广播 */
+    private void onGameStartRequest(LanGameStartRequestPacket packet) {
+        if (server == null) return;
+        server.clients.forEach((targetGuid, ignored) -> {
+            LanGameStartBroadcastPacket rep = new LanGameStartBroadcastPacket(targetGuid, IStatus.RETURN_SUCCESS);
+            server.sendPacket(rep);
+        });
     }
 
     private void onPlayerSyncRequest(LanPlayerSyncRequestPacket packet) {
@@ -211,6 +236,16 @@ public class LanMultiplayerService {
         LanRoomPlayersRequestPacket packet = new LanRoomPlayersRequestPacket(localGuid);
         client.sendPacket(packet);
     }
+
+    /** 房主调用：通知所有客户端"开始游戏"（通过广播聊天通道发送命令） */
+    public void broadcastGameStart() {
+        if (!connected || client == null || localGuid < 0) return;
+        // 复用已验证可靠的 BroadcastRequest 通道，用特殊前缀标识命令
+        client.sendPacket(new BroadcastRequestPacket(localGuid, CMD_GAME_START));
+    }
+
+    /** 游戏开始命令前缀 */
+    public static final String CMD_GAME_START = "$CMD:GAME_START";
 
     public void sendChat(String msg) {
         if (!connected || client == null || localGuid < 0) return;
@@ -292,6 +327,8 @@ public class LanMultiplayerService {
         PacketCodeC.INSTANCE.registerPacketType(LanCommands.PLAYER_SYNC_BROADCAST, LanPlayerSyncBroadcastPacket.class);
         PacketCodeC.INSTANCE.registerPacketType(LanCommands.ROOM_PLAYERS_REQUEST, LanRoomPlayersRequestPacket.class);
         PacketCodeC.INSTANCE.registerPacketType(LanCommands.ROOM_PLAYERS_RESPONSE, LanRoomPlayersResponsePacket.class);
+        PacketCodeC.INSTANCE.registerPacketType(LanCommands.GAME_START_REQUEST, LanGameStartRequestPacket.class);
+        PacketCodeC.INSTANCE.registerPacketType(LanCommands.GAME_START_BROADCAST, LanGameStartBroadcastPacket.class);
         protocolRegistered = true;
     }
 

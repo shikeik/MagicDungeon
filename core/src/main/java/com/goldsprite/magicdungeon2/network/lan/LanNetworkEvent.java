@@ -6,7 +6,8 @@ public class LanNetworkEvent {
         ERROR,
         CHAT,
         LOGIN_SUCCESS,
-        LOGIN_FAILED
+        LOGIN_FAILED,
+        GAME_START
     }
 
     private final Type type;
@@ -37,6 +38,10 @@ public class LanNetworkEvent {
 
     public static LanNetworkEvent loginFailed(String message) {
         return new LanNetworkEvent(Type.LOGIN_FAILED, message, System.currentTimeMillis());
+    }
+
+    public static LanNetworkEvent gameStart(String message) {
+        return new LanNetworkEvent(Type.GAME_START, message, System.currentTimeMillis());
     }
 
     public Type getType() {

@@ -313,15 +313,22 @@ public class SimpleGameScreen extends GScreen implements GameRenderer.GameState 
 		List<LanRoomPlayer> lanPlayers = lanService.getRemotePlayers();
 		remotePlayers.clear();
 		for (LanRoomPlayer lp : lanPlayers) {
+			// 跳过尚未发送过位置的玩家（坐标全为0说明还没进入游戏或还没发状态）
+			if (lp.getX() == 0 && lp.getY() == 0 && lp.getVx() == 0 && lp.getVy() == 0) continue;
+
 			GameEntity re = remotePlayerMap.get(lp.getGuid());
 			if (re == null) {
-				re = new GameEntity((int)lp.getX(), (int)lp.getY(), "player", 100, 10, 5, 0.2f, 0, com.goldsprite.magicdungeon2.core.combat.WeaponRange.MELEE);
+				int spawnX = Math.max(1, (int)lp.getX());
+				int spawnY = Math.max(1, (int)lp.getY());
+				re = new GameEntity(spawnX, spawnY, "player", 100, 10, 5, 0.2f, 0, com.goldsprite.magicdungeon2.core.combat.WeaponRange.MELEE);
+				re.visualX = lp.getVx();
+				re.visualY = lp.getVy();
 				remotePlayerMap.put(lp.getGuid(), re);
 			}
 			// 更新逻辑坐标和视觉坐标
 			re.x = (int)lp.getX();
 			re.y = (int)lp.getY();
-			// 简单插值
+			// 平滑插值到目标像素坐标
 			re.visualX += (lp.getVx() - re.visualX) * 10f * delta;
 			re.visualY += (lp.getVy() - re.visualY) * 10f * delta;
 			remotePlayers.add(re);

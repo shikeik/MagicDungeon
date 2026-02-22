@@ -279,6 +279,13 @@ public class LanLobbyScreen extends GScreen {
 		List<LanNetworkEvent> events = lanService.drainEvents();
 		for (LanNetworkEvent e : events) {
 			appendLog("[" + e.getType().name() + "] " + e.getMessage());
+
+			// 客户端收到"开始游戏"广播，自动进入游戏
+			if (e.getType() == LanNetworkEvent.Type.GAME_START
+				&& phase == Phase.CLIENT_WAITING && !startingGame) {
+				startGame();
+				return; // 已进入转场，不再处理后续事件
+			}
 		}
 	}
 
@@ -305,17 +312,24 @@ public class LanLobbyScreen extends GScreen {
 		playersLabel.setText(sb.toString());
 	}
 
-	/** 开始游戏 — 加载资源后进入 SimpleGameScreen */
+	/** 开始游戏 — 资源已在进入大厅时预加载，此处仅做渐变转场 */
 	private void startGame() {
 		startingGame = true;
 		appendLog("正在开始游戏...");
+
+		// 房主需要先广播"开始游戏"信号给所有客户端
+		if (phase == Phase.HOST_WAITING && lanService != null) {
+			lanService.broadcastGameStart();
+		}
+
 		final LanMultiplayerService service = this.lanService;
 		this.lanService = null; // 移交所有权
-		getScreenManager().playLoadingTransition((finishCallback) -> {
+
+		// 用轻量渐变转场（资源已预加载，不需要再走 playLoadingTransition）
+		getScreenManager().playOverlayFade(() -> {
 			SimpleGameScreen gameScreen = new SimpleGameScreen(service);
 			getScreenManager().goScreen(gameScreen);
-			finishCallback.run();
-		}, "正在加载地牢资源...", 1.5f);
+		}, 0.5f);
 	}
 
 	private void appendLog(String msg) {
