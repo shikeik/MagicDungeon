@@ -1,11 +1,21 @@
 package com.goldsprite.magicdungeon2.network.lan;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadLocalRandom;
+
 import com.goldsprite.magicdungeon2.network.lan.packet.LanCommands;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanPlayerStateSnapshot;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanPlayerSyncBroadcastPacket;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanPlayerSyncRequestPacket;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanRoomPlayersRequestPacket;
 import com.goldsprite.magicdungeon2.network.lan.packet.LanRoomPlayersResponsePacket;
+
 import goldsprite.myUdpNetty.codec.PacketCodeC;
 import goldsprite.myUdpNetty.codec.codecInterfaces.IStatus;
 import goldsprite.myUdpNetty.codec.packets.BroadcastRequestPacket;
@@ -16,15 +26,6 @@ import goldsprite.myUdpNetty.handlers.PacketsHandler;
 import goldsprite.myUdpNetty.other.ClientInfoStatus;
 import goldsprite.myUdpNetty.starter.Client;
 import goldsprite.myUdpNetty.starter.Server;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class LanMultiplayerService {
     public enum Mode {
@@ -45,6 +46,7 @@ public class LanMultiplayerService {
     private final ConcurrentHashMap<Integer, LanRoomPlayer> players = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, LanPlayerStateSnapshot> playerStates = new ConcurrentHashMap<>();
     private volatile long lastSyncMillis = 0L;
+    private volatile long syncIntervalMs = 50L; // 默认 20Hz (1000ms / 50ms)
 
     private static volatile boolean protocolRegistered = false;
 
@@ -180,11 +182,19 @@ public class LanMultiplayerService {
     public void sendLocalState(float x, float y, float vx, float vy, String action) {
         if (!connected || client == null || localGuid < 0) return;
         long now = System.currentTimeMillis();
-        if (now - lastSyncMillis < 50) return;
+        if (now - lastSyncMillis < syncIntervalMs) return;
         lastSyncMillis = now;
 
         LanPlayerSyncRequestPacket packet = new LanPlayerSyncRequestPacket(localGuid, x, y, vx, vy, action, now);
         client.sendPacket(packet);
+    }
+
+    public void setSyncIntervalMs(long ms) {
+        this.syncIntervalMs = ms;
+    }
+
+    public long getSyncIntervalMs() {
+        return syncIntervalMs;
     }
 
     public void requestRoomPlayers() {
