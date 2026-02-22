@@ -27,7 +27,7 @@ dependencies {
 	}
 
 	api "com.esotericsoftware.spine:spine-libgdx:$spineVersion"
-	api 'goldsprite.myUdpNetty:TestNetty:0.8.0'
+	api 'com.github.GoldSprite:TestNetty:0.8.0'
 
 	// [Force Refresh] Trigger IDE gradle sync
 	// [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
