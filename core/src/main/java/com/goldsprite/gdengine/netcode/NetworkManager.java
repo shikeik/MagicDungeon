@@ -404,6 +404,20 @@ public class NetworkManager {
         }
     }
 
+    /**
+     * 向指定客户端补发所有已存在的 SpawnPacket。
+     * 通常在新 Client 连入时调用，确保后来者能看到之前已 Spawn 的实体。
+     */
+    public void sendExistingSpawnsToClient(int clientId) {
+        if (transport == null || !transport.isServer()) return;
+        for (Map.Entry<Integer, NetworkObject> entry : networkObjects.entrySet()) {
+            NetworkObject obj = entry.getValue();
+            byte[] spawnPacket = buildSpawnPacket((int) obj.getNetworkId(), obj.getPrefabId(), obj.getOwnerClientId());
+            transport.sendToClient(clientId, spawnPacket);
+        }
+        System.out.println("[NetworkManager] 向 Client #" + clientId + " 补发 " + networkObjects.size() + " 个已有实体的 SpawnPacket");
+    }
+
     public NetworkObject getNetworkObject(int id) {
         return networkObjects.get(id);
     }

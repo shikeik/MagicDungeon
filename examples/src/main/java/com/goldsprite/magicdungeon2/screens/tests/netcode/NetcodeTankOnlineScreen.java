@@ -361,8 +361,11 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     // ══════════════ 连接事件 ══════════════
 
-    /** Server 端: 新 Client 连入时 Spawn 一辆坦克 */
+    /** Server 端: 新 Client 连入时，先补发已有实体，再 Spawn 新坦克 */
     private void onNewClientConnected(int clientId) {
+        // 先向新客户端补发所有已存在的 NetworkObject（包括 Host 坦克和其他客户端的坦克）
+        manager.sendExistingSpawnsToClient(clientId);
+        // 再为新客户端 Spawn 自己的坦克（会广播 SpawnPacket 给所有客户端）
         spawnTankForOwner(clientId);
         System.out.println("[Online] Client #" + clientId + " 已连接，Spawn 坦克");
     }
