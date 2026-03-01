@@ -1,6 +1,11 @@
-feat: P4 TankBehaviour 增加 ServerRpc 输入通道 (rpcMoveInput + rpcFireInput)
+feat: P5+P6 统一联机对战屏幕 + 多客户端动态生成
 
-- TankBehaviour 新增 @ServerRpc rpcMoveInput(dx, dy): Client 上报移动方向, Server 执行位移
-- TankBehaviour 新增 @ServerRpc rpcFireInput(): Client 上报开火请求, Server 标记 pendingFire
-- 新增 transient pendingFire 标志, 供沙盒层 update 消费
-- 编译通过, 60 测试全绿
+- 新增 NetcodeTankOnlineScreen: 合并原 Server/Client 双屏为统一入口
+- CONFIG 状态: Tab切换角色(Server/Client), [1]编辑IP, [2]编辑端口, Enter启动
+- WAITING 状态: Server等待客户端连接, Client等待SpawnPacket
+- PLAYING 状态: Server驱动Tick+物理+碰撞, Client发送ServerRpc输入
+- 多客户端支持: clientTanks Map动态管理, 连接时自动Spawn, 6色轮换
+- Host模式: Server自身坦克(ownerClientId=-1)由WASD+J控制
+- 碰撞泛化: 遍历所有坦克而非硬编码p1/p2
+- TestSelectionScreen 添加"Netcode坦克联机对战"菜单项, 旧入口标记(旧)
+- 编译通过, 91测试全绿(100%通过率)
