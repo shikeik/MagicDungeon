@@ -87,6 +87,27 @@ public class NetworkManager {
     }
 
     /**
+     * 销毁一个已 Spawn 的网络对象。
+     * Server 端移除本地注册表，并广播 DespawnPacket(0x12) 给所有客户端。
+     */
+    public void despawn(int networkId) {
+        if (transport == null || !transport.isServer()) {
+            throw new IllegalStateException("只有服务器可以 Despawn 对象！");
+        }
+        NetworkObject removed = networkObjects.remove(networkId);
+        if (removed == null) {
+            System.err.println("[NetworkManager] Despawn 失败，找不到实体: netId=" + networkId);
+            return;
+        }
+        // 广播 DespawnPacket 给所有客户端
+        NetBuffer buffer = new NetBuffer();
+        buffer.writeInt(0x12); // DespawnPacket 魔法头
+        buffer.writeInt(networkId);
+        transport.broadcast(buffer.toByteArray());
+        System.out.println("[NetworkManager] Server Despawn 实体: netId=" + networkId);
+    }
+
+    /**
      * 构建 Spawn 封包：[0x11][networkId][prefabId]
      */
     private byte[] buildSpawnPacket(int networkId, int prefabId) {
@@ -176,6 +197,16 @@ public class NetworkManager {
             return;
         }
         
+        // DespawnPacket: 客户端收到后移除本地实体
+        if (packetType == 0x12) {
+            int netId = inBuffer.readInt();
+            NetworkObject removed = networkObjects.remove(netId);
+            if (removed != null) {
+                System.out.println("[NetworkManager] Client 移除实体: netId=" + netId);
+            }
+            return;
+        }
+
         // RPC 包: ServerRpc(0x20) 或 ClientRpc(0x21)
         if (packetType == 0x20 || packetType == 0x21) {
             handleRpcPacket(inBuffer);
