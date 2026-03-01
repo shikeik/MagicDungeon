@@ -57,6 +57,9 @@ public class UdpSocketTransport implements Transport {
     // 握手回复魔法标识: [0xFE×4] + [4字节 clientId]
     private static final byte[] HANDSHAKE_REPLY_MAGIC = new byte[]{(byte) 0xFE, (byte) 0xFE, (byte) 0xFE, (byte) 0xFE};
 
+    // 断开通知魔法标识: [0xFD×4] — Client 主动断开时发送给 Server
+    private static final byte[] DISCONNECT_MAGIC = new byte[]{(byte) 0xFD, (byte) 0xFD, (byte) 0xFD, (byte) 0xFD};
+
     // Client 端被 Server 分配的 clientId（通过握手回复获得）
     private int assignedClientId = -1;
 
@@ -111,6 +114,12 @@ public class UdpSocketTransport implements Transport {
 
     @Override
     public void disconnect() {
+        // Client 断开前先通知 Server
+        if (!isServerIdentity && serverAddress != null && socket != null && !socket.isClosed()) {
+            try {
+                sendRaw(DISCONNECT_MAGIC, serverAddress);
+            } catch (Exception ignored) { }
+        }
         running.set(false);
         if (socket != null && !socket.isClosed()) {
             socket.close();
@@ -198,6 +207,21 @@ public class UdpSocketTransport implements Transport {
      * 特殊: 握手包是裸的 [0xFF,0xFF,0xFF,0xFF]（无长度前缀）
      */
     private void processReceivedData(byte[] rawData, InetSocketAddress sender) {
+        // 检查是否为断开通知包 [0xFD×4]
+        if (isDisconnectNotify(rawData)) {
+            if (isServerIdentity) {
+                int clientId = clientAddresses.indexOf(sender);
+                if (clientId >= 0) {
+                    // 不立即移除地址（保持 clientId 索引稳定），只触发回调
+                    System.out.println("[UdpTransport] Server 收到 Client #" + clientId + " 的断开通知: " + sender);
+                    if (connectionListener != null) {
+                        connectionListener.onClientDisconnected(clientId);
+                    }
+                }
+            }
+            return;
+        }
+
         // 检查是否为握手包
         if (isHandshake(rawData)) {
             if (isServerIdentity) {
@@ -302,6 +326,17 @@ public class UdpSocketTransport implements Transport {
         if (data.length < HANDSHAKE_REPLY_MAGIC.length) return false;
         for (int i = 0; i < HANDSHAKE_REPLY_MAGIC.length; i++) {
             if (data[i] != HANDSHAKE_REPLY_MAGIC[i]) return false;
+        }
+        return true;
+    }
+
+    /**
+     * 判断是否为断开通知包 [0xFD,0xFD,0xFD,0xFD]
+     */
+    private boolean isDisconnectNotify(byte[] data) {
+        if (data.length != DISCONNECT_MAGIC.length) return false;
+        for (int i = 0; i < DISCONNECT_MAGIC.length; i++) {
+            if (data[i] != DISCONNECT_MAGIC[i]) return false;
         }
         return true;
     }

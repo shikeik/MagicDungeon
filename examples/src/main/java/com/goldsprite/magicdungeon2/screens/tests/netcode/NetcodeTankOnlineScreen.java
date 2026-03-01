@@ -194,10 +194,19 @@ public class NetcodeTankOnlineScreen extends GScreen {
         manager.registerPrefab(TankSandboxUtils.TANK_PREFAB_ID, TankSandboxUtils.createTankFactory());
 
         if (isServerRole) {
-            // Server 模式：设置连接监听，每个 Client 连入时 Spawn 一辆坦克
-            manager.setConnectionListener(clientId -> {
-                // 在主线程安全队列中标记（UDP 回调在 IO 线程）
-                Gdx.app.postRunnable(() -> onNewClientConnected(clientId));
+            // Server 模式：设置连接/断开监听
+            manager.setConnectionListener(new com.goldsprite.gdengine.netcode.NetworkConnectionListener() {
+                @Override
+                public void onClientConnected(int clientId) {
+                    // 在主线程安全队列中标记（UDP 回调在 IO 线程）
+                    Gdx.app.postRunnable(() -> onNewClientConnected(clientId));
+                }
+
+                @Override
+                public void onClientDisconnected(int clientId) {
+                    // NetworkManager 已自动 despawn 实体，这里清理游戏层映射
+                    Gdx.app.postRunnable(() -> onClientDisconnected(clientId));
+                }
             });
             transport.startServer(configPort);
 
@@ -423,6 +432,12 @@ public class NetcodeTankOnlineScreen extends GScreen {
         // 4. 再次发送全量状态（确保新坦克的初始数据也同步给该客户端）
         manager.sendFullStateToClient(clientId);
         System.out.println("[Online] Client #" + clientId + " 已连接，Spawn 坦克");
+    }
+
+    /** Server 端: Client 断开时，清理游戏层映射 */
+    private void onClientDisconnected(int clientId) {
+        clientTanks.remove(clientId);
+        System.out.println("[Online] Client #" + clientId + " 已断开，移除坦克。剩余坦克: " + clientTanks.size());
     }
 
     /** 为指定 ownerClientId Spawn 一辆坦克 */

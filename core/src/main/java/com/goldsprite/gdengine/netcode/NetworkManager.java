@@ -28,16 +28,31 @@ public class NetworkManager {
         this.transport = transport;
         // 自动注册数据接收回调，无需手动 transport.setManager()
         transport.setReceiveCallback(this::onReceiveData);
-        // 自动注册连接事件回调
-        transport.setConnectionListener(clientId -> {
-            // Client 端收到分配的 clientId 时，自动设置
-            if (transport.isClient()) {
-                localClientId = clientId;
-                System.out.println("[NetworkManager] Client 被分配 clientId=" + clientId);
+        // 自动注册连接事件回调（包含连接和断开）
+        transport.setConnectionListener(new NetworkConnectionListener() {
+            @Override
+            public void onClientConnected(int clientId) {
+                // Client 端收到分配的 clientId 时，自动设置
+                if (transport.isClient()) {
+                    localClientId = clientId;
+                    System.out.println("[NetworkManager] Client 被分配 clientId=" + clientId);
+                }
+                // 转发给游戏层监听器
+                if (connectionListener != null) {
+                    connectionListener.onClientConnected(clientId);
+                }
             }
-            // 转发给游戏层监听器
-            if (connectionListener != null) {
-                connectionListener.onClientConnected(clientId);
+
+            @Override
+            public void onClientDisconnected(int clientId) {
+                // Server 端：自动 Despawn 该客户端拥有的所有实体
+                if (transport.isServer()) {
+                    despawnByOwner(clientId);
+                }
+                // 转发给游戏层监听器
+                if (connectionListener != null) {
+                    connectionListener.onClientDisconnected(clientId);
+                }
             }
         });
     }
@@ -46,6 +61,12 @@ public class NetworkManager {
     public void setConnectionListener(NetworkConnectionListener listener) {
         this.connectionListener = listener;
     }
+
+    /**
+     * 断开连接事件转发监听器（在 setTransport 中注册）。
+     * 仅在 setTransport 中受 Transport 层的回调使用。
+     */
+    private NetworkConnectionListener disconnectionListener;
 
     /** 当前本机的 clientId（Client 端由 Server 握手分配，Server 端无意义） */
     private int localClientId = -1;
@@ -141,6 +162,27 @@ public class NetworkManager {
         buffer.writeInt(networkId);
         transport.broadcast(buffer.toByteArray());
         System.out.println("[NetworkManager] Server Despawn 实体: netId=" + networkId);
+    }
+
+    /**
+     * 移除指定 ownerClientId 拥有的所有网络实体（Server 端）。
+     * 通常在客户端断开连接时调用。
+     */
+    public void despawnByOwner(int ownerClientId) {
+        if (transport == null || !transport.isServer()) return;
+        // 收集要移除的 netId（避免遍历中修改 map）
+        java.util.List<Integer> toRemove = new java.util.ArrayList<>();
+        for (Map.Entry<Integer, NetworkObject> entry : networkObjects.entrySet()) {
+            if (entry.getValue().getOwnerClientId() == ownerClientId) {
+                toRemove.add(entry.getKey());
+            }
+        }
+        for (int netId : toRemove) {
+            despawn(netId);
+        }
+        if (!toRemove.isEmpty()) {
+            System.out.println("[NetworkManager] 已移除 Client #" + ownerClientId + " 拥有的 " + toRemove.size() + " 个实体");
+        }
     }
 
     /**
