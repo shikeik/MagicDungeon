@@ -13,6 +13,9 @@ public class NetworkObject {
     
     // 存储当前实体上所有的状态变量
     private List<NetworkVariable<?>> networkVariables = new ArrayList<>();
+
+    // 存储当前实体挂载的所有网络行为逻辑
+    private List<NetworkBehaviour> behaviours = new ArrayList<>();
     
     // 权限标记，后续将交由 NetworkManager 管理填充
     public boolean isServer = false;
@@ -25,6 +28,17 @@ public class NetworkObject {
 
     public long getNetworkId() {
         return networkId;
+    }
+
+    /**
+     * 为实体动态挂载一个网络行为组件
+     */
+    public void addComponent(NetworkBehaviour behaviour) {
+        if (!behaviours.contains(behaviour)) {
+            behaviours.add(behaviour);
+            // 将自己作为宿主绑定给逻辑组件，内部会自动触发反射注册变量
+            behaviour.internalAttach(this);
+        }
     }
 
     /**
