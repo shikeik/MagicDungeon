@@ -75,11 +75,16 @@ public class NetcodeTankOnlineScreen extends GScreen {
         Color.ORANGE, Color.CYAN, Color.LIME, Color.MAGENTA, Color.GOLD, Color.SKY
     };
 
-    // ══════════════ 生命周期 ══════════════
+	@Override protected void initViewport() {
+		uiViewportScale = 0.7f;
+		super.initViewport();
+	}
+
+
+	// ══════════════ 生命周期 ══════════════
 
     @Override
-    public void show() {
-        super.show();
+    public void create() {
         neon = new NeonBatch();
         font = FontUtils.generate(14, 2);
         titleFont = FontUtils.generate(18, 2);
@@ -110,13 +115,34 @@ public class NetcodeTankOnlineScreen extends GScreen {
         }
     }
 
+    /** ESC/返回时会调用 hide()（不调用 dispose），在此清理网络资源 */
+    @Override
+    public void hide() {
+        super.hide();
+        shutdownNetwork();
+    }
+
     @Override
     public void dispose() {
         super.dispose();
-        if (neon != null) neon.dispose();
-        if (font != null) font.dispose();
-        if (titleFont != null) titleFont.dispose();
-        if (transport != null) transport.disconnect();
+        shutdownNetwork();
+        if (neon != null) { neon.dispose(); neon = null; }
+        if (font != null) { font.dispose(); font = null; }
+        if (titleFont != null) { titleFont.dispose(); titleFont = null; }
+    }
+
+    /** 安全关闭网络连接并重置游戏状态 */
+    private void shutdownNetwork() {
+        if (transport != null) {
+            transport.disconnect();
+            transport = null;
+        }
+        manager = null;
+        clientTanks.clear();
+        serverBullets.clear();
+        clientBullets.clear();
+        nextBulletId = 1;
+        state = State.CONFIG;
     }
 
     // ══════════════ CONFIG 阶段 ══════════════
@@ -240,6 +266,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
                     tank.y.setValue(tank.y.getValue() + my * speed);
                     tank.rot.setValue(new Vector2(mx, my).angleDeg());
                 }
+                // 消费后清零，确保松键后停止移动
+                tank.pendingMoveX = 0;
+                tank.pendingMoveY = 0;
             }
 
             if (tank.pendingFire && !tank.isDead.getValue()) {
@@ -309,8 +338,11 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 double dist = Math.hypot(b.x - tank.x.getValue(), b.y - tank.y.getValue());
                 if (dist < 20) {
                     TankSandboxUtils.hitTank(tank);
-                    // 通知所有客户端销毁该子弹
-                    tank.sendClientRpc("rpcDestroyBullet", b.bulletId);
+                    // 通知所有客户端销毁该子弹（从射手坦克发送，因为子弹在射手的 localBullets 中）
+                    TankBehaviour shooter = clientTanks.get(b.ownerId);
+                    if (shooter != null) {
+                        shooter.sendClientRpc("rpcDestroyBullet", b.bulletId);
+                    }
                     hit = true;
                     break;
                 }
