@@ -42,6 +42,13 @@ public class NetworkObject {
     }
 
     /**
+     * 获取当前实体上所有的状态变量（按注册顺序索引）
+     */
+    public List<NetworkVariable<?>> getNetworkVariables() {
+        return networkVariables;
+    }
+
+    /**
      * 业务层通过此方法将自动同步变量交给 NetworkObject 托管。
      */
     public void registerVariable(NetworkVariable<?> variable) {

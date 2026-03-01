@@ -65,8 +65,21 @@ public class NetworkManager {
         // 封包头：先写一个魔法数字标识这是一个【状态同步包】 (暂定0x10表示StatusSync)
         buffer.writeInt(0x10);
         buffer.writeInt(networkId);
-        // 这里暂时只是象征性地写入实体发生脏变的数据条数，完整版本需要对每个 NetworkVariable 进行序列化映射出去了。
-        buffer.writeInt(obj.countDirtyVariables()); 
+        
+        int dirtyCount = obj.countDirtyVariables();
+        buffer.writeInt(dirtyCount); 
+        
+        // 遍历所有变量，如果被标记为脏则进行序列化
+        java.util.List<NetworkVariable<?>> vars = obj.getNetworkVariables();
+        for (int i = 0; i < vars.size(); i++) {
+            NetworkVariable<?> var = vars.get(i);
+            if (var.isDirty()) {
+                // 写入当前变量的标识位 (Index)
+                buffer.writeInt(i);
+                // 将变量具体的二进制数值序列化到 buffer 中
+                var.serialize(buffer);
+            }
+        }
         
         return buffer.toByteArray();
     }
@@ -83,13 +96,25 @@ public class NetworkManager {
         if (packetType == 0x10) {
             int netId = inBuffer.readInt();
             int modifiedCount = inBuffer.readInt();
-            // 在实际代码里，这里会把具体改变的 float / int 更新到对应的 NetworkVirtual 里
-            System.out.println("[NetworkManager] 接收到同步包! 实体ID: " + netId + " 变更变量数: " + modifiedCount);
             
-            // 假设我们找得到本地副本，这里要进行数据覆盖（供TDD验证接收回调畅通）
             NetworkObject localObj = networkObjects.get(netId);
-            if (localObj != null) {
-                // ... 模拟应用了这些变更
+            if (localObj == null) {
+                System.err.println("[NetworkManager] 本地找不到对应的实体, 无法执行同步更新: ID=" + netId);
+                return;
+            }
+            
+            java.util.List<NetworkVariable<?>> vars = localObj.getNetworkVariables();
+            for (int i = 0; i < modifiedCount; i++) {
+                int varIndex = inBuffer.readInt();
+                if (varIndex >= 0 && varIndex < vars.size()) {
+                    NetworkVariable<?> var = vars.get(varIndex);
+                    // 执行反序列化，覆盖本地值
+                    var.deserialize(inBuffer);
+                } else {
+                    System.err.println("[NetworkManager] 反序列化失败，越界的变量索引: " + varIndex);
+                    // 由于协议强顺序性，一旦发现反序列化索引错乱，后面整个包的读取都将失效，必须直接阻断或者丢弃。
+                    break; 
+                }
             }
         }
     }

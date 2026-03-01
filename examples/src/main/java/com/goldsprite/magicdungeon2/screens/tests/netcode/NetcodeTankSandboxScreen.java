@@ -142,15 +142,7 @@ public class NetcodeTankSandboxScreen extends GScreen {
         }
     }
 
-    private void syncTank(TankBehaviour serv, TankBehaviour cli) {
-        cli.x.setValue(serv.x.getValue());
-        cli.y.setValue(serv.y.getValue());
-        cli.rot.setValue(serv.rot.getValue());
-        cli.hp.setValue(serv.hp.getValue());
-        cli.isDead.setValue(serv.isDead.getValue());
-        cli.respawnTimer.setValue(serv.respawnTimer.getValue());
-        cli.color.setValue(serv.color.getValue());
-    }
+    // syncTank function removed. Let the true NetBuffer transport handle it!
 
     public void render(float delta) {
         super.render(delta);
@@ -242,9 +234,8 @@ public class NetcodeTankSandboxScreen extends GScreen {
         serverManager.tick();
         clientManager.tick();
 
-        // 【Client Logic】客户端强制覆盖同步 (此处打桩手动拷贝数据，后续由NetBuffer反序列化接管)
-        syncTank(serverP1, clientP1);
-        syncTank(serverP2, clientP2);
+        // 【Client Logic】由前面 tick() 执行的 NetBuffer 反序列化代替了手工打桩！！
+        
         clientBullets.clear();
         for (Bullet b : serverBullets) {
             Bullet cb = new Bullet();
