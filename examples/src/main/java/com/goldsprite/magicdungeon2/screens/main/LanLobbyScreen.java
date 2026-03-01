@@ -247,26 +247,31 @@ public class LanLobbyScreen extends GScreen {
 		if (!startingGame && lanService != null) {
 			consumeEvents();
 
-			// 定期刷新房间成员
-			if (lanService.isConnected()) {
-				refreshTimer += delta;
-				if (refreshTimer >= 1.5f) {
-					refreshTimer = 0f;
-					lanService.requestRoomPlayers();
+			// consumeEvents() 内部可能触发 startGame()，导致 lanService 被置 null，需要重新检查
+			if (startingGame || lanService == null) {
+				// 已进入转场流程，跳过后续网络操作
+			} else {
+				// 定期刷新房间成员
+				if (lanService.isConnected()) {
+					refreshTimer += delta;
+					if (refreshTimer >= 1.5f) {
+						refreshTimer = 0f;
+						lanService.requestRoomPlayers();
+					}
 				}
-			}
 
-			updateRoomUI();
+				updateRoomUI();
 
-			// 宽限期倒计时（等待异步登录回调完成）
-			if (connectionGraceTimer > 0f) {
-				connectionGraceTimer -= delta;
-			}
+				// 宽限期倒计时（等待异步登录回调完成）
+				if (connectionGraceTimer > 0f) {
+					connectionGraceTimer -= delta;
+				}
 
-			// 如果在房间阶段但连接断开了，且宽限期已过，自动回到未连接面板
-			if (phase != Phase.IDLE && !lanService.isConnected() && connectionGraceTimer <= 0f) {
-				appendLog("连接已断开");
-				showPhase(Phase.IDLE);
+				// 如果在房间阶段但连接断开了，且宽限期已过，自动回到未连接面板
+				if (phase != Phase.IDLE && !lanService.isConnected() && connectionGraceTimer <= 0f) {
+					appendLog("连接已断开");
+					showPhase(Phase.IDLE);
+				}
 			}
 		}
 
