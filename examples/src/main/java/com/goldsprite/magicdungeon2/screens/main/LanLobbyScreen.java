@@ -317,7 +317,7 @@ public class LanLobbyScreen extends GScreen {
 		playersLabel.setText(sb.toString());
 	}
 
-	/** 开始游戏 — 资源已在进入大厅时预加载，此处仅做渐变转场 */
+	/** 开始游戏 — 使用 playTransition 安全地延迟到遮罩变黑后再切换屏幕 */
 	private void startGame() {
 		startingGame = true;
 		appendLog("正在开始游戏...");
@@ -327,14 +327,15 @@ public class LanLobbyScreen extends GScreen {
 			lanService.broadcastGameStart();
 		}
 
-		final LanMultiplayerService service = this.lanService;
-		this.lanService = null; // 移交所有权
+		// 使用 playTransition：先淡入黑幕，黑幕完全变黑后再执行 goScreen
+		// 这样 goScreen 不会在当前帧的 render0 中途执行，避免状态错乱
+		getScreenManager().playTransition(() -> {
+			final LanMultiplayerService service = this.lanService;
+			this.lanService = null; // 移交所有权（在安全时机）
 
-		// 用轻量渐变转场（资源已预加载，不需要再走 playLoadingTransition）
-		getScreenManager().playOverlayFade(() -> {
 			SimpleGameScreen gameScreen = new SimpleGameScreen(service);
 			getScreenManager().goScreen(gameScreen);
-		}, 0.5f);
+		});
 	}
 
 	private void appendLog(String msg) {
