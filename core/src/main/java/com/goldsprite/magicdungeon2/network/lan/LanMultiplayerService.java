@@ -48,7 +48,7 @@ public class LanMultiplayerService {
     private final ConcurrentHashMap<Integer, LanRoomPlayer> players = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, LanPlayerStateSnapshot> playerStates = new ConcurrentHashMap<>();
     private volatile long lastSyncMillis = 0L;
-    private volatile long syncIntervalMs = 50L; // 默认 20Hz (1000ms / 50ms)
+    private volatile long syncIntervalMs = 16L; // 默认 60Hz (1000ms / 16ms ≈ 62.5Hz)
 
     private static volatile boolean protocolRegistered = false;
 
