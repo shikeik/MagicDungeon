@@ -21,6 +21,12 @@ git fetch origin --prune --prune-tags
 ```
 
 
+本地MavenLocal目录位置
+```
+C:\Users\26670\.m2\repository\
+```
+
+
 ## trae
 清理 Java 工作区 (如果使用的是 Java 扩展)：
 
