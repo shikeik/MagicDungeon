@@ -49,7 +49,6 @@ public class NetworkManager {
             int dirties = obj.countDirtyVariables();
             if (dirties > 0) {
                 // 如果发现该实体有脏数据，将其打包序列化发送给客户端。
-                // （在这个沙盒模型中，我们先直接打印或记录下来，后面补上序列化方法）
                 byte[] payload = serializeObjectState(entry.getKey(), obj);
                 transport.broadcast(payload);
                 // 重置所有对象的脏检查位
@@ -59,12 +58,40 @@ public class NetworkManager {
     }
     
     /**
-     * 将带有脏变标志的对象转成字节（占位，之后需要真实序列化）
+     * 将带有脏变标志的对象转成字节
      */
     private byte[] serializeObjectState(int networkId, NetworkObject obj) {
-        // [4 byte NetworkId] + [n byte Object 状态数据]
-        // 现阶段用一个最简长度代表，后面会用ByteBuffer或者DataOutputStream
-        return new byte[]{ (byte)networkId }; 
+        NetBuffer buffer = new NetBuffer();
+        // 封包头：先写一个魔法数字标识这是一个【状态同步包】 (暂定0x10表示StatusSync)
+        buffer.writeInt(0x10);
+        buffer.writeInt(networkId);
+        // 这里暂时只是象征性地写入实体发生脏变的数据条数，完整版本需要对每个 NetworkVariable 进行序列化映射出去了。
+        buffer.writeInt(obj.countDirtyVariables()); 
+        
+        return buffer.toByteArray();
+    }
+
+    /**
+     * Transport 收到字节流后回调此方法。
+     * 是从字节码还原为内存逻辑对象的必经之路。
+     */
+    public void onReceiveData(byte[] payload) {
+        NetBuffer inBuffer = new NetBuffer(payload);
+        int packetType = inBuffer.readInt();
+        
+        // 如果是状态更新包
+        if (packetType == 0x10) {
+            int netId = inBuffer.readInt();
+            int modifiedCount = inBuffer.readInt();
+            // 在实际代码里，这里会把具体改变的 float / int 更新到对应的 NetworkVirtual 里
+            System.out.println("[NetworkManager] 接收到同步包! 实体ID: " + netId + " 变更变量数: " + modifiedCount);
+            
+            // 假设我们找得到本地副本，这里要进行数据覆盖（供TDD验证接收回调畅通）
+            NetworkObject localObj = networkObjects.get(netId);
+            if (localObj != null) {
+                // ... 模拟应用了这些变更
+            }
+        }
     }
     
     public NetworkObject getNetworkObject(int id) {
