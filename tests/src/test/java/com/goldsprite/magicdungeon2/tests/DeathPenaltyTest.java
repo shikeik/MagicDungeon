@@ -2,7 +2,7 @@ package com.goldsprite.magicdungeon2.tests;
 
 import org.junit.Test;
 
-import com.goldsprite.magicdungeon2.CLogAssert;
+import com.goldsprite.CLogAssert;
 import com.goldsprite.magicdungeon2.core.growth.DeathPenalty;
 import com.goldsprite.magicdungeon2.core.growth.DeathPenalty.DeathResult;
 import com.goldsprite.magicdungeon2.core.growth.GrowthCalculator;

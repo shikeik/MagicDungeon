@@ -1,4 +1,4 @@
-package com.goldsprite.magicdungeon2;
+package com.goldsprite;
 
 import org.junit.Assert;
 
