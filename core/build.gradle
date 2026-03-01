@@ -34,6 +34,9 @@ dependencies {
 		// Android DEX 合并时 javax.jms.Message 重复定义，必须排除
 		exclude group: 'org.apache.geronimo.specs', module: 'geronimo-jms_1.1_spec'
 		exclude group: 'javax.jms', module: 'javax.jms-api'
+		exclude group: "org.osgi"
+		exclude group: "org.apache"
+		exclude group: "log4j"
 	}
 
 	// [Force Refresh] Trigger IDE gradle sync
