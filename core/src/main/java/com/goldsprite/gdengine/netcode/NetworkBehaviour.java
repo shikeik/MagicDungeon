@@ -9,6 +9,9 @@ import java.lang.reflect.Field;
 public abstract class NetworkBehaviour {
 
     private NetworkObject networkObject;
+    
+    // 所属的 NetworkManager（由 NetworkObject 或外部绑定）
+    private NetworkManager manager;
 
     public void internalAttach(NetworkObject parentObject) {
         this.networkObject = parentObject;
@@ -17,6 +20,14 @@ public abstract class NetworkBehaviour {
 
     public NetworkObject getNetworkObject() {
         return networkObject;
+    }
+    
+    public void setManager(NetworkManager manager) {
+        this.manager = manager;
+    }
+    
+    public NetworkManager getManager() {
+        return manager;
     }
 
     public boolean isServer() {
@@ -29,6 +40,30 @@ public abstract class NetworkBehaviour {
 
     public boolean isLocalPlayer() {
         return networkObject != null && networkObject.isLocalPlayer;
+    }
+
+    /**
+     * 业务层调用：向 Server 端发送 RPC 请求。
+     * 参数会被序列化为字节流通过 Transport 发给 Server，Server 端会反射执行对应方法。
+     */
+    public void sendServerRpc(String methodName, Object... args) {
+        if (manager == null || networkObject == null) {
+            throw new IllegalStateException("NetworkBehaviour 未绑定到 Manager，无法发送 RPC");
+        }
+        int behaviourIndex = networkObject.getBehaviourIndex(this);
+        manager.sendRpcPacket(0x20, (int) networkObject.getNetworkId(), behaviourIndex, methodName, args);
+    }
+
+    /**
+     * 业务层调用：向所有 Client 端广播 RPC 调用。
+     * 参数会被序列化为字节流通过 Transport 广播给所有客户端，客户端反射执行对应方法。
+     */
+    public void sendClientRpc(String methodName, Object... args) {
+        if (manager == null || networkObject == null) {
+            throw new IllegalStateException("NetworkBehaviour 未绑定到 Manager，无法发送 RPC");
+        }
+        int behaviourIndex = networkObject.getBehaviourIndex(this);
+        manager.sendRpcPacket(0x21, (int) networkObject.getNetworkId(), behaviourIndex, methodName, args);
     }
 
     /**

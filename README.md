@@ -1,4 +1,4 @@
-# MagicDungeon2 V0.6.2
+# MagicDungeon2 V0.6.3
 - 始于2026.2.2
 
 ## 介绍:

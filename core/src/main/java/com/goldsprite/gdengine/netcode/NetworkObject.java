@@ -78,6 +78,13 @@ public class NetworkObject {
     }
 
     /**
+     * 获取指定行为组件在列表中的索引位置（用于 RPC 封包定位）
+     */
+    public int getBehaviourIndex(NetworkBehaviour behaviour) {
+        return behaviours.indexOf(behaviour);
+    }
+
+    /**
      * 业务层通过此方法将自动同步变量交给 NetworkObject 托管。
      */
     public void registerVariable(NetworkVariable<?> variable) {

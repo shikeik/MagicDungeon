@@ -11,10 +11,12 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.goldsprite.gdengine.netcode.ClientRpc;
 import com.goldsprite.gdengine.netcode.LocalMemoryTransport;
 import com.goldsprite.gdengine.netcode.NetworkBehaviour;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.NetworkObject;
+import com.goldsprite.gdengine.netcode.NetworkPrefabFactory;
 import com.goldsprite.gdengine.netcode.NetworkVariable;
 import com.goldsprite.gdengine.screens.GScreen;
 
@@ -53,6 +55,23 @@ public class NetcodeTankSandboxScreen extends GScreen {
         public NetworkVariable<Integer> hp = new NetworkVariable<>(4);
         public NetworkVariable<Boolean> isDead = new NetworkVariable<>(false);
         public NetworkVariable<Float> respawnTimer = new NetworkVariable<>(0f);
+
+        // 客户端本地子弹列表（由 ClientRpc 触发生成）
+        public transient List<Bullet> localBullets = new ArrayList<>();
+
+        /**
+         * Server -> Client: 通知客户端生成子弹，客户端独立模拟运动
+         */
+        @ClientRpc
+        public void rpcSpawnBullet(float bx, float by, float bvx, float bvy, int ownerId) {
+            Bullet b = new Bullet();
+            b.x = bx; b.y = by;
+            b.vx = bvx; b.vy = bvy;
+            b.ownerId = ownerId;
+            // 简化处理：设定子弹颜色与坦克一致
+            b.color = color.getValue();
+            localBullets.add(b);
+        }
     }
 
     @Override
@@ -109,8 +128,11 @@ public class NetcodeTankSandboxScreen extends GScreen {
         b.vx = MathUtils.cos(rad) * 400;
         b.vy = MathUtils.sin(rad) * 400;
         b.ownerId = ownerId;
-        b.color = tank.color.getValue(); // Let bullet color match the tank color for clarity
+        b.color = tank.color.getValue();
         serverBullets.add(b);
+
+        // 通过 ClientRpc 通知客户端生成子弹（客户端独立模拟运动）
+        tank.sendClientRpc("rpcSpawnBullet", b.x, b.y, b.vx, b.vy, ownerId);
     }
 
     private void hitTank(TankBehaviour tank) {
@@ -216,13 +238,10 @@ public class NetcodeTankSandboxScreen extends GScreen {
         clientManager.tick();
 
         // 【Client Logic】由前面 tick() 执行的 NetBuffer 反序列化代替了手工打桩！！
-        
+        // 客户端子弹现在由 ClientRpc 触发生成，独立模拟运动
         clientBullets.clear();
-        for (Bullet b : serverBullets) {
-            Bullet cb = new Bullet();
-            cb.x = b.x; cb.y = b.y; cb.color = b.color;
-            clientBullets.add(cb);
-        }
+        updateAndCollectClientBullets(clientP1, delta);
+        updateAndCollectClientBullets(clientP2, delta);
 
         // ====== Rendering ======
         float halfW = Gdx.graphics.getWidth() / 2f;
@@ -237,6 +256,21 @@ public class NetcodeTankSandboxScreen extends GScreen {
         drawWorld(clientP1, clientP2, clientBullets, halfW);
 
         neon.end(); // END BATCH
+    }
+
+    private void updateAndCollectClientBullets(TankBehaviour tank, float delta) {
+        float halfW = Gdx.graphics.getWidth() / 2f;
+        Iterator<Bullet> iter = tank.localBullets.iterator();
+        while (iter.hasNext()) {
+            Bullet b = iter.next();
+            b.x += b.vx * delta;
+            b.y += b.vy * delta;
+            if (b.x < 0 || b.x > halfW || b.y < 0 || b.y > Gdx.graphics.getHeight()) {
+                iter.remove();
+                continue;
+            }
+            clientBullets.add(b);
+        }
     }
 
     private void drawWorld(TankBehaviour p1, TankBehaviour p2, List<Bullet> bullets, float offsetX) {

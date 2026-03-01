@@ -46,6 +46,10 @@ public class NetworkManager {
         int assignedId = nextNetworkId++;
         obj.setNetworkId(assignedId);
         networkObjects.put(assignedId, obj);
+        // 为所有 Behaviour 绑定 Manager 引用
+        for (NetworkBehaviour b : obj.getBehaviours()) {
+            b.setManager(this);
+        }
     }
 
     /**
@@ -68,6 +72,10 @@ public class NetworkManager {
         obj.setNetworkId(assignedId);
         obj.setPrefabId(prefabId);
         networkObjects.put(assignedId, obj);
+        // 为所有 Behaviour 绑定 Manager 引用
+        for (NetworkBehaviour b : obj.getBehaviours()) {
+            b.setManager(this);
+        }
 
         // 广播 SpawnPacket 给所有客户端
         byte[] spawnPacket = buildSpawnPacket(assignedId, prefabId);
@@ -156,9 +164,19 @@ public class NetworkManager {
             NetworkObject localObj = factory.create();
             localObj.setNetworkId(netId);
             localObj.setPrefabId(prefabId);
+            // 为所有 Behaviour 绑定 Manager 引用
+            for (NetworkBehaviour b : localObj.getBehaviours()) {
+                b.setManager(this);
+            }
             networkObjects.put(netId, localObj);
             
             System.out.println("[NetworkManager] Client 自动派生实体成功: netId=" + netId + ", prefabId=" + prefabId);
+            return;
+        }
+        
+        // RPC 包: ServerRpc(0x20) 或 ClientRpc(0x21)
+        if (packetType == 0x20 || packetType == 0x21) {
+            handleRpcPacket(inBuffer);
             return;
         }
         
@@ -189,6 +207,125 @@ public class NetworkManager {
         }
     }
     
+    /**
+     * 构建并发送 RPC 封包。
+     * 封包格式: [packetType(0x20/0x21)][netId][behaviourIndex][methodNameLength][methodNameBytes][argCount][arg1Type][arg1Value]...
+     * @param packetType 0x20=ServerRpc, 0x21=ClientRpc
+     */
+    public void sendRpcPacket(int packetType, int netId, int behaviourIndex, String methodName, Object... args) {
+        NetBuffer buffer = new NetBuffer();
+        buffer.writeInt(packetType);
+        buffer.writeInt(netId);
+        buffer.writeInt(behaviourIndex);
+        buffer.writeString(methodName);
+        
+        // 序列化参数
+        buffer.writeInt(args.length);
+        for (Object arg : args) {
+            serializeRpcArg(buffer, arg);
+        }
+        
+        byte[] payload = buffer.toByteArray();
+        
+        if (packetType == 0x20) {
+            // ServerRpc: Client -> Server
+            if (transport != null) {
+                transport.sendToServer(payload);
+            }
+        } else if (packetType == 0x21) {
+            // ClientRpc: Server -> Client
+            if (transport != null) {
+                transport.broadcast(payload);
+            }
+        }
+    }
+
+    /**
+     * 将单个 RPC 参数序列化到 buffer 中。
+     * 类型标记: 1=int, 2=float, 3=boolean, 4=String
+     */
+    private void serializeRpcArg(NetBuffer buffer, Object arg) {
+        if (arg instanceof Integer) {
+            buffer.writeInt(1);
+            buffer.writeInt((Integer) arg);
+        } else if (arg instanceof Float) {
+            buffer.writeInt(2);
+            buffer.writeFloat((Float) arg);
+        } else if (arg instanceof Boolean) {
+            buffer.writeInt(3);
+            buffer.writeBoolean((Boolean) arg);
+        } else if (arg instanceof String) {
+            buffer.writeInt(4);
+            buffer.writeString((String) arg);
+        } else {
+            throw new IllegalArgumentException("RPC 暂不支持此参数类型: " + (arg != null ? arg.getClass() : "null"));
+        }
+    }
+
+    /**
+     * 从 buffer 中反序列化单个 RPC 参数
+     */
+    private Object deserializeRpcArg(NetBuffer buffer) {
+        int typeTag = buffer.readInt();
+        switch (typeTag) {
+            case 1: return buffer.readInt();
+            case 2: return buffer.readFloat();
+            case 3: return buffer.readBoolean();
+            case 4: return buffer.readString();
+            default: throw new IllegalArgumentException("未知的 RPC 参数类型标记: " + typeTag);
+        }
+    }
+
+    /**
+     * 处理接收到的 RPC 封包，反射调用目标方法
+     */
+    private void handleRpcPacket(NetBuffer inBuffer) {
+        int netId = inBuffer.readInt();
+        int behaviourIndex = inBuffer.readInt();
+        String methodName = inBuffer.readString();
+        int argCount = inBuffer.readInt();
+        
+        Object[] args = new Object[argCount];
+        for (int i = 0; i < argCount; i++) {
+            args[i] = deserializeRpcArg(inBuffer);
+        }
+        
+        // 在本地找到对应的实体和行为组件
+        NetworkObject localObj = networkObjects.get(netId);
+        if (localObj == null) {
+            System.err.println("[NetworkManager] RPC 目标实体不存在: netId=" + netId);
+            return;
+        }
+        
+        java.util.List<NetworkBehaviour> behaviours = localObj.getBehaviours();
+        if (behaviourIndex < 0 || behaviourIndex >= behaviours.size()) {
+            System.err.println("[NetworkManager] RPC 目标行为组件索引越界: " + behaviourIndex);
+            return;
+        }
+        
+        NetworkBehaviour target = behaviours.get(behaviourIndex);
+        
+        // 通过反射找到并调用目标方法
+        try {
+            // 构建参数类型数组用于精确匹配方法
+            Class<?>[] paramTypes = new Class<?>[argCount];
+            for (int i = 0; i < argCount; i++) {
+                if (args[i] instanceof Integer) paramTypes[i] = int.class;
+                else if (args[i] instanceof Float) paramTypes[i] = float.class;
+                else if (args[i] instanceof Boolean) paramTypes[i] = boolean.class;
+                else if (args[i] instanceof String) paramTypes[i] = String.class;
+                else paramTypes[i] = args[i].getClass();
+            }
+            
+            java.lang.reflect.Method method = target.getClass().getDeclaredMethod(methodName, paramTypes);
+            method.setAccessible(true);
+            method.invoke(target, args);
+        } catch (Exception e) {
+            System.err.println("[NetworkManager] RPC 反射调用失败: " + methodName + " -> " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     public NetworkObject getNetworkObject(int id) {
         return networkObjects.get(id);
     }
