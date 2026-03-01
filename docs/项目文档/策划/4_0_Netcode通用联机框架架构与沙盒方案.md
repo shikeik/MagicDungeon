@@ -57,38 +57,77 @@
 
 ---
 
-## 4. 靶场设计：沙盒小游戏 (Netcode Sandbox)
+## 4. 靶场设计：2D俯视角坦克大战 (Netcode Sandbox)
 
-为了不受现有复杂代码（地牢生成、攻击计算、怪物AI等）的干扰，我们需要一个 **极简的靶场小游戏** 来验证这套框架。
+为了彻底隔绝业务逻辑与底层核心框架，我们绝对不能在魔法地牢里测试。需要在 `examples` 模块中开发一个名为 **"Netcode 坦克大战"** (NetTank) 的极简沙盒。
+**核心原则：在这个沙盒中，你只允许调用 `NetworkBehaviour` 提供的方法，严禁直接碰 Socket 和 Packet 组件！**
 
-*   **所在位置**：`examples` 模块中新建一个包 `com.goldsprite.examples.netcodesandbox`，和一个纯享版的入口 `SandboxGameScreen`。
-*   **视觉表现**：纯色方块/圆形（使用 ShapeRenderer 或 简单的白块贴图+染色）。
-*   **核心玩法与验证点**：
-    1.  **进出房间测验 (Spawn/Despawn)**
-        *   每个玩家加入时，服务器 `Spawn` 一个玩家方块赋予 `NetworkId`。
-        *   退出时，方块被立刻 `Despawn`。
-    2.  **移动同步测验 (NetworkVariable <Transform>)**
-        *   玩家 WASD 移动方块。通过 `NetworkVariable` 测试：位置插值平滑、Client Prediction 表现。
-    3.  **RPC 测验 (发射子弹与减血)**
-        *   鼠标点击：调用 `ServerRpc_FireBullet(x, y)`。
-        *   服务器生成一个子弹实体（也是 `NetworkObject` 并 `Spawn`）。
-        *   子弹触碰别人：服务器判定伤害，减少其 `NetworkVariable<Int> hp`，并触发 `ClientRpc_PlayExplosion()`。
+*   **所在位置**：`examples/src/com/goldsprite/examples/nettank/`
+*   **视觉表现**：抛弃传统 ShapeRenderer，直接使用引擎内置的 `NeonBatch` (GScreen自带实例) 绘制发光几何体。
+    *   🟦 蓝色发光方块 = 本地玩家 (`IsLocalPlayer == true`)
+    *   🟥 红色发光方块 = 网络其他玩家 (`IsLocalPlayer == false`)
+    *   🟡 黄色发光圆球 = 场景中自动按路线移动的NPC敌人
+    *   ⚪ 白色实心发光小圆 = 发射的子弹
+*   **核心测试用例映射表**：
+    1.  **进出房间测试 (NetworkPrefab & Spawn/Despawn)**
+        *   **逻辑**：Server 启动后分配 `NetworkId`，客户端连入后 Server 执行 `NetworkManager.Spawn(PlayerPrefab)`。
+        *   **验收**：A端掉线，B端能立刻看到对应方块消失，没有任何空指针和内存泄漏。
+    2.  **绝对服务端权威移动机制 (NetworkVariable<Vector2>)**
+        *   **逻辑**：玩家按下 W 键，不直接本地移动坐标，而是触发按键的状态发送（或者简单的 ClientPrediction）。我们优先实现 Server权威移动：Server 收到摇杆输入，修改 `NetworkVariable<Vector2> Position`，Client根据 `isDirty` 被动同步并**平滑插值 (Interpolation)** 移动。
+        *   **验收**：在 200ms Ping 的模拟延迟下，方块仍能平滑移动而不是鬼畜闪现。
+    3.  **瞬时事件与特效同步 (RPC 系统)**
+        *   **逻辑**：点击鼠标，调用 `@ServerRpc requestFire()`。服务器计算冷却，若合法则 `Spawn` 一个子弹实体（具有物理碰撞）。子弹碰到墙壁后，调用 `@ClientRpc playExplosionFX(x, y)` 让所有客户端在本地绘制爆炸粒子。
+        *   **验收**：业务层代码像调用普通方法一样，感知不到网络包的存在。
+    4.  **状态同步系统与生命周期测试 (NetworkVariable<Integer> / <String>)**
+        *   **逻辑**：方块上方显示名字与血量（如 `Player1 [100/100]`）。受到攻击时，仅 Server 扣血。`m_health` 发生变化自动下发。
+        *   **重生机制**：当血量降为 0 时，触发死亡逻辑，Server 设置该对象为隐藏状态，开始 3秒 倒计时，倒计时结束后重新在随机出生点 Spawn 并恢复状态。
+        *   **验收**：无需写任何更新血量的网络协议，只要值改变，所有客户端UI自动刷新，并能正确处理死亡倒计时重生表现。
 
 ---
 
-## 5. 开发里程碑与 Iteration 计划
+## 5. 质量保证体系 (测试驱动开发战略)
 
-*   **Iteration 1: 基础设施架设**
-    *   搭建 `GDNetcode` 模块（独立于魔法地牢的具体业务）。
-    *   实现 `NetworkManager` 对 `TestNetty` Server/Client 的封装。
-    *   创建 `SandboxLobbyScreen` ，跑通双端建立连接的基层通讯。
-*   **Iteration 2: 实体与生成机制**
-    *   实现 `NetworkObject` 和全局 ID 生成器。
-    *   实现服务端的 `Spawn` 并把状态推给刚加入的 Client。
-    *   在靶场中测试玩家实体的出现和消失。
-*   **Iteration 3: 状态与动作同步**
-    *   实现 `NetworkVariable` 接口及其泛型打包。
-    *   在靶场中验证玩家方块的基础移动。
-    *   实现基础的 `ServerRpc` 与 `ClientRpc`。
-*   **Iteration 4: 框架回迁**
-    *   靶场完全跑通后，将 `MagicDungeon2` 的复杂战局基于 `GDNetcode` 进行一次降维打击式的重构。
+抛弃以前 "出了Bug才靠断点打Log来猜" 的模式。这套核心通用框架必须有 **严密的单元测试和自动化测试** 支撑，保证底层磐石般坚固。
+
+整个质量保证分为三层金字塔：
+
+### ① 纯业务无关测试 (Headless JUnit 单元测试)
+对于底层序列化、连接管理，完全不需要 LibGDX 引擎启动。在项目的 `tests/` 目录中：
+*   **`NetworkVariableTest.java`**: 
+    测试脏标记机制，在模拟的内存流中序列化 `NetworkVariable<Integer>`，修改其值，断言其序列化前后的值与 `isDirty` 状态是否严格一致。
+*   **`RpcMethodReflectionTest.java`**: 
+    测试方法上的 `@ServerRpc` 拦截机制。断言通过反射能否正确提取方法签名和参数类型列表。
+*   **`LocalTransportTest.java`**: 
+    抛弃物理网卡，写一个 `MemoryTransport` 存放于内存中的收发队列，用于模拟瞬间极高兵量的压测和丢包模拟。
+
+### ② 依赖引擎环境测试 (GdxTestRunner)
+需要 `Vector2`, `Entity`, `Lifecycle` 的集成测试。
+*   **`NetObjectSpawnTest.java`**: 
+    使用 GdxTestRunner。启动一个本地 Server 实例和两个本地 Client 实例。Server 端执行 `Spawn()`，并 Assert Client1, Client2 中的 `EntityManager` 是否在接下来几帧内正确反序列化并生成了该实体的镜像对象。
+
+### ③ 暴力压力测试 (AutoTest Bot 自动化集群)
+在开发到 Iteration 3 之后，我们需要提供极其暴力的回归测试来验证其真正可用：
+*   **`HeadlessBotClient.java`**: 
+    编写一个脱离UI渲染的纯算力僵尸客户端。
+*   **混沌猴子测试 (Chaos Monkey bot tests)**: 
+    启动 1 个服务器，同时在后台用多线程启动 50 个 `HeadlessBotClient`，每个 Bot 每秒随机向四面八方疯狂移动、疯狂发射 `@ServerRpc` 的射击请求，并在期间随机执行 Socket 断开连接（模拟杀进程拔网线）。
+*   **断言目标**：
+    持续运行 10 分钟。服务器**必须不能卡死、不能抛出非受检异常、不报 ConcurrentModificationException，内存不泄露**。如果不满足，框架不准合并到 `main` 分支。
+
+---
+
+## 6. 开发里程碑与 Iteration 计划
+
+*   **Iteration 1: 基建与单元测试架设**
+    *   搭建 `gdengine-netcode` 模块（完全独立）。搭建 `tests` 测试用例池。
+    *   搭建 `NetTank` 靶场空壳。实现 Headless 环境下 Server/Client 互通。
+*   **Iteration 2: 实体生成与管理 (Spawn/Despawn + GdxTestRunner)**
+    *   实现全局 `NetworkObjectId` 生成系统，通过集成测试验证 Client 可复制 Server 实体。
+*   **Iteration 3: 核心同步三板斧 (状态与过程同步)**
+    *   引入 `NetworkVariable<T>` 及自动打包。
+    *   使用注解（或硬编码映射字典）跑通 `ServerRpc` / `ClientRpc`。
+    *   靶场能愉快地看到子弹互射和血量同步。
+*   **Iteration 4: 上混沌猴子压测与防抖调雷**
+    *   写 BotClient 并发压测，消灭所有并发锁和网络时序问题。
+*   **Iteration 5: 回归与降维打击**
+    *   靶场毕业后，重构魔法地牢的庞杂通信问题。
