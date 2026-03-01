@@ -27,9 +27,15 @@ public class TankSandboxUtils {
         };
     }
 
-    /** 在 Server 端生成一颗子弹并通过 ClientRpc 广播给客户端 */
+    /** 在 Server 端生成一颗子弹并通过 ClientRpc 广播给客户端（无 bulletId 版，向后兼容旧沙盒） */
     public static void spawnBullet(TankBehaviour tank, int ownerId, List<Bullet> serverBullets) {
+        spawnBullet(tank, ownerId, serverBullets, 0);
+    }
+
+    /** 在 Server 端生成一颗子弹并通过 ClientRpc 广播给客户端 */
+    public static void spawnBullet(TankBehaviour tank, int ownerId, List<Bullet> serverBullets, int bulletId) {
         Bullet b = new Bullet();
+        b.bulletId = bulletId;
         float rad = tank.rot.getValue() * MathUtils.degreesToRadians;
         b.x = tank.x.getValue() + MathUtils.cos(rad) * 20;
         b.y = tank.y.getValue() + MathUtils.sin(rad) * 20;
@@ -38,7 +44,7 @@ public class TankSandboxUtils {
         b.ownerId = ownerId;
         b.color = tank.color.getValue();
         serverBullets.add(b);
-        tank.sendClientRpc("rpcSpawnBullet", b.x, b.y, b.vx, b.vy, ownerId);
+        tank.sendClientRpc("rpcSpawnBullet", b.x, b.y, b.vx, b.vy, ownerId, bulletId);
     }
 
     /** Server 端扣血逻辑 */

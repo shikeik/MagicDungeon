@@ -63,6 +63,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
     private final Map<Integer, TankBehaviour> clientTanks = new HashMap<>();
     /** Server 端: 所有活跃子弹（Server 权威） */
     private final List<Bullet> serverBullets = new ArrayList<>();
+    /** Server 端: 子弹自增ID */
+    private int nextBulletId = 1;
 
     // ── 游戏对象 (Client 端维护) ──────
     /** Client 端: 从 ClientRpc 收集的子弹 */
@@ -86,6 +88,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
     @Override
     public void render(float delta) {
         super.render(delta);
+
+        // 应用 UI 视口，确保 resize 后坐标系正确
+        uiViewport.apply();
 
         switch (state) {
             case CONFIG:
@@ -221,12 +226,24 @@ public class NetcodeTankOnlineScreen extends GScreen {
             updateHostTankInput(hostTank, delta, speed);
         }
 
-        // 处理所有远程坦克的 pendingFire 标记
+        // 处理所有远程坦克的 pendingMove + pendingFire
         for (Map.Entry<Integer, TankBehaviour> entry : clientTanks.entrySet()) {
             TankBehaviour tank = entry.getValue();
             int ownerId = entry.getKey();
+
+            // Server 权威驱动远程坦克移动（消费 pendingMove）
+            if (ownerId >= 0 && !tank.isDead.getValue()) {
+                float mx = tank.pendingMoveX;
+                float my = tank.pendingMoveY;
+                if (mx != 0 || my != 0) {
+                    tank.x.setValue(tank.x.getValue() + mx * speed);
+                    tank.y.setValue(tank.y.getValue() + my * speed);
+                    tank.rot.setValue(new Vector2(mx, my).angleDeg());
+                }
+            }
+
             if (tank.pendingFire && !tank.isDead.getValue()) {
-                TankSandboxUtils.spawnBullet(tank, ownerId, serverBullets);
+                TankSandboxUtils.spawnBullet(tank, ownerId, serverBullets, nextBulletId++);
                 tank.pendingFire = false;
             }
             // 死亡倒计时
@@ -262,14 +279,14 @@ public class NetcodeTankOnlineScreen extends GScreen {
             tank.rot.setValue(new Vector2(dx, dy).angleDeg());
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
-            TankSandboxUtils.spawnBullet(tank, -1, serverBullets);
+            TankSandboxUtils.spawnBullet(tank, -1, serverBullets, nextBulletId++);
         }
     }
 
     /** Server 子弹物理 + 泛化碰撞检测（支持 N 辆坦克） */
     private void updateServerBullets(float delta) {
-        float screenW = Gdx.graphics.getWidth();
-        float screenH = Gdx.graphics.getHeight();
+        float screenW = uiViewport.getWorldWidth();
+        float screenH = uiViewport.getWorldHeight();
         Iterator<Bullet> iter = serverBullets.iterator();
         while (iter.hasNext()) {
             Bullet b = iter.next();
@@ -292,6 +309,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 double dist = Math.hypot(b.x - tank.x.getValue(), b.y - tank.y.getValue());
                 if (dist < 20) {
                     TankSandboxUtils.hitTank(tank);
+                    // 通知所有客户端销毁该子弹
+                    tank.sendClientRpc("rpcDestroyBullet", b.bulletId);
                     hit = true;
                     break;
                 }
@@ -339,8 +358,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
     /** 收集由 ClientRpc 触发的子弹，模拟运动 */
     private void updateClientBullets(float delta) {
         clientBullets.clear();
-        float screenW = Gdx.graphics.getWidth();
-        float screenH = Gdx.graphics.getHeight();
+        float screenW = uiViewport.getWorldWidth();
+        float screenH = uiViewport.getWorldHeight();
 
         for (NetworkObject obj : manager.getAllNetworkObjects()) {
             if (obj.getBehaviours().isEmpty()) continue;
@@ -361,12 +380,16 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     // ══════════════ 连接事件 ══════════════
 
-    /** Server 端: 新 Client 连入时，先补发已有实体，再 Spawn 新坦克 */
+    /** Server 端: 新 Client 连入时，先补发已有实体+状态，再 Spawn 新坦克 */
     private void onNewClientConnected(int clientId) {
-        // 先向新客户端补发所有已存在的 NetworkObject（包括 Host 坦克和其他客户端的坦克）
+        // 1. 先向新客户端补发所有已存在的 NetworkObject 的 SpawnPacket
         manager.sendExistingSpawnsToClient(clientId);
-        // 再为新客户端 Spawn 自己的坦克（会广播 SpawnPacket 给所有客户端）
+        // 2. 补发已有实体的全量状态快照（位置、颜色、HP 等）
+        manager.sendFullStateToClient(clientId);
+        // 3. 为新客户端 Spawn 自己的坦克（会广播 SpawnPacket 给所有客户端）
         spawnTankForOwner(clientId);
+        // 4. 再次发送全量状态（确保新坦克的初始数据也同步给该客户端）
+        manager.sendFullStateToClient(clientId);
         System.out.println("[Online] Client #" + clientId + " 已连接，Spawn 坦克");
     }
 
@@ -403,9 +426,10 @@ public class NetcodeTankOnlineScreen extends GScreen {
     // ══════════════ 渲染 ══════════════
 
     private void renderConfig() {
+        neon.setProjectionMatrix(uiViewport.getCamera().combined);
         neon.begin();
-        float cx = Gdx.graphics.getWidth() / 2f - 160;
-        float cy = Gdx.graphics.getHeight() / 2f + 80;
+        float cx = uiViewport.getWorldWidth() / 2f - 160;
+        float cy = uiViewport.getWorldHeight() / 2f + 80;
 
         titleFont.setColor(Color.WHITE);
         titleFont.draw(neon, "Netcode 坦克联机对战", cx + 30, cy + 20);
@@ -443,10 +467,11 @@ public class NetcodeTankOnlineScreen extends GScreen {
     }
 
     private void renderWaiting() {
+        neon.setProjectionMatrix(uiViewport.getCamera().combined);
         neon.begin();
         font.setColor(Color.YELLOW);
-        float cx = Gdx.graphics.getWidth() / 2f - 120;
-        float cy = Gdx.graphics.getHeight() / 2f;
+        float cx = uiViewport.getWorldWidth() / 2f - 120;
+        float cy = uiViewport.getWorldHeight() / 2f;
 
         if (isServerRole) {
             font.draw(neon, "Server 等待客户端连接...", cx, cy + 20);
@@ -461,6 +486,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
     }
 
     private void renderPlaying() {
+        neon.setProjectionMatrix(uiViewport.getCamera().combined);
         neon.begin();
 
         if (isServerRole) {
@@ -473,9 +499,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
             font.setColor(Color.YELLOW);
             font.draw(neon, "Server (Port:" + configPort + ")  坦克数:" + clientTanks.size()
                 + "  远程客户端:" + transport.getClientCount(),
-                10, Gdx.graphics.getHeight() - 10);
+                10, uiViewport.getWorldHeight() - 10);
             font.draw(neon, "Host: WASD + J  |  远程客户端通过 ServerRpc 操控",
-                10, Gdx.graphics.getHeight() - 30);
+                10, uiViewport.getWorldHeight() - 30);
         } else {
             // ── Client 渲染 ──
             for (NetworkObject obj : manager.getAllNetworkObjects()) {
@@ -491,9 +517,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
             font.draw(neon, "Client -> " + configIp + ":" + configPort
                 + "  实体数:" + manager.getNetworkObjectCount()
                 + "  myId:" + manager.getLocalClientId(),
-                10, Gdx.graphics.getHeight() - 10);
+                10, uiViewport.getWorldHeight() - 10);
             font.draw(neon, myTank != null ? "WASD/方向键 移动 + J/Enter 开火" : "等待分配坦克...",
-                10, Gdx.graphics.getHeight() - 30);
+                10, uiViewport.getWorldHeight() - 30);
         }
 
         neon.end();

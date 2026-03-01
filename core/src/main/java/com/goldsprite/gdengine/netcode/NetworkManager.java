@@ -418,6 +418,40 @@ public class NetworkManager {
         System.out.println("[NetworkManager] 向 Client #" + clientId + " 补发 " + networkObjects.size() + " 个已有实体的 SpawnPacket");
     }
 
+    /**
+     * 向指定客户端发送所有已有实体的全量状态快照。
+     * 确保新加入的 Client 能看到正确的位置、颜色、HP 等。
+     */
+    public void sendFullStateToClient(int clientId) {
+        if (transport == null || !transport.isServer()) return;
+        for (Map.Entry<Integer, NetworkObject> entry : networkObjects.entrySet()) {
+            NetworkObject obj = entry.getValue();
+            byte[] payload = serializeFullObjectState(entry.getKey(), obj);
+            transport.sendToClient(clientId, payload);
+        }
+        System.out.println("[NetworkManager] 向 Client #" + clientId + " 发送 " + networkObjects.size() + " 个实体的全量状态快照");
+    }
+
+    /**
+     * 将对象的所有变量全量序列化（不仅是脏变量），用于新客户端状态补发。
+     */
+    private byte[] serializeFullObjectState(int networkId, NetworkObject obj) {
+        NetBuffer buffer = new NetBuffer();
+        buffer.writeInt(0x10); // StatusSync
+        buffer.writeInt(networkId);
+
+        java.util.List<NetworkVariable<?>> vars = obj.getNetworkVariables();
+        int totalCount = vars.size();
+        buffer.writeInt(totalCount);
+
+        for (int i = 0; i < totalCount; i++) {
+            buffer.writeInt(i);
+            vars.get(i).serialize(buffer);
+        }
+
+        return buffer.toByteArray();
+    }
+
     public NetworkObject getNetworkObject(int id) {
         return networkObjects.get(id);
     }

@@ -25,24 +25,22 @@ public class TankBehaviour extends NetworkBehaviour {
     /** 客户端本地子弹列表（由 ClientRpc 触发生成） */
     public transient List<Bullet> localBullets = new ArrayList<>();
 
+    /** Server 端暂存的移动方向（由 rpcMoveInput 写入，由 Server update 消费） */
+    public transient float pendingMoveX = 0f;
+    public transient float pendingMoveY = 0f;
+
     // ==================== ServerRpc: Client → Server 上报输入 ====================
 
     /**
      * Client → Server: 上报移动输入（归一化方向）。
-     * Server 收到后直接修改坦克位置和朝向。
+     * Server 收到后仅存储方向，实际位移由 Server update 统一驱动。
      * @param dx 水平方向 (-1/0/1)
      * @param dy 垂直方向 (-1/0/1)
      */
     @ServerRpc
     public void rpcMoveInput(float dx, float dy) {
-        if (isDead.getValue()) return;
-        float speed = 200f;
-        float dt = 1f / 60f; // 固定 tick 步长
-        x.setValue(x.getValue() + dx * speed * dt);
-        y.setValue(y.getValue() + dy * speed * dt);
-        if (dx != 0 || dy != 0) {
-            rot.setValue((float) Math.toDegrees(Math.atan2(dy, dx)));
-        }
+        pendingMoveX = dx;
+        pendingMoveY = dy;
     }
 
     /**
@@ -63,12 +61,21 @@ public class TankBehaviour extends NetworkBehaviour {
      * Server -> Client: 通知客户端生成子弹，客户端独立模拟运动
      */
     @ClientRpc
-    public void rpcSpawnBullet(float bx, float by, float bvx, float bvy, int ownerId) {
+    public void rpcSpawnBullet(float bx, float by, float bvx, float bvy, int ownerId, int bulletId) {
         Bullet b = new Bullet();
+        b.bulletId = bulletId;
         b.x = bx; b.y = by;
         b.vx = bvx; b.vy = bvy;
         b.ownerId = ownerId;
         b.color = color.getValue();
         localBullets.add(b);
+    }
+
+    /**
+     * Server -> Client: 通知客户端销毁指定子弹（命中时）
+     */
+    @ClientRpc
+    public void rpcDestroyBullet(int bulletId) {
+        localBullets.removeIf(b -> b.bulletId == bulletId);
     }
 }
