@@ -19,6 +19,7 @@ public class NetworkManagerTest {
         @Override public void disconnect() {}
         @Override public void sendToClient(int clientId, byte[] payload) {}
         @Override public void sendToServer(byte[] payload) {}
+        @Override public void setReceiveCallback(TransportReceiveCallback callback) {}
         
         @Override
         public void broadcast(byte[] payload) {

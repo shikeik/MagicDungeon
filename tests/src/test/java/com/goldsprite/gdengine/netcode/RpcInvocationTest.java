@@ -52,12 +52,10 @@ public class RpcInvocationTest {
         // 搭建双端
         NetworkManager serverManager = new NetworkManager();
         LocalMemoryTransport serverTransport = new LocalMemoryTransport(true);
-        serverTransport.setManager(serverManager);
         serverManager.setTransport(serverTransport);
 
         NetworkManager clientManager = new NetworkManager();
         LocalMemoryTransport clientTransport = new LocalMemoryTransport(false);
-        clientTransport.setManager(clientManager);
         clientManager.setTransport(clientTransport);
 
         serverTransport.connectToPeer(clientTransport);
@@ -102,12 +100,10 @@ public class RpcInvocationTest {
         // 搭建双端
         NetworkManager serverManager = new NetworkManager();
         LocalMemoryTransport serverTransport = new LocalMemoryTransport(true);
-        serverTransport.setManager(serverManager);
         serverManager.setTransport(serverTransport);
 
         NetworkManager clientManager = new NetworkManager();
         LocalMemoryTransport clientTransport = new LocalMemoryTransport(false);
-        clientTransport.setManager(clientManager);
         clientManager.setTransport(clientTransport);
 
         serverTransport.connectToPeer(clientTransport);
@@ -155,12 +151,10 @@ public class RpcInvocationTest {
         // 内联一个多参数 Behaviour
         NetworkManager serverManager = new NetworkManager();
         LocalMemoryTransport serverTransport = new LocalMemoryTransport(true);
-        serverTransport.setManager(serverManager);
         serverManager.setTransport(serverTransport);
 
         NetworkManager clientManager = new NetworkManager();
         LocalMemoryTransport clientTransport = new LocalMemoryTransport(false);
-        clientTransport.setManager(clientManager);
         clientManager.setTransport(clientTransport);
 
         serverTransport.connectToPeer(clientTransport);

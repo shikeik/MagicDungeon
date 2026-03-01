@@ -23,6 +23,8 @@ public class NetworkManager {
 
     public void setTransport(Transport transport) {
         this.transport = transport;
+        // 自动注册数据接收回调，无需手动 transport.setManager()
+        transport.setReceiveCallback(this::onReceiveData);
     }
 
     public Transport getTransport() {

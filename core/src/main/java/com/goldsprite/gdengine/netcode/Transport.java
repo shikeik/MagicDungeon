@@ -12,4 +12,10 @@ public interface Transport {
     boolean isServer();
     // 返回是否是客户端
     boolean isClient();
+    
+    /**
+     * 设置数据接收回调。传输层收到网络数据后，通过此回调推送给上层。
+     * 由 NetworkManager.setTransport() 自动调用，无需手动接线。
+     */
+    void setReceiveCallback(TransportReceiveCallback callback);
 }

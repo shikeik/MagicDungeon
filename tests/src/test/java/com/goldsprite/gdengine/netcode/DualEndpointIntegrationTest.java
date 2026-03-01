@@ -20,13 +20,11 @@ public class DualEndpointIntegrationTest {
         // ------------- 1. 搭建 Server -------------
         NetworkManager serverManager = new NetworkManager();
         LocalMemoryTransport serverTransport = new LocalMemoryTransport(true);
-        serverTransport.setManager(serverManager);
         serverManager.setTransport(serverTransport);
 
         // ------------- 2. 搭建 Client -------------
         NetworkManager clientManager = new NetworkManager();
         LocalMemoryTransport clientTransport = new LocalMemoryTransport(false);
-        clientTransport.setManager(clientManager);
         clientManager.setTransport(clientTransport);
 
         serverTransport.connectToPeer(clientTransport);

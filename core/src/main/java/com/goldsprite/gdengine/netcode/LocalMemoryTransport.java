@@ -12,15 +12,16 @@ public class LocalMemoryTransport implements Transport {
     // 自认身份
     private boolean isServerIdentity;
     
-    // 用于对接上级的网络管理器
-    private NetworkManager manager;
+    // 统一的数据接收回调（由 NetworkManager.setTransport() 自动注册）
+    private TransportReceiveCallback receiveCallback;
     
     // 调试统计用
     public int bytesSent = 0;
     public int messagesReceived = 0;
 
-    public void setManager(NetworkManager manager) {
-        this.manager = manager;
+    @Override
+    public void setReceiveCallback(TransportReceiveCallback callback) {
+        this.receiveCallback = callback;
     }
 
     public void connectToPeer(LocalMemoryTransport peer) {
@@ -91,8 +92,8 @@ public class LocalMemoryTransport implements Transport {
      */
     public void receiveData(byte[] payload) {
         messagesReceived++;
-        if (manager != null) {
-            manager.onReceiveData(payload);
+        if (receiveCallback != null) {
+            receiveCallback.onReceiveData(payload);
         }
     }
 }

@@ -18,6 +18,8 @@ import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.NetworkObject;
 import com.goldsprite.gdengine.netcode.NetworkPrefabFactory;
 import com.goldsprite.gdengine.netcode.NetworkVariable;
+import com.goldsprite.gdengine.netcode.Transport;
+import com.goldsprite.gdengine.netcode.UdpSocketTransport;
 import com.goldsprite.gdengine.screens.GScreen;
 
 public class NetcodeTankSandboxScreen extends GScreen {
@@ -26,10 +28,18 @@ public class NetcodeTankSandboxScreen extends GScreen {
     private BitmapFont font;
 
     // ============== 网络层基础设施 ==============
+    /**
+     * 传输层切换开关：
+     * false = LocalMemoryTransport（进程内内存直传，同步、确定性，适合单机调试）
+     * true  = UdpSocketTransport（真实 UDP Socket 回环，异步、有延迟，模拟真实网络环境）
+     */
+    private static final boolean USE_UDP = false;
+    private static final int UDP_PORT = 19100;
+
     private NetworkManager serverManager;
     private NetworkManager clientManager;
-    private LocalMemoryTransport serverTransport;
-    private LocalMemoryTransport clientTransport;
+    private Transport serverTransport;
+    private Transport clientTransport;
 
     // 实例
     private TankBehaviour serverP1;
@@ -82,14 +92,29 @@ public class NetcodeTankSandboxScreen extends GScreen {
 
         serverManager = new NetworkManager();
         clientManager = new NetworkManager();
-        serverTransport = new LocalMemoryTransport(true);
-        clientTransport = new LocalMemoryTransport(false);
 
-        serverTransport.setManager(serverManager);
-        clientTransport.setManager(clientManager);
-        serverManager.setTransport(serverTransport);
-        clientManager.setTransport(clientTransport);
-        serverTransport.connectToPeer(clientTransport);
+        if (USE_UDP) {
+            // 真实 UDP 传输层（本机回环）
+            UdpSocketTransport udpServer = new UdpSocketTransport(true);
+            UdpSocketTransport udpClient = new UdpSocketTransport(false);
+            serverTransport = udpServer;
+            clientTransport = udpClient;
+            serverManager.setTransport(serverTransport);
+            clientManager.setTransport(clientTransport);
+            udpServer.startServer(UDP_PORT);
+            udpClient.connect("127.0.0.1", UDP_PORT);
+            // 等待握手完成
+            try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+        } else {
+            // 进程内内存传输层（同步、确定性）
+            LocalMemoryTransport memServer = new LocalMemoryTransport(true);
+            LocalMemoryTransport memClient = new LocalMemoryTransport(false);
+            serverTransport = memServer;
+            clientTransport = memClient;
+            serverManager.setTransport(serverTransport);
+            clientManager.setTransport(clientTransport);
+            memServer.connectToPeer(memClient);
+        }
 
         // 双端注册坦克预制体工厂
         int TANK_PREFAB_ID = 1;
@@ -255,6 +280,13 @@ public class NetcodeTankSandboxScreen extends GScreen {
         // 右半屏：代表 Client 端的世界线 (offsetX=halfW)
         drawWorld(clientP1, clientP2, clientBullets, halfW);
 
+        // HUD：显示传输层模式
+        font.setColor(Color.YELLOW);
+        String transportMode = USE_UDP ? "Transport: UDP Socket (127.0.0.1:" + UDP_PORT + ")" : "Transport: LocalMemory (进程内直传)";
+        font.draw(neon, transportMode, 10, Gdx.graphics.getHeight() - 10);
+        font.draw(neon, "SERVER", halfW * 0.4f, Gdx.graphics.getHeight() - 30);
+        font.draw(neon, "CLIENT", halfW + halfW * 0.4f, Gdx.graphics.getHeight() - 30);
+
         neon.end(); // END BATCH
     }
 
@@ -319,6 +351,7 @@ public class NetcodeTankSandboxScreen extends GScreen {
         super.dispose();
         if (neon != null) neon.dispose();
         if (font != null) font.dispose();
-        serverTransport.disconnect();
+        if (serverTransport != null) serverTransport.disconnect();
+        if (clientTransport != null) clientTransport.disconnect();
     }
 }
