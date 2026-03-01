@@ -62,10 +62,11 @@ public class NetcodeUdpServerScreen extends GScreen {
         manager = new NetworkManager();
         transport = new UdpSocketTransport(true);
         manager.setTransport(transport);
-        transport.startServer(PORT);
 
-        // 注册坦克预制体工厂
+        // 必须在 startServer 之前注册，否则收包线程可能先于工厂处理 SpawnPacket
         manager.registerPrefab(TankSandboxUtils.TANK_PREFAB_ID, TankSandboxUtils.createTankFactory());
+
+        transport.startServer(PORT);
     }
 
     @Override

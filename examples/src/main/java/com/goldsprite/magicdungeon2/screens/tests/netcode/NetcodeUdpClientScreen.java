@@ -61,10 +61,11 @@ public class NetcodeUdpClientScreen extends GScreen {
         manager = new NetworkManager();
         transport = new UdpSocketTransport(false);
         manager.setTransport(transport);
-        transport.connect(SERVER_IP, SERVER_PORT);
 
-        // 注册坦克预制体工厂（Client 端必须与 Server 端一致，否则无法反序列化 SpawnPacket）
+        // 必须在 connect 之前注册，否则 UDP 收包线程收到 SpawnPacket 时工厂尚未就绪
         manager.registerPrefab(TankSandboxUtils.TANK_PREFAB_ID, TankSandboxUtils.createTankFactory());
+
+        transport.connect(SERVER_IP, SERVER_PORT);
     }
 
     @Override
