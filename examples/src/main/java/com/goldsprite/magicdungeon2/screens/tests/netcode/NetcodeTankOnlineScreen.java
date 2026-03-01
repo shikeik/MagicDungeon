@@ -48,6 +48,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
     // ── 状态机 ───────
     private enum State { CONFIG, WAITING, PLAYING }
     private State state = State.CONFIG;
+    /** 配置阶段的错误提示（端口占用等） */
+    private String configError = null;
 
     // ── 渲染 ─────────
     private NeonBatch neon;
@@ -193,33 +195,46 @@ public class NetcodeTankOnlineScreen extends GScreen {
         manager.setTransport(transport);
         manager.registerPrefab(TankSandboxUtils.TANK_PREFAB_ID, TankSandboxUtils.createTankFactory());
 
-        if (isServerRole) {
-            // Server 模式：设置连接/断开监听
-            manager.setConnectionListener(new com.goldsprite.gdengine.netcode.NetworkConnectionListener() {
-                @Override
-                public void onClientConnected(int clientId) {
-                    // 在主线程安全队列中标记（UDP 回调在 IO 线程）
-                    Gdx.app.postRunnable(() -> onNewClientConnected(clientId));
-                }
+        try {
+            if (isServerRole) {
+                // Server 模式：设置连接/断开监听
+                manager.setConnectionListener(new com.goldsprite.gdengine.netcode.NetworkConnectionListener() {
+                    @Override
+                    public void onClientConnected(int clientId) {
+                        Gdx.app.postRunnable(() -> onNewClientConnected(clientId));
+                    }
 
-                @Override
-                public void onClientDisconnected(int clientId) {
-                    // NetworkManager 已自动 despawn 实体，这里清理游戏层映射
-                    Gdx.app.postRunnable(() -> onClientDisconnected(clientId));
-                }
-            });
-            transport.startServer(configPort);
+                    @Override
+                    public void onClientDisconnected(int clientId) {
+                        // tick() 中已在主线程执行，直接清理游戏层映射
+                        onClientDisconnectedHandler(clientId);
+                    }
+                });
+                transport.startServer(configPort);
 
-            // Server 自身也产一辆坦克（Host 模式: ownerClientId = -1）
-            spawnTankForOwner(-1);
+                // Server 自身也产一辆坦克（Host 模式: ownerClientId = -1）
+                spawnTankForOwner(-1);
 
-            state = State.WAITING;
-            System.out.println("[Online] Server 启动，监听端口: " + configPort);
-        } else {
-            // Client 模式
-            transport.connect(configIp, configPort);
-            state = State.WAITING;
-            System.out.println("[Online] Client 连接中: " + configIp + ":" + configPort);
+                state = State.WAITING;
+                configError = null;
+                System.out.println("[Online] Server 启动，监听端口: " + configPort);
+            } else {
+                // Client 模式
+                transport.connect(configIp, configPort);
+                state = State.WAITING;
+                configError = null;
+                System.out.println("[Online] Client 连接中: " + configIp + ":" + configPort);
+            }
+        } catch (Exception e) {
+            // 端口占用或其他网络错误，优雅回退到配置界面
+            configError = e.getMessage();
+            System.err.println("[Online] 网络启动失败: " + e.getMessage());
+            // 清理已初始化的资源
+            if (transport != null) {
+                try { transport.disconnect(); } catch (Exception ignored) {}
+                transport = null;
+            }
+            manager = null;
         }
     }
 
@@ -434,8 +449,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
         System.out.println("[Online] Client #" + clientId + " 已连接，Spawn 坦克");
     }
 
-    /** Server 端: Client 断开时，清理游戏层映射 */
-    private void onClientDisconnected(int clientId) {
+    /** Server 端: Client 断开时，清理游戏层映射（已在主线程 tick() 中调用） */
+    private void onClientDisconnectedHandler(int clientId) {
         clientTanks.remove(clientId);
         System.out.println("[Online] Client #" + clientId + " 已断开，移除坦克。剩余坦克: " + clientTanks.size());
     }
@@ -483,6 +498,12 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
         font.setColor(Color.GRAY);
         font.draw(neon, "[Tab] 切换角色    [1] 编辑IP    [2] 编辑端口    [Enter] 开始", cx - 30, cy - 10);
+
+        // 错误提示
+        if (configError != null) {
+            font.setColor(Color.RED);
+            font.draw(neon, "✖ " + configError, cx - 30, cy - 30);
+        }
 
         // 角色选择
         float y1 = cy - 50;

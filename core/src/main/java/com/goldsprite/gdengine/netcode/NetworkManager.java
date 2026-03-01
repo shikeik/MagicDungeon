@@ -2,6 +2,7 @@ package com.goldsprite.gdengine.netcode;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 网络层管理器，负责统筹所有的 NetworkObject 生命周期（Spawn / Despawn），
@@ -24,6 +25,9 @@ public class NetworkManager {
     // 游戏层连接事件监听器
     private NetworkConnectionListener connectionListener;
 
+    // 待处理的断开事件队列（IO 线程写入，主线程 tick() 中消费，线程安全）
+    private final CopyOnWriteArrayList<Integer> pendingDisconnects = new CopyOnWriteArrayList<>();
+
     public void setTransport(Transport transport) {
         this.transport = transport;
         // 自动注册数据接收回调，无需手动 transport.setManager()
@@ -45,14 +49,8 @@ public class NetworkManager {
 
             @Override
             public void onClientDisconnected(int clientId) {
-                // Server 端：自动 Despawn 该客户端拥有的所有实体
-                if (transport.isServer()) {
-                    despawnByOwner(clientId);
-                }
-                // 转发给游戏层监听器
-                if (connectionListener != null) {
-                    connectionListener.onClientDisconnected(clientId);
-                }
+                // IO 线程回调，不直接操作 networkObjects，改为入队列，由主线程 tick() 统一处理
+                pendingDisconnects.add(clientId);
             }
         });
     }
@@ -202,6 +200,15 @@ public class NetworkManager {
      */
     public void tick() {
         if (transport == null || !transport.isServer()) return;
+
+        // === 处理待处理的断开事件（主线程安全） ===
+        while (!pendingDisconnects.isEmpty()) {
+            int clientId = pendingDisconnects.remove(0);
+            despawnByOwner(clientId);
+            if (connectionListener != null) {
+                connectionListener.onClientDisconnected(clientId);
+            }
+        }
 
         for (Map.Entry<Integer, NetworkObject> entry : networkObjects.entrySet()) {
             NetworkObject obj = entry.getValue();
