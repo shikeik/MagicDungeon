@@ -51,8 +51,8 @@ public class GameEntity {
 
 		// 初始化 StatData 并反推 equipFixed，使 stats 成为属性唯一数据源
 		stats = new StatData();
-		stats.setLevel(1);
-		float fixedPts = StatCalculator.fixedPointsPerStat(1);
+		stats.setLevel(0); // 0级对应 totalXp=0，确保等级与经验一致
+		float fixedPts = StatCalculator.fixedPointsPerStat(0);
 		stats.setEquipFixed(StatType.HP, hp - fixedPts * StatType.HP.valuePerPoint);
 		stats.setEquipFixed(StatType.ATK, atk - fixedPts * StatType.ATK.valuePerPoint);
 		stats.setEquipFixed(StatType.DEF, def - fixedPts * StatType.DEF.valuePerPoint);
