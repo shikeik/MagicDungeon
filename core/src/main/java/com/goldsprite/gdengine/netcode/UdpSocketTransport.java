@@ -136,6 +136,11 @@ public class UdpSocketTransport implements Transport {
         return !isServerIdentity;
     }
 
+    /** 返回已连接的客户端数量（仅 Server 端有意义） */
+    public int getClientCount() {
+        return clientAddresses.size();
+    }
+
     // ==================== 内部实现 ====================
 
     /**

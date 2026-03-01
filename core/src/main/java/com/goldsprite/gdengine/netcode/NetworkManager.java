@@ -362,4 +362,14 @@ public class NetworkManager {
     public NetworkObject getNetworkObject(int id) {
         return networkObjects.get(id);
     }
+
+    /** 返回当前注册的网络对象数量 */
+    public int getNetworkObjectCount() {
+        return networkObjects.size();
+    }
+
+    /** 返回所有已注册网络对象的只读集合 */
+    public java.util.Collection<NetworkObject> getAllNetworkObjects() {
+        return java.util.Collections.unmodifiableCollection(networkObjects.values());
+    }
 }
