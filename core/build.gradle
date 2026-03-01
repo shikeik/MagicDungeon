@@ -28,7 +28,13 @@ dependencies {
 
 	api "com.esotericsoftware.spine:spine-libgdx:$spineVersion"
 //	api 'com.github.GoldSprite:TestNetty:0.8.0'
-	api 'com.github.GoldSprite:TestNetty:0.8.0.2'
+	api ('com.github.GoldSprite:TestNetty:0.8.0.2') {
+		// netty-all 全家桶会传递引入 javax.jms 的两个冲突实现:
+		//   geronimo-jms_1.1_spec-1.0.jar  vs  javax.jms-api-2.0.1.jar
+		// Android DEX 合并时 javax.jms.Message 重复定义，必须排除
+		exclude group: 'org.apache.geronimo.specs', module: 'geronimo-jms_1.1_spec'
+		exclude group: 'javax.jms', module: 'javax.jms-api'
+	}
 
 	// [Force Refresh] Trigger IDE gradle sync
 	// [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
