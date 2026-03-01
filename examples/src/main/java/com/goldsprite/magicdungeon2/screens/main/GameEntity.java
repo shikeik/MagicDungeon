@@ -37,6 +37,7 @@ public class GameEntity {
 	public int xpReward;              // 击杀经验奖励（敌人用）
 	public WeaponRange weaponRange;   // 武器范围类型
 	public int faceDx = 0, faceDy = 1; // 面朝方向（默认朝上）
+	public int enemyId = -1;          // 敌人唯一标识（房主分配，玩家为-1）
 
 	public GameEntity(int x, int y, String texName, float hp, float atk, float def,
 				   float moveDelay, int xpReward, WeaponRange weaponRange) {

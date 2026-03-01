@@ -328,8 +328,13 @@ public class ScreenManager implements Disposable {
 			if (transitionTime >= transitionDuration) {
 				// Fade Out 完成，执行中间操作
 				if (onTransitionMiddle != null) {
-					onTransitionMiddle.run();
-					onTransitionMiddle = null; // 确保只执行一次
+					try {
+						onTransitionMiddle.run();
+					} catch (Exception e) {
+						System.err.println("[ScreenManager] 转场中间回调异常: " + e.getMessage());
+						e.printStackTrace();
+					}
+					onTransitionMiddle = null; // 无论成功失败都置null，防止每帧重复抛异常
 				}
 				
 				// 如果中间回调没有改变状态（例如改为 LOADING_WAIT），则默认切换到 FADE_IN

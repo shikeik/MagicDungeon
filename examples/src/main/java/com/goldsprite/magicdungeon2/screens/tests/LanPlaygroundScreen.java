@@ -221,7 +221,7 @@ public class LanPlaygroundScreen extends ExampleGScreen {
                 roomRefreshTimer = 0f;
                 lanService.requestRoomPlayers();
             }
-            lanService.sendLocalState(localX, localY, velocityX(), velocityY(), isMoving() ? "move" : "idle");
+            lanService.sendLocalState(localX, localY, velocityX(), velocityY(), isMoving() ? "move" : "idle", 0, 0, 0, 0, 0);
         }
 
         updateRemoteInterpStates(lanService.getRemotePlayers());

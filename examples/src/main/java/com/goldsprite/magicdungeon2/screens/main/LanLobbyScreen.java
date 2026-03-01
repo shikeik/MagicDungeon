@@ -319,22 +319,38 @@ public class LanLobbyScreen extends GScreen {
 
 	/** 开始游戏 — 使用 playTransition 安全地延迟到遮罩变黑后再切换屏幕 */
 	private void startGame() {
+		if (getScreenManager().isTransitioning()) {
+			appendLog("⚠ 转场进行中，忽略开始请求");
+			return; // 防止转场进行中设置 startingGame=true 导致网络逻辑全部停止
+		}
 		startingGame = true;
 		appendLog("正在开始游戏...");
 
-		// 房主需要先广播"开始游戏"信号给所有客户端
+		// 房主需要先广播"开始游戏"信号给所有客户端（携带地图种子）
+		long mapSeed;
 		if (phase == Phase.HOST_WAITING && lanService != null) {
-			lanService.broadcastGameStart();
+			mapSeed = java.util.concurrent.ThreadLocalRandom.current().nextLong();
+			lanService.broadcastGameStart(mapSeed);
+		} else {
+			// 客户端：使用房主广播携带的种子
+			mapSeed = lanService != null ? lanService.getPendingMapSeed() : 0L;
 		}
 
+		final long finalMapSeed = mapSeed;
 		// 使用 playTransition：先淡入黑幕，黑幕完全变黑后再执行 goScreen
 		// 这样 goScreen 不会在当前帧的 render0 中途执行，避免状态错乱
 		getScreenManager().playTransition(() -> {
-			final LanMultiplayerService service = this.lanService;
-			this.lanService = null; // 移交所有权（在安全时机）
+			try {
+				final LanMultiplayerService service = this.lanService;
+				this.lanService = null; // 移交所有权（在安全时机）
 
-			SimpleGameScreen gameScreen = new SimpleGameScreen(service);
-			getScreenManager().goScreen(gameScreen);
+				SimpleGameScreen gameScreen = new SimpleGameScreen(service, finalMapSeed);
+				getScreenManager().goScreen(gameScreen);
+			} catch (Exception e) {
+				com.goldsprite.gdengine.log.DLog.logErr("开始游戏转场异常: " + e.getMessage());
+				e.printStackTrace();
+				startingGame = false; // 恢复标记，允许重试
+			}
 		});
 	}
 

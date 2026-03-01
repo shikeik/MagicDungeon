@@ -114,6 +114,32 @@ public class GrowthHelper {
 		notifyLog("重生！继续冒险...");
 	}
 
+	/**
+	 * 网络击杀奖励处理（客户端收到房主广播的击杀确认后调用）
+	 * 与 onEnemyKilled 不同：经验/金币已在调用方直接加过，这里只负责升级检查和日志
+	 * @param xpReward 本次击杀获得的经验值
+	 * @param killCount 当前击杀总数
+	 */
+	public void onEnemyKilledByNetwork(int xpReward, int killCount) {
+		int oldLevel = player.stats.getLevel();
+		int newLevel = GrowthCalculator.levelFromXp(player.totalXp);
+
+		if (newLevel > oldLevel) {
+			player.stats.setLevel(newLevel);
+			autoAllocateFreePoints(player);
+			player.hp = player.getMaxHp();
+			player.mp = player.getMaxMp();
+
+			popups.add(new DamagePopup(
+				player.visualX + TILE * 0.5f,
+				player.visualY + TILE * 1.5f,
+				"升级! Lv." + newLevel, com.badlogic.gdx.graphics.Color.GOLD));
+			notifyLog(String.format("升级至 Lv.%d！属性全面提升！", newLevel));
+		} else {
+			notifyLog(String.format("击败敌人！(+%dXP, 击杀:%d)", xpReward, killCount));
+		}
+	}
+
 	/** 通知日志更新 */
 	private void notifyLog(String text) {
 		if (listener != null) listener.onLogUpdate(text);
