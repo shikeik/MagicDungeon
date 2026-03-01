@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.netcode.ClientRpc;
 import com.goldsprite.gdengine.netcode.LocalMemoryTransport;
@@ -29,8 +30,8 @@ public class NetcodeTankSandboxScreen extends GScreen {
 
     // ============== 网络层基础设施 ==============
     /**
-     * 传输层切换开关：
-     * false = LocalMemoryTransport（进程内内存直传，同步、确定性，适合单机调试）
+     * 传输层切换开关（编译期常量，改完重新运行即可）：
+     * false = LocalMemoryTransport（进程内内存直传，同步、确定性，适合 TDD / 单机调试）
      * true  = UdpSocketTransport（真实 UDP Socket 回环，异步、有延迟，模拟真实网络环境）
      */
     private static final boolean USE_UDP = false;
@@ -88,7 +89,7 @@ public class NetcodeTankSandboxScreen extends GScreen {
     public void show() {
         super.show();
         neon = new NeonBatch();
-        font = new BitmapFont();
+        font = FontUtils.generate(14, 2);
 
         serverManager = new NetworkManager();
         clientManager = new NetworkManager();
@@ -138,9 +139,20 @@ public class NetcodeTankSandboxScreen extends GScreen {
         serverP2.x.setValue(200f); serverP2.y.setValue(100f);
         serverP2.color.setValue(Color.CYAN);
 
-        // Client 端已由 SpawnPacket 自动派生，直接获取引用
+        // Client 端已由 SpawnPacket 自动派生，获取引用
+        // 注意：UDP 传输是异步的，SpawnPacket 由后台线程接收，需要轮询等待
         int id1 = (int) sObj1.getNetworkId();
         int id2 = (int) sObj2.getNetworkId();
+        if (USE_UDP) {
+            long deadline = System.currentTimeMillis() + 2000; // 最多等 2 秒
+            while (System.currentTimeMillis() < deadline) {
+                if (clientManager.getNetworkObject(id1) != null
+                    && clientManager.getNetworkObject(id2) != null) {
+                    break;
+                }
+                try { Thread.sleep(10); } catch (InterruptedException ignored) {}
+            }
+        }
         clientP1 = (TankBehaviour) clientManager.getNetworkObject(id1).getBehaviours().get(0);
         clientP2 = (TankBehaviour) clientManager.getNetworkObject(id2).getBehaviours().get(0);
     }
@@ -282,7 +294,7 @@ public class NetcodeTankSandboxScreen extends GScreen {
 
         // HUD：显示传输层模式
         font.setColor(Color.YELLOW);
-        String transportMode = USE_UDP ? "Transport: UDP Socket (127.0.0.1:" + UDP_PORT + ")" : "Transport: LocalMemory (进程内直传)";
+        String transportMode = USE_UDP ? "Transport: UDP (127.0.0.1:" + UDP_PORT + ")" : "Transport: LocalMemory";
         font.draw(neon, transportMode, 10, Gdx.graphics.getHeight() - 10);
         font.draw(neon, "SERVER", halfW * 0.4f, Gdx.graphics.getHeight() - 30);
         font.draw(neon, "CLIENT", halfW + halfW * 0.4f, Gdx.graphics.getHeight() - 30);
@@ -297,7 +309,19 @@ public class NetcodeTankSandboxScreen extends GScreen {
             Bullet b = iter.next();
             b.x += b.vx * delta;
             b.y += b.vy * delta;
+            // 越界检测
             if (b.x < 0 || b.x > halfW || b.y < 0 || b.y > Gdx.graphics.getHeight()) {
+                iter.remove();
+                continue;
+            }
+            // 碰撞检测（与服务端逻辑一致）
+            if (b.ownerId != 1 && !clientP1.isDead.getValue()
+                && Math.hypot(b.x - clientP1.x.getValue(), b.y - clientP1.y.getValue()) < 20) {
+                iter.remove();
+                continue;
+            }
+            if (b.ownerId != 2 && !clientP2.isDead.getValue()
+                && Math.hypot(b.x - clientP2.x.getValue(), b.y - clientP2.y.getValue()) < 20) {
                 iter.remove();
                 continue;
             }

@@ -11,44 +11,44 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 鍩轰簬 Java 鍘熺敓 DatagramSocket (UDP) 鐨勭湡瀹炵綉缁滀紶杈撳眰瀹炵幇銆?
+ * 基于 Java 原生 DatagramSocket (UDP) 的真实网络传输层实现。
  * <p>
- * 涓?LocalMemoryTransport锛堣繘绋嬪唴鍐呭瓨鐩翠紶锛変笉鍚岋紝鏈被閫氳繃鐪熷疄鐨勬搷浣滅郴缁?Socket 鍙戦€佸拰鎺ユ敹 UDP 鏁版嵁鎶ワ紝
- * 閫傜敤浜庤法杩涚▼ / 璺ㄧ綉缁滅殑鑱旀満鍦烘櫙銆?
+ * 与 LocalMemoryTransport（进程内内存直传）不同，本类通过真实的操作系统 Socket 发送和接收 UDP 数据报，
+ * 适用于跨进程 / 跨网络的联机场景。
  * <p>
- * 璁捐瑕佺偣锛?
+ * 设计要点：
  * <ul>
- *   <li>Server 绔粦瀹氱鍙ｅ苟鐩戝惉锛屾帴鏀舵潵鑷?Client 鐨勬暟鎹紝鑳藉骞挎挱缁欐墍鏈夊凡鐭?Client</li>
- *   <li>Client 绔悜 Server 鍦板潃鍙戦€佹暟鎹紝鍚屾椂鐩戝惉 Server 鐨勫洖鍖?/li>
- *   <li>浣跨敤瀹堟姢绾跨▼寮傛鎺ユ敹鏁版嵁锛岄€氳繃 TransportReceiveCallback 鍥炶皟鎺ㄩ€佺粰涓婂眰</li>
- *   <li>鎻℃墜鍗忚锛欳lient 杩炴帴鏃跺彂閫?[0xFF,0xFF,0xFF,0xFF] 鎻℃墜鍖咃紝Server 鎹璁板綍 Client 鍦板潃</li>
+ *   <li>Server 端绑定端口并监听，接收来自 Client 的数据，能够广播给所有已知 Client</li>
+ *   <li>Client 端向 Server 地址发送数据，同时监听 Server 的回包</li>
+ *   <li>使用守护线程异步接收数据，通过 TransportReceiveCallback 回调推送给上层</li>
+ *   <li>握手协议：Client 连接时发送 [0xFF,0xFF,0xFF,0xFF] 握手包，Server 据此记录 Client 地址</li>
  * </ul>
  */
 public class UdpSocketTransport implements Transport {
 
-    // 韬唤鏍囪瘑
+    // 身份标识
     private final boolean isServerIdentity;
 
     // UDP Socket
     private DatagramSocket socket;
 
-    // 鏁版嵁鎺ユ敹鍥炶皟
+    // 数据接收回调
     private TransportReceiveCallback receiveCallback;
 
-    // 鎺ユ敹绾跨▼
+    // 接收线程
     private Thread receiveThread;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
-    // Server 璁板綍鐨勬墍鏈夊凡杩炴帴 Client 鍦板潃
+    // Server 记录的所有已连接 Client 地址
     private final List<InetSocketAddress> clientAddresses = new CopyOnWriteArrayList<>();
 
-    // Client 璁板綍鐨?Server 鍦板潃
+    // Client 记录的 Server 地址
     private InetSocketAddress serverAddress;
 
-    // 鏈€澶?UDP 鏁版嵁鎶ュぇ灏忥紙瀵逛簬娓告垙 Netcode锛屼竴鑸笉瓒呰繃 MTU锛岃繖閲屼繚瀹堣涓?4096锛?
+    // 最大 UDP 数据报大小（对于游戏 Netcode，一般不超过 MTU，这里保守设为 4096）
     private static final int MAX_PACKET_SIZE = 4096;
 
-    // 鎻℃墜榄旀硶鏍囪瘑
+    // 握手魔法标识
     private static final byte[] HANDSHAKE_MAGIC = new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
 
     public UdpSocketTransport(boolean isServerIdentity) {
@@ -67,9 +67,9 @@ public class UdpSocketTransport implements Transport {
             socket = new DatagramSocket(port);
             running.set(true);
             startReceiveLoop();
-            System.out.println("[UdpTransport] Server 宸插惎鍔紝鐩戝惉绔彛: " + port);
+            System.out.println("[UdpTransport] Server 已启动，监听端口: " + port);
         } catch (SocketException e) {
-            throw new RuntimeException("[UdpTransport] Server 鍚姩澶辫触: " + e.getMessage(), e);
+            throw new RuntimeException("[UdpTransport] Server 启动失败: " + e.getMessage(), e);
         }
     }
 
@@ -77,16 +77,16 @@ public class UdpSocketTransport implements Transport {
     public void connect(String ip, int port) {
         if (isServerIdentity) return;
         try {
-            socket = new DatagramSocket(); // 闅忔満缁戝畾鏈湴绔彛
+            socket = new DatagramSocket(); // 随机绑定本地端口
             serverAddress = new InetSocketAddress(ip, port);
             running.set(true);
             startReceiveLoop();
 
-            // 鍙戦€佹彙鎵嬪寘锛岃 Server 鐭ラ亾鎴戜滑鐨勫湴鍧€
+            // 发送握手包，让 Server 知道我们的地址
             sendRaw(HANDSHAKE_MAGIC, serverAddress);
-            System.out.println("[UdpTransport] Client 宸茶繛鎺ュ埌 " + ip + ":" + port);
+            System.out.println("[UdpTransport] Client 已连接到 " + ip + ":" + port);
         } catch (SocketException e) {
-            throw new RuntimeException("[UdpTransport] Client 杩炴帴澶辫触: " + e.getMessage(), e);
+            throw new RuntimeException("[UdpTransport] Client 连接失败: " + e.getMessage(), e);
         }
     }
 
@@ -100,13 +100,13 @@ public class UdpSocketTransport implements Transport {
             receiveThread.interrupt();
         }
         clientAddresses.clear();
-        System.out.println("[UdpTransport] 宸叉柇寮€杩炴帴");
+        System.out.println("[UdpTransport] 已断开连接");
     }
 
     @Override
     public void sendToClient(int clientId, byte[] payload) {
         if (!isServerIdentity || clientAddresses.isEmpty()) return;
-        // 鏍规嵁 clientId 鍙戦€侊紙鐩墠绠€鍖栵細濡傛灉鍙湁涓€涓?Client锛岀洿鎺ュ彂锛?
+        // 根据 clientId 发送（目前简化：如果只有一个 Client，直接发）
         if (clientId >= 0 && clientId < clientAddresses.size()) {
             sendWithLengthPrefix(payload, clientAddresses.get(clientId));
         }
@@ -136,10 +136,10 @@ public class UdpSocketTransport implements Transport {
         return !isServerIdentity;
     }
 
-    // ==================== 鍐呴儴瀹炵幇 ====================
+    // ==================== 内部实现 ====================
 
     /**
-     * 鍚姩寮傛鎺ユ敹寰幆锛堝畧鎶ょ嚎绋嬶級
+     * 启动异步接收循环（守护线程）
      */
     private void startReceiveLoop() {
         receiveThread = new Thread(() -> {
@@ -153,14 +153,14 @@ public class UdpSocketTransport implements Transport {
                     byte[] rawData = new byte[packet.getLength()];
                     System.arraycopy(buffer, 0, rawData, 0, packet.getLength());
 
-                    // 瑙ｆ瀽甯﹂暱搴﹀墠缂€鐨勫皝鍖?
+                    // 解析带长度前缀的封包
                     processReceivedData(rawData, sender);
 
                 } catch (IOException e) {
                     if (running.get()) {
-                        System.err.println("[UdpTransport] 鎺ユ敹鏁版嵁寮傚父: " + e.getMessage());
+                        System.err.println("[UdpTransport] 接收数据异常: " + e.getMessage());
                     }
-                    // socket 鍏抽棴鏃朵細瑙﹀彂 IOException锛屽睘浜庢甯搁€€鍑?
+                    // socket 关闭时会触发 IOException，属于正常退出
                 }
             }
         }, "UdpTransport-Recv-" + (isServerIdentity ? "Server" : "Client"));
@@ -169,46 +169,46 @@ public class UdpSocketTransport implements Transport {
     }
 
     /**
-     * 澶勭悊鏀跺埌鐨勫師濮嬫暟鎹€?
-     * 鍗忚鏍煎紡: [4瀛楄妭payload闀垮害][payload瀛楄妭]
-     * 鐗规畩: 鎻℃墜鍖呮槸瑁哥殑 [0xFF,0xFF,0xFF,0xFF]锛堟棤闀垮害鍓嶇紑锛?
+     * 处理收到的原始数据。
+     * 协议格式: [4字节payload长度][payload字节]
+     * 特殊: 握手包是裸的 [0xFF,0xFF,0xFF,0xFF]（无长度前缀）
      */
     private void processReceivedData(byte[] rawData, InetSocketAddress sender) {
-        // 妫€鏌ユ槸鍚︿负鎻℃墜鍖?
+        // 检查是否为握手包
         if (isHandshake(rawData)) {
             if (isServerIdentity) {
-                // Server 鏀跺埌鎻℃墜鍖咃紝璁板綍 Client 鍦板潃
+                // Server 收到握手包，记录 Client 地址
                 if (!clientAddresses.contains(sender)) {
                     clientAddresses.add(sender);
-                    System.out.println("[UdpTransport] Server 鍙戠幇鏂板鎴风: " + sender);
+                    System.out.println("[UdpTransport] Server 发现新客户端: " + sender);
                 }
             }
-            // 鎻℃墜鍖呬笉浼犻€掔粰涓婂眰
+            // 握手包不传递给上层
             return;
         }
 
-        // 瑙ｆ瀽闀垮害鍓嶇紑灏佸寘: [4瀛楄妭length][payload]
+        // 解析长度前缀封包: [4字节length][payload]
         if (rawData.length < 4) return;
 
         ByteBuffer bb = ByteBuffer.wrap(rawData, 0, 4);
         int payloadLen = bb.getInt();
 
         if (payloadLen <= 0 || payloadLen + 4 > rawData.length) {
-            System.err.println("[UdpTransport] 灏佸寘闀垮害寮傚父: declared=" + payloadLen + ", actual=" + (rawData.length - 4));
+            System.err.println("[UdpTransport] 封包长度异常: declared=" + payloadLen + ", actual=" + (rawData.length - 4));
             return;
         }
 
         byte[] payload = new byte[payloadLen];
         System.arraycopy(rawData, 4, payload, 0, payloadLen);
 
-        // 閫氳繃鍥炶皟鎺ㄩ€佺粰涓婂眰
+        // 通过回调推送给上层
         if (receiveCallback != null) {
             receiveCallback.onReceiveData(payload);
         }
     }
 
     /**
-     * 鍙戦€佸甫闀垮害鍓嶇紑鐨勫皝鍖? [4瀛楄妭payload闀垮害][payload瀛楄妭]
+     * 发送带长度前缀的封包: [4字节payload长度][payload字节]
      */
     private void sendWithLengthPrefix(byte[] payload, InetSocketAddress target) {
         byte[] packet = new byte[4 + payload.length];
@@ -219,7 +219,7 @@ public class UdpSocketTransport implements Transport {
     }
 
     /**
-     * 搴曞眰鍙戦€佸師濮嬪瓧鑺?
+     * 底层发送原始字节
      */
     private void sendRaw(byte[] data, InetSocketAddress target) {
         if (socket == null || socket.isClosed()) return;
@@ -227,12 +227,12 @@ public class UdpSocketTransport implements Transport {
             DatagramPacket packet = new DatagramPacket(data, data.length, target.getAddress(), target.getPort());
             socket.send(packet);
         } catch (IOException e) {
-            System.err.println("[UdpTransport] 鍙戦€佸け璐? " + e.getMessage());
+            System.err.println("[UdpTransport] 发送失败: " + e.getMessage());
         }
     }
 
     /**
-     * 鍒ゆ柇鏄惁涓烘彙鎵嬪寘 [0xFF,0xFF,0xFF,0xFF]
+     * 判断是否为握手包 [0xFF,0xFF,0xFF,0xFF]
      */
     private boolean isHandshake(byte[] data) {
         if (data.length != HANDSHAKE_MAGIC.length) return false;
@@ -242,4 +242,3 @@ public class UdpSocketTransport implements Transport {
         return true;
     }
 }
-
