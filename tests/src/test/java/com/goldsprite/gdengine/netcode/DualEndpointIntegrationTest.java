@@ -31,30 +31,27 @@ public class DualEndpointIntegrationTest {
 
         serverTransport.connectToPeer(clientTransport);
 
-        // ------------- 3. 业务层准备：Server在场景里创建一个坦克 -------------
-        NetworkObject serverPlayer = new NetworkObject(1);
-        DummyPlayerBehaviour serverLogic = new DummyPlayerBehaviour();
-        serverPlayer.addComponent(serverLogic);
-        serverManager.spawn(serverPlayer);
+        // ------------- 3. 双端注册预制体工厂（取代反射 Hack） -------------
+        int PLAYER_PREFAB_ID = 1;
+        NetworkPrefabFactory playerFactory = () -> {
+            NetworkObject obj = new NetworkObject();
+            obj.addComponent(new DummyPlayerBehaviour());
+            return obj;
+        };
+        serverManager.registerPrefab(PLAYER_PREFAB_ID, playerFactory);
+        clientManager.registerPrefab(PLAYER_PREFAB_ID, playerFactory);
 
-        // 为客户端也伪造好这个副本接收端
-        NetworkObject clientPlayerMock = new NetworkObject(1);
-        DummyPlayerBehaviour clientLogic = new DummyPlayerBehaviour();
-        clientPlayerMock.addComponent(clientLogic);
-        
-        try {
-            java.lang.reflect.Field field = NetworkManager.class.getDeclaredField("networkObjects");
-            field.setAccessible(true);
-            java.util.Map<Integer, NetworkObject> map = (java.util.Map<Integer, NetworkObject>) field.get(clientManager);
-            map.put(1, clientPlayerMock);
-            
-            java.lang.reflect.Field bfield = NetworkObject.class.getDeclaredField("behaviours");
-            bfield.setAccessible(true);
-            java.util.List<NetworkBehaviour> bs = (java.util.List<NetworkBehaviour>) bfield.get(clientPlayerMock);
-            for(NetworkBehaviour b : bs) b.internalAttach(clientPlayerMock);
-        } catch (Exception e) {}
+        // ------------- 4. Server 通过预制体 Spawn（自动广播到 Client） -------------
+        NetworkObject serverPlayer = serverManager.spawnWithPrefab(PLAYER_PREFAB_ID);
+        int netId = (int) serverPlayer.getNetworkId();
+        DummyPlayerBehaviour serverLogic = (DummyPlayerBehaviour) serverPlayer.getBehaviours().get(0);
 
-        // ------------- 4. 驱动 Server 状态同步 -------------
+        // Client 端应已自动派生出对应实体
+        NetworkObject clientPlayer = clientManager.getNetworkObject(netId);
+        CLogAssert.assertTrue("Client 应已自动派生出实体", clientPlayer != null);
+        DummyPlayerBehaviour clientLogic = (DummyPlayerBehaviour) clientPlayer.getBehaviours().get(0);
+
+        // ------------- 5. 驱动 Server 状态同步 -------------
         int expectedPreRecv = clientTransport.messagesReceived;
         
         serverLogic.hp.setValue(80f);
@@ -67,8 +64,6 @@ public class DualEndpointIntegrationTest {
         CLogAssert.assertTrue("当Server数据更新时必须能收到包", afterRecv > expectedPreRecv);   
         
         System.out.println("收到包之前客户端的HP: " + clientLogic.hp.getValue());
-
-        clientManager.tick(); // 触发网络层解包与应用
 
         CLogAssert.assertEquals("自动同步流：Client的数据应该被同步，从而与Server的数据保持严格一致", 80f, clientLogic.hp.getValue());
 

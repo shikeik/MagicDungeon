@@ -12,6 +12,9 @@ public class NetworkManager {
     // 网络对象注册表（使用统一分配的网络ID作为Key）
     private final Map<Integer, NetworkObject> networkObjects = new HashMap<>();
     
+    // 预制体工厂注册表（prefabId -> factory）
+    private final Map<Integer, NetworkPrefabFactory> prefabRegistry = new HashMap<>();
+    
     // 自增网络ID分配器
     private int nextNetworkId = 1;
     
@@ -27,15 +30,61 @@ public class NetworkManager {
     }
 
     /**
-     * 生成一个新的网络对象，并分配网络ID
+     * 注册预制体工厂，Server 和 Client 两端都需要注册相同的 prefabId 对应的工厂。
+     */
+    public void registerPrefab(int prefabId, NetworkPrefabFactory factory) {
+        prefabRegistry.put(prefabId, factory);
+    }
+
+    /**
+     * 生成一个新的网络对象，并分配网络ID（旧接口，保留兼容）
      */
     public void spawn(NetworkObject obj) {
         if (transport == null || !transport.isServer()) {
             throw new IllegalStateException("只有服务器可以(或者在此模式下) Spawn 对象！");
         }
         int assignedId = nextNetworkId++;
+        obj.setNetworkId(assignedId);
         networkObjects.put(assignedId, obj);
-        // 这里理论上要向所有客户端发送一条 SpawnRPC 消息...（简化处理，之后在数据包机制实现）
+    }
+
+    /**
+     * 通过预制体ID创建并生成网络对象。
+     * Server 端会创建本地实例，并即时广播 SpawnPacket(0x11) 给所有客户端，
+     * 客户端收到后会通过相同 prefabId 的工厂自动派生本地副本。
+     */
+    public NetworkObject spawnWithPrefab(int prefabId) {
+        if (transport == null || !transport.isServer()) {
+            throw new IllegalStateException("只有服务器可以 Spawn 对象！");
+        }
+        NetworkPrefabFactory factory = prefabRegistry.get(prefabId);
+        if (factory == null) {
+            throw new IllegalArgumentException("未注册的预制体ID: " + prefabId);
+        }
+
+        // Server 端本地创建
+        NetworkObject obj = factory.create();
+        int assignedId = nextNetworkId++;
+        obj.setNetworkId(assignedId);
+        obj.setPrefabId(prefabId);
+        networkObjects.put(assignedId, obj);
+
+        // 广播 SpawnPacket 给所有客户端
+        byte[] spawnPacket = buildSpawnPacket(assignedId, prefabId);
+        transport.broadcast(spawnPacket);
+
+        return obj;
+    }
+
+    /**
+     * 构建 Spawn 封包：[0x11][networkId][prefabId]
+     */
+    private byte[] buildSpawnPacket(int networkId, int prefabId) {
+        NetBuffer buffer = new NetBuffer();
+        buffer.writeInt(0x11); // SpawnPacket 魔法头
+        buffer.writeInt(networkId);
+        buffer.writeInt(prefabId);
+        return buffer.toByteArray();
     }
 
     /**
@@ -92,7 +141,28 @@ public class NetworkManager {
         NetBuffer inBuffer = new NetBuffer(payload);
         int packetType = inBuffer.readInt();
         
-        // 如果是状态更新包
+        // SpawnPacket: 客户端收到后自动通过预制体工厂派生本地实体
+        if (packetType == 0x11) {
+            int netId = inBuffer.readInt();
+            int prefabId = inBuffer.readInt();
+            
+            NetworkPrefabFactory factory = prefabRegistry.get(prefabId);
+            if (factory == null) {
+                System.err.println("[NetworkManager] Client 收到 SpawnPacket 但未注册对应的预制体工厂: prefabId=" + prefabId);
+                return;
+            }
+            
+            // 通过工厂创建本地副本
+            NetworkObject localObj = factory.create();
+            localObj.setNetworkId(netId);
+            localObj.setPrefabId(prefabId);
+            networkObjects.put(netId, localObj);
+            
+            System.out.println("[NetworkManager] Client 自动派生实体成功: netId=" + netId + ", prefabId=" + prefabId);
+            return;
+        }
+        
+        // 状态同步包
         if (packetType == 0x10) {
             int netId = inBuffer.readInt();
             int modifiedCount = inBuffer.readInt();

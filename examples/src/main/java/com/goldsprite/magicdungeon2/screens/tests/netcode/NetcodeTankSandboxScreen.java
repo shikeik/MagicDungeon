@@ -72,52 +72,33 @@ public class NetcodeTankSandboxScreen extends GScreen {
         clientManager.setTransport(clientTransport);
         serverTransport.connectToPeer(clientTransport);
 
-        // Server P1
-        NetworkObject sObj1 = new NetworkObject(1);
-        serverP1 = new TankBehaviour();
+        // 双端注册坦克预制体工厂
+        int TANK_PREFAB_ID = 1;
+        NetworkPrefabFactory tankFactory = () -> {
+            NetworkObject obj = new NetworkObject();
+            obj.addComponent(new TankBehaviour());
+            return obj;
+        };
+        serverManager.registerPrefab(TANK_PREFAB_ID, tankFactory);
+        clientManager.registerPrefab(TANK_PREFAB_ID, tankFactory);
+
+        // Server Spawn P1（自动广播到 Client）
+        NetworkObject sObj1 = serverManager.spawnWithPrefab(TANK_PREFAB_ID);
+        serverP1 = (TankBehaviour) sObj1.getBehaviours().get(0);
         serverP1.x.setValue(200f); serverP1.y.setValue(300f);
         serverP1.color.setValue(Color.ORANGE);
-        sObj1.addComponent(serverP1);
-        serverManager.spawn(sObj1);
 
-        // Server P2
-        NetworkObject sObj2 = new NetworkObject(2);
-        serverP2 = new TankBehaviour();
+        // Server Spawn P2（自动广播到 Client）
+        NetworkObject sObj2 = serverManager.spawnWithPrefab(TANK_PREFAB_ID);
+        serverP2 = (TankBehaviour) sObj2.getBehaviours().get(0);
         serverP2.x.setValue(200f); serverP2.y.setValue(100f);
         serverP2.color.setValue(Color.CYAN);
-        sObj2.addComponent(serverP2);
-        serverManager.spawn(sObj2);
 
-        // Client P1 Ghost
-        NetworkObject cObj1 = new NetworkObject(1);
-        clientP1 = new TankBehaviour();
-        cObj1.addComponent(clientP1);
-        registerEntityInClientManager(clientManager, cObj1);
-
-        // Client P2 Ghost
-        NetworkObject cObj2 = new NetworkObject(2);
-        clientP2 = new TankBehaviour();
-        cObj2.addComponent(clientP2);
-        registerEntityInClientManager(clientManager, cObj2);
-    }
-
-    private void registerEntityInClientManager(NetworkManager manager, NetworkObject obj) {
-        try {
-            java.lang.reflect.Field field = com.goldsprite.gdengine.netcode.NetworkManager.class.getDeclaredField("networkObjects");
-            field.setAccessible(true);
-            java.util.Map<Integer, NetworkObject> map = (java.util.Map<Integer, NetworkObject>) field.get(manager);
-            map.put((int)obj.getNetworkId(), obj);
-
-            java.lang.reflect.Field behaField = com.goldsprite.gdengine.netcode.NetworkObject.class.getDeclaredField("behaviours");
-            behaField.setAccessible(true);
-            java.util.List<com.goldsprite.gdengine.netcode.NetworkBehaviour> behas = (java.util.List<com.goldsprite.gdengine.netcode.NetworkBehaviour>) behaField.get(obj);
-
-            for(com.goldsprite.gdengine.netcode.NetworkBehaviour b : behas) {
-                b.internalAttach(obj);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // Client 端已由 SpawnPacket 自动派生，直接获取引用
+        int id1 = (int) sObj1.getNetworkId();
+        int id2 = (int) sObj2.getNetworkId();
+        clientP1 = (TankBehaviour) clientManager.getNetworkObject(id1).getBehaviours().get(0);
+        clientP2 = (TankBehaviour) clientManager.getNetworkObject(id2).getBehaviours().get(0);
     }
 
     private void spawnBullet(TankBehaviour tank, int ownerId) {

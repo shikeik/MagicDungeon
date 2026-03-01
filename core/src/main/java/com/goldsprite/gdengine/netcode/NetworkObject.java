@@ -11,6 +11,9 @@ public class NetworkObject {
 
     private long networkId;
     
+    // 预制体ID，用于 Spawn 包广播时让远端知道用哪个工厂创建实例
+    private int prefabId = -1;
+    
     // 存储当前实体上所有的状态变量
     private List<NetworkVariable<?>> networkVariables = new ArrayList<>();
 
@@ -22,12 +25,31 @@ public class NetworkObject {
     public boolean isClient = false;
     public boolean isLocalPlayer = false;
 
+    /**
+     * 无参构造，用于预制体工厂创建实例（网络ID将由 NetworkManager 分配）
+     */
+    public NetworkObject() {
+        this.networkId = -1;
+    }
+
     public NetworkObject(long networkId) {
         this.networkId = networkId;
     }
 
     public long getNetworkId() {
         return networkId;
+    }
+
+    public void setNetworkId(long networkId) {
+        this.networkId = networkId;
+    }
+
+    public int getPrefabId() {
+        return prefabId;
+    }
+
+    public void setPrefabId(int prefabId) {
+        this.prefabId = prefabId;
     }
 
     /**
@@ -46,6 +68,13 @@ public class NetworkObject {
      */
     public List<NetworkVariable<?>> getNetworkVariables() {
         return networkVariables;
+    }
+
+    /**
+     * 获取当前实体挂载的所有网络行为逻辑组件
+     */
+    public List<NetworkBehaviour> getBehaviours() {
+        return behaviours;
     }
 
     /**
