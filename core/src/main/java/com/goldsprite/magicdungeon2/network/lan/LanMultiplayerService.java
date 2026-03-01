@@ -125,15 +125,10 @@ public class LanMultiplayerService {
 
         handler.addSubscriber(BroadcastResponsePacket.class, packet -> {
             String msg = packet.getMessage();
-            // 检测特殊命令前缀
-            if (CMD_GAME_START.equals(msg)) {
-                eventQueue.offer(LanNetworkEvent.gameStart("房主已开始游戏！"));
-            } else {
-                eventQueue.offer(LanNetworkEvent.chat(msg));
-            }
+            eventQueue.offer(LanNetworkEvent.chat(msg));
         });
 
-        // 保留自定义包订阅作为备用（如果框架支持的话也会触发）
+        // 专用包：服务器广播"开始游戏"信号
         handler.addSubscriber(LanGameStartBroadcastPacket.class, packet -> {
             eventQueue.offer(LanNetworkEvent.gameStart("房主已开始游戏！"));
         });
@@ -237,15 +232,11 @@ public class LanMultiplayerService {
         client.sendPacket(packet);
     }
 
-    /** 房主调用：通知所有客户端"开始游戏"（通过广播聊天通道发送命令） */
+    /** 房主调用：通知所有客户端"开始游戏"（通过专用包类型发送） */
     public void broadcastGameStart() {
         if (!connected || client == null || localGuid < 0) return;
-        // 复用已验证可靠的 BroadcastRequest 通道，用特殊前缀标识命令
-        client.sendPacket(new BroadcastRequestPacket(localGuid, CMD_GAME_START));
+        client.sendPacket(new LanGameStartRequestPacket(localGuid));
     }
-
-    /** 游戏开始命令前缀 */
-    public static final String CMD_GAME_START = "$CMD:GAME_START";
 
     public void sendChat(String msg) {
         if (!connected || client == null || localGuid < 0) return;
