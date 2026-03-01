@@ -35,6 +35,9 @@ public class UdpSocketTransport implements Transport {
     // 数据接收回调
     private TransportReceiveCallback receiveCallback;
 
+    // 连接事件监听器
+    private NetworkConnectionListener connectionListener;
+
     // 接收线程
     private Thread receiveThread;
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -51,6 +54,12 @@ public class UdpSocketTransport implements Transport {
     // 握手魔法标识
     private static final byte[] HANDSHAKE_MAGIC = new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
 
+    // 握手回复魔法标识: [0xFE×4] + [4字节 clientId]
+    private static final byte[] HANDSHAKE_REPLY_MAGIC = new byte[]{(byte) 0xFE, (byte) 0xFE, (byte) 0xFE, (byte) 0xFE};
+
+    // Client 端被 Server 分配的 clientId（通过握手回复获得）
+    private int assignedClientId = -1;
+
     public UdpSocketTransport(boolean isServerIdentity) {
         this.isServerIdentity = isServerIdentity;
     }
@@ -58,6 +67,16 @@ public class UdpSocketTransport implements Transport {
     @Override
     public void setReceiveCallback(TransportReceiveCallback callback) {
         this.receiveCallback = callback;
+    }
+
+    @Override
+    public void setConnectionListener(NetworkConnectionListener listener) {
+        this.connectionListener = listener;
+    }
+
+    /** 获取被 Server 分配的 clientId（仅 Client 端有意义） */
+    public int getAssignedClientId() {
+        return assignedClientId;
     }
 
     @Override
@@ -185,10 +204,34 @@ public class UdpSocketTransport implements Transport {
                 // Server 收到握手包，记录 Client 地址
                 if (!clientAddresses.contains(sender)) {
                     clientAddresses.add(sender);
-                    System.out.println("[UdpTransport] Server 发现新客户端: " + sender);
+                    int clientId = clientAddresses.indexOf(sender);
+                    System.out.println("[UdpTransport] Server 发现新客户端: " + sender + " -> clientId=" + clientId);
+
+                    // 发送握手回复: [0xFE×4][clientId]
+                    byte[] reply = new byte[8];
+                    System.arraycopy(HANDSHAKE_REPLY_MAGIC, 0, reply, 0, 4);
+                    ByteBuffer bb = ByteBuffer.wrap(reply, 4, 4);
+                    bb.putInt(clientId);
+                    sendRaw(reply, sender);
+
+                    // 触发连接事件
+                    if (connectionListener != null) {
+                        connectionListener.onClientConnected(clientId);
+                    }
                 }
             }
             // 握手包不传递给上层
+            return;
+        }
+
+        // 检查是否为握手回复包 (Client 端接收): [0xFE×4][4字节 clientId]
+        if (!isServerIdentity && rawData.length == 8 && isHandshakeReply(rawData)) {
+            ByteBuffer bb = ByteBuffer.wrap(rawData, 4, 4);
+            assignedClientId = bb.getInt();
+            System.out.println("[UdpTransport] Client 被分配 clientId=" + assignedClientId);
+            if (connectionListener != null) {
+                connectionListener.onClientConnected(assignedClientId);
+            }
             return;
         }
 
@@ -208,7 +251,12 @@ public class UdpSocketTransport implements Transport {
 
         // 通过回调推送给上层
         if (receiveCallback != null) {
-            receiveCallback.onReceiveData(payload);
+            // Server 端：根据 sender 地址反查 clientId；Client 端：固定 -1
+            int clientId = -1;
+            if (isServerIdentity) {
+                clientId = clientAddresses.indexOf(sender);
+            }
+            receiveCallback.onReceiveData(payload, clientId);
         }
     }
 
@@ -243,6 +291,17 @@ public class UdpSocketTransport implements Transport {
         if (data.length != HANDSHAKE_MAGIC.length) return false;
         for (int i = 0; i < HANDSHAKE_MAGIC.length; i++) {
             if (data[i] != HANDSHAKE_MAGIC[i]) return false;
+        }
+        return true;
+    }
+
+    /**
+     * 判断是否为握手回复包前缀 [0xFE,0xFE,0xFE,0xFE]
+     */
+    private boolean isHandshakeReply(byte[] data) {
+        if (data.length < HANDSHAKE_REPLY_MAGIC.length) return false;
+        for (int i = 0; i < HANDSHAKE_REPLY_MAGIC.length; i++) {
+            if (data[i] != HANDSHAKE_REPLY_MAGIC[i]) return false;
         }
         return true;
     }

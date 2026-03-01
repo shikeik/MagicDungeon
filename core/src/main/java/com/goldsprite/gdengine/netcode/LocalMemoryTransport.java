@@ -14,6 +14,9 @@ public class LocalMemoryTransport implements Transport {
     
     // 统一的数据接收回调（由 NetworkManager.setTransport() 自动注册）
     private TransportReceiveCallback receiveCallback;
+
+    // 连接事件监听器
+    private NetworkConnectionListener connectionListener;
     
     // 调试统计用
     public int bytesSent = 0;
@@ -24,9 +27,21 @@ public class LocalMemoryTransport implements Transport {
         this.receiveCallback = callback;
     }
 
+    @Override
+    public void setConnectionListener(NetworkConnectionListener listener) {
+        this.connectionListener = listener;
+    }
+
     public void connectToPeer(LocalMemoryTransport peer) {
         this.connectedPeer = peer;
         peer.connectedPeer = this;
+        // 模拟连接事件：Server 端触发 onClientConnected(0)
+        if (peer.isServerIdentity && peer.connectionListener != null) {
+            peer.connectionListener.onClientConnected(0);
+        }
+        if (this.isServerIdentity && this.connectionListener != null) {
+            this.connectionListener.onClientConnected(0);
+        }
     }
 
     public LocalMemoryTransport(boolean isServerIdentity) {
@@ -89,11 +104,18 @@ public class LocalMemoryTransport implements Transport {
 
     /**
      * 模拟收到网络封包时的底层回调
+     * @param senderClientId 发送方 clientId（Server 端接收时为 0；Client 端接收时为 -1）
      */
-    public void receiveData(byte[] payload) {
+    public void receiveData(byte[] payload, int senderClientId) {
         messagesReceived++;
         if (receiveCallback != null) {
-            receiveCallback.onReceiveData(payload);
+            receiveCallback.onReceiveData(payload, senderClientId);
         }
+    }
+
+    /** 兼容旧调用（默认 clientId 按身份推断） */
+    public void receiveData(byte[] payload) {
+        // 如果本端是 Server，说明这是从 Client(0) 来的数据；否则从 Server(-1) 来的
+        receiveData(payload, isServerIdentity ? 0 : -1);
     }
 }

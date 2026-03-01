@@ -30,7 +30,7 @@ public class UdpSocketTransportTest {
 
         // 用于在回调中捕获接收到的数据
         final byte[][] receivedHolder = new byte[1][];
-        clientTransport.setReceiveCallback(payload -> {
+        clientTransport.setReceiveCallback((payload, clientId) -> {
             receivedHolder[0] = payload;
         });
 
@@ -74,7 +74,7 @@ public class UdpSocketTransportTest {
         UdpSocketTransport clientTransport = new UdpSocketTransport(false);
 
         final byte[][] receivedHolder = new byte[1][];
-        serverTransport.setReceiveCallback(payload -> {
+        serverTransport.setReceiveCallback((payload, clientId) -> {
             // 过滤握手包（握手包只有 4 字节：[0xFF, 0xFF, 0xFF, 0xFF]）
             if (payload.length == 4 && payload[0] == (byte) 0xFF) return;
             receivedHolder[0] = payload;

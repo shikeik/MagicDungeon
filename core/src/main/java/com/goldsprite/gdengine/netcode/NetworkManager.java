@@ -21,11 +21,37 @@ public class NetworkManager {
     // 传输层
     private Transport transport;
 
+    // 游戏层连接事件监听器
+    private NetworkConnectionListener connectionListener;
+
     public void setTransport(Transport transport) {
         this.transport = transport;
         // 自动注册数据接收回调，无需手动 transport.setManager()
         transport.setReceiveCallback(this::onReceiveData);
+        // 自动注册连接事件回调
+        transport.setConnectionListener(clientId -> {
+            // Client 端收到分配的 clientId 时，自动设置
+            if (transport.isClient()) {
+                localClientId = clientId;
+                System.out.println("[NetworkManager] Client 被分配 clientId=" + clientId);
+            }
+            // 转发给游戏层监听器
+            if (connectionListener != null) {
+                connectionListener.onClientConnected(clientId);
+            }
+        });
     }
+
+    /** 设置游戏层连接事件监听器（用于动态 Spawn 实体等场景逻辑） */
+    public void setConnectionListener(NetworkConnectionListener listener) {
+        this.connectionListener = listener;
+    }
+
+    /** 当前本机的 clientId（Client 端由 Server 握手分配，Server 端无意义） */
+    private int localClientId = -1;
+
+    public void setLocalClientId(int id) { this.localClientId = id; }
+    public int getLocalClientId() { return localClientId; }
 
     public Transport getTransport() {
         return transport;
@@ -55,11 +81,20 @@ public class NetworkManager {
     }
 
     /**
-     * 通过预制体ID创建并生成网络对象。
-     * Server 端会创建本地实例，并即时广播 SpawnPacket(0x11) 给所有客户端，
-     * 客户端收到后会通过相同 prefabId 的工厂自动派生本地副本。
+     * 通过预制体ID创建并生成网络对象（无拥有者，Server 拥有）。
      */
     public NetworkObject spawnWithPrefab(int prefabId) {
+        return spawnWithPrefab(prefabId, -1);
+    }
+
+    /**
+     * 通过预制体ID创建并生成网络对象，并指定拥有者 clientId。
+     * Server 端会创建本地实例，并即时广播 SpawnPacket(0x11) 给所有客户端，
+     * 客户端收到后会通过相同 prefabId 的工厂自动派生本地副本。
+     * @param prefabId       预制体ID
+     * @param ownerClientId  拥有者 clientId（-1 表示 Server 拥有）
+     */
+    public NetworkObject spawnWithPrefab(int prefabId, int ownerClientId) {
         if (transport == null || !transport.isServer()) {
             throw new IllegalStateException("只有服务器可以 Spawn 对象！");
         }
@@ -73,6 +108,7 @@ public class NetworkManager {
         int assignedId = nextNetworkId++;
         obj.setNetworkId(assignedId);
         obj.setPrefabId(prefabId);
+        obj.setOwnerClientId(ownerClientId);
         networkObjects.put(assignedId, obj);
         // 为所有 Behaviour 绑定 Manager 引用
         for (NetworkBehaviour b : obj.getBehaviours()) {
@@ -80,7 +116,7 @@ public class NetworkManager {
         }
 
         // 广播 SpawnPacket 给所有客户端
-        byte[] spawnPacket = buildSpawnPacket(assignedId, prefabId);
+        byte[] spawnPacket = buildSpawnPacket(assignedId, prefabId, ownerClientId);
         transport.broadcast(spawnPacket);
 
         return obj;
@@ -108,13 +144,14 @@ public class NetworkManager {
     }
 
     /**
-     * 构建 Spawn 封包：[0x11][networkId][prefabId]
+     * 构建 Spawn 封包：[0x11][networkId][prefabId][ownerClientId]
      */
-    private byte[] buildSpawnPacket(int networkId, int prefabId) {
+    private byte[] buildSpawnPacket(int networkId, int prefabId, int ownerClientId) {
         NetBuffer buffer = new NetBuffer();
         buffer.writeInt(0x11); // SpawnPacket 魔法头
         buffer.writeInt(networkId);
         buffer.writeInt(prefabId);
+        buffer.writeInt(ownerClientId);
         return buffer.toByteArray();
     }
 
@@ -167,8 +204,10 @@ public class NetworkManager {
     /**
      * Transport 收到字节流后回调此方法。
      * 是从字节码还原为内存逻辑对象的必经之路。
+     * @param payload  原始字节数据
+     * @param clientId 发送方 clientId（Server 端 >= 0，Client 端为 -1）
      */
-    public void onReceiveData(byte[] payload) {
+    public void onReceiveData(byte[] payload, int clientId) {
         NetBuffer inBuffer = new NetBuffer(payload);
         int packetType = inBuffer.readInt();
         
@@ -176,6 +215,7 @@ public class NetworkManager {
         if (packetType == 0x11) {
             int netId = inBuffer.readInt();
             int prefabId = inBuffer.readInt();
+            int ownerClientId = inBuffer.readInt();
             
             NetworkPrefabFactory factory = prefabRegistry.get(prefabId);
             if (factory == null) {
@@ -187,13 +227,18 @@ public class NetworkManager {
             NetworkObject localObj = factory.create();
             localObj.setNetworkId(netId);
             localObj.setPrefabId(prefabId);
+            localObj.setOwnerClientId(ownerClientId);
+            // 判断是否为本地玩家实体
+            if (ownerClientId >= 0 && ownerClientId == localClientId) {
+                localObj.isLocalPlayer = true;
+            }
             // 为所有 Behaviour 绑定 Manager 引用
             for (NetworkBehaviour b : localObj.getBehaviours()) {
                 b.setManager(this);
             }
             networkObjects.put(netId, localObj);
             
-            System.out.println("[NetworkManager] Client 自动派生实体成功: netId=" + netId + ", prefabId=" + prefabId);
+            System.out.println("[NetworkManager] Client 自动派生实体成功: netId=" + netId + ", prefabId=" + prefabId + ", owner=" + ownerClientId + (localObj.isLocalPlayer ? " [本地玩家]" : ""));
             return;
         }
         

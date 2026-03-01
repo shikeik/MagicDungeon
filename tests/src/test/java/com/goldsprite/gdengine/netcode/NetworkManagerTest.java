@@ -20,6 +20,7 @@ public class NetworkManagerTest {
         @Override public void sendToClient(int clientId, byte[] payload) {}
         @Override public void sendToServer(byte[] payload) {}
         @Override public void setReceiveCallback(TransportReceiveCallback callback) {}
+        @Override public void setConnectionListener(NetworkConnectionListener listener) {}
         
         @Override
         public void broadcast(byte[] payload) {

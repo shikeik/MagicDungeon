@@ -9,7 +9,8 @@ package com.goldsprite.gdengine.netcode;
 public interface TransportReceiveCallback {
     /**
      * 当底层传输层收到一帧完整的网络封包时调用。
-     * @param payload 收到的原始字节数据
+     * @param payload  收到的原始字节数据
+     * @param clientId 发送方的 clientId（Server 端接收时 >= 0；Client 端固定为 -1）
      */
-    void onReceiveData(byte[] payload);
+    void onReceiveData(byte[] payload, int clientId);
 }

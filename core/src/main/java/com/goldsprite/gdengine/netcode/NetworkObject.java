@@ -20,6 +20,9 @@ public class NetworkObject {
     // 存储当前实体挂载的所有网络行为逻辑
     private List<NetworkBehaviour> behaviours = new ArrayList<>();
     
+    // 实体拥有者的 clientId（-1 表示 Server 拥有，>= 0 表示对应 Client）
+    private int ownerClientId = -1;
+
     // 权限标记，后续将交由 NetworkManager 管理填充
     public boolean isServer = false;
     public boolean isClient = false;
@@ -50,6 +53,14 @@ public class NetworkObject {
 
     public void setPrefabId(int prefabId) {
         this.prefabId = prefabId;
+    }
+
+    public int getOwnerClientId() {
+        return ownerClientId;
+    }
+
+    public void setOwnerClientId(int ownerClientId) {
+        this.ownerClientId = ownerClientId;
     }
 
     /**

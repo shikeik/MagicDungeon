@@ -18,4 +18,11 @@ public interface Transport {
      * 由 NetworkManager.setTransport() 自动调用，无需手动接线。
      */
     void setReceiveCallback(TransportReceiveCallback callback);
+
+    /**
+     * 设置连接事件监听器。
+     * Server 端：新 Client 握手成功时触发 onClientConnected(clientId)。
+     * Client 端：收到 Server 分配的 clientId 时触发 onClientConnected(assignedClientId)。
+     */
+    void setConnectionListener(NetworkConnectionListener listener);
 }
