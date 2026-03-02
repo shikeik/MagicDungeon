@@ -1,6 +1,7 @@
-fix(netcode): 修复跨平台变量注册顺序不一致导致安卓PC联机数据全错位
+feat(netcode): 大厅新增直连IP:Port模式，绕过自动网络类型识别
 
-- getDeclaredFields()在HotSpot和Android ART返回字段顺序不同
-- 导致varIndex错位: PC的x对应安卓的color, 所有同步数据交叉赋值
-- 表现: HP=几千万, 颜色乱闪, 只有炮管没身体, 双端完全不同步
-- 修复: autoRegisterNetworkVariables()按字段名字母序排序后注册
+- SupabaseLobbyScreen 右侧面板新增"直连模式"区域
+- 提供 ip:port 输入框（省略端口默认20001）+ 直连加入按钮
+- directConnect() 方法直接调用 preConfigureAsClient，绕过
+  回环/LAN/WAN 三级智能判断（同WiFi下存在误判为公网的问题）
+- 支持纯IP或 ip:port 两种格式，含完善的输入校验与提示

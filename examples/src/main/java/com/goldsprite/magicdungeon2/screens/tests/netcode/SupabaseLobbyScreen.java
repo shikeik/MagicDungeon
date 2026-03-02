@@ -36,6 +36,8 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
     private VisTextField playerNameField;
     private VisTextField hostIpField;
     private VisTextButton createRoomBtn;
+    /** 直连地址输入框 (ip:port) */
+    private VisTextField directConnectField;
 
     // === 业务层 (Presence 云大厅) ===
     private PresenceLobbyManager lobbyManager;
@@ -242,6 +244,27 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
         });
         panel.add(createRoomBtn).expandX().fillX().padBottom(8).row();
 
+        // ── 分隔线 ──
+        VisLabel separator = new VisLabel("──────── 直连模式 ────────");
+        separator.setColor(Color.GRAY);
+        panel.add(separator).center().padTop(16).padBottom(8).row();
+
+        // 直连地址输入
+        panel.add(new VisLabel("直连地址 (ip:port)")).left().row();
+        directConnectField = new VisTextField("");
+        directConnectField.setMessageText("如 192.168.1.5:20001");
+        panel.add(directConnectField).expandX().fillX().padBottom(8).row();
+
+        // 直连按钮
+        VisTextButton directConnectBtn = new VisTextButton("直连加入");
+        directConnectBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                directConnect();
+            }
+        });
+        panel.add(directConnectBtn).expandX().fillX().padBottom(8).row();
+
         // 弹性间距
         panel.add().expandY().row();
 
@@ -447,6 +470,48 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
         // 携带客户端参数跳转到 NetcodeTankOnlineScreen
         NetcodeTankOnlineScreen.preConfigureAsClient(connectIp, room.hostPort);
         NetcodeTankOnlineScreen.preConfigureRoomInfo(room.roomName);
+        getScreenManager().replaceScreen(NetcodeTankOnlineScreen.class);
+    }
+
+    // ==================== 直连模式 ====================
+
+    /**
+     * 直连模式: 用户手动输入 ip:port 直接连接，绕过三级智能判断。
+     * 适用于同WiFi被误判为公网、或已知对方确切地址等场景。
+     */
+    private void directConnect() {
+        String raw = directConnectField != null ? directConnectField.getText().trim() : "";
+        if (raw.isEmpty()) {
+            setStatus("请输入直连地址，格式: ip:port", Color.RED);
+            return;
+        }
+
+        // 解析 ip:port
+        String ip;
+        int port = DEFAULT_UDP_PORT;
+        if (raw.contains(":")) {
+            int colonIdx = raw.lastIndexOf(':');
+            ip = raw.substring(0, colonIdx);
+            try {
+                port = Integer.parseInt(raw.substring(colonIdx + 1));
+            } catch (NumberFormatException e) {
+                setStatus("端口格式错误: " + raw.substring(colonIdx + 1), Color.RED);
+                return;
+            }
+        } else {
+            ip = raw;
+        }
+
+        if (ip.isEmpty()) {
+            setStatus("IP 地址不能为空", Color.RED);
+            return;
+        }
+
+        DLog.logT(TAG, "直连模式: " + ip + ":" + port);
+        setStatus("直连中: " + ip + ":" + port + "...", Color.YELLOW);
+
+        NetcodeTankOnlineScreen.preConfigureAsClient(ip, port);
+        NetcodeTankOnlineScreen.preConfigureRoomInfo("直连房间");
         getScreenManager().replaceScreen(NetcodeTankOnlineScreen.class);
     }
 
