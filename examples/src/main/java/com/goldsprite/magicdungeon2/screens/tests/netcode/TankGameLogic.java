@@ -59,7 +59,7 @@ public class TankGameLogic {
      * <p>
      * 输入约定：
      * <ul>
-     *   <li>{@code pendingMoveX/Y}: 归一化方向 (−1~1)，本方法消费后自动清零</li>
+     *   <li>{@code pendingMoveX/Y}: 归一化方向 (−1~1)，代表当前摇杆状态（持续生效，不清零）</li>
      *   <li>{@code pendingFire}: true 表示有开火请求，本方法消费后自动复位</li>
      * </ul>
      */
@@ -71,7 +71,7 @@ public class TankGameLogic {
             int ownerId = entry.getKey();
 
             if (!tank.isDead.getValue()) {
-                // ── 消费移动输入 ──
+                // ── 消费移动输入（持续状态，不清零，发送端负责发0,0停止）──
                 float mx = tank.pendingMoveX;
                 float my = tank.pendingMoveY;
                 if (mx != 0 || my != 0) {
@@ -79,8 +79,6 @@ public class TankGameLogic {
                     tank.y.setValue(tank.y.getValue() + my * speed);
                     tank.rot.setValue(new Vector2(mx, my).angleDeg());
                 }
-                tank.pendingMoveX = 0;
-                tank.pendingMoveY = 0;
 
                 // ── 消费开火请求 ──
                 if (tank.pendingFire) {

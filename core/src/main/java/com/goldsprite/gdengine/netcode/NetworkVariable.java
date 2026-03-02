@@ -41,7 +41,7 @@ public class NetworkVariable<T> {
      */
     private boolean clientPredicted = false;
     /** 客户端预测模式下的硬拉回阈值（偏差超过此值 → 直接 snap） */
-    private float clientPredictSnapDist = 30f;
+    private float clientPredictSnapDist = 60f;
     /** 客户端预测模式下的漂移修正速率（每秒收敛比例） */
     private float clientPredictCorrectionRate = 3f;
 

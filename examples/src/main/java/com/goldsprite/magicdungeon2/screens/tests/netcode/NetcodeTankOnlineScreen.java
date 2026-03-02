@@ -426,9 +426,11 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
             Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
 
-            if (dir.x != 0 || dir.y != 0) {
-                myTank.sendServerRpc("rpcMoveInput", dir.x, dir.y);
+            // 始终发送方向（包括 0,0 停止）—— 服务端不清零 pendingMove，
+            // 必须显式发送停止指令，否则坦克会永远滑行
+            myTank.sendServerRpc("rpcMoveInput", dir.x, dir.y);
 
+            if (dir.x != 0 || dir.y != 0) {
                 // ── 客户端预测: 本地立即移动 + 本地碰撞，消除 RTT 延迟感 ──
                 float speed = TankGameLogic.MOVE_SPEED * delta;
                 float newX = myTank.x.getValue() + dir.x * speed;

@@ -1,6 +1,7 @@
-fix(netcode): 地图种子改为 Server 权威下发，修复直连/手动加入时墙体不同步
+fix(netcode): 修复帧率不匹配导致移动速度异常+回扯, 新增客户端预测模式
 
-- 根因: 双端各自猜测地图种子, 直连路径 roomName 不一致导致 hashCode 不同
-- TankBehaviour: 新增 @ClientRpc rpcSyncMapSeed(int) + volatile 接收字段
-- OnlineScreen Server: 新客户端连入时通过 hostTank 广播地图种子
-- OnlineScreen Client: 删除自行猜测种子, 新增 checkMapSeedSync() 每帧检查并重建地图
+- pendingMoveX/Y 改为持续摇杆状态(不清零), 服务端每帧应用最后已知方向
+- 客户端始终发送方向(含 0,0 停止), 解决高帧率服务端移动被稀释到 25% 的问题
+- NetworkVariable 新增 clientPrediction 模式: 反序列化不覆盖本地值, >60px 才硬拉
+- 客户端预测加入本地碰撞(clampToBoundary + pushOutOfWalls)
+- 彻底删除 disableSmoothForLocalPlayer/enableSmoothForRemotePlayer 残留代码

@@ -3,6 +3,23 @@
 本项目的所有显著更改都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，并且本项目遵循 [语义化版本控制 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
 
+## [0.8.2] - 2026-03-03
+
+### 修复 (Fixed)
+
+- **帧率不匹配导致移动速度异常 + 严重回扯**：PC 240fps / Android 60fps 下，坦克实际速度只有预期的 25% 甚至更低
+  - 根因：`serverTickTanks()` 每次消费 `pendingMoveX/Y` 后清零，而客户端每帧只发 1 次 RPC。服务端高帧率下，仅收到 RPC 那 1 帧有输入，其余帧 pendingMove=0，移动被大幅稀释
+  - 修复：`pendingMoveX/Y` 改为**持续摇杆状态**（不清零），服务端每帧都应用最后已知方向
+  - 客户端始终发送方向（含 `0,0` 停止指令），确保松手后服务端立刻停止
+
+- **客户端预测被服务端频繁拉回**：正常延迟下本地玩家仍出现明显回扯
+  - 修复：`NetworkVariable` 新增 `clientPrediction` 模式 — 反序列化不直接覆盖本地值，仅在偏差 >60px 时硬拉，微偏差通过 `reconcileTick` 漂移修正
+  - 客户端预测加入本地碰撞（`clampToBoundary` + `pushOutOfWalls`），预测路径更贴近服务端
+
+- **彻底移除位置同步插值**：删除 `disableSmoothForLocalPlayer()` / `enableSmoothForRemotePlayer()` 残留代码
+
+---
+
 ## [0.8.1] - 2026-03-03
 
 ### 修复 (Fixed)
