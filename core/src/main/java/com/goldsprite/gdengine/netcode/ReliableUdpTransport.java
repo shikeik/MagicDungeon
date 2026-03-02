@@ -558,9 +558,9 @@ public class ReliableUdpTransport implements Transport {
          */
         public boolean accept(int seqNum) {
             if (highestAccepted < 0) {
-                // 首个包，直接接受
+                // 首个包，直接接受；标记在窗口末端（即 highestAccepted 对应位置）
                 highestAccepted = seqNum;
-                receivedBits[0] = true;
+                receivedBits[WINDOW_SIZE - 1] = true;
                 return true;
             }
 
