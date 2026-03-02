@@ -1,8 +1,8 @@
-refactor(netcode): 重构 SupabaseLobbyScreen 从轮询驱动到 Presence 事件驱动
+fix(netcode): 修复大厅房间残留 + 客户端重连同步全失效
 
-- SupabaseLobbyScreen: 移除 RoomManager 和 10s 轮询定时器，接入 PresenceLobbyManager
-- SupabaseLobbyScreen: 建房流程打通 (获取IP→publishRoom→跳转游戏)
-- SupabaseLobbyScreen: 加入流程打通 (读取hostIp:port→跳转游戏)
-- SupabaseLobbyScreen: 新增连接状态指示器、房间状态标签、按钮禁用态
-- NetcodeTankOnlineScreen: 新增 preConfigureAsHost/preConfigureAsClient 静态预配置接口
-- NetcodeTankOnlineScreen: create() 中检测预配置，跳过 CONFIG 阶段直接启动网络
+- SupabaseLobbyScreen: 重写 show()，从游戏返回大厅时自动 unpublishRoom 清除残留房间
+- UdpSocketTransport: broadcast() 仅向 activeClientIds 发送，不再向已断开的旧地址发包
+- ReliableUdpTransport: 引入按 clientId 隔离的 ReceiveSequenceTracker，修复重连客户端可靠包被当旧包丢弃
+- ReliableUdpTransport: setConnectionListener 拦截连接/断开事件，自动创建/清理追踪器
+- ReliableUdpTransport: checkHeartbeatTimeouts 同步清理断开客户端的追踪器
+- ReliableUdpTransport: disconnect() 清空所有按客户端隔离的状态

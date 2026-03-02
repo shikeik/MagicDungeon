@@ -86,6 +86,21 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
     }
 
     @Override
+    public void show() {
+        super.show();
+        // 从游戏屏幕返回大厅时，取消发布已创建的房间（避免房主离开后房间仍残留在列表中）
+        if (myRoomInfo != null && lobbyManager != null) {
+            lobbyManager.unpublishRoom();
+            DLog.logT(TAG, "从游戏返回大厅，已取消发布房间: " + myRoomInfo.roomName);
+            myRoomInfo = null;
+        }
+        // 恢复建房按钮可用状态
+        if (createRoomBtn != null) {
+            createRoomBtn.setDisabled(false);
+        }
+    }
+
+    @Override
     public void render0(float delta) {
         // 不需要轮询定时器了！Presence 事件会自动推送更新。
         uiStage.act(delta);

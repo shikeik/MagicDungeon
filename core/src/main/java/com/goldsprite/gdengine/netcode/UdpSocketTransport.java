@@ -178,8 +178,11 @@ public class UdpSocketTransport implements Transport {
     @Override
     public void broadcast(byte[] payload) {
         if (!isServerIdentity) return;
-        for (InetSocketAddress addr : clientAddresses) {
-            sendWithLengthPrefix(payload, addr);
+        // 仅向活跃客户端广播（避免发送给已断开的旧地址）
+        for (int clientId : activeClientIds) {
+            if (clientId >= 0 && clientId < clientAddresses.size()) {
+                sendWithLengthPrefix(payload, clientAddresses.get(clientId));
+            }
         }
     }
 

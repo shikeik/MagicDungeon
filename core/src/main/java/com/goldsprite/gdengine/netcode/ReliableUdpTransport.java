@@ -57,8 +57,10 @@ public class ReliableUdpTransport implements Transport {
     private final PendingPacketBuffer pendingBuffer = new PendingPacketBuffer();
 
     // ── 接收端 ──
-    /** 接收端序列号追踪器 */
+    /** 接收端序列号追踪器（Client 端使用：只连一个 Server） */
     private final ReceiveSequenceTracker receiveTracker = new ReceiveSequenceTracker();
+    /** Server 端按客户端隔离的接收序列号追踪器（clientId → Tracker） */
+    private final Map<Integer, ReceiveSequenceTracker> clientReceiveTrackers = new ConcurrentHashMap<>();
     /** 最近收到的对方序列号（用于 ACK 回复） */
     private volatile int lastReceivedSeqNum = 0;
 
@@ -90,7 +92,22 @@ public class ReliableUdpTransport implements Transport {
     @Override
     public void setConnectionListener(NetworkConnectionListener listener) {
         this.userConnectionListener = listener;
-        rawTransport.setConnectionListener(listener);
+        // 拦截连接事件，管理按客户端隔离的可靠层状态
+        rawTransport.setConnectionListener(new NetworkConnectionListener() {
+            @Override
+            public void onClientConnected(int clientId) {
+                // 为新客户端创建独立的接收序列号追踪器（确保重连客户端从 seq=0 开始不被当作旧包）
+                clientReceiveTrackers.put(clientId, new ReceiveSequenceTracker());
+                if (listener != null) listener.onClientConnected(clientId);
+            }
+            @Override
+            public void onClientDisconnected(int clientId) {
+                // 清理断开客户端的可靠层状态
+                clientReceiveTrackers.remove(clientId);
+                clientLastRecvTimeMs.remove(clientId);
+                if (listener != null) listener.onClientDisconnected(clientId);
+            }
+        });
     }
 
     @Override
@@ -109,6 +126,7 @@ public class ReliableUdpTransport implements Transport {
     public void disconnect() {
         rawTransport.disconnect();
         pendingBuffer.clear();
+        clientReceiveTrackers.clear();
     }
 
     @Override
@@ -215,8 +233,21 @@ public class ReliableUdpTransport implements Transport {
                 // 处理对方捎带的 ACK
                 pendingBuffer.ack(ackNum);
 
+                // 选择对应的序列号追踪器（Server 端按客户端隔离，Client 端使用全局追踪器）
+                ReceiveSequenceTracker tracker;
+                if (rawTransport.isServer() && clientId >= 0) {
+                    tracker = clientReceiveTrackers.get(clientId);
+                    if (tracker == null) {
+                        // 安全兜底：如果追踪器不存在（理论上不应该发生），动态创建
+                        tracker = new ReceiveSequenceTracker();
+                        clientReceiveTrackers.put(clientId, tracker);
+                    }
+                } else {
+                    tracker = receiveTracker;
+                }
+
                 // 乱序/重复检测
-                if (!receiveTracker.accept(seqNum)) {
+                if (!tracker.accept(seqNum)) {
                     // 旧包或重复包，但仍需回复 ACK（避免对方无限重传）
                     sendAck(seqNum, clientId);
                     return;
@@ -363,6 +394,7 @@ public class ReliableUdpTransport implements Transport {
         }
         for (int cid : timedOut) {
             clientLastRecvTimeMs.remove(cid);
+            clientReceiveTrackers.remove(cid);
             rawTransport.deactivateClient(cid);
             DLog.logT("Netcode", "[ReliableUDP] 客户端 #" + cid + " 心跳超时，触发断线");
             if (userConnectionListener != null) {

@@ -3,9 +3,18 @@
 本项目的所有显著更改都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，并且本项目遵循 [语义化版本控制 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
 
-## [未发布/最新] (Unreleased)
+## [0.7.9] - 2026-03-03
 
 ### 修复 (Fixed)
+
+- **房主 ESC 返回大厅后房间仍残留在 Presence 列表**
+  - 根因: `replaceScreen()` 只 hide 大厅屏幕（压栈），不 dispose，`lobbyManager` 保持 Presence 连接且房间仍处于发布状态
+  - 修复: SupabaseLobbyScreen 重写 `show()`，从游戏屏幕返回时自动调用 `lobbyManager.unpublishRoom()` 并清空 `myRoomInfo`，恢复建房按钮状态
+
+- **[严重] 客户端断开后重连房间无法同步位置和子弹（实体 Spawn 正常但 RPC 全失效）**
+  - 根因 1: `ReliableUdpTransport` 服务器端仅有一个全局 `ReceiveSequenceTracker`，所有客户端共享同一序列号空间。重连客户端的可靠包从 seq=0 重新开始，但追踪器记住了旧客户端的 `highestAccepted`，导致新客户端的所有 ServerRpc（移动/开火）被判定为「旧包」而静默丢弃
+  - 根因 2: `UdpSocketTransport.broadcast()` 向所有历史客户端地址（含已断开的）发包，浪费带宽且向死地址发送数据
+  - 修复: 引入 `Map<Integer, ReceiveSequenceTracker> clientReceiveTrackers` 按 clientId 隔离序列号追踪；`broadcast()` 仅向 `activeClientIds` 发送；客户端连接/断开/心跳超时时同步创建/清理追踪器状态
 
 - **跨平台变量注册顺序不一致导致安卓-PC联机数据全错位**
   - `Class.getDeclaredFields()` 在不同 JVM（HotSpot vs Android ART）返回字段顺序不同
