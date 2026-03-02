@@ -13,7 +13,7 @@ import com.goldsprite.gdengine.log.DLog;
 /**
  * Supabase Realtime Presence 云大厅管理器
  * <p>
- * 替代旧的 {@link RoomManager} (REST 表操作 + HTTP 心跳)，采用 WebSocket Presence
+ * 替代旧的 RoomManager (REST 表操作 + HTTP 心跳，已删除)，采用 WebSocket Presence
  * 实现零数据库 I/O 的实时房间列表同步。
  * <p>
  * 核心能力:

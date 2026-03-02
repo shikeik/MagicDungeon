@@ -1,0 +1,445 @@
+package com.goldsprite.gdengine.netcode;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.goldsprite.gdengine.log.DLog;
+
+/**
+ * 可靠 UDP 传输层（装饰器模式）。
+ * <p>
+ * 在原始 {@link UdpSocketTransport} 之上添加可靠性保障：
+ * <ul>
+ *   <li>序列号 (16-bit 循环) 用于乱序检测和去重</li>
+ *   <li>ACK 确认机制</li>
+ *   <li>超时重传（默认 200ms，最多 5 次）</li>
+ *   <li>双通道: Reliable（需确认）和 Unreliable（透传）</li>
+ * </ul>
+ * <p>
+ * 封包格式:
+ * <pre>
+ * [channelType: 1B] [seqNum: 2B] [ackNum: 2B] [payload: NB]
+ * </pre>
+ * channelType: 0x00=Unreliable, 0x01=Reliable, 0x02=ACK
+ */
+public class ReliableUdpTransport implements Transport {
+
+    // 通道类型常量
+    public static final byte CHANNEL_UNRELIABLE = 0x00;
+    public static final byte CHANNEL_RELIABLE = 0x01;
+    public static final byte CHANNEL_ACK = 0x02;
+
+    // 序列号空间: 16-bit (0 ~ 65535)
+    private static final int SEQ_MAX = 65536;
+    private static final int SEQ_HALF = SEQ_MAX / 2;
+
+    // 重传参数
+    private static final long RETRANSMIT_TIMEOUT_MS = 200;
+    private static final int MAX_RETRANSMIT_COUNT = 5;
+
+    // 被装饰的原始 UDP 传输层
+    private final UdpSocketTransport rawTransport;
+
+    // 上层数据接收回调
+    private TransportReceiveCallback userCallback;
+
+    // 连接事件监听器
+    private NetworkConnectionListener userConnectionListener;
+
+    // ── 发送端 ──
+    /** 发送端递增序列号 */
+    private int sendSeqNum = 0;
+    /** 待确认包缓冲区（seqNum → PendingEntry） */
+    private final PendingPacketBuffer pendingBuffer = new PendingPacketBuffer();
+
+    // ── 接收端 ──
+    /** 接收端序列号追踪器 */
+    private final ReceiveSequenceTracker receiveTracker = new ReceiveSequenceTracker();
+    /** 最近收到的对方序列号（用于 ACK 回复） */
+    private volatile int lastReceivedSeqNum = 0;
+
+    public ReliableUdpTransport(UdpSocketTransport rawTransport) {
+        this.rawTransport = rawTransport;
+    }
+
+    // ========== Transport 接口实现 ==========
+
+    @Override
+    public void setReceiveCallback(TransportReceiveCallback callback) {
+        this.userCallback = callback;
+        // 拦截原始传输层的回调，在中间层处理可靠性协议
+        rawTransport.setReceiveCallback(this::onRawReceive);
+    }
+
+    @Override
+    public void setConnectionListener(NetworkConnectionListener listener) {
+        this.userConnectionListener = listener;
+        rawTransport.setConnectionListener(listener);
+    }
+
+    @Override
+    public void startServer(int port) {
+        rawTransport.setReceiveCallback(this::onRawReceive);
+        rawTransport.startServer(port);
+    }
+
+    @Override
+    public void connect(String ip, int port) {
+        rawTransport.setReceiveCallback(this::onRawReceive);
+        rawTransport.connect(ip, port);
+    }
+
+    @Override
+    public void disconnect() {
+        rawTransport.disconnect();
+        pendingBuffer.clear();
+    }
+
+    @Override
+    public void sendToClient(int clientId, byte[] payload) {
+        byte[] wrapped = wrapPayload(payload);
+        rawTransport.sendToClient(clientId, wrapped);
+    }
+
+    @Override
+    public void sendToServer(byte[] payload) {
+        byte[] wrapped = wrapPayload(payload);
+        rawTransport.sendToServer(wrapped);
+    }
+
+    @Override
+    public void broadcast(byte[] payload) {
+        byte[] wrapped = wrapPayload(payload);
+        rawTransport.broadcast(wrapped);
+    }
+
+    @Override
+    public boolean isServer() {
+        return rawTransport.isServer();
+    }
+
+    @Override
+    public boolean isClient() {
+        return rawTransport.isClient();
+    }
+
+    // ========== 可靠层核心逻辑 ==========
+
+    /**
+     * 根据 payload 内容自动选择通道并编码。
+     * 业务层封包的前 4 字节是 packetType（0x10/0x11/0x12/0x20/0x21）。
+     */
+    private byte[] wrapPayload(byte[] payload) {
+        if (payload.length < 4) {
+            // 太短，无法解析 packetType，走 Unreliable
+            return encodeUnreliablePacket(payload);
+        }
+
+        // 读取前 4 字节作为 packetType
+        int packetType = ((payload[0] & 0xFF) << 24)
+                       | ((payload[1] & 0xFF) << 16)
+                       | ((payload[2] & 0xFF) << 8)
+                       | (payload[3] & 0xFF);
+
+        if (isReliablePacketType(packetType)) {
+            int seq = nextSeqNum();
+            byte[] packet = encodeReliablePacket(seq, lastReceivedSeqNum, payload);
+            pendingBuffer.add(seq, packet, System.currentTimeMillis());
+            return packet;
+        } else {
+            return encodeUnreliablePacket(payload);
+        }
+    }
+
+    /**
+     * 原始传输层收到数据后的拦截处理。
+     * 解析可靠层头部，根据通道类型分别处理。
+     */
+    private void onRawReceive(byte[] rawData, int clientId) {
+        if (rawData == null || rawData.length < 1) return;
+
+        byte channelType = rawData[0];
+
+        switch (channelType) {
+            case CHANNEL_UNRELIABLE: {
+                // Unreliable: 去掉 1 字节头，直接推送给上层
+                byte[] payload = new byte[rawData.length - 1];
+                System.arraycopy(rawData, 1, payload, 0, payload.length);
+                if (userCallback != null) {
+                    userCallback.onReceiveData(payload, clientId);
+                }
+                break;
+            }
+
+            case CHANNEL_RELIABLE: {
+                if (rawData.length < 5) return; // 头部不完整
+                // 解析 seqNum 和 ackNum
+                int seqNum = ((rawData[1] & 0xFF) << 8) | (rawData[2] & 0xFF);
+                int ackNum = ((rawData[3] & 0xFF) << 8) | (rawData[4] & 0xFF);
+
+                // 处理对方捎带的 ACK
+                pendingBuffer.ack(ackNum);
+
+                // 乱序/重复检测
+                if (!receiveTracker.accept(seqNum)) {
+                    // 旧包或重复包，但仍需回复 ACK（避免对方无限重传）
+                    sendAck(seqNum, clientId);
+                    return;
+                }
+
+                // 更新最近收到的序列号
+                lastReceivedSeqNum = seqNum;
+
+                // 回复 ACK
+                sendAck(seqNum, clientId);
+
+                // 提取 payload 推送给上层
+                byte[] payload = new byte[rawData.length - 5];
+                System.arraycopy(rawData, 5, payload, 0, payload.length);
+                if (userCallback != null) {
+                    userCallback.onReceiveData(payload, clientId);
+                }
+                break;
+            }
+
+            case CHANNEL_ACK: {
+                if (rawData.length < 3) return;
+                int ackedSeq = ((rawData[1] & 0xFF) << 8) | (rawData[2] & 0xFF);
+                pendingBuffer.ack(ackedSeq);
+                break;
+            }
+
+            default:
+                // 未知通道类型，忽略
+                DLog.logErr("[ReliableUDP] 未知通道类型: 0x" + Integer.toHexString(channelType & 0xFF));
+                break;
+        }
+    }
+
+    /** 发送 ACK 包: [0x02][seqNum: 2B] */
+    private void sendAck(int seqNum, int clientId) {
+        byte[] ackPacket = new byte[3];
+        ackPacket[0] = CHANNEL_ACK;
+        ackPacket[1] = (byte) ((seqNum >> 8) & 0xFF);
+        ackPacket[2] = (byte) (seqNum & 0xFF);
+
+        if (rawTransport.isServer()) {
+            rawTransport.sendToClient(clientId, ackPacket);
+        } else {
+            rawTransport.sendToServer(ackPacket);
+        }
+    }
+
+    /** 分配下一个序列号（16-bit 循环） */
+    private synchronized int nextSeqNum() {
+        int seq = sendSeqNum;
+        sendSeqNum = (sendSeqNum + 1) % SEQ_MAX;
+        return seq;
+    }
+
+    /**
+     * 每帧调用: 检查超时重传。
+     * 由 NetworkManager 或游戏层在主循环中调用。
+     */
+    public void tickReliable() {
+        long now = System.currentTimeMillis();
+        List<PendingEntry> timedOut = pendingBuffer.getTimedOut(now, RETRANSMIT_TIMEOUT_MS);
+
+        for (PendingEntry entry : timedOut) {
+            if (entry.retransmitCount >= MAX_RETRANSMIT_COUNT) {
+                DLog.logErr("[ReliableUDP] 包 seq=" + entry.seqNum + " 超过最大重传次数，放弃");
+                pendingBuffer.remove(entry.seqNum);
+                continue;
+            }
+
+            // 重传
+            if (rawTransport.isServer()) {
+                rawTransport.broadcast(entry.packetData);
+            } else {
+                rawTransport.sendToServer(entry.packetData);
+            }
+            pendingBuffer.markRetransmitted(entry.seqNum, now);
+        }
+    }
+
+    // ========== 转发方法: 暴露底层 UdpSocketTransport 的特性 ==========
+
+    /** 获取底层 UDP 传输被分配的 clientId */
+    public int getAssignedClientId() {
+        return rawTransport.getAssignedClientId();
+    }
+
+    /** 获取当前活跃客户端数 */
+    public int getActiveClientCount() {
+        return rawTransport.getActiveClientCount();
+    }
+
+    /** 获取当前活跃客户端 ID 集合 */
+    public java.util.Set<Integer> getActiveClientIds() {
+        return rawTransport.getActiveClientIds();
+    }
+
+    // ========== 静态工具方法 ==========
+
+    /**
+     * 判断序列号 a 是否新于 b（支持 16-bit 循环）。
+     * 使用半空间比较法: 如果 (a - b) mod 65536 < 32768，则 a 新于 b。
+     */
+    public static boolean isSeqNewer(int a, int b) {
+        if (a == b) return false;
+        int diff = (a - b + SEQ_MAX) % SEQ_MAX;
+        return diff > 0 && diff < SEQ_HALF;
+    }
+
+    /**
+     * 判断业务封包类型是否需要走 Reliable 通道。
+     * 状态同步 (0x10) → Unreliable，其他关键封包 → Reliable。
+     */
+    public static boolean isReliablePacketType(int packetType) {
+        switch (packetType) {
+            case 0x11: // Spawn
+            case 0x12: // Despawn
+            case 0x20: // ServerRpc
+            case 0x21: // ClientRpc
+                return true;
+            case 0x10: // 状态同步
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * 编码 Reliable 封包: [0x01][seqNum: 2B][ackNum: 2B][payload]
+     */
+    public static byte[] encodeReliablePacket(int seqNum, int ackNum, byte[] payload) {
+        byte[] packet = new byte[5 + payload.length];
+        packet[0] = CHANNEL_RELIABLE;
+        packet[1] = (byte) ((seqNum >> 8) & 0xFF);
+        packet[2] = (byte) (seqNum & 0xFF);
+        packet[3] = (byte) ((ackNum >> 8) & 0xFF);
+        packet[4] = (byte) (ackNum & 0xFF);
+        System.arraycopy(payload, 0, packet, 5, payload.length);
+        return packet;
+    }
+
+    /**
+     * 编码 Unreliable 封包: [0x00][payload]
+     */
+    public static byte[] encodeUnreliablePacket(byte[] payload) {
+        byte[] packet = new byte[1 + payload.length];
+        packet[0] = CHANNEL_UNRELIABLE;
+        System.arraycopy(payload, 0, packet, 1, payload.length);
+        return packet;
+    }
+
+    // ========== 内部数据结构 ==========
+
+    /** 待确认包条目 */
+    public static class PendingEntry {
+        public final int seqNum;
+        public final byte[] packetData;
+        public long lastSendTime;
+        public int retransmitCount;
+
+        public PendingEntry(int seqNum, byte[] packetData, long sendTime) {
+            this.seqNum = seqNum;
+            this.packetData = packetData;
+            this.lastSendTime = sendTime;
+            this.retransmitCount = 0;
+        }
+    }
+
+    /**
+     * 待确认包缓冲区。
+     * 线程安全: 发送在主线程，ACK 回调在 IO 线程。
+     */
+    public static class PendingPacketBuffer {
+        private final Map<Integer, PendingEntry> entries = new ConcurrentHashMap<>();
+
+        public void add(int seqNum, byte[] packetData, long sendTime) {
+            entries.put(seqNum, new PendingEntry(seqNum, packetData, sendTime));
+        }
+
+        /** 收到 ACK 后移除对应条目 */
+        public void ack(int seqNum) {
+            entries.remove(seqNum);
+        }
+
+        /** 移除指定条目 */
+        public void remove(int seqNum) {
+            entries.remove(seqNum);
+        }
+
+        /** 清空所有待确认包 */
+        public void clear() {
+            entries.clear();
+        }
+
+        /** 当前待确认包数量 */
+        public int size() {
+            return entries.size();
+        }
+
+        /** 获取所有超时的条目（不修改状态） */
+        public List<PendingEntry> getTimedOut(long now, long timeoutMs) {
+            List<PendingEntry> result = new ArrayList<>();
+            for (PendingEntry entry : entries.values()) {
+                if (now - entry.lastSendTime >= timeoutMs) {
+                    result.add(entry);
+                }
+            }
+            return result;
+        }
+
+        /** 标记重传（更新发送时间和重传计数） */
+        public void markRetransmitted(int seqNum, long now) {
+            PendingEntry entry = entries.get(seqNum);
+            if (entry != null) {
+                entry.lastSendTime = now;
+                entry.retransmitCount++;
+            }
+        }
+
+        /** 检查是否超过最大重传次数 */
+        public boolean isMaxRetriesExceeded(int seqNum, int maxRetries) {
+            PendingEntry entry = entries.get(seqNum);
+            return entry != null && entry.retransmitCount >= maxRetries;
+        }
+    }
+
+    /**
+     * 接收端序列号追踪器。
+     * 维护已处理的最新序列号，拒绝旧包和重复包。
+     */
+    public static class ReceiveSequenceTracker {
+        /** 最近接受的最大序列号，-1 表示尚未收到任何包 */
+        private int highestAccepted = -1;
+
+        /**
+         * 尝试接受一个序列号。
+         * @return true 如果是新包（接受），false 如果是旧包或重复（拒绝）
+         */
+        public boolean accept(int seqNum) {
+            if (highestAccepted < 0) {
+                // 首个包，直接接受
+                highestAccepted = seqNum;
+                return true;
+            }
+
+            if (isSeqNewer(seqNum, highestAccepted)) {
+                highestAccepted = seqNum;
+                return true;
+            }
+
+            // seqNum <= highestAccepted（含循环判断），拒绝
+            return false;
+        }
+
+        public int getHighestAccepted() {
+            return highestAccepted;
+        }
+    }
+}

@@ -14,8 +14,10 @@ import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.goldsprite.gdengine.netcode.MapCollisionUtils;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.NetworkObject;
+import com.goldsprite.gdengine.netcode.ReliableUdpTransport;
 import com.goldsprite.gdengine.netcode.UdpSocketTransport;
 import com.goldsprite.gdengine.screens.GScreen;
 
@@ -101,7 +103,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     // ── 网络层 ────────
     private NetworkManager manager;
-    private UdpSocketTransport transport;
+    private ReliableUdpTransport transport;
+    private UdpSocketTransport rawTransport;
 
     // ── 游戏对象 (Server 端维护) ──────
     /** Server 端: clientId → TankBehaviour 映射 */
@@ -119,6 +122,24 @@ public class NetcodeTankOnlineScreen extends GScreen {
     private static final Color[] SPAWN_COLORS = {
         Color.ORANGE, Color.CYAN, Color.LIME, Color.MAGENTA, Color.GOLD, Color.SKY
     };
+
+    // ── 地图边界与墙体 ──
+    /** 地图边界宽度 */
+    private static final float MAP_WIDTH = 2000f;
+    /** 地图边界高度 */
+    private static final float MAP_HEIGHT = 1500f;
+    /** 墙体颜色 */
+    private static final Color WALL_COLOR = new Color(0.4f, 0.6f, 1f, 0.7f);
+    /** 边界颜色 */
+    private static final Color BOUNDARY_COLOR = new Color(0.3f, 0.8f, 0.3f, 0.6f);
+    /** 墙体线框宽度 */
+    private static final float WALL_LINE_WIDTH = 2f;
+    /** 边界线框宽度 */
+    private static final float BOUNDARY_LINE_WIDTH = 3f;
+    /** 随机墙体列表（双端一致） */
+    private final List<float[]> walls = new ArrayList<>();
+    /** 随机种子（由 Server 决定） */
+    private long mapSeed = 0;
 
     // ── 抽屉面板（房间成员详情） ──
     /** 抽屉是否展开 */
@@ -158,10 +179,10 @@ public class NetcodeTankOnlineScreen extends GScreen {
             startNetwork();
         }
 
-        // 初始化游戏世界相机到视口中心
+        // 初始化游戏世界相机到地图中心
         worldCamera.position.set(
-            uiViewport.getWorldWidth() / 2f,
-            uiViewport.getWorldHeight() / 2f, 0);
+            MAP_WIDTH / 2f,
+            MAP_HEIGHT / 2f, 0);
         worldCamera.update();
     }
 
@@ -212,10 +233,12 @@ public class NetcodeTankOnlineScreen extends GScreen {
             transport.disconnect();
             transport = null;
         }
+        rawTransport = null;
         manager = null;
         clientTanks.clear();
         serverBullets.clear();
         clientBullets.clear();
+        walls.clear();
         nextBulletId = 1;
         state = State.CONFIG;
     }
@@ -264,7 +287,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     private void startNetwork() {
         manager = new NetworkManager();
-        transport = new UdpSocketTransport(isServerRole);
+        rawTransport = new UdpSocketTransport(isServerRole);
+        transport = new ReliableUdpTransport(rawTransport);
         manager.setTransport(transport);
         manager.registerPrefab(TankSandboxUtils.TANK_PREFAB_ID, TankSandboxUtils.createTankFactory());
 
@@ -285,6 +309,10 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 });
                 transport.startServer(configPort);
 
+                // 生成地图墙体（使用房间名哈希作为种子，确保双端一致）
+                mapSeed = roomName != null ? roomName.hashCode() : System.currentTimeMillis();
+                generateWalls(mapSeed);
+
                 // Server 自身也产一辆坦克（Host 模式: ownerClientId = -1）
                 spawnTankForOwner(-1);
 
@@ -294,6 +322,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
             } else {
                 // Client 模式
                 transport.connect(configIp, configPort);
+                // Client 使用固定种子（后续由 Server 下发，暂用房间名哈希代替）
+                mapSeed = roomName != null ? roomName.hashCode() : 42;
+                generateWalls(mapSeed);
                 state = State.WAITING;
                 configError = null;
                 DLog.logT("Netcode", "[Online] Client 连接中: " + configIp + ":" + configPort);
@@ -403,8 +434,18 @@ public class NetcodeTankOnlineScreen extends GScreen {
         // 子弹物理 + 碰撞
         updateServerBullets(delta);
 
+        // 坦克边界 + 墙体碰撞
+        for (TankBehaviour tank : clientTanks.values()) {
+            if (!tank.isDead.getValue()) {
+                clampTankToBoundary(tank);
+                pushTankOutOfWalls(tank);
+            }
+        }
+
         // 同步
         manager.tick();
+        // 可靠层超时重传检查
+        transport.tickReliable();
     }
 
     /** Host 坦克由本地键盘驱动: WASD 移动, J 开火 */
@@ -429,16 +470,27 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     /** Server 子弹物理 + 泛化碰撞检测（支持 N 辆坦克） */
     private void updateServerBullets(float delta) {
-        float screenW = uiViewport.getWorldWidth();
-        float screenH = uiViewport.getWorldHeight();
         Iterator<Bullet> iter = serverBullets.iterator();
         while (iter.hasNext()) {
             Bullet b = iter.next();
             b.x += b.vx * delta;
             b.y += b.vy * delta;
 
-            // 越界移除
-            if (b.x < 0 || b.x > screenW || b.y < 0 || b.y > screenH) {
+            // 越界移除（使用地图边界）
+            if (b.x < 0 || b.x > MAP_WIDTH || b.y < 0 || b.y > MAP_HEIGHT) {
+                iter.remove();
+                continue;
+            }
+
+            // 子弹 vs 墙体碰撞（AABB: 子弹视为 8x8）
+            boolean hitWall = false;
+            for (float[] w : walls) {
+                if (rectOverlap(b.x - 4, b.y - 4, 8, 8, w[0], w[1], w[2], w[3])) {
+                    hitWall = true;
+                    break;
+                }
+            }
+            if (hitWall) {
                 iter.remove();
                 continue;
             }
@@ -499,6 +551,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
         // 模拟 Client 端子弹运动
         updateClientBullets(delta);
+
+        // 可靠层超时重传检查
+        transport.tickReliable();
     }
 
     /** 从 manager 中找到 isLocalPlayer=true 的坦克 */
@@ -514,8 +569,6 @@ public class NetcodeTankOnlineScreen extends GScreen {
     /** 收集由 ClientRpc 触发的子弹，模拟运动 */
     private void updateClientBullets(float delta) {
         clientBullets.clear();
-        float screenW = uiViewport.getWorldWidth();
-        float screenH = uiViewport.getWorldHeight();
 
         for (NetworkObject obj : manager.getAllNetworkObjects()) {
             if (obj.getBehaviours().isEmpty()) continue;
@@ -529,7 +582,20 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 Bullet b = iter.next();
                 b.x += b.vx * delta;
                 b.y += b.vy * delta;
-                if (b.x < 0 || b.x > screenW || b.y < 0 || b.y > screenH) {
+                // 使用地图边界
+                if (b.x < 0 || b.x > MAP_WIDTH || b.y < 0 || b.y > MAP_HEIGHT) {
+                    iter.remove();
+                    continue;
+                }
+                // 客户端本地墙体碰撞（视觉一致性）
+                boolean hitWall = false;
+                for (float[] w : walls) {
+                    if (rectOverlap(b.x - 4, b.y - 4, 8, 8, w[0], w[1], w[2], w[3])) {
+                        hitWall = true;
+                        break;
+                    }
+                }
+                if (hitWall) {
                     iter.remove();
                     continue;
                 }
@@ -690,6 +756,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
         // ── 1. 游戏世界渲染（跟随相机）──
         neon.setProjectionMatrix(worldCamera.combined);
         neon.begin();
+
+        // 地图边界和墙体
+        renderMapElements();
 
         if (isServerRole) {
             for (TankBehaviour tank : clientTanks.values()) {
@@ -862,5 +931,103 @@ public class NetcodeTankOnlineScreen extends GScreen {
         textY -= lineH + 4;
 
         return textY;
+    }
+
+    // ══════════════ 地图墙体 & 边界 ══════════════
+
+    /**
+     * 根据种子生成随机墙体布局。
+     * 双端使用相同种子可得到一致的墙体布局。
+     * @param seed 随机种子（Server 时间戳 / Client 房间名哈希）
+     */
+    private void generateWalls(long seed) {
+        walls.clear();
+        float[][] generated = MapCollisionUtils.generateWalls(seed, MAP_WIDTH, MAP_HEIGHT);
+        for (float[] w : generated) {
+            walls.add(w);
+        }
+    }
+
+    /**
+     * 将坦克坐标限制在地图边界内（Clamp）。
+     * 坦克半径 15px（30x30 车体的一半）。
+     */
+    private void clampTankToBoundary(TankBehaviour tank) {
+        float halfSize = 15f;
+        float tx = tank.x.getValue();
+        float ty = tank.y.getValue();
+        float cx = Math.max(halfSize, Math.min(MAP_WIDTH - halfSize, tx));
+        float cy = Math.max(halfSize, Math.min(MAP_HEIGHT - halfSize, ty));
+        if (cx != tx) tank.x.setValue(cx);
+        if (cy != ty) tank.y.setValue(cy);
+    }
+
+    /**
+     * 将坦克推出所有墙体（AABB 碰撞 + 最小穿透推回）。
+     * 坦克视为 30x30 矩形。
+     */
+    private void pushTankOutOfWalls(TankBehaviour tank) {
+        float halfSize = 15f;
+        float tx = tank.x.getValue();
+        float ty = tank.y.getValue();
+        // 坦克 AABB
+        float tLeft = tx - halfSize, tBottom = ty - halfSize;
+        float tRight = tx + halfSize, tTop = ty + halfSize;
+
+        for (float[] w : walls) {
+            float wLeft = w[0], wBottom = w[1];
+            float wRight = w[0] + w[2], wTop = w[1] + w[3];
+
+            // AABB 重叠检测
+            if (tLeft < wRight && tRight > wLeft && tBottom < wTop && tTop > wBottom) {
+                // 计算四个方向的穿透深度，取最小值推回
+                float pushLeft = tRight - wLeft;
+                float pushRight = wRight - tLeft;
+                float pushDown = tTop - wBottom;
+                float pushUp = wTop - tBottom;
+
+                float minPush = Math.min(Math.min(pushLeft, pushRight), Math.min(pushDown, pushUp));
+                if (minPush == pushLeft) {
+                    tank.x.setValue(tx - pushLeft);
+                } else if (minPush == pushRight) {
+                    tank.x.setValue(tx + pushRight);
+                } else if (minPush == pushDown) {
+                    tank.y.setValue(ty - pushDown);
+                } else {
+                    tank.y.setValue(ty + pushUp);
+                }
+                // 更新局部变量以正确处理多墙体碰撞
+                tx = tank.x.getValue();
+                ty = tank.y.getValue();
+                tLeft = tx - halfSize; tBottom = ty - halfSize;
+                tRight = tx + halfSize; tTop = ty + halfSize;
+            }
+        }
+    }
+
+    /**
+     * AABB 矩形重叠检测。
+     * @return true 如果两个矩形有重叠
+     */
+    private static boolean rectOverlap(float ax, float ay, float aw, float ah,
+                                        float bx, float by, float bw, float bh) {
+        return MapCollisionUtils.rectOverlap(ax, ay, aw, ah, bx, by, bw, bh);
+    }
+
+    /**
+     * 渲染地图边界和墙体（在游戏世界 Pass 中调用）。
+     * 使用线框矩形（filled=false）。
+     */
+    private void renderMapElements() {
+        // 地图边界（较粗线框）
+        neon.drawRect(0, 0, MAP_WIDTH, MAP_HEIGHT, 0, BOUNDARY_LINE_WIDTH, BOUNDARY_COLOR, false);
+
+        // 随机墙体（较细线框 + 半透明填充）
+        for (float[] w : walls) {
+            // 半透明填充
+            neon.drawRect(w[0], w[1], w[2], w[3], 0, 0, new Color(0.2f, 0.3f, 0.5f, 0.3f), true);
+            // 线框
+            neon.drawRect(w[0], w[1], w[2], w[3], 0, WALL_LINE_WIDTH, WALL_COLOR, false);
+        }
     }
 }

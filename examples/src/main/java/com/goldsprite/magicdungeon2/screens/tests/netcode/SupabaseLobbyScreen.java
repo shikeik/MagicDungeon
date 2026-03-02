@@ -37,7 +37,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
     private VisTextField hostIpField;
     private VisTextButton createRoomBtn;
 
-    // === 业务层 (Presence 替代旧的 RoomManager) ===
+    // === 业务层 (Presence 云大厅) ===
     private PresenceLobbyManager lobbyManager;
 
     // === 状态 ===
