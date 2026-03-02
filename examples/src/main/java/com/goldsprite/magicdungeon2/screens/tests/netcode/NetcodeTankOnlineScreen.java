@@ -152,6 +152,16 @@ public class NetcodeTankOnlineScreen extends GScreen {
     /** 抽屉动画时长(秒) */
     private static final float DRAWER_ANIM_DURATION = 0.25f;
 
+    // ── 心跳 / 断线检测 ──
+    /** 连接是否已断开（心跳超时 / Server 主动断线） */
+    private boolean connectionLost = false;
+    /** 连接断开后的计时器(秒) */
+    private float connectionLostTimer = 0f;
+    /** 心跳超时阈值(秒) — 超过此时间未收到数据视为断线 */
+    private static final float HEARTBEAT_TIMEOUT_SEC = 5f;
+    /** 最大等待重连时间(秒) — 超时后自动返回大厅 */
+    private static final float MAX_RECONNECT_WAIT_SEC = 15f;
+
 	@Override protected void initViewport() {
 		uiViewportScale = 0.7f;
 		super.initViewport();
@@ -241,6 +251,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
         clientBullets.clear();
         walls.clear();
         nextBulletId = 1;
+        connectionLost = false;
+        connectionLostTimer = 0f;
         state = State.CONFIG;
     }
 
@@ -394,6 +406,11 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     private void updateServerLogic(float delta) {
         float speed = 200 * delta;
+
+        // ── 服务器端心跳超时检测 ──
+        if (transport != null) {
+            transport.checkHeartbeatTimeouts((long)(HEARTBEAT_TIMEOUT_SEC * 1000));
+        }
 
         // Host 的坦克（ownerClientId = -1）由本地键盘控制: WASD + J
         TankBehaviour hostTank = clientTanks.get(-1);
@@ -801,8 +818,10 @@ public class NetcodeTankOnlineScreen extends GScreen {
         } else {
             TankBehaviour myTank = findLocalPlayerTank();
             font.setColor(Color.YELLOW);
+            long pingMs = transport != null ? transport.getPingMs() : -1;
             font.draw(neon, "Client -> " + configIp + ":" + configPort
-                + "  实体数:" + manager.getNetworkObjectCount()
+                + "  Ping:" + (pingMs >= 0 ? pingMs + "ms" : "-")
+                + "  实体:" + manager.getNetworkObjectCount()
                 + "  myId:" + manager.getLocalClientId(),
                 10, uiViewport.getWorldHeight() - 10);
             font.draw(neon, myTank != null ? "WASD/方向键 移动 + J/Enter 开火" : "等待分配坦克...",
@@ -811,6 +830,11 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
         // 绘制抽屉面板（两端通用）
         renderDrawerPanel();
+
+        // 断线重连覆盖层
+        if (connectionLost) {
+            renderDisconnectOverlay();
+        }
 
         neon.end();
     }
@@ -875,6 +899,10 @@ public class NetcodeTankOnlineScreen extends GScreen {
         textY -= lineH;
         font.draw(neon, "模式: " + getConnectionMode(), textX, textY);
         textY -= lineH;
+        long drawerPingMs = transport != null ? transport.getPingMs() : -1;
+        String pingText = drawerPingMs >= 0 ? drawerPingMs + " ms" : (isServerRole ? "N/A(Host)" : "测量中...");
+        font.draw(neon, "Ping: " + pingText, textX, textY);
+        textY -= lineH;
         int tankCount = isServerRole ? clientTanks.size() : manager.getNetworkObjectCount();
         font.draw(neon, "坦克数: " + tankCount, textX, textY);
         textY -= lineH + 10;
@@ -909,6 +937,50 @@ public class NetcodeTankOnlineScreen extends GScreen {
         textY -= 10;
         font.setColor(new Color(0.5f, 0.5f, 0.5f, eased));
         font.draw(neon, "[I] 收起面板", textX, textY);
+    }
+
+    // ══════════════ 断线重连覆盖层 ══════════════
+
+    /**
+     * 渲染断线重连覆盖层。
+     * 半透明暗色全屏覆盖 + 断线提示 + 重连倒计时 + 进度条。
+     */
+    private void renderDisconnectOverlay() {
+        float screenW = uiViewport.getWorldWidth();
+        float screenH = uiViewport.getWorldHeight();
+
+        // 半透明暗色背景
+        neon.drawRect(0, 0, screenW, screenH, 0, 0, new Color(0, 0, 0, 0.75f), true);
+
+        float cx = screenW / 2f;
+        float cy = screenH / 2f;
+
+        // 断线标题
+        titleFont.setColor(Color.RED);
+        titleFont.draw(neon, "⚠ 连接已断开", cx - 70, cy + 55);
+
+        // 已断开时间
+        font.setColor(Color.YELLOW);
+        font.draw(neon, String.format("已断开 %.1f 秒", connectionLostTimer), cx - 50, cy + 18);
+
+        // 倒计时提示
+        float remaining = MAX_RECONNECT_WAIT_SEC - connectionLostTimer;
+        font.setColor(Color.WHITE);
+        font.draw(neon, String.format("%.0f 秒后自动返回大厅...", Math.max(0, remaining)), cx - 70, cy - 12);
+
+        // 进度条背景
+        float barW = 200f, barH = 8f;
+        float barX = cx - barW / 2f;
+        float barY = cy - 50;
+        neon.drawRect(barX, barY, barW, barH, 0, 0, new Color(0.3f, 0.3f, 0.3f, 0.8f), true);
+
+        // 进度条前景（从满到空）
+        float progress = Math.max(0, 1f - connectionLostTimer / MAX_RECONNECT_WAIT_SEC);
+        neon.drawRect(barX, barY, barW * progress, barH, 0, 0, new Color(1f, 0.4f, 0.2f, 0.9f), true);
+
+        // 底部提示
+        font.setColor(Color.GRAY);
+        font.draw(neon, "按 ESC 立即返回", cx - 50, barY - 25);
     }
 
     /** 绘制单个成员行，返回下一个 Y 坐标 */

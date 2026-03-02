@@ -30,6 +30,8 @@ public class ReliableUdpTransport implements Transport {
     public static final byte CHANNEL_UNRELIABLE = 0x00;
     public static final byte CHANNEL_RELIABLE = 0x01;
     public static final byte CHANNEL_ACK = 0x02;
+    public static final byte CHANNEL_PING = 0x03;
+    public static final byte CHANNEL_PONG = 0x04;
 
     // 序列号空间: 16-bit (0 ~ 65535)
     private static final int SEQ_MAX = 65536;
@@ -59,6 +61,18 @@ public class ReliableUdpTransport implements Transport {
     private final ReceiveSequenceTracker receiveTracker = new ReceiveSequenceTracker();
     /** 最近收到的对方序列号（用于 ACK 回复） */
     private volatile int lastReceivedSeqNum = 0;
+
+    // ── 心跳 / Ping-Pong ──
+    /** 最近一次收到任何有效包的时间戳(ms) */
+    private volatile long lastRecvTimeMs = System.currentTimeMillis();
+    /** 最近一次发送 Ping 的时间戳(ms) */
+    private volatile long lastPingSentTimeMs = 0;
+    /** 当前往返延迟(ms)，-1 表示尚未测量 */
+    private volatile long currentPingMs = -1;
+    /** Ping 发送间隔(ms) */
+    private static final long PING_INTERVAL_MS = 1000;
+    /** 每个客户端的最后接收时间（Server 端跟踪心跳） */
+    private final Map<Integer, Long> clientLastRecvTimeMs = new ConcurrentHashMap<>();
 
     public ReliableUdpTransport(UdpSocketTransport rawTransport) {
         this.rawTransport = rawTransport;
@@ -159,6 +173,13 @@ public class ReliableUdpTransport implements Transport {
      * 外层 try-catch 保护 IO 线程不会因单个损坏包崩溃。
      */
     private void onRawReceive(byte[] rawData, int clientId) {
+        // 任何有效接收都刷新心跳时间戳
+        long now = System.currentTimeMillis();
+        lastRecvTimeMs = now;
+        if (rawTransport.isServer() && clientId >= 0) {
+            clientLastRecvTimeMs.put(clientId, now);
+        }
+
         try {
             onRawReceiveInternal(rawData, clientId);
         } catch (Exception e) {
@@ -223,6 +244,26 @@ public class ReliableUdpTransport implements Transport {
                 break;
             }
 
+            case CHANNEL_PING: {
+                // Server 收到 Ping，回复 Pong（原样回传时间戳）
+                if (rawData.length >= 9) {
+                    byte[] pong = new byte[9];
+                    System.arraycopy(rawData, 0, pong, 0, 9);
+                    pong[0] = CHANNEL_PONG;
+                    rawTransport.sendToClient(clientId, pong);
+                }
+                break;
+            }
+
+            case CHANNEL_PONG: {
+                // Client 收到 Pong，计算 RTT
+                if (rawData.length >= 9 && !rawTransport.isServer()) {
+                    long sentTime = bytesToLong(rawData, 1);
+                    currentPingMs = System.currentTimeMillis() - sentTime;
+                }
+                break;
+            }
+
             default:
                 // 未知通道类型，忽略
                 DLog.logErr("[ReliableUDP] 未知通道类型: 0x" + Integer.toHexString(channelType & 0xFF));
@@ -256,6 +297,9 @@ public class ReliableUdpTransport implements Transport {
      * 由 NetworkManager 或游戏层在主循环中调用。
      */
     public void tickReliable() {
+        // Client 端定期发送 Ping（维持心跳 + 测量 RTT）
+        sendPingIfNeeded();
+
         long now = System.currentTimeMillis();
         List<PendingEntry> timedOut = pendingBuffer.getTimedOut(now, RETRANSMIT_TIMEOUT_MS);
 
@@ -274,6 +318,74 @@ public class ReliableUdpTransport implements Transport {
             }
             pendingBuffer.markRetransmitted(entry.seqNum, now);
         }
+    }
+
+    // ========== 心跳 / Ping-Pong ==========
+
+    /** Client 端定期发送 Ping 包，用于测量 RTT 和维持心跳 */
+    private void sendPingIfNeeded() {
+        if (rawTransport.isServer()) return;
+        long now = System.currentTimeMillis();
+        if (now - lastPingSentTimeMs >= PING_INTERVAL_MS) {
+            lastPingSentTimeMs = now;
+            byte[] ping = new byte[9];
+            ping[0] = CHANNEL_PING;
+            longToBytes(now, ping, 1);
+            rawTransport.sendToServer(ping);
+        }
+    }
+
+    /** 获取当前 Ping 延迟(ms)，未测量时返回 -1 */
+    public long getPingMs() { return currentPingMs; }
+
+    /** 获取距离上次收到任何数据的时间(ms) */
+    public long getTimeSinceLastRecvMs() { return System.currentTimeMillis() - lastRecvTimeMs; }
+
+    /** 获取指定客户端距离上次收到数据的时间(ms)（Server 端） */
+    public long getClientTimeSinceLastRecvMs(int clientId) {
+        Long t = clientLastRecvTimeMs.get(clientId);
+        return t == null ? Long.MAX_VALUE : System.currentTimeMillis() - t;
+    }
+
+    /**
+     * 检查并处理心跳超时的客户端（Server 端）。
+     * 超时的客户端会被标记为非活跃并触发 onClientDisconnected 回调。
+     * @param timeoutMs 超时阈值(毫秒)
+     */
+    public void checkHeartbeatTimeouts(long timeoutMs) {
+        if (!rawTransport.isServer()) return;
+        long now = System.currentTimeMillis();
+        java.util.List<Integer> timedOut = new java.util.ArrayList<>();
+        for (Map.Entry<Integer, Long> entry : clientLastRecvTimeMs.entrySet()) {
+            if (now - entry.getValue() > timeoutMs) {
+                timedOut.add(entry.getKey());
+            }
+        }
+        for (int cid : timedOut) {
+            clientLastRecvTimeMs.remove(cid);
+            rawTransport.deactivateClient(cid);
+            DLog.logT("Netcode", "[ReliableUDP] 客户端 #" + cid + " 心跳超时，触发断线");
+            if (userConnectionListener != null) {
+                userConnectionListener.onClientDisconnected(cid);
+            }
+        }
+    }
+
+    /** long → byte[8] 大端序 */
+    private static void longToBytes(long value, byte[] dest, int offset) {
+        for (int i = 7; i >= 0; i--) {
+            dest[offset + i] = (byte) (value & 0xFF);
+            value >>= 8;
+        }
+    }
+
+    /** byte[8] 大端序 → long */
+    private static long bytesToLong(byte[] src, int offset) {
+        long value = 0;
+        for (int i = 0; i < 8; i++) {
+            value = (value << 8) | (src[offset + i] & 0xFF);
+        }
+        return value;
     }
 
     // ========== 转发方法: 暴露底层 UdpSocketTransport 的特性 ==========

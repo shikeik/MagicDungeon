@@ -74,6 +74,9 @@ public class UdpSocketTransport implements Transport {
     // Client 端被 Server 分配的 clientId（通过握手回复获得）
     private int assignedClientId = -1;
 
+    /** Server 主动断线标志（Client 端收到 DISCONNECT_MAGIC 时置位） */
+    private volatile boolean serverDisconnectReceived = false;
+
     public UdpSocketTransport(boolean isServerIdentity) {
         this.isServerIdentity = isServerIdentity;
     }
@@ -92,6 +95,9 @@ public class UdpSocketTransport implements Transport {
     public int getAssignedClientId() {
         return assignedClientId;
     }
+
+    /** Client 端：是否收到了 Server 的主动断线通知 */
+    public boolean isServerDisconnectReceived() { return serverDisconnectReceived; }
 
     @Override
     public void startServer(int port) {
@@ -127,11 +133,19 @@ public class UdpSocketTransport implements Transport {
 
     @Override
     public void disconnect() {
-        // Client 断开前先通知 Server
+        // Server 断开前通知所有客户端（多次发送提高 UDP 可达率）
+        if (isServerIdentity && socket != null && !socket.isClosed()) {
+            for (InetSocketAddress addr : clientAddresses) {
+                for (int i = 0; i < 3; i++) {
+                    try { sendRaw(DISCONNECT_MAGIC, addr); } catch (Exception ignored) { }
+                }
+            }
+        }
+        // Client 断开前多次通知 Server（提高 UDP 可达率）
         if (!isServerIdentity && serverAddress != null && socket != null && !socket.isClosed()) {
-            try {
-                sendRaw(DISCONNECT_MAGIC, serverAddress);
-            } catch (Exception ignored) { }
+            for (int i = 0; i < 3; i++) {
+                try { sendRaw(DISCONNECT_MAGIC, serverAddress); } catch (Exception ignored) { }
+            }
         }
         running.set(false);
         if (socket != null && !socket.isClosed()) {
@@ -142,6 +156,7 @@ public class UdpSocketTransport implements Transport {
         }
         clientAddresses.clear();
         activeClientIds.clear();
+        serverDisconnectReceived = false;
         DLog.logT("Netcode", "[UdpTransport] 已断开连接");
     }
 
@@ -191,6 +206,11 @@ public class UdpSocketTransport implements Transport {
     /** 返回当前活跃客户端 ID 集合（只读副本） */
     public Set<Integer> getActiveClientIds() {
         return java.util.Collections.unmodifiableSet(activeClientIds);
+    }
+
+    /** 将指定客户端标记为非活跃（心跳超时时由上层调用） */
+    public void deactivateClient(int clientId) {
+        activeClientIds.remove(clientId);
     }
 
     // ==================== 内部实现 ====================
@@ -251,6 +271,10 @@ public class UdpSocketTransport implements Transport {
                         connectionListener.onClientDisconnected(clientId);
                     }
                 }
+            } else {
+                // Client 收到 Server 的断线通知
+                serverDisconnectReceived = true;
+                DLog.logT("Netcode", "[UdpTransport] Client 收到 Server 断线通知");
             }
             return;
         }

@@ -1,7 +1,11 @@
-feat(netcode): 大厅新增直连IP:Port模式，绕过自动网络类型识别
+feat(netcode): 心跳Ping/Pong + 自动断线检测 + 断线重连覆盖层
 
-- SupabaseLobbyScreen 右侧面板新增"直连模式"区域
-- 提供 ip:port 输入框（省略端口默认20001）+ 直连加入按钮
-- directConnect() 方法直接调用 preConfigureAsClient，绕过
-  回环/LAN/WAN 三级智能判断（同WiFi下存在误判为公网的问题）
-- 支持纯IP或 ip:port 两种格式，含完善的输入校验与提示
+- ReliableUdpTransport 新增 PING/PONG 通道(0x03/0x04)
+  Client 每秒发送 Ping，Server 回复 Pong，测量 RTT
+- 所有有效接收刷新 lastRecvTimeMs（双端+per-client）
+- checkHeartbeatTimeouts(): Server 自动检测超时客户端并触发断线
+- UdpSocketTransport.disconnect() 改为发送 3× DISCONNECT_MAGIC
+  Server 断开时也通知所有客户端，Client 收到置位 serverDisconnectReceived
+- I 信息面板 + HUD 显示 Ping 延迟
+- Client 端心跳超时 5s 显示断线覆盖层(计时条+倒计时)，15s 自动返回大厅
+- ESC 触发 hide() → shutdownNetwork() 一直可用，覆盖层显示 ESC 提示
