@@ -9,7 +9,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.NetworkObject;
-import com.goldsprite.gdengine.netcode.NetworkVariable;
 import com.goldsprite.gdengine.netcode.ReliableUdpTransport;
 import com.goldsprite.gdengine.netcode.UdpSocketTransport;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -107,6 +106,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
     // ── 地图 ──
     /** 地图数据与碰撞逻辑（解耦提取，可独立测试） */
     private final TankGameMap gameMap = new TankGameMap(2000f, 1500f);
+
+    // ── 核心逻辑（与 Sandbox 共享，避免重复维护） ──
+    private final TankGameLogic gameLogic = new TankGameLogic(bulletSystem, gameMap);
 
     // ── 抽屉面板（房间成员详情） ──
     /** 抽屉是否展开 */
@@ -364,69 +366,19 @@ public class NetcodeTankOnlineScreen extends GScreen {
     // ── Server 逻辑 ──
 
     private void updateServerLogic(float delta) {
-        float speed = 200 * delta;
-
         // ── 服务器端心跳超时检测 ──
         if (transport != null) {
             transport.checkHeartbeatTimeouts((long)(HEARTBEAT_TIMEOUT_SEC * 1000));
         }
 
-        // Host 的坦克（ownerClientId = -1）由本地键盘控制: WASD + J
+        // Host 坦克（ownerClientId = -1）：读键盘 → 写 pendingMove/pendingFire
         TankBehaviour hostTank = clientTanks.get(-1);
         if (hostTank != null) {
-            updateHostTankInput(hostTank, delta, speed);
+            readHostInput(hostTank);
         }
 
-        // 处理所有远程坦克的 pendingMove + pendingFire
-        for (Map.Entry<Integer, TankBehaviour> entry : clientTanks.entrySet()) {
-            TankBehaviour tank = entry.getValue();
-            int ownerId = entry.getKey();
-
-            // Server 权威驱动远程坦克移动（消费 pendingMove）
-            if (ownerId >= 0 && !tank.isDead.getValue()) {
-                float mx = tank.pendingMoveX;
-                float my = tank.pendingMoveY;
-                if (mx != 0 || my != 0) {
-                    tank.x.setValue(tank.x.getValue() + mx * speed);
-                    tank.y.setValue(tank.y.getValue() + my * speed);
-                    tank.rot.setValue(new Vector2(mx, my).angleDeg());
-                }
-                // 消费后清零，确保松键后停止移动
-                tank.pendingMoveX = 0;
-                tank.pendingMoveY = 0;
-            }
-
-            if (tank.pendingFire && !tank.isDead.getValue()) {
-                bulletSystem.spawnBullet(tank, ownerId);
-                tank.pendingFire = false;
-            }
-            // 死亡倒计时
-            if (tank.isDead.getValue()) {
-                float timer = tank.respawnTimer.getValue() - delta;
-                tank.respawnTimer.setValue(Math.max(0, timer));
-                if (timer <= 0) {
-                    respawnTank(tank, ownerId);
-                }
-            }
-        }
-
-        // 子弹物理 + 碰撞
-        bulletSystem.updateServerBullets(delta, gameMap, clientTanks);
-
-        // 坦克边界 + 墙体碰撞
-        float halfSize = 15f;
-        for (TankBehaviour tank : clientTanks.values()) {
-            if (!tank.isDead.getValue()) {
-                // 边界限制
-                Vector2 clamped = gameMap.clampToBoundary(tank.x.getValue(), tank.y.getValue(), halfSize);
-                if (clamped.x != tank.x.getValue()) tank.x.setValue(clamped.x);
-                if (clamped.y != tank.y.getValue()) tank.y.setValue(clamped.y);
-                // 推出墙体
-                Vector2 pushed = gameMap.pushOutOfWalls(tank.x.getValue(), tank.y.getValue(), halfSize);
-                tank.x.setValue(pushed.x);
-                tank.y.setValue(pushed.y);
-            }
-        }
+        // 统一驱动：移动/开火/死亡/子弹/碰撞（与 Sandbox 共用同一套规则）
+        gameLogic.serverTick(delta, clientTanks);
 
         // 同步（使用累加器模式，根据 tick rate 自动控制发送频率）
         manager.tick(delta);
@@ -434,64 +386,61 @@ public class NetcodeTankOnlineScreen extends GScreen {
         transport.tickReliable();
     }
 
-    /** Host 坦克由本地键盘驱动: WASD 移动, J 开火 */
-    private void updateHostTankInput(TankBehaviour tank, float delta, float speed) {
+    /** Host 坦克由本地键盘驱动: WASD 移动, J 开火。仅写入 pending*，由 serverTick 统一消费。 */
+    private void readHostInput(TankBehaviour tank) {
         if (tank.isDead.getValue()) return;
 
         float dx = 0, dy = 0;
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += speed;
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= speed;
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= speed;
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) dx += speed;
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) dx += 1f;
 
-        if (dx != 0 || dy != 0) {
-            tank.x.setValue(tank.x.getValue() + dx);
-            tank.y.setValue(tank.y.getValue() + dy);
-            tank.rot.setValue(new Vector2(dx, dy).angleDeg());
-        }
+        Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
+        tank.pendingMoveX = dir.x;
+        tank.pendingMoveY = dir.y;
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
-            bulletSystem.spawnBullet(tank, -1);
+            tank.pendingFire = true;
         }
     }
 
     // ── Client 逻辑 ──
 
-    /** 客户端预测移动速度（与 Server 端一致） */
-    private static final float CLIENT_PREDICT_SPEED = 200f;
-
     private void updateClientLogic(float delta) {
-        // ── 驱动所有网络对象的平滑调和插值（消除服务端状态硬覆盖导致的拉回感） ──
-        for (NetworkObject obj : manager.getAllNetworkObjects()) {
-            for (NetworkVariable<?> var : obj.getNetworkVariables()) {
-                var.reconcileTick(delta);
-            }
-        }
+        // ── 驱动所有网络变量的平滑调和插值（与 Sandbox 共用 TankGameLogic） ──
+        TankGameLogic.clientReconcileTick(delta, manager);
 
         // 检测本地输入并通过 ServerRpc 上报
         TankBehaviour myTank = findLocalPlayerTank();
         if (myTank != null && !myTank.isDead.getValue()) {
+            // 本地玩家关闭位置插值 —— 插值会走直线路径，忽略墙体碰撞导致嵌墙
+            TankGameLogic.disableSmoothForLocalPlayer(myTank);
+
             float dx = 0, dy = 0;
             if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) dy += 1;
             if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy -= 1;
             if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) dx -= 1;
             if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx += 1;
 
-            if (dx != 0 || dy != 0) {
-                myTank.sendServerRpc("rpcMoveInput", dx, dy);
+            Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
+
+            if (dir.x != 0 || dir.y != 0) {
+                myTank.sendServerRpc("rpcMoveInput", dir.x, dir.y);
 
                 // ── 客户端预测: 本地立即移动，消除 RTT 延迟感 ──
-                float speed = CLIENT_PREDICT_SPEED * delta;
-                myTank.x.setLocal(myTank.x.getValue() + dx * speed);
-                myTank.y.setLocal(myTank.y.getValue() + dy * speed);
-                myTank.rot.setLocal(new Vector2(dx, dy).angleDeg());
+                float speed = TankGameLogic.MOVE_SPEED * delta;
+                myTank.x.setLocal(myTank.x.getValue() + dir.x * speed);
+                myTank.y.setLocal(myTank.y.getValue() + dir.y * speed);
+                myTank.rot.setLocal(dir.angleDeg());
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.J) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 myTank.sendServerRpc("rpcFireInput");
             }
         }
 
-        // 模拟 Client 端子弹运动
-        bulletSystem.updateClientBullets(delta, gameMap, manager.getAllNetworkObjects());
+        // 模拟 Client 端子弹运动（与 Sandbox 共用 TankGameLogic）
+        gameLogic.clientBulletTick(delta, manager);
 
         // 可靠层超时重传检查
         transport.tickReliable();
@@ -531,11 +480,6 @@ public class NetcodeTankOnlineScreen extends GScreen {
     /** 为指定 ownerClientId Spawn 一辆坦克（委托给 TankSpawnSystem） */
     private void spawnTankForOwner(int ownerClientId) {
         TankSpawnSystem.spawnTankForOwner(manager, ownerClientId, clientTanks);
-    }
-
-    /** 复活坦克（委托给 TankSpawnSystem） */
-    private void respawnTank(TankBehaviour tank, int ownerClientId) {
-        TankSpawnSystem.respawnTank(tank, ownerClientId, clientTanks);
     }
 
     // ══════════════ 相机跟随 ══════════════

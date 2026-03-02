@@ -2,6 +2,8 @@ package com.goldsprite.gdengine.netcode;
 
 import java.util.Objects;
 
+import com.badlogic.gdx.graphics.Color;
+
 /**
  * 自动状态同步变量 (类似 Unity NGO 的 NetworkVariable)。
  * 负责追踪数据的变化 (Dirty Flag)，只在发生改变时被动打成网络包。
@@ -146,8 +148,8 @@ public class NetworkVariable<T> {
             buffer.writeBoolean((Boolean) value);
         } else if (value instanceof String) {
             buffer.writeString((String) value);
-        } else if (value instanceof com.badlogic.gdx.graphics.Color) {
-            buffer.writeInt(com.badlogic.gdx.graphics.Color.rgba8888((com.badlogic.gdx.graphics.Color) value));
+        } else if (value instanceof Color) {
+            buffer.writeInt(Color.rgba8888((Color) value));
         } else {
             throw new IllegalArgumentException("NetworkVariable 暂不支持此类型序列化: " + (value != null ? value.getClass() : "null"));
         }
@@ -171,8 +173,8 @@ public class NetworkVariable<T> {
             newVal = buffer.readBoolean();
         } else if (value instanceof String) {
             newVal = buffer.readString();
-        } else if (value instanceof com.badlogic.gdx.graphics.Color) {
-            newVal = new com.badlogic.gdx.graphics.Color(buffer.readInt());
+        } else if (value instanceof Color) {
+            newVal = new Color(buffer.readInt());
         } else {
             throw new IllegalArgumentException("NetworkVariable 暂不支持此类型反序列化: " + (value != null ? value.getClass() : "null"));
         }

@@ -1,8 +1,8 @@
 package com.goldsprite.magicdungeon2.screens.tests.netcode;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -13,10 +13,16 @@ import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.netcode.LocalMemoryTransport;
 import com.goldsprite.gdengine.netcode.NetworkManager;
-import com.goldsprite.gdengine.netcode.NetworkObject;
 import com.goldsprite.gdengine.netcode.Transport;
 import com.goldsprite.gdengine.screens.GScreen;
 
+/**
+ * Netcode 坦克纯内存沙盒 -- 同进程分屏（左=Server，右=Client）。
+ * <p>
+ * 核心游戏逻辑全部委托给 {@link TankGameLogic}，
+ * 与 {@link NetcodeTankOnlineScreen} 共用同一套规则，
+ * 确保内存场景可作为快速验证的等价替身。
+ */
 public class NetcodeTankSandboxScreen extends GScreen {
 
     private NeonBatch neon;
@@ -28,14 +34,17 @@ public class NetcodeTankSandboxScreen extends GScreen {
     private Transport serverTransport;
     private Transport clientTransport;
 
-    // 实例
-    private TankBehaviour serverP1;
-    private TankBehaviour serverP2;
+    // ============== 游戏系统（与 Online 共享） ==============
+    private TankGameLogic gameLogic;
+    private BulletSystem bulletSystem;
+    private TankGameMap gameMap;
+
+    // ============== Server 端坦克映射（与 Online 结构一致） ==============
+    private final Map<Integer, TankBehaviour> serverTanks = new HashMap<>();
+
+    // ============== Client 端引用（用于渲染右半屏） ==============
     private TankBehaviour clientP1;
     private TankBehaviour clientP2;
-
-    private List<Bullet> serverBullets = new ArrayList<>();
-    private List<Bullet> clientBullets = new ArrayList<>();
 
     @Override
     public void show() {
@@ -43,10 +52,17 @@ public class NetcodeTankSandboxScreen extends GScreen {
         neon = new NeonBatch();
         font = FontUtils.generate(14, 2);
 
+        // -- 游戏系统初始化（与 Online 结构一致） --
+        float halfW = Gdx.graphics.getWidth() / 2f;
+        float screenH = Gdx.graphics.getHeight();
+        gameMap = new TankGameMap(halfW, screenH);
+        bulletSystem = new BulletSystem();
+        gameLogic = new TankGameLogic(bulletSystem, gameMap);
+
+        // -- 网络层初始化 --
         serverManager = new NetworkManager();
         clientManager = new NetworkManager();
 
-        // 进程内内存传输层（同步、确定性）
         LocalMemoryTransport memServer = new LocalMemoryTransport(true);
         LocalMemoryTransport memClient = new LocalMemoryTransport(false);
         serverTransport = memServer;
@@ -55,182 +71,103 @@ public class NetcodeTankSandboxScreen extends GScreen {
         clientManager.setTransport(clientTransport);
         memServer.connectToPeer(memClient);
 
-        // 双端注册坦克预制体工厂
         serverManager.registerPrefab(TankSandboxUtils.TANK_PREFAB_ID, TankSandboxUtils.createTankFactory());
         clientManager.registerPrefab(TankSandboxUtils.TANK_PREFAB_ID, TankSandboxUtils.createTankFactory());
 
-        // Server Spawn P1（自动广播到 Client）
-        NetworkObject sObj1 = serverManager.spawnWithPrefab(TankSandboxUtils.TANK_PREFAB_ID);
-        serverP1 = (TankBehaviour) sObj1.getBehaviours().get(0);
-        serverP1.x.setValue(200f); serverP1.y.setValue(300f);
-        serverP1.color.setValue(Color.ORANGE);
+        // -- 使用 TankSpawnSystem 统一出生逻辑（与 Online 一致） --
+        TankBehaviour serverP1 = TankSpawnSystem.spawnTankForOwner(serverManager, 1, serverTanks);
+        TankBehaviour serverP2 = TankSpawnSystem.spawnTankForOwner(serverManager, 2, serverTanks);
 
-        // Server Spawn P2（自动广播到 Client）
-        NetworkObject sObj2 = serverManager.spawnWithPrefab(TankSandboxUtils.TANK_PREFAB_ID);
-        serverP2 = (TankBehaviour) sObj2.getBehaviours().get(0);
-        serverP2.x.setValue(200f); serverP2.y.setValue(100f);
-        serverP2.color.setValue(Color.CYAN);
-
-        // Client 端已由 SpawnPacket 自动派生（内存传输是同步的，无需等待）
-        int id1 = (int) sObj1.getNetworkId();
-        int id2 = (int) sObj2.getNetworkId();
-        clientP1 = (TankBehaviour) clientManager.getNetworkObject(id1).getBehaviours().get(0);
-        clientP2 = (TankBehaviour) clientManager.getNetworkObject(id2).getBehaviours().get(0);
+        // Client 端由 SpawnPacket 自动派生（内存传输是同步的，无需等待）
+        long nid1 = serverP1.getNetworkObject().getNetworkId();
+        long nid2 = serverP2.getNetworkObject().getNetworkId();
+        clientP1 = (TankBehaviour) clientManager.getNetworkObject((int) nid1).getBehaviours().get(0);
+        clientP2 = (TankBehaviour) clientManager.getNetworkObject((int) nid2).getBehaviours().get(0);
     }
 
-    private void spawnBullet(TankBehaviour tank, int ownerId) {
-        TankSandboxUtils.spawnBullet(tank, ownerId, serverBullets);
-    }
-
-    private void hitTank(TankBehaviour tank) {
-        TankSandboxUtils.hitTank(tank);
-    }
-
-    // syncTank function removed. Let the true NetBuffer transport handle it!
-
+    @Override
     public void render(float delta) {
         super.render(delta);
-        float moveSpeed = 200 * delta;
 
-        // 【Server Logic】 模拟处理本地主机P1与远端发来的客户端P2输入
-        // P1 Host Logic
-        if (!serverP1.isDead.getValue()) {
-            float dx1 = 0, dy1 = 0;
-            if (Gdx.input.isKeyPressed(Input.Keys.W)) dy1 += moveSpeed;
-            if (Gdx.input.isKeyPressed(Input.Keys.S)) dy1 -= moveSpeed;
-            if (Gdx.input.isKeyPressed(Input.Keys.A)) dx1 -= moveSpeed;
-            if (Gdx.input.isKeyPressed(Input.Keys.D)) dx1 += moveSpeed;
-            
-            if (dx1 != 0 || dy1 != 0) {
-                serverP1.x.setValue(serverP1.x.getValue() + dx1);
-                serverP1.y.setValue(serverP1.y.getValue() + dy1);
-                serverP1.rot.setValue(new Vector2(dx1, dy1).angleDeg());
-            }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
-                spawnBullet(serverP1, 1);
-            }
-        } else {
-            float timer = serverP1.respawnTimer.getValue() - delta;
-            serverP1.respawnTimer.setValue(Math.max(0, timer));
-            if (timer <= 0) {
-                serverP1.isDead.setValue(false);
-                serverP1.hp.setValue(4);
-                serverP1.x.setValue(200f); serverP1.y.setValue(300f);
-                serverP1.color.setValue(Color.ORANGE);
-            }
-        }
+        // -- 读取输入 -> 写入 pendingMoveX/Y & pendingFire --
+        readP1Input();
+        readP2Input();
 
-        // P2 Client Logic (Processed on Server logically)
-        if (!serverP2.isDead.getValue()) {
-            float dx2 = 0, dy2 = 0;
-            if (Gdx.input.isKeyPressed(Input.Keys.UP)) dy2 += moveSpeed;
-            if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy2 -= moveSpeed;
-            if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) dx2 -= moveSpeed;
-            if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx2 += moveSpeed;
+        // -- Server 端统一驱动（移动/开火/死亡/子弹/碰撞） --
+        gameLogic.serverTick(delta, serverTanks);
 
-            if (dx2 != 0 || dy2 != 0) {
-                serverP2.x.setValue(serverP2.x.getValue() + dx2);
-                serverP2.y.setValue(serverP2.y.getValue() + dy2);
-                serverP2.rot.setValue(new Vector2(dx2, dy2).angleDeg());
-            }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                spawnBullet(serverP2, 2);
-            }
-        } else {
-            float timer = serverP2.respawnTimer.getValue() - delta;
-            serverP2.respawnTimer.setValue(Math.max(0, timer));
-            if (timer <= 0) {
-                serverP2.isDead.setValue(false);
-                serverP2.hp.setValue(4);
-                serverP2.x.setValue(200f); serverP2.y.setValue(100f);
-                serverP2.color.setValue(Color.CYAN);
-            }
-        }
+        // -- 网络同步：与真实联机场景一致，使用 tick(delta) 累加器节奏 --
+        serverManager.tick(delta);
 
-        // Server Bullets Logic
-        Iterator<Bullet> iter = serverBullets.iterator();
-        while(iter.hasNext()) {
-            Bullet b = iter.next();
-            b.x += b.vx * delta;
-            b.y += b.vy * delta;
-            
-            // Out of bounds check (just a simple box logic based on left half screen)
-            float halfW = Gdx.graphics.getWidth() / 2f;
-            if(b.x < 0 || b.x > halfW || b.y < 0 || b.y > Gdx.graphics.getHeight()) {
-                iter.remove();
-                continue;
-            }
-            
-            // Hit check
-            if(b.ownerId != 1 && !serverP1.isDead.getValue() && Math.hypot(b.x - serverP1.x.getValue(), b.y - serverP1.y.getValue()) < 20) {
-                hitTank(serverP1);
-                iter.remove();
-                continue;
-            }
-            if(b.ownerId != 2 && !serverP2.isDead.getValue() && Math.hypot(b.x - serverP2.x.getValue(), b.y - serverP2.y.getValue()) < 20) {
-                hitTank(serverP2);
-                iter.remove();
-                continue;
-            }
-        }
+        // -- Client 端驱动：平滑调和 + 子弹 --
+        TankGameLogic.clientReconcileTick(delta, clientManager);
+        gameLogic.clientBulletTick(delta, clientManager);
 
-        // 核心网络循环：在每一帧必须被调用执行数据交换
-        serverManager.tick();
-        clientManager.tick();
-
-        // 【Client Logic】由前面 tick() 执行的 NetBuffer 反序列化代替了手工打桩！！
-        // 客户端子弹现在由 ClientRpc 触发生成，独立模拟运动
-        clientBullets.clear();
-        updateAndCollectClientBullets(clientP1, delta);
-        updateAndCollectClientBullets(clientP2, delta);
-
-        // ====== Rendering ======
+        // ========== 渲染 ==========
         float halfW = Gdx.graphics.getWidth() / 2f;
-        neon.begin(); // BEGIN BATCH
+        neon.begin();
 
         // 分割线
         neon.drawLine(halfW, 0, halfW, Gdx.graphics.getHeight(), 2, Color.WHITE);
 
-        // 左半屏：代表 Server 端的世界线 (offsetX=0)
-        drawWorld(serverP1, serverP2, serverBullets, 0);
-        // 右半屏：代表 Client 端的世界线 (offsetX=halfW)
-        drawWorld(clientP1, clientP2, clientBullets, halfW);
+        // 左半屏：Server 视角
+        TankBehaviour sp1 = serverTanks.get(1);
+        TankBehaviour sp2 = serverTanks.get(2);
+        drawWorld(sp1, sp2, bulletSystem.getServerBullets(), 0);
 
-        // HUD：显示传输层模式
+        // 右半屏：Client 视角
+        drawWorld(clientP1, clientP2, bulletSystem.getClientBullets(), halfW);
+
+        // HUD
         font.setColor(Color.YELLOW);
         font.draw(neon, "Transport: LocalMemory", 10, Gdx.graphics.getHeight() - 10);
         font.draw(neon, "SERVER", halfW * 0.4f, Gdx.graphics.getHeight() - 30);
         font.draw(neon, "CLIENT", halfW + halfW * 0.4f, Gdx.graphics.getHeight() - 30);
 
-        neon.end(); // END BATCH
+        neon.end();
     }
 
-    private void updateAndCollectClientBullets(TankBehaviour tank, float delta) {
-        float halfW = Gdx.graphics.getWidth() / 2f;
-        Iterator<Bullet> iter = tank.localBullets.iterator();
-        while (iter.hasNext()) {
-            Bullet b = iter.next();
-            b.x += b.vx * delta;
-            b.y += b.vy * delta;
-            // 越界检测
-            if (b.x < 0 || b.x > halfW || b.y < 0 || b.y > Gdx.graphics.getHeight()) {
-                iter.remove();
-                continue;
-            }
-            // 碰撞检测（与服务端逻辑一致）
-            if (b.ownerId != 1 && !clientP1.isDead.getValue()
-                && Math.hypot(b.x - clientP1.x.getValue(), b.y - clientP1.y.getValue()) < 20) {
-                iter.remove();
-                continue;
-            }
-            if (b.ownerId != 2 && !clientP2.isDead.getValue()
-                && Math.hypot(b.x - clientP2.x.getValue(), b.y - clientP2.y.getValue()) < 20) {
-                iter.remove();
-                continue;
-            }
-            clientBullets.add(b);
+    // -- 输入读取：写入 pendingMoveX/Y + pendingFire，由 serverTick 统一消费 --
+
+    /** P1（Host）: WASD 移动，J 开火 */
+    private void readP1Input() {
+        TankBehaviour tank = serverTanks.get(1);
+        if (tank == null || tank.isDead.getValue()) return;
+
+        float dx = 0, dy = 0;
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) dx += 1f;
+        Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
+        tank.pendingMoveX = dir.x;
+        tank.pendingMoveY = dir.y;
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+            tank.pendingFire = true;
         }
     }
+
+    /** P2（模拟 Client）: 方向键移动，Enter 开火 */
+    private void readP2Input() {
+        TankBehaviour tank = serverTanks.get(2);
+        if (tank == null || tank.isDead.getValue()) return;
+
+        float dx = 0, dy = 0;
+        if (Gdx.input.isKeyPressed(Input.Keys.UP)) dy += 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy -= 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) dx -= 1f;
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx += 1f;
+        Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
+        tank.pendingMoveX = dir.x;
+        tank.pendingMoveY = dir.y;
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            tank.pendingFire = true;
+        }
+    }
+
+    // -- 渲染辅助 --
 
     private void drawWorld(TankBehaviour p1, TankBehaviour p2, List<Bullet> bullets, float offsetX) {
         TankSandboxUtils.drawTank(neon, font, p1, offsetX);

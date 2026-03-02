@@ -3,6 +3,24 @@
 本项目的所有显著更改都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，并且本项目遵循 [语义化版本控制 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
 
+## [0.8.0] - 2026-03-03
+
+### 重构 (Refactored)
+
+- **提取 TankGameLogic 共享逻辑层**：Sandbox（纯内存）和 Online（真 UDP）场景共用同一套游戏规则
+  - 新增 `TankGameLogic.java` (198行)：`serverTick()` 统一驱动移动/开火/死亡/子弹/碰撞，`clientReconcileTick()` + `clientBulletTick()` 统一客户端逻辑
+  - 所有坦克输入（Host/Remote/Sandbox）统一为 `pendingMoveX/Y` + `pendingFire` 的缓存-消费模式
+  - `normalizeDir()` 收拢为 `TankGameLogic` 静态方法，删除两处重复定义
+  - SandboxScreen: 281→187 行 (↓33%)，OnlineScreen: 571→500 行 (↓12%)
+
+### 修复 (Fixed)
+
+- **本地玩家嵌墙/穿墙**：客户端本地玩家关闭 x/y 平滑插值，服务端修正值（已 pushOutOfWalls）直接生效
+  - 根因：插值沿直线路径过渡，完全忽略墙体碰撞，导致坦克视觉上嵌入墙中再滑出
+  - 修复：`TankGameLogic.disableSmoothForLocalPlayer()` 关闭本地玩家 x/y 的 `smoothReconciliation`，远端玩家保留插值
+
+---
+
 ## [0.7.9] - 2026-03-03
 
 ### 修复 (Fixed)
