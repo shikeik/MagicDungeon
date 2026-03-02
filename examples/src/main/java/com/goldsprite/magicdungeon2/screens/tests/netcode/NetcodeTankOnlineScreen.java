@@ -408,14 +408,15 @@ public class NetcodeTankOnlineScreen extends GScreen {
     // ── Client 逻辑 ──
 
     private void updateClientLogic(float delta) {
-        // ── 驱动所有网络变量的平滑调和插值（与 Sandbox 共用 TankGameLogic） ──
+        // ── 驱动所有网络变量的调和 / 客户端预测漂移修正 ──
         TankGameLogic.clientReconcileTick(delta, manager);
 
         // 检测本地输入并通过 ServerRpc 上报
         TankBehaviour myTank = findLocalPlayerTank();
         if (myTank != null && !myTank.isDead.getValue()) {
-            // 本地玩家关闭位置插值 —— 插值会走直线路径，忽略墙体碰撞导致嵌墙
-            TankGameLogic.disableSmoothForLocalPlayer(myTank);
+            // 本地玩家 x/y 启用客户端预测模式（仅首次调用生效，后续幂等）
+            myTank.x.enableClientPrediction();
+            myTank.y.enableClientPrediction();
 
             float dx = 0, dy = 0;
             if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) dy += 1;
@@ -428,10 +429,17 @@ public class NetcodeTankOnlineScreen extends GScreen {
             if (dir.x != 0 || dir.y != 0) {
                 myTank.sendServerRpc("rpcMoveInput", dir.x, dir.y);
 
-                // ── 客户端预测: 本地立即移动，消除 RTT 延迟感 ──
+                // ── 客户端预测: 本地立即移动 + 本地碰撞，消除 RTT 延迟感 ──
                 float speed = TankGameLogic.MOVE_SPEED * delta;
-                myTank.x.setLocal(myTank.x.getValue() + dir.x * speed);
-                myTank.y.setLocal(myTank.y.getValue() + dir.y * speed);
+                float newX = myTank.x.getValue() + dir.x * speed;
+                float newY = myTank.y.getValue() + dir.y * speed;
+
+                // 本地也做边界 + 墙体碰撞（与服务端 serverTickCollision 同逻辑）
+                Vector2 clamped = gameMap.clampToBoundary(newX, newY, TankGameLogic.TANK_HALF_SIZE);
+                Vector2 pushed = gameMap.pushOutOfWalls(clamped.x, clamped.y, TankGameLogic.TANK_HALF_SIZE);
+
+                myTank.x.setLocal(pushed.x);
+                myTank.y.setLocal(pushed.y);
                 myTank.rot.setLocal(dir.angleDeg());
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.J) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {

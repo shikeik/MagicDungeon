@@ -32,6 +32,19 @@ public class NetworkVariable<T> {
     /** 标记: 当前是否有未消化的服务端权威值（避免在无新数据时也做插值） */
     private boolean hasPendingAuthority = false;
 
+    // ── 客户端预测模式 ──
+    /**
+     * 客户端预测标记。
+     * 为 true 时，{@link #deserialize} 仅记录服务端值，不覆盖本地预测值（{@link #value}）。
+     * 只有当本地值与服务端值偏差超过 {@link #clientPredictSnapDist} 时才硬 snap
+     * （撞墙修正 / 复活传送等）。正常移动预测漂移由 {@link #reconcileTick} 每帧微量修正。
+     */
+    private boolean clientPredicted = false;
+    /** 客户端预测模式下的硬拉回阈值（偏差超过此值 → 直接 snap） */
+    private float clientPredictSnapDist = 30f;
+    /** 客户端预测模式下的漂移修正速率（每秒收敛比例） */
+    private float clientPredictCorrectionRate = 3f;
+
     public NetworkVariable(T initialValue) {
         this.value = initialValue;
         this.serverAuthoritativeValue = initialValue;
@@ -95,6 +108,39 @@ public class NetworkVariable<T> {
         return this;
     }
 
+    // ── 客户端预测模式 API ──
+
+    /**
+     * 启用客户端预测模式（仅对 Float 类型变量有效，如坐标 x/y）。
+     * <p>
+     * 启用后，{@link #deserialize} 不再覆盖本地预测值，
+     * 仅在偏差超过 snapDist 时硬 snap（墙体推回 / 复活传送）。
+     * 正常移动漂移由 {@link #reconcileTick} 每帧微量修正。
+     *
+     * @param snapDist       硬拉回阈值（像素，推荐 25~40）
+     * @param correctionRate 漂移修正速率（每秒收敛比例，推荐 2~5）
+     */
+    public NetworkVariable<T> enableClientPrediction(float snapDist, float correctionRate) {
+        this.clientPredicted = true;
+        this.clientPredictSnapDist = snapDist;
+        this.clientPredictCorrectionRate = correctionRate;
+        return this;
+    }
+
+    /** 使用默认参数启用客户端预测模式 (snapDist=30, correctionRate=3) */
+    public NetworkVariable<T> enableClientPrediction() {
+        return enableClientPrediction(30f, 3f);
+    }
+
+    /** 禁用客户端预测模式（恢复标准 deserialize 行为） */
+    public NetworkVariable<T> disableClientPrediction() {
+        this.clientPredicted = false;
+        return this;
+    }
+
+    /** 是否启用了客户端预测模式 */
+    public boolean isClientPredicted() { return clientPredicted; }
+
     /** 是否启用了平滑调和 */
     public boolean isSmoothEnabled() { return smoothReconciliation; }
 
@@ -102,35 +148,50 @@ public class NetworkVariable<T> {
     public T getServerValue() { return serverAuthoritativeValue; }
 
     /**
-     * 每帧调用一次，驱动平滑调和插值。
-     * 仅对启用了调和模式的 Float 类型变量生效。
+     * 每帧调用一次，驱动平滑调和插值 或 客户端预测漂移修正。
      * @param delta 帧间隔（秒）
      */
     public void reconcileTick(float delta) {
-        if (!smoothReconciliation || !hasPendingAuthority) return;
+        if (!hasPendingAuthority) return;
         if (!(value instanceof Float)) return;
 
         float current = (Float) value;
         float target = (Float) serverAuthoritativeValue;
         float diff = Math.abs(current - target);
 
+        // ── 客户端预测模式：微量漂移修正 ──
+        if (clientPredicted) {
+            if (diff <= 1.0f) {
+                // 已足够接近，停止修正
+                hasPendingAuthority = false;
+                return;
+            }
+            // 每帧向服务端值微量靠拢，玩家几乎无感知
+            float alpha = Math.min(1f, clientPredictCorrectionRate * delta);
+            float corrected = current + (target - current) * alpha;
+            @SuppressWarnings("unchecked")
+            T result = (T) Float.valueOf(corrected);
+            this.value = result;
+            return;
+        }
+
+        // ── 平滑调和模式 ──
+        if (!smoothReconciliation) return;
+
         if (diff <= reconcileTolerance) {
-            // 差距极小，直接吸附
             this.value = serverAuthoritativeValue;
             hasPendingAuthority = false;
             return;
         }
 
         if (diff > snapThreshold) {
-            // 差距过大（可能是传送/复活），直接 snap
             this.value = serverAuthoritativeValue;
             hasPendingAuthority = false;
             return;
         }
 
-        // 指数衰减插值: 每帧 current 向 target 靠近 (1 - e^(-speed*delta)) 的比例
-        float alpha = 1f - (float) Math.exp(-reconcileSpeed * delta);
-        float lerped = current + (target - current) * alpha;
+        float alpha2 = 1f - (float) Math.exp(-reconcileSpeed * delta);
+        float lerped = current + (target - current) * alpha2;
         @SuppressWarnings("unchecked")
         T result = (T) Float.valueOf(lerped);
         this.value = result;
@@ -179,6 +240,21 @@ public class NetworkVariable<T> {
             throw new IllegalArgumentException("NetworkVariable 暂不支持此类型反序列化: " + (value != null ? value.getClass() : "null"));
         }
         
+        // 客户端预测模式：不覆盖 value，仅记录服务端值，大偏差时硬 snap
+        if (clientPredicted && value instanceof Float) {
+            this.serverAuthoritativeValue = (T) newVal;
+            this.hasPendingAuthority = true;
+            float current = (Float) value;
+            float server = (Float) newVal;
+            if (Math.abs(current - server) > clientPredictSnapDist) {
+                // 大偏差（墙体推回 / 复活传送）→ 硬 snap
+                this.value = (T) newVal;
+                this.hasPendingAuthority = false;
+            }
+            // 小偏差：信任客户端预测，由 reconcileTick 微量修正
+            return;
+        }
+
         // 平滑调和模式：服务端值写入权威缓冲区，由 reconcileTick 驱动插值
         if (smoothReconciliation && value instanceof Float) {
             this.serverAuthoritativeValue = (T) newVal;

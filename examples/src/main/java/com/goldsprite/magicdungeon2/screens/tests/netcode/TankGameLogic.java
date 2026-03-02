@@ -30,7 +30,7 @@ public class TankGameLogic {
     /** 移动速度（像素/秒） */
     public static final float MOVE_SPEED = 200f;
     /** 坦克碰撞半径（30×30 的一半） */
-    private static final float TANK_HALF_SIZE = 15f;
+    public static final float TANK_HALF_SIZE = 15f;
 
     public TankGameLogic(BulletSystem bulletSystem, TankGameMap gameMap) {
         this.bulletSystem = bulletSystem;
@@ -150,32 +150,6 @@ public class TankGameLogic {
      */
     public void clientBulletTick(float delta, NetworkManager manager) {
         bulletSystem.updateClientBullets(delta, gameMap, manager.getAllNetworkObjects());
-    }
-
-    // ══════════════ 插值策略管理 ══════════════
-
-    /**
-     * 为本地玩家的坦克关闭位置平滑插值。
-     * <p>
-     * 本地玩家使用客户端预测（{@code setLocal}），服务端权威值到达时应直接覆盖
-     * 而非插值过渡 —— 因为插值会走"直线路径"，完全忽略墙体碰撞，
-     * 导致坦克嵌墙、穿墙、头身分离等视觉异常。
-     * <p>
-     * 关闭后，服务端修正值（已经过 {@code pushOutOfWalls}）直接生效，
-     * 下一帧客户端预测从修正后的位置继续，自然不会嵌墙。
-     */
-    public static void disableSmoothForLocalPlayer(TankBehaviour tank) {
-        tank.x.disableSmooth();
-        tank.y.disableSmooth();
-    }
-
-    /**
-     * 为远程玩家恢复位置平滑插值（让远程坦克移动看起来流畅）。
-     * 通常不需要手动调用 —— TankBehaviour 的 x/y 默认就是 enableSmooth 的。
-     */
-    public static void enableSmoothForRemotePlayer(TankBehaviour tank) {
-        tank.x.enableSmooth();
-        tank.y.enableSmooth();
     }
 
     // ══════════════ 通用工具 ══════════════
