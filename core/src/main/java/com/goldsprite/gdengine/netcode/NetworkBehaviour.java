@@ -1,6 +1,8 @@
 package com.goldsprite.gdengine.netcode;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Comparator;
 
 /**
  * 所有联机业务逻辑的基类 (类似 Unity 的 NetworkBehaviour)。
@@ -69,10 +71,19 @@ public abstract class NetworkBehaviour {
     /**
      * 利用反射自动收集当前业务逻辑子类中定义的所有 NetworkVariable，
      * 并将其托管给上级的 NetworkObject。
+     * <p>
+     * 关键: 按字段名字母序排序后再注册，保证不同 JVM 实现（HotSpot / Android ART）
+     * 返回相同的 varIndex 映射。{@code Class.getDeclaredFields()} 的顺序在 JVM 规范中
+     * 是未定义的，Android ART 和桌面 HotSpot 可能返回不同顺序，导致 varIndex 错位，
+     * 所有同步数据交叉赋值（HP=几千万、颜色乱闪等）。
      */
     private void autoRegisterNetworkVariables() {
         Class<?> clazz = this.getClass();
         Field[] fields = clazz.getDeclaredFields();
+
+        // 按字段名字母序排序，保证跨平台（PC HotSpot / Android ART）一致的注册顺序
+        Arrays.sort(fields, Comparator.comparing(Field::getName));
+
         for (Field f : fields) {
             if (NetworkVariable.class.isAssignableFrom(f.getType())) {
                 f.setAccessible(true);

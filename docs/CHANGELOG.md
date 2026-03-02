@@ -7,6 +7,12 @@
 
 ### 修复 (Fixed)
 
+- **跨平台变量注册顺序不一致导致安卓-PC联机数据全错位**
+  - `Class.getDeclaredFields()` 在不同 JVM（HotSpot vs Android ART）返回字段顺序不同
+  - 导致 varIndex 错位：PC 端 `varIndex=0` 是 x 坐标，安卓端 `varIndex=0` 可能是 color
+  - 表现为：HP=几千万、颜色乱闪、只有炮管没身体、双端完全无法同步
+  - 修复：`autoRegisterNetworkVariables()` 按字段名字母序排序后再注册，保证一致
+
 - **NetBuffer 防御性安全升级**
   - 写入端自动扩容（初始 1024B，按需翻倍，上限 64KB），消除 BufferOverflowException
   - `readString()` 增加长度上限校验（MAX_STRING_LENGTH=4096），防止损坏数据导致 OOM 崩溃

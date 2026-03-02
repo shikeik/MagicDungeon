@@ -1,8 +1,6 @@
-fix(netcode): 防御性安全升级修复安卓公网连PC崩溃+同步失败
+fix(netcode): 修复跨平台变量注册顺序不一致导致安卓PC联机数据全错位
 
-- NetBuffer: 写入自动扩容, readString长度上限4096防OOM, 全read方法前置remaining检查
-- NetworkManager.onReceiveData: try-catch包裹防IO线程崩溃, modifiedCount上限256
-- ReliableUdpTransport.onRawReceive: try-catch包裹防接收线程死亡
-- UdpSocketTransport.startReceiveLoop: processReceivedData异常隔离
-- ReceiveSequenceTracker: 滑动窗口+位域去重替换简单水位, 修复公网乱序包被永久丢弃
-- bumpPatch 0.7.7
+- getDeclaredFields()在HotSpot和Android ART返回字段顺序不同
+- 导致varIndex错位: PC的x对应安卓的color, 所有同步数据交叉赋值
+- 表现: HP=几千万, 颜色乱闪, 只有炮管没身体, 双端完全不同步
+- 修复: autoRegisterNetworkVariables()按字段名字母序排序后注册
