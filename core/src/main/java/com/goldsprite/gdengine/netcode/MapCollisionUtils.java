@@ -51,7 +51,7 @@ public class MapCollisionUtils {
         Random rng = new Random(seed);
         float margin = 100f;
 
-        int wallCount = 5 + rng.nextInt(6); // 5~10 个墙体
+        int wallCount = 10 + rng.nextInt(11); // 5~10 个墙体
         float[][] walls = new float[wallCount][4];
 
         for (int i = 0; i < wallCount; i++) {

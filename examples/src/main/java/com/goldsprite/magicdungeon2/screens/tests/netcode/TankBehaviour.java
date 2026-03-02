@@ -15,10 +15,8 @@ import com.goldsprite.gdengine.netcode.ServerRpc;
  * 单进程双屏沙盒和跨进程 UDP 沙盒共用此类，避免重复定义。
  */
 public class TankBehaviour extends NetworkBehaviour {
-//    public NetworkVariable<Float> x = new NetworkVariable<>(0f).enableSmooth(10f, 50f, 0.5f);
-//    public NetworkVariable<Float> y = new NetworkVariable<>(0f).enableSmooth(10f, 50f, 0.5f);
-    public NetworkVariable<Float> x = new NetworkVariable<>(0f).disableSmooth();
-    public NetworkVariable<Float> y = new NetworkVariable<>(0f).disableSmooth();
+    public NetworkVariable<Float> x = new NetworkVariable<>(0f).enableSmooth(10f, 120f, 0.5f);
+    public NetworkVariable<Float> y = new NetworkVariable<>(0f).enableSmooth(10f, 120f, 0.5f);
     public NetworkVariable<Float> rot = new NetworkVariable<>(90f);
     public NetworkVariable<Color> color = new NetworkVariable<>(Color.RED);
     public NetworkVariable<Integer> hp = new NetworkVariable<>(4);
