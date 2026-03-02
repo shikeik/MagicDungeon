@@ -1,17 +1,21 @@
 package com.goldsprite.gdengine.utils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.BooleanSupplier;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-
-import java.util.function.BooleanSupplier;
-import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 
 /**
  * 简易相机控制器 (通用版).
@@ -45,6 +49,11 @@ public class SimpleCameraController implements InputProcessor {
 	public static float minZoom = 0.001f;
 	/** 最大缩放比例 (Zoom 值越大，视野越大/物体越小) */
 	public static float maxZoom = 100.0f;
+
+	// [新增] UI Stage 列表: touchDown 时对这些 Stage 做 hit 检测，命中则跳过相机操作
+	private final List<Stage> uiStages = new ArrayList<>();
+	// 记录每个 pointer 是否被 UI 拦截（touchDown 时标记，touchUp 时重置）
+	private final boolean[] touchBlockedByUI = new boolean[20];
 
 	/**
 	 * 坐标映射策略接口.
@@ -109,6 +118,22 @@ public class SimpleCameraController implements InputProcessor {
 	}
 
 	/**
+	 * 添加需要做 UI 遮挡检测的 Stage.
+	 * <p>
+	 * touchDown 时会对所有已添加的 Stage 做 hit 检测，
+	 * 只要任意一个 Stage 命中了控件，整个触摸序列（拖拽、抬起）都跳过相机操作。
+	 * <p>
+	 * 典型用法:
+	 * <pre>
+	 * controller.addUIStages(DLog.getInstance().getStage(), myScreenStage);
+	 * </pre>
+	 * @param stages 需要参与遮挡检测的 Stage（可变参数）
+	 */
+	public void addUIStages(Stage... stages) {
+		uiStages.addAll(Arrays.asList(stages));
+	}
+
+	/**
 	 * 启用或禁用输入处理.
 	 * @param enabled true 为启用，false 为禁用
 	 */
@@ -127,12 +152,27 @@ public class SimpleCameraController implements InputProcessor {
 		// [修改] 增加检查
 		if (shouldIgnore()) return false;
 
+		// [新增] UI 遮挡检测：按下时对所有注册的 Stage 做 hit 检测
+		if (isUIHit(x, y)) {
+			if (pointer >= 0 && pointer < touchBlockedByUI.length) {
+				touchBlockedByUI[pointer] = true;
+			}
+			return false;
+		}
+		if (pointer >= 0 && pointer < touchBlockedByUI.length) {
+			touchBlockedByUI[pointer] = false;
+		}
+
 		// 优先处理鼠标逻辑 (PC右键)
 		if (mouseInputAdapter.touchDown(x, y, pointer, button)) return true;
 		// 其次处理手势 (Android双指/单指拖拽)
 		return gestureDetector.touchDown(x, y, pointer, button);
 	}
 	@Override public boolean touchUp(int x, int y, int pointer, int button) {
+		// [新增] 重置 UI 拦截标记
+		if (pointer >= 0 && pointer < touchBlockedByUI.length) {
+			touchBlockedByUI[pointer] = false;
+		}
 		mouseInputAdapter.touchUp(x, y, pointer, button);
 		return gestureDetector.touchUp(x, y, pointer, button);
 	}
@@ -140,6 +180,8 @@ public class SimpleCameraController implements InputProcessor {
 		// 拖拽过程中通常不需要检查 condition (因为 touchDown 已经检查过了)
 		// 但为了安全，如果 inputEnabled 被强关，还是断开比较好
 		if (shouldIgnore()) return false;
+		// [新增] 如果此 pointer 在 touchDown 时被 UI 拦截，跳过相机拖拽
+		if (pointer >= 0 && pointer < touchBlockedByUI.length && touchBlockedByUI[pointer]) return false;
 		if (mouseInputAdapter.touchDragged(x, y, pointer)) return true;
 		return gestureDetector.touchDragged(x, y, pointer);
 	}
@@ -154,6 +196,19 @@ public class SimpleCameraController implements InputProcessor {
 	@Override public boolean keyTyped(char character) { return false; }
 	@Override public boolean mouseMoved(int screenX, int screenY) { return false; }
 	@Override public boolean touchCancelled(int screenX, int screenY, int pointer, int button) { return false; }
+
+	/**
+	 * 对所有已注册的 UI Stage 做命中检测.
+	 * 任意一个 Stage 的 hit 返回非 null（即触摸点命中了某个 touchable 的 Actor），则返回 true。
+	 */
+	private boolean isUIHit(int screenX, int screenY) {
+		for (Stage stage : uiStages) {
+			if (stage == null) continue;
+			Vector2 coords = stage.screenToStageCoordinates(new Vector2(screenX, screenY));
+			if (stage.hit(coords.x, coords.y, true) != null) return true;
+		}
+		return false;
+	}
 
 	// --- 手势逻辑 (Mobile / Touch) ---
 	private class CameraGestureListener extends GestureDetector.GestureAdapter {

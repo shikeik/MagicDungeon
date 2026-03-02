@@ -418,6 +418,14 @@ public class DLog {
 	}
 
 	/**
+	 * 获取 DLog 内部的 Stage (用于 UI 遮挡检测等).
+	 * @return DLog 的 Stage，未初始化时返回 null
+	 */
+	public Stage getStage() {
+		return stage;
+	}
+
+	/**
 	 * [新增] 显式 UI 初始化方法
 	 * 必须在 VisUIHelper.loadWithChineseFont() 之后调用
 	 */

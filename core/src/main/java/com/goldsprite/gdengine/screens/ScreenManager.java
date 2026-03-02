@@ -582,8 +582,9 @@ public class ScreenManager implements Disposable {
 	}
 
 	public void enableInput(InputMultiplexer screenImp) {
-		// 确保 screenImp 插入到最前面，以便 UI 优先处理
-		imp.addProcessor(0, screenImp);
+		// 追加到末尾，确保全局覆盖层 (DLog.stage, toastStage) 始终在最前面
+		// 这样 FPS 按钮、Toast 等全局 UI 优先接收触摸事件
+		imp.addProcessor(screenImp);
 	}
 
 	public void disableInput(InputMultiplexer screenImp) {

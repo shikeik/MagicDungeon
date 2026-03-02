@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.FontUtils;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.utils.SimpleCameraController;
@@ -50,6 +51,8 @@ public class TexturePreviewScreen extends GScreen {
         // 相机控制器（拖拽平移 + 滚轮缩放）
         SimpleCameraController controller = new SimpleCameraController(camera);
         controller.setCoordinateMapper((x, y) -> viewport.unproject(new Vector2(x, y)));
+        // 注册 UI Stage: 按下时命中这些 Stage 的控件则跳过相机操作
+        controller.addUIStages(DLog.getInstance().getStage());
         getImp().addProcessor(controller);
 
         // 初始化纹理管理器（加载所有 JSON 绘制计划）
