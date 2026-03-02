@@ -157,7 +157,7 @@ public class PresenceLobbyManagerTest {
         assertNull("加入时不应有错误", errorRef.get());
 
         // 发布房间
-        PresenceRoomInfo info = new PresenceRoomInfo("测试房间_Presence", "127.0.0.1", 20000, 1, 6);
+        PresenceRoomInfo info = new PresenceRoomInfo("测试房间_Presence", "127.0.0.1", 20001, 1, 6);
         manager.publishRoom(info);
 
         // 等待同步回调收到我们的房间
@@ -173,7 +173,7 @@ public class PresenceLobbyManagerTest {
         for (PresenceRoomInfo room : rooms) {
             if ("测试房间_Presence".equals(room.roomName)) {
                 assertEquals("127.0.0.1", room.hostIp);
-                assertEquals(20000, room.hostPort);
+                assertEquals(20001, room.hostPort);
                 assertEquals(1, room.currentPlayers);
                 assertEquals(6, room.maxPlayers);
                 assertEquals("waiting", room.status);

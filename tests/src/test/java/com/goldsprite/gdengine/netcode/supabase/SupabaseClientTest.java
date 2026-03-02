@@ -38,7 +38,7 @@ public class SupabaseClientTest {
         CountDownLatch latch = new CountDownLatch(1);
         SupabaseClient client = new SupabaseClient(SupabaseConfig.URL, SupabaseConfig.PUBLISHABLE_KEY);
 
-        RoomModel room = new RoomModel("测试房间_TDD", "127.0.0.1", 20000, 1, 6);
+        RoomModel room = new RoomModel("测试房间_TDD", "127.0.0.1", 20001, 1, 6);
 
         client.createRoom(room, new SupabaseClient.RequestCallback<RoomModel>() {
             @Override

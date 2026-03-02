@@ -47,7 +47,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
     /** 本机局域网 IP */
     private String myLocalIp = null;
     private static final String TAG = "SupabaseLobby";
-    private static final int DEFAULT_UDP_PORT = 20000;
+    private static final int DEFAULT_UDP_PORT = 20001;
 
     @Override
     public String getIntroduction() {

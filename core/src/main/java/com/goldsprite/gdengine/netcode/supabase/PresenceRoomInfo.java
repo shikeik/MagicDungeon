@@ -18,7 +18,7 @@ public class PresenceRoomInfo {
     public String localIp = "";
 
     /** 房主 UDP 监听端口 */
-    public int hostPort = 20000;
+    public int hostPort = 20001;
 
     /** 当前玩家数 */
     public int currentPlayers = 1;

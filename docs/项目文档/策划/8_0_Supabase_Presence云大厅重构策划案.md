@@ -251,7 +251,7 @@ ws://PROJECT_REF.supabase.co/realtime/v1/websocket?apikey=PUBLISHABLE_KEY
     "state": {
       "roomName": "大马猴的坦克战场",
       "hostIp": "123.45.67.89",
-      "hostPort": 20000,
+      "hostPort": 20001,
       "currentPlayers": 1,
       "maxPlayers": 6,
       "status": "waiting"
