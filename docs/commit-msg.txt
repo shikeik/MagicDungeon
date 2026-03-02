@@ -1,10 +1,8 @@
-feat(netcode): 可配置tick rate + 客户端平滑调和消除拉回感
+fix(netcode): 防御性安全升级修复安卓公网连PC崩溃+同步失败
 
-- NetworkManager 新增 setTickRate(hz) API，默认60Hz，支持1~128Hz
-- tick(delta) 累加器模式替代旧的每帧tick()，频率不受帧率波动
-- NetworkVariable 新增平滑调和模式 enableSmooth()
-  服务端状态到达后不再硬覆盖预测值，通过指数衰减插值过渡
-- 三个可调参数: reconcileSpeed/snapThreshold/reconcileTolerance
-- TankBehaviour x/y 默认启用调和，解决0延迟回环也扯着走的问题
-- bumpPatch 0.7.6
-- core/build.gradle 添加 slf4j-nop:2.0.13 消除 SLF4J 红色警告
+- NetBuffer: 写入自动扩容, readString长度上限4096防OOM, 全read方法前置remaining检查
+- NetworkManager.onReceiveData: try-catch包裹防IO线程崩溃, modifiedCount上限256
+- ReliableUdpTransport.onRawReceive: try-catch包裹防接收线程死亡
+- UdpSocketTransport.startReceiveLoop: processReceivedData异常隔离
+- ReceiveSequenceTracker: 滑动窗口+位域去重替换简单水位, 修复公网乱序包被永久丢弃
+- bumpPatch 0.7.7

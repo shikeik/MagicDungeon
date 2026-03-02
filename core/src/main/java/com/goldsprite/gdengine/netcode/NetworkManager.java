@@ -306,6 +306,19 @@ public class NetworkManager {
      * @param clientId 发送方 clientId（Server 端 >= 0，Client 端为 -1）
      */
     public void onReceiveData(byte[] payload, int clientId) {
+        try {
+            onReceiveDataInternal(payload, clientId);
+        } catch (NetBuffer.NetBufferUnderflowException e) {
+            DLog.logErr("[NetworkManager] 封包解析失败（数据损坏/截断），已安全丢弃: " + e.getMessage()
+                + " | 来源 clientId=" + clientId + ", 封包长度=" + payload.length);
+        } catch (Exception e) {
+            DLog.logErr("[NetworkManager] 封包处理异常，已安全丢弃: " + e.getClass().getSimpleName()
+                + " - " + e.getMessage() + " | 来源 clientId=" + clientId + ", 封包长度=" + payload.length);
+        }
+    }
+
+    /** 内部封包分发（由 onReceiveData try-catch 保护） */
+    private void onReceiveDataInternal(byte[] payload, int clientId) {
         NetBuffer inBuffer = new NetBuffer(payload);
         int packetType = inBuffer.readInt();
         
@@ -360,10 +373,16 @@ public class NetworkManager {
         if (packetType == 0x10) {
             int netId = inBuffer.readInt();
             int modifiedCount = inBuffer.readInt();
+
+            // 防御性校验：modifiedCount 不能是负数或超过合理上限（单个实体的变量数不可能超过 256）
+            if (modifiedCount < 0 || modifiedCount > 256) {
+                DLog.logErr("[NetworkManager] 状态同步包 modifiedCount 异常: " + modifiedCount + " (netId=" + netId + ")，丢弃此包");
+                return;
+            }
             
             NetworkObject localObj = networkObjects.get(netId);
             if (localObj == null) {
-                DLog.logErr("[NetworkManager] 本地找不到对应的实体, 无法执行同步更新: ID=" + netId);
+                // 当为 Unreliable 同步先于 Spawn 到达时可能触发，属正常现象，不需要 logErr
                 return;
             }
             
@@ -375,7 +394,7 @@ public class NetworkManager {
                     // 执行反序列化，覆盖本地值
                     var.deserialize(inBuffer);
                 } else {
-                    DLog.logErr("[NetworkManager] 反序列化失败，越界的变量索引: " + varIndex);
+                    DLog.logErr("[NetworkManager] 反序列化失败，越界的变量索引: " + varIndex + " (netId=" + netId + ", vars.size=" + vars.size() + ")");
                     // 由于协议强顺序性，一旦发现反序列化索引错乱，后面整个包的读取都将失效，必须直接阻断或者丢弃。
                     break; 
                 }

@@ -5,6 +5,28 @@
 
 ## [未发布/最新] (Unreleased)
 
+### 修复 (Fixed)
+
+- **NetBuffer 防御性安全升级**
+  - 写入端自动扩容（初始 1024B，按需翻倍，上限 64KB），消除 BufferOverflowException
+  - `readString()` 增加长度上限校验（MAX_STRING_LENGTH=4096），防止损坏数据导致 OOM 崩溃
+  - 所有 read 方法增加 `remaining()` 前置检查，不足时抛出诊断异常 `NetBufferUnderflowException`
+  - 新增 `remaining()` 工具方法
+
+- **NetworkManager 反序列化崩溃防护**
+  - `onReceiveData()` 增加 try-catch 包裹，单个损坏封包不再杀死 IO 接收线程
+  - 状态同步包 `modifiedCount` 增加上限校验（≤256），拦截垃圾数据
+  - 未找到实体时降级为静默跳过（Unreliable 先于 Spawn 到达属正常现象）
+
+- **ReliableUdpTransport 接收线程保护**
+  - `onRawReceive()` 增加 try-catch，防止异常杀死接收线程
+  - UdpSocketTransport 接收循环内 `processReceivedData()` 增加异常隔离
+
+- **ReceiveSequenceTracker 公网乱序包丢弃修复**
+  - 旧实现仅用"最高水位"判断，公网乱序包（如 seq=3 先到, seq=2 后到）会被永久丢弃
+  - 新实现使用 256 位滑动窗口 + 位域去重，允许窗口内任意乱序包被正确接收
+  - 修复安卓公网连 PC 时可靠包（Spawn/RPC）静默丢失的问题
+
 ### 新增 (Added)
 
 - **NetworkManager 可配置 Tick Rate**

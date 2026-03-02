@@ -210,8 +210,13 @@ public class UdpSocketTransport implements Transport {
                     byte[] rawData = new byte[packet.getLength()];
                     System.arraycopy(buffer, 0, rawData, 0, packet.getLength());
 
-                    // 解析带长度前缀的封包
-                    processReceivedData(rawData, sender);
+                    // 解析带长度前缀的封包（try-catch 防止单个损坏包杀死整个接收线程）
+                    try {
+                        processReceivedData(rawData, sender);
+                    } catch (Exception e) {
+                        DLog.logErr("[UdpTransport] 处理封包异常（已安全跳过）: " + e.getClass().getSimpleName()
+                            + " - " + e.getMessage() + " | sender=" + sender + ", rawLen=" + rawData.length);
+                    }
 
                 } catch (SocketTimeoutException e) {
                     // 正常超时，回到循环头检查 running 标志

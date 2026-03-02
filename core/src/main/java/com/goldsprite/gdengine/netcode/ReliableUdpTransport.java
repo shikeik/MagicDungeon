@@ -157,8 +157,20 @@ public class ReliableUdpTransport implements Transport {
     /**
      * 原始传输层收到数据后的拦截处理。
      * 解析可靠层头部，根据通道类型分别处理。
+     * 外层 try-catch 保护 IO 线程不会因单个损坏包崩溃。
      */
     private void onRawReceive(byte[] rawData, int clientId) {
+        try {
+            onRawReceiveInternal(rawData, clientId);
+        } catch (Exception e) {
+            DLog.logErr("[ReliableUDP] 接收处理异常（已安全忽略）: " + e.getClass().getSimpleName()
+                + " - " + e.getMessage() + " | clientId=" + clientId
+                + ", rawLen=" + (rawData != null ? rawData.length : 0));
+        }
+    }
+
+    /** 内部接收分发（由 onRawReceive try-catch 保护） */
+    private void onRawReceiveInternal(byte[] rawData, int clientId) {
         if (rawData == null || rawData.length < 1) return;
 
         byte channelType = rawData[0];
@@ -411,12 +423,23 @@ public class ReliableUdpTransport implements Transport {
     }
 
     /**
-     * 接收端序列号追踪器。
-     * 维护已处理的最新序列号，拒绝旧包和重复包。
+     * 接收端序列号追踪器（滑动窗口 + 位域去重）。
+     * <p>
+     * 旧版仅用"最高水位"判断，公网乱序包（如 seq=3 先于 seq=2 到达）会被永久丢弃。
+     * 新版使用 WINDOW_SIZE=256 的位域，允许窗口内的乱序包被正确接收。
      */
     public static class ReceiveSequenceTracker {
+        /** 滑动窗口大小（支持最多 256 个序列号的乱序容忍） */
+        private static final int WINDOW_SIZE = 256;
+
         /** 最近接受的最大序列号，-1 表示尚未收到任何包 */
         private int highestAccepted = -1;
+
+        /**
+         * 位域：记录最近 WINDOW_SIZE 个序列号的接收状态。
+         * receivedBits[i] == true 表示 (highestAccepted - WINDOW_SIZE + 1 + i) 已接收。
+         */
+        private final boolean[] receivedBits = new boolean[WINDOW_SIZE];
 
         /**
          * 尝试接受一个序列号。
@@ -426,16 +449,55 @@ public class ReliableUdpTransport implements Transport {
             if (highestAccepted < 0) {
                 // 首个包，直接接受
                 highestAccepted = seqNum;
+                receivedBits[0] = true;
                 return true;
             }
 
             if (isSeqNewer(seqNum, highestAccepted)) {
+                // seqNum 比当前最高更新 → 滑动窗口前移
+                int advance = seqDistance(highestAccepted, seqNum);
+                slideWindow(advance);
                 highestAccepted = seqNum;
+                receivedBits[WINDOW_SIZE - 1] = true;
                 return true;
             }
 
-            // seqNum <= highestAccepted（含循环判断），拒绝
-            return false;
+            // seqNum <= highestAccepted，检查是否在窗口范围内
+            int age = seqDistance(seqNum, highestAccepted);
+            if (age >= WINDOW_SIZE) {
+                // 太旧，超出窗口范围，拒绝
+                return false;
+            }
+
+            int index = WINDOW_SIZE - 1 - age;
+            if (receivedBits[index]) {
+                // 重复包，拒绝
+                return false;
+            }
+
+            // 窗口内的乱序包，接受
+            receivedBits[index] = true;
+            return true;
+        }
+
+        /** 窗口向前滑动 advance 位 */
+        private void slideWindow(int advance) {
+            if (advance >= WINDOW_SIZE) {
+                // 整个窗口都过期了，清空
+                java.util.Arrays.fill(receivedBits, false);
+            } else {
+                // 左移 advance 位
+                System.arraycopy(receivedBits, advance, receivedBits, 0, WINDOW_SIZE - advance);
+                java.util.Arrays.fill(receivedBits, WINDOW_SIZE - advance, WINDOW_SIZE, false);
+            }
+        }
+
+        /**
+         * 计算从 from 到 to 的正向距离（支持 16-bit 循环）。
+         * 要求 to 在 from 的"前方"或等于 from。
+         */
+        private static int seqDistance(int from, int to) {
+            return (to - from + SEQ_MAX) % SEQ_MAX;
         }
 
         public int getHighestAccepted() {
