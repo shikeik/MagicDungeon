@@ -16,7 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.goldsprite.gdengine.netcode.supabase.RoomManager;
 import com.goldsprite.gdengine.netcode.supabase.RoomModel;
-import com.goldsprite.magicdungeon2.GdxLauncher;
+import com.goldsprite.GdxLauncher;
 
 import java.util.List;
 
@@ -189,7 +189,7 @@ public class SupabaseLobbyScreen extends ScreenAdapter {
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_Buffer_BIT);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         stage.act(Math.min(Gdx.graphics.getDeltaTime(), 1 / 30f));
         stage.draw();
