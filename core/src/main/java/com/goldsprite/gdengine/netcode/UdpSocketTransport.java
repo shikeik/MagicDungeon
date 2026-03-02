@@ -7,8 +7,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.goldsprite.gdengine.log.DLog;
 
 /**
  * 基于 Java 原生 DatagramSocket (UDP) 的真实网络传输层实现。
@@ -44,6 +48,9 @@ public class UdpSocketTransport implements Transport {
 
     // Server 记录的所有已连接 Client 地址
     private final List<InetSocketAddress> clientAddresses = new CopyOnWriteArrayList<>();
+
+    // 当前活跃（未断开）的客户端 ID 集合
+    private final Set<Integer> activeClientIds = ConcurrentHashMap.newKeySet();
 
     // Client 记录的 Server 地址
     private InetSocketAddress serverAddress;
@@ -89,7 +96,7 @@ public class UdpSocketTransport implements Transport {
             socket = new DatagramSocket(port);
             running.set(true);
             startReceiveLoop();
-            System.out.println("[UdpTransport] Server 已启动，监听端口: " + port);
+            DLog.logT("Netcode", "[UdpTransport] Server 已启动，监听端口: " + port);
         } catch (SocketException e) {
             throw new RuntimeException("[UdpTransport] Server 启动失败: " + e.getMessage(), e);
         }
@@ -106,7 +113,7 @@ public class UdpSocketTransport implements Transport {
 
             // 发送握手包，让 Server 知道我们的地址
             sendRaw(HANDSHAKE_MAGIC, serverAddress);
-            System.out.println("[UdpTransport] Client 已连接到 " + ip + ":" + port);
+            DLog.logT("Netcode", "[UdpTransport] Client 已连接到 " + ip + ":" + port);
         } catch (SocketException e) {
             throw new RuntimeException("[UdpTransport] Client 连接失败: " + e.getMessage(), e);
         }
@@ -128,7 +135,8 @@ public class UdpSocketTransport implements Transport {
             receiveThread.interrupt();
         }
         clientAddresses.clear();
-        System.out.println("[UdpTransport] 已断开连接");
+        activeClientIds.clear();
+        DLog.logT("Netcode", "[UdpTransport] 已断开连接");
     }
 
     @Override
@@ -164,9 +172,19 @@ public class UdpSocketTransport implements Transport {
         return !isServerIdentity;
     }
 
-    /** 返回已连接的客户端数量（仅 Server 端有意义） */
+    /** 返回历史连接过的客户端总数（包含已断开的，用于 clientId 索引） */
     public int getClientCount() {
         return clientAddresses.size();
+    }
+
+    /** 返回当前活跃（未断开）的客户端数量 */
+    public int getActiveClientCount() {
+        return activeClientIds.size();
+    }
+
+    /** 返回当前活跃客户端 ID 集合（只读副本） */
+    public Set<Integer> getActiveClientIds() {
+        return java.util.Collections.unmodifiableSet(activeClientIds);
     }
 
     // ==================== 内部实现 ====================
@@ -191,7 +209,7 @@ public class UdpSocketTransport implements Transport {
 
                 } catch (IOException e) {
                     if (running.get()) {
-                        System.err.println("[UdpTransport] 接收数据异常: " + e.getMessage());
+                        DLog.logErr("[UdpTransport] 接收数据异常: " + e.getMessage());
                     }
                     // socket 关闭时会触发 IOException，属于正常退出
                 }
@@ -212,8 +230,9 @@ public class UdpSocketTransport implements Transport {
             if (isServerIdentity) {
                 int clientId = clientAddresses.indexOf(sender);
                 if (clientId >= 0) {
-                    // 不立即移除地址（保持 clientId 索引稳定），只触发回调
-                    System.out.println("[UdpTransport] Server 收到 Client #" + clientId + " 的断开通知: " + sender);
+                    // 不立即移除地址（保持 clientId 索引稳定），但从活跃集合中移除
+                    activeClientIds.remove(clientId);
+                    DLog.logT("Netcode", "[UdpTransport] Server 收到 Client #" + clientId + " 的断开通知: " + sender);
                     if (connectionListener != null) {
                         connectionListener.onClientDisconnected(clientId);
                     }
@@ -229,7 +248,8 @@ public class UdpSocketTransport implements Transport {
                 if (!clientAddresses.contains(sender)) {
                     clientAddresses.add(sender);
                     int clientId = clientAddresses.indexOf(sender);
-                    System.out.println("[UdpTransport] Server 发现新客户端: " + sender + " -> clientId=" + clientId);
+                    activeClientIds.add(clientId);
+                    DLog.logT("Netcode", "[UdpTransport] Server 发现新客户端: " + sender + " -> clientId=" + clientId);
 
                     // 发送握手回复: [0xFE×4][clientId]
                     byte[] reply = new byte[8];
@@ -252,7 +272,7 @@ public class UdpSocketTransport implements Transport {
         if (!isServerIdentity && rawData.length == 8 && isHandshakeReply(rawData)) {
             ByteBuffer bb = ByteBuffer.wrap(rawData, 4, 4);
             assignedClientId = bb.getInt();
-            System.out.println("[UdpTransport] Client 被分配 clientId=" + assignedClientId);
+            DLog.logT("Netcode", "[UdpTransport] Client 被分配 clientId=" + assignedClientId);
             if (connectionListener != null) {
                 connectionListener.onClientConnected(assignedClientId);
             }
@@ -266,7 +286,7 @@ public class UdpSocketTransport implements Transport {
         int payloadLen = bb.getInt();
 
         if (payloadLen <= 0 || payloadLen + 4 > rawData.length) {
-            System.err.println("[UdpTransport] 封包长度异常: declared=" + payloadLen + ", actual=" + (rawData.length - 4));
+            DLog.logErr("[UdpTransport] 封包长度异常: declared=" + payloadLen + ", actual=" + (rawData.length - 4));
             return;
         }
 
@@ -304,7 +324,7 @@ public class UdpSocketTransport implements Transport {
             DatagramPacket packet = new DatagramPacket(data, data.length, target.getAddress(), target.getPort());
             socket.send(packet);
         } catch (IOException e) {
-            System.err.println("[UdpTransport] 发送失败: " + e.getMessage());
+            DLog.logErr("[UdpTransport] 发送失败: " + e.getMessage());
         }
     }
 

@@ -88,6 +88,13 @@ public class TankSandboxUtils {
             Color hpColor = i < hp ? Color.GREEN : Color.RED;
             neon.drawRect(cx - 15 + i * 8, cy - 25, 6, 6, 0, 0, hpColor, true);
         }
+
+        // 头顶名称标签
+        String name = t.playerName.getValue();
+        if (name != null && !name.isEmpty()) {
+            font.setColor(Color.WHITE);
+            font.draw(neon, name, cx - name.length() * 3.5f, cy + 30);
+        }
     }
 
     /** 绘制子弹列表 */

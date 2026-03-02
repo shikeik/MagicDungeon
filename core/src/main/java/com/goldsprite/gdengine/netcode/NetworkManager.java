@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.goldsprite.gdengine.log.DLog;
+
 /**
  * 网络层管理器，负责统筹所有的 NetworkObject 生命周期（Spawn / Despawn），
  * 并在每一帧（Net Tick）中汇总脏数据，通过 Transport 接口将数据序列化下发到物理网络层。
@@ -39,7 +41,7 @@ public class NetworkManager {
                 // Client 端收到分配的 clientId 时，自动设置
                 if (transport.isClient()) {
                     localClientId = clientId;
-                    System.out.println("[NetworkManager] Client 被分配 clientId=" + clientId);
+                    DLog.logT("Netcode", "[NetworkManager] Client 被分配 clientId=" + clientId);
                 }
                 // 转发给游戏层监听器
                 if (connectionListener != null) {
@@ -151,7 +153,7 @@ public class NetworkManager {
         }
         NetworkObject removed = networkObjects.remove(networkId);
         if (removed == null) {
-            System.err.println("[NetworkManager] Despawn 失败，找不到实体: netId=" + networkId);
+            DLog.logErr("[NetworkManager] Despawn 失败，找不到实体: netId=" + networkId);
             return;
         }
         // 广播 DespawnPacket 给所有客户端
@@ -159,7 +161,7 @@ public class NetworkManager {
         buffer.writeInt(0x12); // DespawnPacket 魔法头
         buffer.writeInt(networkId);
         transport.broadcast(buffer.toByteArray());
-        System.out.println("[NetworkManager] Server Despawn 实体: netId=" + networkId);
+        DLog.logT("Netcode", "[NetworkManager] Server Despawn 实体: netId=" + networkId);
     }
 
     /**
@@ -179,7 +181,7 @@ public class NetworkManager {
             despawn(netId);
         }
         if (!toRemove.isEmpty()) {
-            System.out.println("[NetworkManager] 已移除 Client #" + ownerClientId + " 拥有的 " + toRemove.size() + " 个实体");
+            DLog.logT("Netcode", "[NetworkManager] 已移除 Client #" + ownerClientId + " 拥有的 " + toRemove.size() + " 个实体");
         }
     }
 
@@ -268,7 +270,7 @@ public class NetworkManager {
             
             NetworkPrefabFactory factory = prefabRegistry.get(prefabId);
             if (factory == null) {
-                System.err.println("[NetworkManager] Client 收到 SpawnPacket 但未注册对应的预制体工厂: prefabId=" + prefabId);
+                DLog.logErr("[NetworkManager] Client 收到 SpawnPacket 但未注册对应的预制体工厂: prefabId=" + prefabId);
                 return;
             }
             
@@ -287,7 +289,7 @@ public class NetworkManager {
             }
             networkObjects.put(netId, localObj);
             
-            System.out.println("[NetworkManager] Client 自动派生实体成功: netId=" + netId + ", prefabId=" + prefabId + ", owner=" + ownerClientId + (localObj.isLocalPlayer ? " [本地玩家]" : ""));
+            DLog.logT("Netcode", "[NetworkManager] Client 自动派生实体成功: netId=" + netId + ", prefabId=" + prefabId + ", owner=" + ownerClientId + (localObj.isLocalPlayer ? " [本地玩家]" : ""));
             return;
         }
         
@@ -296,7 +298,7 @@ public class NetworkManager {
             int netId = inBuffer.readInt();
             NetworkObject removed = networkObjects.remove(netId);
             if (removed != null) {
-                System.out.println("[NetworkManager] Client 移除实体: netId=" + netId);
+                DLog.logT("Netcode", "[NetworkManager] Client 移除实体: netId=" + netId);
             }
             return;
         }
@@ -314,7 +316,7 @@ public class NetworkManager {
             
             NetworkObject localObj = networkObjects.get(netId);
             if (localObj == null) {
-                System.err.println("[NetworkManager] 本地找不到对应的实体, 无法执行同步更新: ID=" + netId);
+                DLog.logErr("[NetworkManager] 本地找不到对应的实体, 无法执行同步更新: ID=" + netId);
                 return;
             }
             
@@ -326,7 +328,7 @@ public class NetworkManager {
                     // 执行反序列化，覆盖本地值
                     var.deserialize(inBuffer);
                 } else {
-                    System.err.println("[NetworkManager] 反序列化失败，越界的变量索引: " + varIndex);
+                    DLog.logErr("[NetworkManager] 反序列化失败，越界的变量索引: " + varIndex);
                     // 由于协议强顺序性，一旦发现反序列化索引错乱，后面整个包的读取都将失效，必须直接阻断或者丢弃。
                     break; 
                 }
@@ -420,13 +422,13 @@ public class NetworkManager {
         // 在本地找到对应的实体和行为组件
         NetworkObject localObj = networkObjects.get(netId);
         if (localObj == null) {
-            System.err.println("[NetworkManager] RPC 目标实体不存在: netId=" + netId);
+            DLog.logErr("[NetworkManager] RPC 目标实体不存在: netId=" + netId);
             return;
         }
         
         java.util.List<NetworkBehaviour> behaviours = localObj.getBehaviours();
         if (behaviourIndex < 0 || behaviourIndex >= behaviours.size()) {
-            System.err.println("[NetworkManager] RPC 目标行为组件索引越界: " + behaviourIndex);
+            DLog.logErr("[NetworkManager] RPC 目标行为组件索引越界: " + behaviourIndex);
             return;
         }
         
@@ -448,8 +450,7 @@ public class NetworkManager {
             method.setAccessible(true);
             method.invoke(target, args);
         } catch (Exception e) {
-            System.err.println("[NetworkManager] RPC 反射调用失败: " + methodName + " -> " + e.getMessage());
-            e.printStackTrace();
+            DLog.logErr("[NetworkManager] RPC 反射调用失败: " + methodName + " -> " + e.getMessage());
         }
     }
 
@@ -464,7 +465,7 @@ public class NetworkManager {
             byte[] spawnPacket = buildSpawnPacket((int) obj.getNetworkId(), obj.getPrefabId(), obj.getOwnerClientId());
             transport.sendToClient(clientId, spawnPacket);
         }
-        System.out.println("[NetworkManager] 向 Client #" + clientId + " 补发 " + networkObjects.size() + " 个已有实体的 SpawnPacket");
+        DLog.logT("Netcode", "[NetworkManager] 向 Client #" + clientId + " 补发 " + networkObjects.size() + " 个已有实体的 SpawnPacket");
     }
 
     /**
@@ -478,7 +479,7 @@ public class NetworkManager {
             byte[] payload = serializeFullObjectState(entry.getKey(), obj);
             transport.sendToClient(clientId, payload);
         }
-        System.out.println("[NetworkManager] 向 Client #" + clientId + " 发送 " + networkObjects.size() + " 个实体的全量状态快照");
+        DLog.logT("Netcode", "[NetworkManager] 向 Client #" + clientId + " 发送 " + networkObjects.size() + " 个实体的全量状态快照");
     }
 
     /**

@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.assets.FontUtils;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.NetworkObject;
@@ -76,6 +77,16 @@ public class NetcodeTankOnlineScreen extends GScreen {
     private static final Color[] SPAWN_COLORS = {
         Color.ORANGE, Color.CYAN, Color.LIME, Color.MAGENTA, Color.GOLD, Color.SKY
     };
+
+    // ── 抽屉面板（房间成员详情） ──
+    /** 抽屉是否展开 */
+    private boolean drawerExpanded = false;
+    /** 抽屉动画进度 0(收起)~1(展开) */
+    private float drawerAnimProgress = 0f;
+    /** 抽屉宽度 */
+    private static final float DRAWER_WIDTH = 220f;
+    /** 抽屉动画时长(秒) */
+    private static final float DRAWER_ANIM_DURATION = 0.25f;
 
 	@Override protected void initViewport() {
 		uiViewportScale = 0.7f;
@@ -217,18 +228,18 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
                 state = State.WAITING;
                 configError = null;
-                System.out.println("[Online] Server 启动，监听端口: " + configPort);
+                DLog.logT("Netcode", "[Online] Server 启动，监听端口: " + configPort);
             } else {
                 // Client 模式
                 transport.connect(configIp, configPort);
                 state = State.WAITING;
                 configError = null;
-                System.out.println("[Online] Client 连接中: " + configIp + ":" + configPort);
+                DLog.logT("Netcode", "[Online] Client 连接中: " + configIp + ":" + configPort);
             }
         } catch (Exception e) {
             // 端口占用或其他网络错误，优雅回退到配置界面
             configError = e.getMessage();
-            System.err.println("[Online] 网络启动失败: " + e.getMessage());
+            DLog.logErr("[Online] 网络启动失败: " + e.getMessage());
             // 清理已初始化的资源
             if (transport != null) {
                 try { transport.disconnect(); } catch (Exception ignored) {}
@@ -250,7 +261,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
             // Client: 等待至少收到一个实体的 SpawnPacket
             if (manager.getNetworkObjectCount() >= 1) {
                 state = State.PLAYING;
-                System.out.println("[Online] Client 收到 Spawn，进入游戏");
+                DLog.logT("Netcode", "[Online] Client 收到 Spawn，进入游戏");
             }
         }
     }
@@ -258,6 +269,21 @@ public class NetcodeTankOnlineScreen extends GScreen {
     // ══════════════ PLAYING 阶段 ══════════════
 
     private void updatePlaying(float delta) {
+        // 抽屉开关: 按 I 键切换
+        if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
+            drawerExpanded = !drawerExpanded;
+        }
+        // 抽屉动画插值
+        float target = drawerExpanded ? 1f : 0f;
+        if (drawerAnimProgress != target) {
+            float speed = 1f / DRAWER_ANIM_DURATION * delta;
+            if (drawerExpanded) {
+                drawerAnimProgress = Math.min(1f, drawerAnimProgress + speed);
+            } else {
+                drawerAnimProgress = Math.max(0f, drawerAnimProgress - speed);
+            }
+        }
+
         if (isServerRole) {
             updateServerLogic(delta);
         } else {
@@ -446,13 +472,13 @@ public class NetcodeTankOnlineScreen extends GScreen {
         spawnTankForOwner(clientId);
         // 4. 再次发送全量状态（确保新坦克的初始数据也同步给该客户端）
         manager.sendFullStateToClient(clientId);
-        System.out.println("[Online] Client #" + clientId + " 已连接，Spawn 坦克");
+        DLog.logT("Netcode", "[Online] Client #" + clientId + " 已连接，Spawn 坦克");
     }
 
     /** Server 端: Client 断开时，清理游戏层映射（已在主线程 tick() 中调用） */
     private void onClientDisconnectedHandler(int clientId) {
         clientTanks.remove(clientId);
-        System.out.println("[Online] Client #" + clientId + " 已断开，移除坦克。剩余坦克: " + clientTanks.size());
+        DLog.logT("Netcode", "[Online] Client #" + clientId + " 已断开，移除坦克。剩余坦克: " + clientTanks.size());
     }
 
     /** 为指定 ownerClientId Spawn 一辆坦克 */
@@ -469,6 +495,12 @@ public class NetcodeTankOnlineScreen extends GScreen {
         tank.x.setValue(spawnX);
         tank.y.setValue(spawnY);
         tank.color.setValue(spawnColor);
+        // 设置玩家名称标签
+        if (ownerClientId == -1) {
+            tank.playerName.setValue("Host");
+        } else {
+            tank.playerName.setValue("Player#" + ownerClientId);
+        }
 
         clientTanks.put(ownerClientId, tank);
     }
@@ -566,7 +598,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
             font.setColor(Color.YELLOW);
             font.draw(neon, "Server (Port:" + configPort + ")  坦克数:" + clientTanks.size()
-                + "  远程客户端:" + transport.getClientCount(),
+                + "  远程客户端:" + transport.getActiveClientCount(),
                 10, uiViewport.getWorldHeight() - 10);
             font.draw(neon, "Host: WASD + J  |  远程客户端通过 ServerRpc 操控",
                 10, uiViewport.getWorldHeight() - 30);
@@ -590,6 +622,112 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 10, uiViewport.getWorldHeight() - 30);
         }
 
+        // 绘制抽屉面板（两端通用）
+        renderDrawerPanel();
+
         neon.end();
+    }
+
+    // ══════════════ 抽屉面板 ══════════════
+
+    /**
+     * 绘制右侧抽屉式房间成员详情面板。
+     * 参考旧项目 DrawerPanel 的展开/收起概念，以即时模式（NeonBatch）实现。
+     * 按 I 键切换展开/收起，带平滑动画。
+     */
+    private void renderDrawerPanel() {
+        if (drawerAnimProgress <= 0.001f) {
+            // 完全收起时只画一个小标签提示
+            font.setColor(Color.GRAY);
+            font.draw(neon, "[I] 成员面板", uiViewport.getWorldWidth() - 105, uiViewport.getWorldHeight() / 2f + 8);
+            return;
+        }
+
+        float screenW = uiViewport.getWorldWidth();
+        float screenH = uiViewport.getWorldHeight();
+
+        // 使用 pow2Out 缓动（类似旧项目的 Interpolation.pow2Out）
+        float eased = 1f - (1f - drawerAnimProgress) * (1f - drawerAnimProgress);
+        float visibleW = DRAWER_WIDTH * eased;
+
+        // 面板区域：从右边缘向左滑出
+        float panelX = screenW - visibleW;
+        float panelY = 0;
+        float panelH = screenH;
+
+        // 半透明背景
+        neon.drawRect(panelX, panelY, visibleW, panelH, 0, 0, new Color(0.1f, 0.1f, 0.15f, 0.85f * eased), true);
+        // 左边缘分割线
+        neon.drawRect(panelX, panelY, 2, panelH, 0, 0, new Color(0.4f, 0.6f, 1f, 0.7f * eased), true);
+
+        // 面板内容（仅当展开足够时绘制文字，避免裁剪闪烁）
+        if (eased < 0.3f) return;
+
+        float textX = panelX + 12;
+        float textY = screenH - 20;
+        float lineH = 18f;
+
+        // 标题
+        titleFont.setColor(new Color(0.5f, 0.8f, 1f, eased));
+        titleFont.draw(neon, "房间成员", textX, textY);
+        textY -= lineH + 6;
+
+        // 分割线
+        neon.drawRect(textX, textY, DRAWER_WIDTH - 24, 1, 0, 0, new Color(0.3f, 0.5f, 0.8f, 0.6f * eased), true);
+        textY -= 8;
+
+        if (isServerRole) {
+            // Server 端：展示 clientTanks 映射中的每个成员
+            for (Map.Entry<Integer, TankBehaviour> entry : clientTanks.entrySet()) {
+                int ownerId = entry.getKey();
+                TankBehaviour tank = entry.getValue();
+                textY = drawMemberRow(textX, textY, lineH, eased, ownerId, tank);
+            }
+        } else {
+            // Client 端：展示 manager 中的所有 NetworkObject
+            for (NetworkObject obj : manager.getAllNetworkObjects()) {
+                if (obj.getBehaviours().isEmpty()) continue;
+                TankBehaviour tank = (TankBehaviour) obj.getBehaviours().get(0);
+                int ownerId = obj.getOwnerClientId();
+                textY = drawMemberRow(textX, textY, lineH, eased, ownerId, tank);
+            }
+        }
+
+        // 底部提示
+        textY -= 10;
+        font.setColor(new Color(0.5f, 0.5f, 0.5f, eased));
+        font.draw(neon, "[I] 收起面板", textX, textY);
+    }
+
+    /** 绘制单个成员行，返回下一个 Y 坐标 */
+    private float drawMemberRow(float textX, float textY, float lineH, float alpha, int ownerId, TankBehaviour tank) {
+        String name = tank.playerName.getValue();
+        if (name == null || name.isEmpty()) name = (ownerId == -1 ? "Host" : "Client#" + ownerId);
+
+        // 颜色方块标识
+        Color tankColor = tank.color.getValue();
+        neon.drawRect(textX, textY - 10, 10, 10, 0, 0,
+            new Color(tankColor.r, tankColor.g, tankColor.b, alpha), true);
+
+        // 名称
+        font.setColor(new Color(1f, 1f, 1f, alpha));
+        font.draw(neon, name, textX + 16, textY);
+        textY -= lineH;
+
+        // HP
+        int hp = tank.hp.getValue();
+        boolean dead = tank.isDead.getValue();
+        String hpText = dead ? "  已阵亡 (复活:" + String.format("%.1f", tank.respawnTimer.getValue()) + "s)"
+                             : "  HP: " + hp + "/4";
+        font.setColor(new Color(dead ? 1f : 0.5f, dead ? 0.4f : 1f, dead ? 0.4f : 0.5f, alpha));
+        font.draw(neon, hpText, textX, textY);
+        textY -= lineH;
+
+        // 坐标
+        font.setColor(new Color(0.6f, 0.6f, 0.6f, alpha));
+        font.draw(neon, String.format("  Pos: (%.0f, %.0f)", tank.x.getValue(), tank.y.getValue()), textX, textY);
+        textY -= lineH + 4;
+
+        return textY;
     }
 }

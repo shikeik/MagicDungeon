@@ -21,6 +21,8 @@ public class TankBehaviour extends NetworkBehaviour {
     public NetworkVariable<Integer> hp = new NetworkVariable<>(4);
     public NetworkVariable<Boolean> isDead = new NetworkVariable<>(false);
     public NetworkVariable<Float> respawnTimer = new NetworkVariable<>(0f);
+    /** 玩家名称（显示在坦克头顶） */
+    public NetworkVariable<String> playerName = new NetworkVariable<>("");
 
     /** 客户端本地子弹列表（由 ClientRpc 触发生成） */
     public transient List<Bullet> localBullets = new ArrayList<>();
