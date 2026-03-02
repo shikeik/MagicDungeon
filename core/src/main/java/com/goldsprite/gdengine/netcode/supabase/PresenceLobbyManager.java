@@ -5,10 +5,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
+import com.goldsprite.gdengine.log.DLog;
 
 /**
  * Supabase Realtime Presence 云大厅管理器
@@ -113,13 +113,13 @@ public class PresenceLobbyManager {
         channel.setListener(new PhoenixChannel.ChannelListener() {
             @Override
             public void onConnected() {
-                Gdx.app.log(TAG, "WebSocket 已连接");
+                DLog.logT(TAG, "WebSocket 已连接");
                 if (statusListener != null) statusListener.onConnected();
             }
 
             @Override
             public void onJoined() {
-                Gdx.app.log(TAG, "已加入大厅频道");
+                DLog.logT(TAG, "已加入大厅频道");
                 if (statusListener != null) statusListener.onJoined();
             }
 
@@ -135,13 +135,13 @@ public class PresenceLobbyManager {
 
             @Override
             public void onError(String message, Throwable cause) {
-                Gdx.app.error(TAG, "频道错误: " + message, cause);
+                DLog.logErrT(TAG, "频道错误: " + message + (cause != null ? " | " + cause : ""));
                 if (statusListener != null) statusListener.onError(message);
             }
 
             @Override
             public void onDisconnected(int code, String reason) {
-                Gdx.app.log(TAG, "连接断开: " + reason);
+                DLog.logT(TAG, "连接断开: " + reason);
                 if (statusListener != null) statusListener.onDisconnected(reason);
             }
         });
@@ -178,14 +178,14 @@ public class PresenceLobbyManager {
      */
     public void publishRoom(PresenceRoomInfo info) {
         if (!isReady()) {
-            Gdx.app.error(TAG, "频道未就绪，无法发布房间");
+            DLog.logErrT(TAG, "频道未就绪，无法发布房间");
             return;
         }
 
         info.presenceKey = this.presenceKey;
         String stateJson = buildRoomJson(info);
         channel.trackPresence(stateJson);
-        Gdx.app.log(TAG, "已发布房间: " + info.roomName);
+        DLog.logT(TAG, "已发布房间: " + info.roomName);
     }
 
     /**
@@ -208,7 +208,7 @@ public class PresenceLobbyManager {
     public void unpublishRoom() {
         if (channel != null && channel.isJoined()) {
             channel.untrackPresence();
-            Gdx.app.log(TAG, "已取消发布房间");
+            DLog.logT(TAG, "已取消发布房间");
         }
     }
 
@@ -252,7 +252,7 @@ public class PresenceLobbyManager {
             }
         }
 
-        Gdx.app.log(TAG, "Presence 全量同步完成，共 " + presenceState.size() + " 个房间");
+        DLog.logT(TAG, "Presence 全量同步完成，共 " + presenceState.size() + " 个房间");
         notifySync();
     }
 
@@ -279,7 +279,7 @@ public class PresenceLobbyManager {
                 if (room != null) {
                     presenceState.put(key, room);
                     changed = true;
-                    Gdx.app.log(TAG, "房间加入: " + room.roomName + " (" + key + ")");
+                    DLog.logT(TAG, "房间加入: " + room.roomName + " (" + key + ")");
                 }
             }
         }
@@ -292,13 +292,13 @@ public class PresenceLobbyManager {
                 PresenceRoomInfo removed = presenceState.remove(key);
                 if (removed != null) {
                     changed = true;
-                    Gdx.app.log(TAG, "房间离开: " + removed.roomName + " (" + key + ")");
+                    DLog.logT(TAG, "房间离开: " + removed.roomName + " (" + key + ")");
                 }
             }
         }
 
         if (changed) {
-            Gdx.app.log(TAG, "Presence 增量更新完成，当前 " + presenceState.size() + " 个房间");
+            DLog.logT(TAG, "Presence 增量更新完成，当前 " + presenceState.size() + " 个房间");
             notifySync();
         }
     }
@@ -322,13 +322,14 @@ public class PresenceLobbyManager {
             room.presenceKey = key;
             room.roomName = meta.getString("roomName", "未命名房间");
             room.hostIp = meta.getString("hostIp", "");
+            room.localIp = meta.getString("localIp", "");
             room.hostPort = meta.getInt("hostPort", 0);
             room.currentPlayers = meta.getInt("currentPlayers", 1);
             room.maxPlayers = meta.getInt("maxPlayers", 6);
             room.status = meta.getString("status", "waiting");
             return room;
         } catch (Exception e) {
-            Gdx.app.error(TAG, "解析 Presence 条目失败 (key=" + key + ")", e);
+            DLog.logErrT(TAG, "解析 Presence 条目失败 (key=" + key + "): " + e);
             return null;
         }
     }
@@ -352,6 +353,7 @@ public class PresenceLobbyManager {
         sb.append("{");
         sb.append("\"roomName\":\"").append(escapeJson(info.roomName)).append("\"");
         sb.append(",\"hostIp\":\"").append(escapeJson(info.hostIp)).append("\"");
+        sb.append(",\"localIp\":\"").append(escapeJson(info.localIp)).append("\"");
         sb.append(",\"hostPort\":").append(info.hostPort);
         sb.append(",\"currentPlayers\":").append(info.currentPlayers);
         sb.append(",\"maxPlayers\":").append(info.maxPlayers);

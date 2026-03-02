@@ -10,6 +10,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.Timer;
+import com.goldsprite.gdengine.log.DLog;
 
 /**
  * Supabase Realtime Phoenix Channel 客户端
@@ -111,7 +112,7 @@ public class PhoenixChannel {
      */
     public void connect(final String presenceKey) {
         if (wsClient != null) {
-            Gdx.app.log(TAG, "WebSocket 已存在，先断开旧连接");
+            DLog.logT(TAG, "WebSocket 已存在，先断开旧连接");
             disconnect();
         }
 
@@ -120,13 +121,13 @@ public class PhoenixChannel {
 
         // 构造带 apikey 参数的 WebSocket URL
         String url = realtimeUrl + "?apikey=" + apiKey + "&vsn=1.0.0";
-        Gdx.app.log(TAG, "正在连接 Realtime: " + realtimeUrl);
+        DLog.logT(TAG, "正在连接 Realtime: " + realtimeUrl);
 
         try {
             wsClient = new WebSocketClient(new URI(url)) {
                 @Override
                 public void onOpen(ServerHandshake handshake) {
-                    Gdx.app.log(TAG, "WebSocket 连接成功 (状态码: " + handshake.getHttpStatus() + ")");
+                    DLog.logT(TAG, "WebSocket 连接成功 (状态码: " + handshake.getHttpStatus() + ")");
                     reconnectAttempts = 0;
                     startHeartbeat();
 
@@ -145,7 +146,7 @@ public class PhoenixChannel {
 
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
-                    Gdx.app.log(TAG, "WebSocket 已断开 (code=" + code + ", reason=" + reason + ", remote=" + remote + ")");
+                    DLog.logT(TAG, "WebSocket 已断开 (code=" + code + ", reason=" + reason + ", remote=" + remote + ")");
                     joined = false;
                     stopHeartbeat();
 
@@ -161,7 +162,7 @@ public class PhoenixChannel {
 
                 @Override
                 public void onError(Exception ex) {
-                    Gdx.app.error(TAG, "WebSocket 发生错误", ex);
+                    DLog.logErrT(TAG, "WebSocket 发生错误: " + ex);
                     if (listener != null) {
                         Gdx.app.postRunnable(() -> listener.onError("WebSocket 错误: " + ex.getMessage(), ex));
                     }
@@ -170,7 +171,7 @@ public class PhoenixChannel {
 
             wsClient.connect();
         } catch (Exception e) {
-            Gdx.app.error(TAG, "创建 WebSocket 连接失败", e);
+            DLog.logErrT(TAG, "创建 WebSocket 连接失败: " + e);
             if (listener != null) {
                 Gdx.app.postRunnable(() -> listener.onError("创建连接失败: " + e.getMessage(), e));
             }
@@ -191,7 +192,7 @@ public class PhoenixChannel {
             try {
                 wsClient.close();
             } catch (Exception e) {
-                Gdx.app.error(TAG, "关闭 WebSocket 异常", e);
+                DLog.logErrT(TAG, "关闭 WebSocket 异常: " + e);
             }
             wsClient = null;
         }
@@ -218,7 +219,7 @@ public class PhoenixChannel {
         // { "config": { "presence": { "key": "{presenceKey}" } } }
         String payload = "{\"config\":{\"presence\":{\"key\":\"" + escapeJson(presenceKey) + "\"}}}";
         sendMessage(topic, EVENT_PHX_JOIN, payload, joinRef, joinRef);
-        Gdx.app.log(TAG, "发送 phx_join (ref=" + joinRef + ", presenceKey=" + presenceKey + ")");
+        DLog.logT(TAG, "发送 phx_join (ref=" + joinRef + ", presenceKey=" + presenceKey + ")");
     }
 
     /**
@@ -228,14 +229,14 @@ public class PhoenixChannel {
      */
     public void trackPresence(String stateJson) {
         if (!joined) {
-            Gdx.app.error(TAG, "尚未加入频道，无法 track");
+            DLog.logErrT(TAG, "尚未加入频道，无法 track");
             return;
         }
         // 构造 presence track 消息:
         // { "type": "presence", "event": "track", "payload": {stateJson} }
         String payload = "{\"type\":\"presence\",\"event\":\"track\",\"payload\":" + stateJson + "}";
         sendMessage(topic, "presence", payload, nextRef(), joinRef);
-        Gdx.app.log(TAG, "发送 presence track");
+        DLog.logT(TAG, "发送 presence track");
     }
 
     /**
@@ -245,7 +246,7 @@ public class PhoenixChannel {
         if (!joined) return;
         String payload = "{\"type\":\"presence\",\"event\":\"untrack\"}";
         sendMessage(topic, "presence", payload, nextRef(), joinRef);
-        Gdx.app.log(TAG, "发送 presence untrack");
+        DLog.logT(TAG, "发送 presence untrack");
     }
 
     // ==================== 消息收发 ====================
@@ -256,7 +257,7 @@ public class PhoenixChannel {
      */
     private void sendMessage(String topic, String event, String payloadJson, String ref, String joinRefVal) {
         if (wsClient == null || !wsClient.isOpen()) {
-            Gdx.app.error(TAG, "WebSocket 未连接，无法发送消息");
+            DLog.logErrT(TAG, "WebSocket 未连接，无法发送消息");
             return;
         }
 
@@ -272,20 +273,20 @@ public class PhoenixChannel {
 
         String msg = sb.toString();
         wsClient.send(msg);
-        Gdx.app.debug(TAG, ">>> " + msg);
+        DLog.logT(TAG, ">>> " + msg);
     }
 
     /**
      * 处理从 WebSocket 收到的消息
      */
     private void handleMessage(String message) {
-        Gdx.app.debug(TAG, "<<< " + message);
+        DLog.logT(TAG, "<<< " + message);
 
         JsonValue json;
         try {
             json = jsonReader.parse(message);
         } catch (Exception e) {
-            Gdx.app.error(TAG, "JSON 解析失败: " + message, e);
+            DLog.logErrT(TAG, "JSON 解析失败: " + message + " | " + e);
             return;
         }
 
@@ -294,13 +295,13 @@ public class PhoenixChannel {
 
         // Phoenix 心跳回复
         if (TOPIC_PHOENIX.equals(msgTopic) && EVENT_PHX_REPLY.equals(msgEvent)) {
-            Gdx.app.debug(TAG, "收到心跳回复");
+            DLog.logT(TAG, "收到心跳回复");
             return;
         }
 
         // System 消息 (如 extension reload)
         if (EVENT_SYSTEM.equals(msgEvent)) {
-            Gdx.app.debug(TAG, "收到系统消息: " + message);
+            DLog.logT(TAG, "收到系统消息: " + message);
             return;
         }
 
@@ -344,7 +345,7 @@ public class PhoenixChannel {
             String status = payload.getString("status", "");
             if ("ok".equals(status)) {
                 joined = true;
-                Gdx.app.log(TAG, "成功加入频道: " + topic);
+                DLog.logT(TAG, "成功加入频道: " + topic);
                 if (listener != null) {
                     Gdx.app.postRunnable(() -> listener.onJoined());
                 }
@@ -355,7 +356,7 @@ public class PhoenixChannel {
                     errorMsg += ": " + response.toString();
                 }
                 final String msg = errorMsg;
-                Gdx.app.error(TAG, msg);
+                DLog.logErrT(TAG, msg);
                 if (listener != null) {
                     Gdx.app.postRunnable(() -> listener.onError(msg, null));
                 }
@@ -372,11 +373,11 @@ public class PhoenixChannel {
             public void run() {
                 if (wsClient != null && wsClient.isOpen()) {
                     sendMessage(TOPIC_PHOENIX, EVENT_HEARTBEAT, "{}", nextRef(), null);
-                    Gdx.app.debug(TAG, "发送 Phoenix 心跳");
+                    DLog.logT(TAG, "发送 Phoenix 心跳");
                 }
             }
         }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL);
-        Gdx.app.debug(TAG, "Phoenix 心跳已启动 (间隔 " + HEARTBEAT_INTERVAL + "s)");
+        DLog.logT(TAG, "Phoenix 心跳已启动 (间隔 " + HEARTBEAT_INTERVAL + "s)");
     }
 
     private void stopHeartbeat() {
@@ -392,14 +393,14 @@ public class PhoenixChannel {
         reconnectAttempts++;
         // 指数退避: 1s, 2s, 4s, 8s ... 最大 30s
         float delay = Math.min(BASE_RECONNECT_DELAY * (1 << (reconnectAttempts - 1)), MAX_RECONNECT_DELAY);
-        Gdx.app.log(TAG, "计划 " + delay + " 秒后重连 (第 " + reconnectAttempts + "/" + MAX_RECONNECT_ATTEMPTS + " 次)");
+        DLog.logT(TAG, "计划 " + delay + " 秒后重连 (第 " + reconnectAttempts + "/" + MAX_RECONNECT_ATTEMPTS + " 次)");
 
         cancelReconnect();
         reconnectTask = Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
                 if (shouldReconnect) {
-                    Gdx.app.log(TAG, "正在尝试重连...");
+                    DLog.logT(TAG, "正在尝试重连...");
                     connect(presenceKey);
                 }
             }

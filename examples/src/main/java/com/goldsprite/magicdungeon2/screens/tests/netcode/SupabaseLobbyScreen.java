@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.netcode.supabase.PresenceLobbyManager;
 import com.goldsprite.gdengine.netcode.supabase.PresenceRoomInfo;
 import com.goldsprite.gdengine.netcode.supabase.PublicIPResolver;
+import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
@@ -33,6 +34,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
     private VisLabel statusLabel;
     private VisLabel connectionIndicator;
     private VisTextField playerNameField;
+    private VisTextField hostIpField;
     private VisTextButton createRoomBtn;
 
     // === 业务层 (Presence 替代旧的 RoomManager) ===
@@ -40,6 +42,11 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
 
     // === 状态 ===
     private PresenceRoomInfo myRoomInfo;
+    /** 本机公网 IP（进入大厅后异步获取，加入房间时用于判断是否同网络） */
+    private String myPublicIp = null;
+    /** 本机局域网 IP */
+    private String myLocalIp = null;
+    private static final String TAG = "SupabaseLobby";
     private static final int DEFAULT_UDP_PORT = 20000;
 
     @Override
@@ -58,6 +65,22 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
 
         buildUI();
         connectToLobby();
+
+        // 提前缓存本机 IP，供加入房间时判断是否同网络
+        myLocalIp = PublicIPResolver.getLocalIP();
+        DLog.logT(TAG, "本机局域网 IP: " + myLocalIp);
+
+        PublicIPResolver.resolvePublicIP(new PublicIPResolver.ResolveCallback() {
+            @Override
+            public void onSuccess(String ip) {
+                myPublicIp = ip;
+                DLog.logT(TAG, "本机公网 IP: " + ip);
+            }
+            @Override
+            public void onError(Throwable t) {
+                DLog.logErrT(TAG, "获取本机公网 IP 失败: " + t);
+            }
+        });
     }
 
     @Override
@@ -200,6 +223,12 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
         playerNameField = new VisTextField("Player_" + (int) (Math.random() * 1000));
         panel.add(playerNameField).expandX().fillX().padBottom(16).row();
 
+        // 主机地址输入 (留空 = 自动检测公网IP，填入 = 使用自定义IP，如 Frp 代理)
+        panel.add(new VisLabel("主机地址(可选)")).left().row();
+        hostIpField = new VisTextField("");
+        hostIpField.setMessageText("留空=自动检测, 或输入Frp地址");
+        panel.add(hostIpField).expandX().fillX().padBottom(16).row();
+
         // 创建房间按钮
         createRoomBtn = new VisTextButton("创建房间");
         createRoomBtn.setDisabled(true); // 等待频道加入成功后启用
@@ -244,10 +273,11 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
 
         // 表头行
         VisTable header = new VisTable();
-        addHeaderLabel(header, "房间名", 200);
-        addHeaderLabel(header, "人数", 80);
-        addHeaderLabel(header, "状态", 80);
-        header.add().width(100); // 占位: 加入按钮列
+        addHeaderLabel(header, "房间名", 180);
+        addHeaderLabel(header, "地址", 180);
+        addHeaderLabel(header, "人数", 60);
+        addHeaderLabel(header, "状态", 60);
+        header.add().width(80); // 占位: 加入按钮列
         roomListTable.add(header).expandX().fillX().padBottom(4).row();
 
         // 数据行
@@ -267,15 +297,22 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
         VisTable row = new VisTable();
 
         // 房间名
-        row.add(new VisLabel(room.roomName)).width(200).left();
+        row.add(new VisLabel(room.roomName)).width(180).left();
+
+        // 地址 (IP:Port)
+        String addr = (room.hostIp.length() > 15 ? room.hostIp.substring(0, 15) + ".." : room.hostIp)
+                + ":" + room.hostPort;
+        VisLabel addrLabel = new VisLabel(addr);
+        addrLabel.setColor(Color.LIGHT_GRAY);
+        row.add(addrLabel).width(180).left();
 
         // 人数
-        row.add(new VisLabel(room.getPlayerCountDisplay())).width(80).center();
+        row.add(new VisLabel(room.getPlayerCountDisplay())).width(60).center();
 
         // 状态
         VisLabel statusLbl = new VisLabel(getStatusText(room.status));
         statusLbl.setColor(getStatusColor(room.status));
-        row.add(statusLbl).width(80).center();
+        row.add(statusLbl).width(60).center();
 
         // 加入按钮
         VisTextButton joinBtn = new VisTextButton("加入");
@@ -290,7 +327,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
                 }
             }
         });
-        row.add(joinBtn).width(100).right();
+        row.add(joinBtn).width(80).right();
 
         return row;
     }
@@ -318,12 +355,31 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
         final String roomName = name + " 的房间";
         final int udpPort = DEFAULT_UDP_PORT;
 
+        // 检查是否有自定义 IP (如 Frp 代理地址)
+        final String customIp = hostIpField != null ? hostIpField.getText().trim() : "";
+
+        if (!customIp.isEmpty()) {
+            // 使用自定义 IP，跳过公网 IP 检测
+            DLog.logT(TAG, "使用自定义主机地址: " + customIp);
+            String localIp = PublicIPResolver.getLocalIP();
+            myRoomInfo = new PresenceRoomInfo(roomName, customIp, localIp, udpPort, 1, 6);
+
+            lobbyManager.publishRoom(myRoomInfo);
+            setStatus("建房成功! 正在进入游戏...", Color.GREEN);
+
+            NetcodeTankOnlineScreen.preConfigureAsHost(udpPort);
+            getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
+            return;
+        }
+
         PublicIPResolver.resolvePublicIP(new PublicIPResolver.ResolveCallback() {
             @Override
             public void onSuccess(final String ip) {
                 Gdx.app.postRunnable(() -> {
-                    // 构造房间信息
-                    myRoomInfo = new PresenceRoomInfo(roomName, ip, udpPort, 1, 6);
+                    // 构造房间信息（同时携带公网 IP 和局域网 IP）
+                    String localIp = PublicIPResolver.getLocalIP();
+                    myRoomInfo = new PresenceRoomInfo(roomName, ip, localIp, udpPort, 1, 6);
+                    DLog.logT(TAG, "建房: 公网=" + ip + ", 局域网=" + localIp);
 
                     // 发布到 Presence (其他所有客户端会实时收到)
                     lobbyManager.publishRoom(myRoomInfo);
@@ -356,10 +412,25 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
             return;
         }
 
-        setStatus("正在连接 " + room.hostIp + ":" + room.hostPort + "...", Color.YELLOW);
+        // 三级 IP 智能选择：同机 → 同 LAN → 公网
+        String connectIp = room.hostIp;
+        if (myPublicIp != null && myPublicIp.equals(room.hostIp)) {
+            if (myLocalIp != null && myLocalIp.equals(room.localIp)) {
+                // 同一台机器：用回环地址
+                connectIp = "127.0.0.1";
+                DLog.logT(TAG, "检测到同机，使用回环地址: 127.0.0.1");
+            } else if (room.localIp != null && !room.localIp.isEmpty()) {
+                // 同局域网不同机器：用局域网 IP
+                connectIp = room.localIp;
+                DLog.logT(TAG, "检测到同 LAN，使用局域网 IP: " + connectIp);
+            }
+        }
+
+        DLog.logT(TAG, "加入房间: " + room.roomName + " -> " + connectIp + ":" + room.hostPort);
+        setStatus("正在连接 " + connectIp + ":" + room.hostPort + "...", Color.YELLOW);
 
         // 携带客户端参数跳转到 NetcodeTankOnlineScreen
-        NetcodeTankOnlineScreen.preConfigureAsClient(room.hostIp, room.hostPort);
+        NetcodeTankOnlineScreen.preConfigureAsClient(connectIp, room.hostPort);
         getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
     }
 

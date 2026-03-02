@@ -14,6 +14,9 @@ public class PresenceRoomInfo {
     /** 房主公网 IP */
     public String hostIp = "";
 
+    /** 房主局域网 IP（同网络时使用） */
+    public String localIp = "";
+
     /** 房主 UDP 监听端口 */
     public int hostPort = 20000;
 
@@ -33,8 +36,13 @@ public class PresenceRoomInfo {
     }
 
     public PresenceRoomInfo(String roomName, String hostIp, int hostPort, int currentPlayers, int maxPlayers) {
+        this(roomName, hostIp, "", hostPort, currentPlayers, maxPlayers);
+    }
+
+    public PresenceRoomInfo(String roomName, String hostIp, String localIp, int hostPort, int currentPlayers, int maxPlayers) {
         this.roomName = roomName;
         this.hostIp = hostIp;
+        this.localIp = localIp != null ? localIp : "";
         this.hostPort = hostPort;
         this.currentPlayers = currentPlayers;
         this.maxPlayers = maxPlayers;
@@ -56,6 +64,7 @@ public class PresenceRoomInfo {
         return "PresenceRoomInfo{" +
             "roomName='" + roomName + '\'' +
             ", hostIp='" + hostIp + '\'' +
+            ", localIp='" + localIp + '\'' +
             ", hostPort=" + hostPort +
             ", players=" + currentPlayers + "/" + maxPlayers +
             ", status='" + status + '\'' +
