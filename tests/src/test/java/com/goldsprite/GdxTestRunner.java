@@ -47,6 +47,11 @@ public class GdxTestRunner extends BlockJUnit4ClassRunner {
 					String msg = args.length > 1 ? String.valueOf(args[1]) : "";
 					System.out.println("[GDX-" + tag + "] " + msg);
 				}
+				// [关键] 在测试环境中，postRunnable 立即执行（无主循环）
+				if (name.equals("postRunnable") && args != null && args.length > 0 && args[0] instanceof Runnable) {
+					((Runnable) args[0]).run();
+					return null;
+				}
 				return defaultValue(method.getReturnType());
 			}
 		);
