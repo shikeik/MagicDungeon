@@ -1,20 +1,23 @@
 package com.goldsprite;
 
+import java.io.File;
+import java.lang.reflect.Proxy;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.junit.runner.notification.RunNotifier;
+import org.junit.runners.BlockJUnit4ClassRunner;
+import org.junit.runners.model.InitializationError;
+
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.backends.headless.HeadlessApplicationConfiguration;
+import com.badlogic.gdx.backends.headless.HeadlessNet;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
-import org.junit.runner.notification.RunNotifier;
-import org.junit.runners.BlockJUnit4ClassRunner;
-import org.junit.runners.model.InitializationError;
-
-import java.io.File;
-import java.lang.reflect.Proxy;
-import java.util.HashMap;
-import java.util.Map;
 
 public class GdxTestRunner extends BlockJUnit4ClassRunner {
 
@@ -95,6 +98,9 @@ public class GdxTestRunner extends BlockJUnit4ClassRunner {
 			@Override public String getLocalStoragePath() { return ""; }
 			@Override public boolean isLocalStorageAvailable() { return true; }
 		};
+
+		// 5. Net Mock (Headless Implementation)
+		Gdx.net = new HeadlessNet(new HeadlessApplicationConfiguration());
 
 		initialized = true;
 	}
