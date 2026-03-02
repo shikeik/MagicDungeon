@@ -61,6 +61,7 @@ public class DLog {
 	static {
 		blackList.add("拦截");
 		blackList.add("InputManager");
+		blackList.add("VirtualKeyboard");
 
 		// [新增] 注册默认输出端
 		registerLogOutput(new StandardOutput());
