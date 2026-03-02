@@ -22,8 +22,8 @@ public class RoomManager {
         void onError(Throwable t);
     }
 
-    public RoomManager(String supabaseUrl, String anonKey) {
-        this.client = new SupabaseClient(supabaseUrl, anonKey);
+    public RoomManager(String supabaseUrl, String publishableKey) {
+        this.client = new SupabaseClient(supabaseUrl, publishableKey);
     }
 
     /**

@@ -22,8 +22,8 @@ public class SupabaseClientTest {
     // 替换为你的真实 Supabase 测试环境配置
     // 或者使用 Mock / 本地测试服务器
     // 这个由于涉及真实 API 操作可能会无法跑通直到真配了对应的URL，仅作为TDD案例
-    private static final String TEST_URL = "https://your-project-id.supabase.co";
-    private static final String TEST_KEY = "your-anon-key";
+    private static final String TEST_URL = "https://ijiuncznaasfbamjuinm.supabase.co";
+    private static final String TEST_KEY = "sb_publishable_pEqL-0pZ4m6Q8zU5vUtTJg_bO2g2oSE";
 
     @BeforeClass
     public static void setup() {
@@ -35,7 +35,7 @@ public class SupabaseClientTest {
     @Test
     public void testCreateRoom() throws InterruptedException {
         // [INFO] 如果你没有配置好真实的 Supabase URL，这个测试会报 DNS 解析错误，
-        // 在正式使用前需要确保这里是填入你自己在 supabase 建立的合法 URL 和 Anon-KEY
+        // 在正式使用前需要确保这里是填入你自己在 supabase 建立的合法 URL 和 Publishable-KEY
         if (TEST_URL.contains("your-project-id")) {
             System.out.println("跳过 testCreateRoom 测试，因为未配置真实 Supabase 凭证");
             return;

@@ -12,7 +12,7 @@ import com.badlogic.gdx.utils.JsonWriter;
 public class SupabaseClient {
 
     private final String SUPABASE_URL;
-    private final String SUPABASE_ANON_KEY;
+    private final String SUPABASE_PUBLISHABLE_KEY;
     private final Json json;
 
     public interface RequestCallback<T> {
@@ -21,9 +21,9 @@ public class SupabaseClient {
         void onError(Throwable t);
     }
 
-    public SupabaseClient(String url, String anonKey) {
+    public SupabaseClient(String url, String publishableKey) {
         this.SUPABASE_URL = url;
-        this.SUPABASE_ANON_KEY = anonKey;
+        this.SUPABASE_PUBLISHABLE_KEY = publishableKey;
         this.json = new Json();
         this.json.setOutputType(JsonWriter.OutputType.json);
         // Ignore unknown fields to prevent crashes if Supabase adds fields we don't care about
@@ -31,8 +31,8 @@ public class SupabaseClient {
     }
 
     private void addHeaders(Net.HttpRequest httpRequest) {
-        httpRequest.setHeader("apikey", SUPABASE_ANON_KEY);
-        httpRequest.setHeader("Authorization", "Bearer " + SUPABASE_ANON_KEY);
+        httpRequest.setHeader("apikey", SUPABASE_PUBLISHABLE_KEY);
+        httpRequest.setHeader("Authorization", "Bearer " + SUPABASE_PUBLISHABLE_KEY);
         httpRequest.setHeader("Content-Type", "application/json");
         httpRequest.setHeader("Prefer", "return=representation");
     }

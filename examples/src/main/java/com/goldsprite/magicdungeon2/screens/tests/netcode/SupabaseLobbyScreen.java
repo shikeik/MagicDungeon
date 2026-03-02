@@ -1,5 +1,7 @@
 package com.goldsprite.magicdungeon2.screens.tests.netcode;
 
+import java.util.List;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
@@ -14,11 +16,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.goldsprite.GdxLauncher;
 import com.goldsprite.gdengine.netcode.supabase.RoomManager;
 import com.goldsprite.gdengine.netcode.supabase.RoomModel;
-import com.goldsprite.GdxLauncher;
-
-import java.util.List;
 
 public class SupabaseLobbyScreen extends ScreenAdapter {
 
@@ -32,8 +32,8 @@ public class SupabaseLobbyScreen extends ScreenAdapter {
 
     // TODO: 替换为您自建的 Supabase 网址和密钥
     // 必须在部署之前更换
-    private static final String SUPABASE_URL = "https://your-project-id.supabase.co";
-    private static final String SUPABASE_KEY = "your-anon-key";
+    private static final String SUPABASE_URL = "https://ijiuncznaasfbamjuinm.supabase.co";
+    private static final String SUPABASE_KEY = "sb_publishable_pEqL-0pZ4m6Q8zU5vUtTJg_bO2g2oSE";
 
     public SupabaseLobbyScreen(GdxLauncher game) {
         this.game = game;

@@ -69,7 +69,7 @@
 ### 2. Supabase HTTP 框架 (SupabaseClient)
 *   **需求**：封装对 Supabase REST API 的基础调用。
 *   **实现**：
-    *   读取配置文件中的 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY`。
+    *   读取配置文件中的 `SUPABASE_URL` 和 `SUPABASE_PUBLISHABLE_KEY`。
     *   封装统一的 `GET`, `POST`, `PATCH`, `DELETE` 方法，通过 `Gdx.net.HttpRequest` 实现非阻塞异步网络请求。
     *   自动填充 `apikey` 和 `Authorization: Bearer` 请求头。
 
