@@ -152,6 +152,7 @@ public class DebugConsole extends Group {
 		introLabel = new VisLabel("", "small"); introLabel.setWrap(true);
 		introScroll = new HoverFocusScrollPane(introLabel);
 		logLabel = new VisLabel("", "small"); logLabel.setWrap(true);
+		logLabel.setFontScale(0.75f); // 缩小一些以便信息量密集化
 		logScroll = new HoverFocusScrollPane(logLabel);
 		infoLabel = new VisLabel("", "small");
 		infoScroll = new HoverFocusScrollPane(infoLabel);
