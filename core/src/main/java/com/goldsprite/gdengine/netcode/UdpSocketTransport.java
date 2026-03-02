@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
@@ -58,6 +59,9 @@ public class UdpSocketTransport implements Transport {
     // 最大 UDP 数据报大小（对于游戏 Netcode，一般不超过 MTU，这里保守设为 4096）
     private static final int MAX_PACKET_SIZE = 4096;
 
+    // Socket 接收超时（毫秒）—— 避免 receive() 永久阻塞导致关窗时无法退出
+    private static final int SOCKET_TIMEOUT_MS = 500;
+
     // 握手魔法标识
     private static final byte[] HANDSHAKE_MAGIC = new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
 
@@ -94,6 +98,7 @@ public class UdpSocketTransport implements Transport {
         if (!isServerIdentity) return;
         try {
             socket = new DatagramSocket(port);
+            socket.setSoTimeout(SOCKET_TIMEOUT_MS);
             running.set(true);
             startReceiveLoop();
             DLog.logT("Netcode", "[UdpTransport] Server 已启动，监听端口: " + port);
@@ -107,6 +112,7 @@ public class UdpSocketTransport implements Transport {
         if (isServerIdentity) return;
         try {
             socket = new DatagramSocket(); // 随机绑定本地端口
+            socket.setSoTimeout(SOCKET_TIMEOUT_MS);
             serverAddress = new InetSocketAddress(ip, port);
             running.set(true);
             startReceiveLoop();
@@ -207,6 +213,9 @@ public class UdpSocketTransport implements Transport {
                     // 解析带长度前缀的封包
                     processReceivedData(rawData, sender);
 
+                } catch (SocketTimeoutException e) {
+                    // 正常超时，回到循环头检查 running 标志
+                    continue;
                 } catch (IOException e) {
                     if (running.get()) {
                         DLog.logErr("[UdpTransport] 接收数据异常: " + e.getMessage());

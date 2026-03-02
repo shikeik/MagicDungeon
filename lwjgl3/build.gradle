@@ -166,9 +166,29 @@ tasks.register('runDual') {
 			.redirectErrorStream(true)
 			.start()
 
-		logger.lifecycle("两个实例已启动，关闭任一窗口后此任务将等待全部退出...")
+		logger.lifecycle("两个实例已启动，关闭任一窗口后另一个将自动关闭...")
 
-		// 等待两个进程都结束
+		// 轮询等待：任一进程退出后自动杀掉另一个
+		while (p1.isAlive() && p2.isAlive()) {
+			Thread.sleep(300)
+		}
+
+		// 给存活的进程一点善后时间，然后强制杀掉
+		if (p1.isAlive()) {
+			logger.lifecycle("实例2 已退出，正在关闭实例1...")
+			p1.destroy()
+			if (!p1.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)) {
+				p1.destroyForcibly()
+			}
+		}
+		if (p2.isAlive()) {
+			logger.lifecycle("实例1 已退出，正在关闭实例2...")
+			p2.destroy()
+			if (!p2.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)) {
+				p2.destroyForcibly()
+			}
+		}
+
 		p1.waitFor()
 		p2.waitFor()
 
