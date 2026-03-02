@@ -3,6 +3,24 @@
 本项目的所有显著更改都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，并且本项目遵循 [语义化版本控制 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
 
+## [0.8.3] - 2026-03-03
+
+### 新增 (Added)
+
+- **坦克屏输入系统重构: 取消硬编码 + Android 触控适配**
+  - 新增 `TankVirtualControls`：坦克屏专用虚拟触控覆盖层（左侧四向摇杆 + 右下攻击按钮）
+  - Android 默认显示虚拟控件，PC 默认隐藏；检测到触控输入时自动淡入，键盘/手柄时淡出
+  - `VirtualButton` 增加 fallback 圆形绘制（无纹理时显示半透明红色圆）
+
+### 重构 (Refactored)
+
+- **坦克屏输入全面走 InputManager**
+  - `NetcodeTankOnlineScreen`: Host 输入 + Client 输入均改用 `InputManager.getAxis(AXIS_LEFT)` + `isJustPressed(ATTACK)`
+  - `NetcodeTankSandboxScreen`: P1 输入改用 InputManager（P2 保留方向键用于调试分屏）
+  - 移除所有 `Gdx.input.isKeyPressed(Keys.W/A/S/D/J)` 硬编码，统一通过 InputManager 合并键盘 + 手柄 + 虚拟摇杆输入
+
+---
+
 ## [0.8.2] - 2026-03-03
 
 ### 修复 (Fixed)

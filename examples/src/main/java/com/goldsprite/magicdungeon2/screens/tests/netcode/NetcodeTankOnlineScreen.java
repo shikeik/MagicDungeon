@@ -6,12 +6,15 @@ import java.util.Map;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.NetworkObject;
 import com.goldsprite.gdengine.netcode.ReliableUdpTransport;
 import com.goldsprite.gdengine.netcode.UdpSocketTransport;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.magicdungeon2.input.InputAction;
+import com.goldsprite.magicdungeon2.input.InputManager;
 
 /**
  * Netcode 坦克联机对战 —— 统一屏幕（Server / Client 合一）。
@@ -110,6 +113,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
     // ── 核心逻辑（与 Sandbox 共享，避免重复维护） ──
     private final TankGameLogic gameLogic = new TankGameLogic(bulletSystem, gameMap);
 
+    // ── 虚拟触控控件（Android 摇杆 + 攻击按钮） ──
+    private TankVirtualControls virtualControls;
+
     // ── 抽屉面板（房间成员详情） ──
     /** 抽屉是否展开 */
     private boolean drawerExpanded = false;
@@ -138,6 +144,11 @@ public class NetcodeTankOnlineScreen extends GScreen {
     public void create() {
         renderer = new TankGameRenderer();
 
+        // 创建虚拟触控控件（Android 默认显示，PC 默认隐藏）
+        virtualControls = new TankVirtualControls(new ExtendViewport(
+            uiViewport.getWorldWidth(), uiViewport.getWorldHeight()));
+        if (imp != null) imp.addProcessor(virtualControls.getStage());
+
         // 检查是否有来自大厅的预配置，如果有则跳过 CONFIG 阶段直接启动网络
         if (preConfigIsServer != null) {
             isServerRole = preConfigIsServer;
@@ -163,6 +174,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
     public void render(float delta) {
         super.render(delta);
 
+        // 更新虚拟触控控件
+        if (virtualControls != null) virtualControls.update(delta);
+
         // 应用 UI 视口，确保 resize 后坐标系正确
         uiViewport.apply();
 
@@ -185,6 +199,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
                     drawerAnimProgress, connectionLost, connectionLostTimer);
                 break;
         }
+
+        // 渲染虚拟触控控件（在所有 HUD 之上）
+        if (virtualControls != null) virtualControls.render();
     }
 
     /** ESC/返回时会调用 hide()（不调用 dispose），在此清理网络资源 */
@@ -199,6 +216,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
         super.dispose();
         shutdownNetwork();
         if (renderer != null) { renderer.dispose(); renderer = null; }
+        if (virtualControls != null) { virtualControls.dispose(); virtualControls = null; }
     }
 
     /** 安全关闭网络连接并重置游戏状态 */
@@ -386,21 +404,20 @@ public class NetcodeTankOnlineScreen extends GScreen {
         transport.tickReliable();
     }
 
-    /** Host 坦克由本地键盘驱动: WASD 移动, J 开火。仅写入 pending*，由 serverTick 统一消费。 */
+    /**
+     * Host 坦克输入: 通过 InputManager 统一读取（键盘WASD + 手柄 + 虚拟摇杆）。
+     * 仅写入 pending*，由 serverTick 统一消费。
+     */
     private void readHostInput(TankBehaviour tank) {
         if (tank.isDead.getValue()) return;
 
-        float dx = 0, dy = 0;
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) dx += 1f;
-
-        Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
+        InputManager input = InputManager.getInstance();
+        Vector2 axis = input.getAxis(InputManager.AXIS_LEFT);
+        Vector2 dir = TankGameLogic.normalizeDir(axis.x, axis.y);
         tank.pendingMoveX = dir.x;
         tank.pendingMoveY = dir.y;
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+        if (input.isJustPressed(InputAction.ATTACK)) {
             tank.pendingFire = true;
         }
     }
@@ -418,13 +435,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
             myTank.x.enableClientPrediction();
             myTank.y.enableClientPrediction();
 
-            float dx = 0, dy = 0;
-            if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) dy += 1;
-            if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) dy -= 1;
-            if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) dx -= 1;
-            if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) dx += 1;
-
-            Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
+            InputManager input = InputManager.getInstance();
+            Vector2 axis = input.getAxis(InputManager.AXIS_LEFT);
+            Vector2 dir = TankGameLogic.normalizeDir(axis.x, axis.y);
 
             // 始终发送方向（包括 0,0 停止）—— 服务端不清零 pendingMove，
             // 必须显式发送停止指令，否则坦克会永远滑行
@@ -444,7 +457,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 myTank.y.setLocal(pushed.y);
                 myTank.rot.setLocal(dir.angleDeg());
             }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.J) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            if (input.isJustPressed(InputAction.ATTACK)) {
                 myTank.sendServerRpc("rpcFireInput");
             }
         }

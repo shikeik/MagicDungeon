@@ -15,6 +15,8 @@ import com.goldsprite.gdengine.netcode.LocalMemoryTransport;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.Transport;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.magicdungeon2.input.InputAction;
+import com.goldsprite.magicdungeon2.input.InputManager;
 
 /**
  * Netcode 坦克纯内存沙盒 -- 同进程分屏（左=Server，右=Client）。
@@ -129,21 +131,18 @@ public class NetcodeTankSandboxScreen extends GScreen {
 
     // -- 输入读取：写入 pendingMoveX/Y + pendingFire，由 serverTick 统一消费 --
 
-    /** P1（Host）: WASD 移动，J 开火 */
+    /** P1（Host）: 通过 InputManager 统一读取（键盘WASD + 手柄 + 虚拟摇杆），J/ATTACK 开火 */
     private void readP1Input() {
         TankBehaviour tank = serverTanks.get(1);
         if (tank == null || tank.isDead.getValue()) return;
 
-        float dx = 0, dy = 0;
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) dy -= 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= 1f;
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) dx += 1f;
-        Vector2 dir = TankGameLogic.normalizeDir(dx, dy);
+        InputManager input = InputManager.getInstance();
+        Vector2 axis = input.getAxis(InputManager.AXIS_LEFT);
+        Vector2 dir = TankGameLogic.normalizeDir(axis.x, axis.y);
         tank.pendingMoveX = dir.x;
         tank.pendingMoveY = dir.y;
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+        if (input.isJustPressed(InputAction.ATTACK)) {
             tank.pendingFire = true;
         }
     }
