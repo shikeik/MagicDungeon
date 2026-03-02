@@ -1,48 +1,41 @@
 ## 本轮会话总结报表 (2026-03-02)
 
-### 提交记录 (自 8d782b1 起)
+### 提交记录 (自 93d9677 起)
 
 | 提交 | 类型 | 摘要 |
 |------|------|------|
-| `1849b84` | feat | DLog日志统一+玩家名称标签+抽屉面板+客户端数修复+开发报告 |
-| `f420f59` | fix  | runDual关窗卡死+UDP接收线程阻塞退出修复 |
+| `b96395a` | refactor | SupabaseLobbyScreen VisUI最佳实践重写+全局配置抽取+UTC修复+测试选单集成+版本报表 |
 
 ---
 
 ### 变更明细
 
-#### 1. 全部日志统一为 DLog (1849b84)
-- `NetworkManager.java` — 15 处 `System.out/err.println` → `DLog.logT("Netcode", ...)` / `DLog.logErr(...)`
-- `UdpSocketTransport.java` — 10 处替换
-- `NetcodeTankOnlineScreen.java` — 7 处替换
-- 统一 tag: `"Netcode"`，可通过 DLog 黑白名单控制显示
+#### 1. SupabaseLobbyScreen 最佳实践重写 (refactor)
+- **基类变更**: `GScreen` → `ExampleGScreen`，获得 `getIntroduction()` 调试信息注入能力
+- **渲染修正**: 移除手动 `render()` 重写 (`glClearColor` / `glClear` / `stage.act/draw`)，改用引擎标准 `render0(delta)` 钩子
+- **VisUI 全面替换**: 原 `Label`/`TextButton`/`TextField`/`ScrollPane`/`Table` (依赖未定义的 `skin`) → `VisLabel`/`VisTextButton`/`VisTextField`/`VisScrollPane`/`VisTable` (自带 VisUI 主题)
+- **Stage 管理**: 不再直接操作父类 `NeonStage stage`，改为独立创建 `Stage uiStage` 并注册到 `InputMultiplexer`
+- **资源清理**: `dispose()` 不再手动 dispose 父类 stage，仅清理自身 `uiStage` 和 `roomManager`
+- **导航集成**: 返回按钮由注释占位 → `getScreenManager().popLastScreen()` 实现正确的栈式导航
+- **自动刷新**: 新增 10 秒自动刷新房间列表定时器
+- **UI 结构优化**: 左右分栏提取为 `buildLeftPanel()` / `buildRightPanel()` 独立方法；新增表头行和空房间提示；状态标签抽取 `setStatus(text, color)` 统一管理
 
-#### 2. 玩家头顶名称标签 (1849b84)
-- `TankBehaviour` 新增 `NetworkVariable<String> playerName`，自动网络同步
-- `spawnTankForOwner`: Host → `"Host"`, 远程客户端 → `"Player#X"`
-- `TankSandboxUtils.drawTank`: HP 槽上方 +30px 绘制白色名称
+#### 2. SupabaseConfig 全局配置抽取 (feat, 上轮遗留)
+- 新建 `SupabaseConfig.java`: 集中定义 `URL` 与 `PUBLISHABLE_KEY`
+- `RoomManager`: 新增无参构造函数，自动读取 `SupabaseConfig`
+- `SupabaseLobbyScreen`: 移除硬编码 URL/Key，改用 `new RoomManager()`
+- `SupabaseClientTest`: 测试类同步使用全局配置
 
-#### 3. 抽屉式房间成员详情面板 (1849b84)
-- 按 `I` 键切换展开/收起，pow2Out 缓动动画
-- 右侧半透明面板滑出，显示每个成员的：颜色标识、名称、HP 状态、实时坐标
-- Server/Client 两端通用
+#### 3. 心跳 UTC 时区修复 (fix, 上轮遗留)
+- **问题**: `SupabaseClient.updateHeartbeat()` 将本地时间配上 `"Z"` 后缀伪装为 UTC，导致时区偏移 8 小时
+- **修复**: `sdf.setTimeZone(TimeZone.getTimeZone("UTC"))` 确保生成真实 UTC 时间戳，适配 PostgreSQL `timestamptz` + `now()` 机制
 
-#### 4. 客户端数显示 Bug 修复 (1849b84)
-- **问题**: `getClientCount()` 返回 `clientAddresses.size()`，断开后地址不移除（保持索引稳定），导致数量只增不减
-- **修复**: 新增 `activeClientIds` (ConcurrentHashMap.newKeySet)，连接时 add、断开时 remove
-- 新增 `getActiveClientCount()` / `getActiveClientIds()` API
-- HUD 改用 `transport.getActiveClientCount()`
+#### 4. 测试选单集成 (feat)
+- `TestSelectionScreen.initScreenMapping()` 新增 `SupabaseLobbyScreen.class` 注册条目
+- 开发者可直接从测试选择界面一键进入 Supabase 云大厅
 
-#### 5. 开发报告文档 (1849b84)
-- 新增 `docs/项目文档/Netcode_v0.7.0_开发报告.md`
-- 涵盖：架构总览、协议设计(8种封包)、功能清单(P1-P5)、Bug 修复历程(B1-B12)、文件清单
-
-#### 6. runDual 关窗卡死修复 (f420f59)
-- **问题**: `socket.receive()` 无超时永久阻塞，Windows 下 `socket.close()` 可能无法立即解除阻塞；Gradle 任务 `p1.waitFor(); p2.waitFor()` 顺序等待两个进程，一个退出后仍挂起
-- **修复**:
-  - `socket.setSoTimeout(500ms)` — receive 每 500ms 苏醒，检查 running 标志
-  - 新增 `SocketTimeoutException` 捕获，正常超时仅 continue 不报错
-  - runDual 改为轮询等待：任一进程退出后 `destroy()` 另一个（3 秒宽限期 + `destroyForcibly()`）
+#### 5. 版本报表重写 (docs)
+- `18_v0.7.1_Supabase云大厅实装报表.md` 全面重写，补充配置架构、UTC 修复、测试集成等细节
 
 ---
 
@@ -50,15 +43,15 @@
 
 | 文件 | 改动类型 |
 |------|----------|
-| `core/.../NetworkManager.java` | DLog 迁移 |
-| `core/.../UdpSocketTransport.java` | DLog 迁移 + activeClientIds + SO_TIMEOUT + SocketTimeoutException |
-| `examples/.../NetcodeTankOnlineScreen.java` | DLog 迁移 + nameLabel + 抽屉面板 + activeClientCount |
-| `examples/.../TankBehaviour.java` | playerName NetworkVariable |
-| `examples/.../TankSandboxUtils.java` | drawTank 名称绘制 |
-| `lwjgl3/build.gradle` | runDual 进程管理重构 |
-| `docs/项目文档/Netcode_v0.7.0_开发报告.md` | 新建 |
+| `core/.../supabase/SupabaseConfig.java` | 新建 — 全局常量 |
+| `core/.../supabase/RoomManager.java` | 修改 — 新增无参构造 |
+| `core/.../supabase/SupabaseClient.java` | 修改 — UTC 时区修复 |
+| `examples/.../SupabaseLobbyScreen.java` | 重写 — VisUI + GScreen 最佳实践 |
+| `examples/.../TestSelectionScreen.java` | 修改 — 新增大厅入口 |
+| `tests/.../SupabaseClientTest.java` | 修改 — 使用全局配置 |
+| `docs/项目文档/版本报表/18_v0.7.1_...报表.md` | 重写 — 详细版本报表 |
 
 ### 编译/测试状态
 - ✅ BUILD SUCCESSFUL
-- ✅ 91 测试全绿
-- ✅ 2 次 Git 提交
+- ✅ 全部测试通过
+- ✅ 1 次 Git 提交

@@ -185,8 +185,10 @@ public class SupabaseClient {
         // Supabase REST PATCH request
         // {"last_ping": "now()"} might need to be resolved correctly depending on Postgres extensions, 
         // often we send the ISO string of current time from Java
-        String timeIso = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-                .format(new java.util.Date());
+        // 为确保 timestamptz 数据的准确性，我们严格使用 UTC 时区
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        String timeIso = sdf.format(new java.util.Date());
                 
         String payload = "{\"last_ping\":\"" + timeIso + "\"}";
         
