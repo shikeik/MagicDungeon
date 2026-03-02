@@ -36,6 +36,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
     private static String preConfigIp = null;
     private static int preConfigPort = -1;
     private static Boolean preConfigIsServer = null;
+    private static String preConfigRoomName = null;
 
     /**
      * 从大厅屏幕调用：预配置为房主模式，进入后直接启动 Server。
@@ -58,11 +59,17 @@ public class NetcodeTankOnlineScreen extends GScreen {
         preConfigPort = port;
     }
 
+    /** 从大厅屏幕调用: 携带房间元信息 */
+    public static void preConfigureRoomInfo(String roomName) {
+        preConfigRoomName = roomName;
+    }
+
     /** 清除预配置 */
     private static void clearPreConfig() {
         preConfigIp = null;
         preConfigPort = -1;
         preConfigIsServer = null;
+        preConfigRoomName = null;
     }
 
     // ── 配置面板参数 ─────
@@ -72,6 +79,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
     private String configIp = "127.0.0.1";
     /** 配置中的端口 */
     private int configPort = 19100;
+    /** 从大厅传入的房间名称 */
+    private String roomName = null;
     /** IP 输入缓冲 */
     private StringBuilder ipInput = new StringBuilder("127.0.0.1");
     /** 端口输入缓冲 */
@@ -144,9 +153,16 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 ipInput = new StringBuilder(preConfigIp);
             }
             portInput = new StringBuilder(String.valueOf(configPort));
+            roomName = preConfigRoomName;
             clearPreConfig();
             startNetwork();
         }
+
+        // 初始化游戏世界相机到视口中心
+        worldCamera.position.set(
+            uiViewport.getWorldWidth() / 2f,
+            uiViewport.getWorldHeight() / 2f, 0);
+        worldCamera.update();
     }
 
     @Override
@@ -335,6 +351,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
         } else {
             updateClientLogic(delta);
         }
+
+        // 游戏相机平滑跟随本地玩家坦克
+        updateCameraFollow(delta);
     }
 
     // ── Server 逻辑 ──
@@ -567,6 +586,29 @@ public class NetcodeTankOnlineScreen extends GScreen {
         tank.color.setValue(SPAWN_COLORS[index % SPAWN_COLORS.length]);
     }
 
+    // ══════════════ 相机跟随 ══════════════
+
+    /** 游戏相机平滑跟随本地玩家坦克 */
+    private void updateCameraFollow(float delta) {
+        TankBehaviour followTank = isServerRole ? clientTanks.get(-1) : findLocalPlayerTank();
+        if (followTank != null) {
+            float tx = followTank.x.getValue();
+            float ty = followTank.y.getValue();
+            float lerp = Math.min(1f, 5f * delta);
+            worldCamera.position.x += (tx - worldCamera.position.x) * lerp;
+            worldCamera.position.y += (ty - worldCamera.position.y) * lerp;
+        }
+        worldCamera.update();
+    }
+
+    /** 获取当前连接模式的中文描述 */
+    private String getConnectionMode() {
+        if (isServerRole) return "本机服务端";
+        if ("127.0.0.1".equals(configIp) || "localhost".equals(configIp)) return "回环 (同机)";
+        if (configIp.startsWith("192.168.") || configIp.startsWith("10.") || configIp.startsWith("172.")) return "LAN (局域网)";
+        return "公网/Frp";
+    }
+
     // ══════════════ 渲染 ══════════════
 
     private void renderConfig() {
@@ -636,24 +678,16 @@ public class NetcodeTankOnlineScreen extends GScreen {
     }
 
     private void renderPlaying() {
-        neon.setProjectionMatrix(uiViewport.getCamera().combined);
+        // ── 1. 游戏世界渲染（跟随相机）──
+        neon.setProjectionMatrix(worldCamera.combined);
         neon.begin();
 
         if (isServerRole) {
-            // ── Server 渲染 ──
             for (TankBehaviour tank : clientTanks.values()) {
                 TankSandboxUtils.drawTank(neon, font, tank, 0);
             }
             TankSandboxUtils.drawBullets(neon, serverBullets, 0);
-
-            font.setColor(Color.YELLOW);
-            font.draw(neon, "Server (Port:" + configPort + ")  坦克数:" + clientTanks.size()
-                + "  远程客户端:" + transport.getActiveClientCount(),
-                10, uiViewport.getWorldHeight() - 10);
-            font.draw(neon, "Host: WASD + J  |  远程客户端通过 ServerRpc 操控",
-                10, uiViewport.getWorldHeight() - 30);
         } else {
-            // ── Client 渲染 ──
             for (NetworkObject obj : manager.getAllNetworkObjects()) {
                 if (!obj.getBehaviours().isEmpty()) {
                     TankBehaviour tank = (TankBehaviour) obj.getBehaviours().get(0);
@@ -661,7 +695,22 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 }
             }
             TankSandboxUtils.drawBullets(neon, clientBullets, 0);
+        }
 
+        neon.end();
+
+        // ── 2. UI 固定层渲染（HUD + 抽屉面板）──
+        neon.setProjectionMatrix(uiViewport.getCamera().combined);
+        neon.begin();
+
+        if (isServerRole) {
+            font.setColor(Color.YELLOW);
+            font.draw(neon, "Server (Port:" + configPort + ")  坦克数:" + clientTanks.size()
+                + "  远程客户端:" + transport.getActiveClientCount(),
+                10, uiViewport.getWorldHeight() - 10);
+            font.draw(neon, "Host: WASD + J  |  远程客户端通过 ServerRpc 操控",
+                10, uiViewport.getWorldHeight() - 30);
+        } else {
             TankBehaviour myTank = findLocalPlayerTank();
             font.setColor(Color.YELLOW);
             font.draw(neon, "Client -> " + configIp + ":" + configPort
@@ -689,7 +738,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
         if (drawerAnimProgress <= 0.001f) {
             // 完全收起时只画一个小标签提示
             font.setColor(Color.GRAY);
-            font.draw(neon, "[I] 成员面板", uiViewport.getWorldWidth() - 105, uiViewport.getWorldHeight() / 2f + 8);
+            font.draw(neon, "[I] 信息面板", uiViewport.getWorldWidth() - 105, uiViewport.getWorldHeight() / 2f + 8);
             return;
         }
 
@@ -717,7 +766,32 @@ public class NetcodeTankOnlineScreen extends GScreen {
         float textY = screenH - 20;
         float lineH = 18f;
 
-        // 标题
+        // ── 房间信息区 ──
+        titleFont.setColor(new Color(0.5f, 0.8f, 1f, eased));
+        titleFont.draw(neon, "房间信息", textX, textY);
+        textY -= lineH + 6;
+
+        neon.drawRect(textX, textY, DRAWER_WIDTH - 24, 1, 0, 0, new Color(0.3f, 0.5f, 0.8f, 0.6f * eased), true);
+        textY -= 8;
+
+        font.setColor(new Color(0.8f, 0.8f, 0.8f, eased));
+        font.draw(neon, "房间: " + (roomName != null ? roomName : "(手动配置)"), textX, textY);
+        textY -= lineH;
+        font.draw(neon, "角色: " + (isServerRole ? "Server (房主)" : "Client (玩家)"), textX, textY);
+        textY -= lineH;
+        if (isServerRole) {
+            font.draw(neon, "监听: 0.0.0.0:" + configPort, textX, textY);
+        } else {
+            font.draw(neon, "连接: " + configIp + ":" + configPort, textX, textY);
+        }
+        textY -= lineH;
+        font.draw(neon, "模式: " + getConnectionMode(), textX, textY);
+        textY -= lineH;
+        int tankCount = isServerRole ? clientTanks.size() : manager.getNetworkObjectCount();
+        font.draw(neon, "坦克数: " + tankCount, textX, textY);
+        textY -= lineH + 10;
+
+        // ── 房间成员区 ──
         titleFont.setColor(new Color(0.5f, 0.8f, 1f, eased));
         titleFont.draw(neon, "房间成员", textX, textY);
         textY -= lineH + 6;

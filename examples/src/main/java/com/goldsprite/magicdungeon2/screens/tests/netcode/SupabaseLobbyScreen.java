@@ -359,15 +359,29 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
         final String customIp = hostIpField != null ? hostIpField.getText().trim() : "";
 
         if (!customIp.isEmpty()) {
-            // 使用自定义 IP，跳过公网 IP 检测
-            DLog.logT(TAG, "使用自定义主机地址: " + customIp);
+            // 解析自定义地址，支持 ip:port 格式（如 Frp 代理地址 119.84.246.217:59473）
+            String frpIp = customIp;
+            int frpPort = udpPort;
+            if (customIp.contains(":")) {
+                int colonIdx = customIp.lastIndexOf(':');
+                String portStr = customIp.substring(colonIdx + 1);
+                try {
+                    frpPort = Integer.parseInt(portStr);
+                    frpIp = customIp.substring(0, colonIdx);
+                } catch (NumberFormatException ignored) {
+                    // 端口格式错误，整个字符串作为 IP，使用默认端口
+                }
+            }
+            DLog.logT(TAG, "使用自定义主机地址: " + frpIp + ":" + frpPort);
             String localIp = PublicIPResolver.getLocalIP();
-            myRoomInfo = new PresenceRoomInfo(roomName, customIp, localIp, udpPort, 1, 6);
+            // 房间信息使用 Frp 公网端口，Server 本地仍监听 DEFAULT_UDP_PORT
+            myRoomInfo = new PresenceRoomInfo(roomName, frpIp, localIp, frpPort, 1, 6);
 
             lobbyManager.publishRoom(myRoomInfo);
             setStatus("建房成功! 正在进入游戏...", Color.GREEN);
 
             NetcodeTankOnlineScreen.preConfigureAsHost(udpPort);
+            NetcodeTankOnlineScreen.preConfigureRoomInfo(roomName);
             getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
             return;
         }
@@ -387,6 +401,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
 
                     // 携带房主参数跳转到 NetcodeTankOnlineScreen
                     NetcodeTankOnlineScreen.preConfigureAsHost(udpPort);
+                    NetcodeTankOnlineScreen.preConfigureRoomInfo(roomName);
                     getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
                 });
             }
@@ -431,6 +446,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
 
         // 携带客户端参数跳转到 NetcodeTankOnlineScreen
         NetcodeTankOnlineScreen.preConfigureAsClient(connectIp, room.hostPort);
+        NetcodeTankOnlineScreen.preConfigureRoomInfo(room.roomName);
         getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
     }
 
