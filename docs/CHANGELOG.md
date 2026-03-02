@@ -3,6 +3,20 @@
 本项目的所有显著更改都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，并且本项目遵循 [语义化版本控制 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
 
+## [0.8.4] - 2026-03-03
+
+### 修复 (Fixed)
+
+- **虚拟攻击按钮按下无效（有反馈但不发子弹）**
+  - 根因：`InputManager.update()` 在 `ScreenManager.render()` 开头清空 `simulatedJustPressedActions`，但 LibGDX input 事件在同一帧先于 `render()` 触发，导致 `injectAction` 注入的信号在同帧就被清掉，`isJustPressed` 永远检测不到
+  - 修复：引入双缓冲机制 — `update()` 将 pending 集合交换到 ready 集合，`isJustPressed` 读取 ready；保证 input 事件和读取始终在同一帧内配对
+
+- **虚拟控件视口变化时变形**
+  - 根因：`TankVirtualControls` 的 Stage viewport 初始化后从未被 `update(width, height)` 同步屏幕尺寸，导致触摸坐标映射错位 + 绘制拉伸
+  - 修复：`create()` 中立即调用 `virtualControls.resize()`；`NetcodeTankOnlineScreen` 重写 `resize()` 转发给 virtualControls
+
+---
+
 ## [0.8.3] - 2026-03-03
 
 ### 新增 (Added)

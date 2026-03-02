@@ -147,6 +147,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
         // 创建虚拟触控控件（Android 默认显示，PC 默认隐藏）
         virtualControls = new TankVirtualControls(new ExtendViewport(
             uiViewport.getWorldWidth(), uiViewport.getWorldHeight()));
+        // 立即同步视口尺寸，确保触摸坐标映射正确
+        virtualControls.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         if (imp != null) imp.addProcessor(virtualControls.getStage());
 
         // 检查是否有来自大厅的预配置，如果有则跳过 CONFIG 阶段直接启动网络
@@ -209,6 +211,12 @@ public class NetcodeTankOnlineScreen extends GScreen {
     public void hide() {
         super.hide();
         shutdownNetwork();
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        if (virtualControls != null) virtualControls.resize(width, height);
     }
 
     @Override

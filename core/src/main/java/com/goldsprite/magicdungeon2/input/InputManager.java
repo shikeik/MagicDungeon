@@ -71,10 +71,14 @@ public class InputManager {
 	// Simulated Actions
 	private final Set<InputAction> simulatedActions = new HashSet<>();
 	private final Set<InputAction> simulatedJustPressedActions = new HashSet<>();
+	/** 双缓冲：update() 将 pending 移入 ready，isJustPressed 读 ready */
+	private final Set<InputAction> readyJustPressedActions = new HashSet<>();
 	
 	// Simulated Keys (Raw Keycodes)
 	private final Set<Integer> simulatedKeys = new HashSet<>();
 	private final Set<Integer> simulatedJustPressedKeys = new HashSet<>();
+	/** 双缓冲：同上 */
+	private final Set<Integer> readyJustPressedKeys = new HashSet<>();
 
 	public void simulatePress(InputAction action) {
 		if (!simulatedActions.contains(action)) {
@@ -179,7 +183,7 @@ public class InputManager {
 	 * Check if a raw key is just pressed (Real Input OR Simulated)
 	 */
 	public boolean isKeyJustPressed(int keycode) {
-		return Gdx.input.isKeyJustPressed(keycode) || simulatedJustPressedKeys.contains(keycode);
+		return Gdx.input.isKeyJustPressed(keycode) || readyJustPressedKeys.contains(keycode);
 	}
 
 	/**
@@ -421,8 +425,13 @@ public class InputManager {
 	 * Must be called once per frame, preferably at start of render()
 	 */
 	public void update() {
-		// Clear simulated just pressed actions from previous frame
+		// 双缓冲交换：将上一帧 input 事件累积的 justPressed 移入 ready 供本帧读取
+		readyJustPressedActions.clear();
+		readyJustPressedActions.addAll(simulatedJustPressedActions);
 		simulatedJustPressedActions.clear();
+
+		readyJustPressedKeys.clear();
+		readyJustPressedKeys.addAll(simulatedJustPressedKeys);
 		simulatedJustPressedKeys.clear();
 
 		// Update startup timer
@@ -1005,7 +1014,7 @@ public class InputManager {
 
 	public boolean isJustPressed(InputAction action) {
 		if (inputBlocked) return false;
-		if (simulatedJustPressedActions.contains(action)) return true;
+		if (readyJustPressedActions.contains(action)) return true;
 
 		// Check Keyboard
 		List<Integer> keys = keyboardMappings.get(action);
