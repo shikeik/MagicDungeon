@@ -24,6 +24,27 @@ public class NetworkManager {
     // 传输层
     private Transport transport;
 
+    // ── 可配置的 Tick Rate（网络同步频率）──
+    /** 每秒网络同步次数（Hz），默认 60。可通过 setTickRate() 动态调整。 */
+    private int tickRate = 60;
+    /** 每次网络同步的时间间隔（秒），由 tickRate 自动计算 */
+    private float tickInterval = 1f / 60f;
+    /** Tick 累加器（积累 delta 直到达到 tickInterval 触发一次网络同步） */
+    private float tickAccumulator = 0f;
+
+    /** 设置网络同步频率（Hz）。常用值: 20(低带宽), 30(平衡), 60(高精度) */
+    public void setTickRate(int hz) {
+        this.tickRate = Math.max(1, Math.min(hz, 128));
+        this.tickInterval = 1f / this.tickRate;
+        DLog.logT("Netcode", "[NetworkManager] Tick rate 已设为 " + this.tickRate + " Hz (间隔 " + String.format("%.1f", tickInterval * 1000) + " ms)");
+    }
+
+    /** 获取当前网络同步频率（Hz） */
+    public int getTickRate() { return tickRate; }
+
+    /** 获取当前网络同步间隔（秒） */
+    public float getTickInterval() { return tickInterval; }
+
     // 游戏层连接事件监听器
     private NetworkConnectionListener connectionListener;
 
@@ -198,9 +219,35 @@ public class NetworkManager {
     }
 
     /**
-     * 服务器专用心跳机制
+     * 服务器专用心跳机制（无参版本，保持向后兼容）。
+     * 每次调用等同于 tick(tickInterval)，即视为恰好一次 tick 间隔。
+     * <p>
+     * 推荐使用 {@link #tick(float)} 并传入帧 delta，由累加器自动控制发送频率。
      */
     public void tick() {
+        tickInternal();
+    }
+
+    /**
+     * 服务器专用心跳机制（推荐版本）。
+     * 使用累加器模式，根据 tickRate 自动控制网络同步频率。
+     * 每帧调用一次，传入帧 delta，当累计时间 >= tickInterval 时触发一次网络同步。
+     * @param delta 当前帧的时间间隔（秒）
+     */
+    public void tick(float delta) {
+        if (transport == null || !transport.isServer()) return;
+        tickAccumulator += delta;
+        // 累加器模式：可能一帧内触发多次 tick（低帧率补偿）
+        while (tickAccumulator >= tickInterval) {
+            tickAccumulator -= tickInterval;
+            tickInternal();
+        }
+    }
+
+    /**
+     * 内部实际执行一次网络同步的逻辑。
+     */
+    private void tickInternal() {
         if (transport == null || !transport.isServer()) return;
 
         // === 处理待处理的断开事件（主线程安全） ===

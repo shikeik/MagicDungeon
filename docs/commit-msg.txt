@@ -1,11 +1,10 @@
-fix(netcode): 修复同机/同LAN大厅连接失败及统一日志格式
+feat(netcode): 可配置tick rate + 客户端平滑调和消除拉回感
 
-- PresenceRoomInfo 新增 localIp 字段，建房时同时发布公网+局域网 IP
-- PublicIPResolver 新增 getLocalIP() 获取本机局域网 IPv4
-- SupabaseLobbyScreen.joinRoom 实现三级 IP 智能选择:
-  同机→127.0.0.1 / 同LAN→局域网IP / 跨网→公网IP
-- 新增自定义主机地址输入框，支持 Frp 等端口转发工具
-- 房间列表新增 IP:Port 地址列，便于调试
-- PhoenixChannel/PresenceLobbyManager 全部 Gdx.app.log 替换为
-  DLog.logT/logErrT，统一 [时间戳][级别][TAG] 日志格式
+- NetworkManager 新增 setTickRate(hz) API，默认60Hz，支持1~128Hz
+- tick(delta) 累加器模式替代旧的每帧tick()，频率不受帧率波动
+- NetworkVariable 新增平滑调和模式 enableSmooth()
+  服务端状态到达后不再硬覆盖预测值，通过指数衰减插值过渡
+- 三个可调参数: reconcileSpeed/snapThreshold/reconcileTolerance
+- TankBehaviour x/y 默认启用调和，解决0延迟回环也扯着走的问题
+- bumpPatch 0.7.6
 - core/build.gradle 添加 slf4j-nop:2.0.13 消除 SLF4J 红色警告

@@ -5,6 +5,28 @@
 
 ## [未发布/最新] (Unreleased)
 
+### 新增 (Added)
+
+- **NetworkManager 可配置 Tick Rate**
+  - 新增 `setTickRate(hz)` / `getTickRate()` / `getTickInterval()` API
+  - 默认 60Hz，支持 1~128Hz 范围动态调整
+  - 采用累加器模式 `tick(delta)` 替代旧的每帧 `tick()`，频率稳定不受帧率波动影响
+  - 保留无参 `tick()` 向后兼容
+
+- **NetworkVariable 平滑调和模式 (Server Reconciliation)**
+  - 新增 `enableSmooth(speed, snapDist, tolerance)` 启用平滑调和
+  - 服务端状态到达后不再硬覆盖本地预测值，而是通过指数衰减插值平滑过渡
+  - 解决客户端预测被服务端拉回/扯着走的手感问题（即使 0 延迟回环也不再抖动）
+  - 三个可调参数：收敛速度、硬拉回阈值、吸附容差
+  - 新增 `reconcileTick(delta)` 驱动每帧调和插值
+  - 新增 `getServerValue()` 用于调试查看权威值
+
+### 改进 (Changed)
+
+- TankBehaviour 的 x/y 坐标默认启用平滑调和 `enableSmooth(10f, 50f, 0.5f)`
+- NetcodeTankOnlineScreen 服务端逻辑改用 `manager.tick(delta)` 累加器模式
+- NetcodeTankOnlineScreen 客户端每帧驱动 `reconcileTick()` 消化调和插值
+
 ---
 
 ## [0.7.0] - 2025-07-16

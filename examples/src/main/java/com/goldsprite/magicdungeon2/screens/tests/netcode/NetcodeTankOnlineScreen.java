@@ -17,6 +17,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.netcode.MapCollisionUtils;
 import com.goldsprite.gdengine.netcode.NetworkManager;
 import com.goldsprite.gdengine.netcode.NetworkObject;
+import com.goldsprite.gdengine.netcode.NetworkVariable;
 import com.goldsprite.gdengine.netcode.ReliableUdpTransport;
 import com.goldsprite.gdengine.netcode.UdpSocketTransport;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -287,6 +288,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     private void startNetwork() {
         manager = new NetworkManager();
+        // 设置可配置的网络同步频率（默认 60Hz，可按需调整为 20/30/60/128）
+        manager.setTickRate(60);
         rawTransport = new UdpSocketTransport(isServerRole);
         transport = new ReliableUdpTransport(rawTransport);
         manager.setTransport(transport);
@@ -442,8 +445,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
             }
         }
 
-        // 同步
-        manager.tick();
+        // 同步（使用累加器模式，根据 tick rate 自动控制发送频率）
+        manager.tick(delta);
         // 可靠层超时重传检查
         transport.tickReliable();
     }
@@ -526,6 +529,13 @@ public class NetcodeTankOnlineScreen extends GScreen {
     private static final float CLIENT_PREDICT_SPEED = 200f;
 
     private void updateClientLogic(float delta) {
+        // ── 驱动所有网络对象的平滑调和插值（消除服务端状态硬覆盖导致的拉回感） ──
+        for (NetworkObject obj : manager.getAllNetworkObjects()) {
+            for (NetworkVariable<?> var : obj.getNetworkVariables()) {
+                var.reconcileTick(delta);
+            }
+        }
+
         // 检测本地输入并通过 ServerRpc 上报
         TankBehaviour myTank = findLocalPlayerTank();
         if (myTank != null && !myTank.isDead.getValue()) {
