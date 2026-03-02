@@ -12,7 +12,7 @@ description: 交付与版本环节
 
 2.  **规范提交**:
     - **格式**: `type(scope): summary` (必须中文)。
-        - `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`.
+        - `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `assets`.
     - **操作**:
         1. 编写 `commit-msg.txt`。
         2. 执行 `git commit -F commit-msg.txt`。
