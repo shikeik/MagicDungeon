@@ -2,6 +2,7 @@ package com.goldsprite.magicdungeon2.screens.tests.netcode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.badlogic.gdx.graphics.Color;
 import com.goldsprite.gdengine.netcode.ClientRpc;
@@ -24,8 +25,13 @@ public class TankBehaviour extends NetworkBehaviour {
     /** 玩家名称（显示在坦克头顶） */
     public NetworkVariable<String> playerName = new NetworkVariable<>("");
 
-    /** 客户端本地子弹列表（由 ClientRpc 触发生成） */
+    /** 客户端本地子弹列表（仅主线程读写，由 drainPendingBulletEvents 填充） */
     public transient List<Bullet> localBullets = new ArrayList<>();
+
+    /** IO 线程写入的待生成子弹队列（主线程 drain 消费） */
+    public transient ConcurrentLinkedQueue<Bullet> pendingSpawns = new ConcurrentLinkedQueue<>();
+    /** IO 线程写入的待销毁子弹ID队列（主线程 drain 消费） */
+    public transient ConcurrentLinkedQueue<Integer> pendingDestroys = new ConcurrentLinkedQueue<>();
 
     /** Server 端暂存的移动方向（由 rpcMoveInput 写入，由 Server update 消费） */
     public transient float pendingMoveX = 0f;
@@ -70,7 +76,8 @@ public class TankBehaviour extends NetworkBehaviour {
         b.vx = bvx; b.vy = bvy;
         b.ownerId = ownerId;
         b.color = color.getValue();
-        localBullets.add(b);
+        // IO 线程调用，入队而非直接操作 localBullets（线程安全）
+        pendingSpawns.add(b);
     }
 
     /**
@@ -78,6 +85,25 @@ public class TankBehaviour extends NetworkBehaviour {
      */
     @ClientRpc
     public void rpcDestroyBullet(int bulletId) {
-        localBullets.removeIf(b -> b.bulletId == bulletId);
+        // IO 线程调用，入队而非直接操作 localBullets（线程安全）
+        pendingDestroys.add(bulletId);
+    }
+
+    /**
+     * 主线程调用：将 IO 线程缓冲的子弹事件应用到 localBullets。
+     * 必须在 updateClientBullets 迭代之前调用。
+     */
+    public void drainPendingBulletEvents() {
+        // 先处理销毁（避免刚生成又立即销毁的子弹闪烁）
+        Integer destroyId;
+        while ((destroyId = pendingDestroys.poll()) != null) {
+            final int id = destroyId;
+            localBullets.removeIf(b -> b.bulletId == id);
+        }
+        // 再处理生成
+        Bullet spawn;
+        while ((spawn = pendingSpawns.poll()) != null) {
+            localBullets.add(spawn);
+        }
     }
 }

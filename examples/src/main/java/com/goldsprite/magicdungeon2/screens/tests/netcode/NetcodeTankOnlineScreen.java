@@ -446,6 +446,10 @@ public class NetcodeTankOnlineScreen extends GScreen {
         for (NetworkObject obj : manager.getAllNetworkObjects()) {
             if (obj.getBehaviours().isEmpty()) continue;
             TankBehaviour tank = (TankBehaviour) obj.getBehaviours().get(0);
+
+            // 主线程统一消费 IO 线程缓冲的子弹生成/销毁事件（线程安全）
+            tank.drainPendingBulletEvents();
+
             Iterator<Bullet> iter = tank.localBullets.iterator();
             while (iter.hasNext()) {
                 Bullet b = iter.next();
