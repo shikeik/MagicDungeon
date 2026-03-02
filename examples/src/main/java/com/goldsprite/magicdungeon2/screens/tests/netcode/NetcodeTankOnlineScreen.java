@@ -470,6 +470,9 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
     // ── Client 逻辑 ──
 
+    /** 客户端预测移动速度（与 Server 端一致） */
+    private static final float CLIENT_PREDICT_SPEED = 200f;
+
     private void updateClientLogic(float delta) {
         // 检测本地输入并通过 ServerRpc 上报
         TankBehaviour myTank = findLocalPlayerTank();
@@ -482,6 +485,12 @@ public class NetcodeTankOnlineScreen extends GScreen {
 
             if (dx != 0 || dy != 0) {
                 myTank.sendServerRpc("rpcMoveInput", dx, dy);
+
+                // ── 客户端预测: 本地立即移动，消除 RTT 延迟感 ──
+                float speed = CLIENT_PREDICT_SPEED * delta;
+                myTank.x.setLocal(myTank.x.getValue() + dx * speed);
+                myTank.y.setLocal(myTank.y.getValue() + dy * speed);
+                myTank.rot.setLocal(new Vector2(dx, dy).angleDeg());
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.J) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 myTank.sendServerRpc("rpcFireInput");

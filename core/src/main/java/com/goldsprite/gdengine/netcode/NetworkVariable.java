@@ -28,6 +28,14 @@ public class NetworkVariable<T> {
         this.isDirty = true;
     }
 
+    /**
+     * 仅设置本地值，不触发脏标记（不会被网络同步广播）。
+     * 典型用途: 客户端预测——本地立即更新，等待 Server 权威值覆盖。
+     */
+    public void setLocal(T newValue) {
+        this.value = newValue;
+    }
+
     public boolean isDirty() {
         return isDirty;
     }

@@ -382,7 +382,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
 
             NetcodeTankOnlineScreen.preConfigureAsHost(udpPort);
             NetcodeTankOnlineScreen.preConfigureRoomInfo(roomName);
-            getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
+            getScreenManager().replaceScreen(NetcodeTankOnlineScreen.class);
             return;
         }
 
@@ -402,7 +402,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
                     // 携带房主参数跳转到 NetcodeTankOnlineScreen
                     NetcodeTankOnlineScreen.preConfigureAsHost(udpPort);
                     NetcodeTankOnlineScreen.preConfigureRoomInfo(roomName);
-                    getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
+                    getScreenManager().replaceScreen(NetcodeTankOnlineScreen.class);
                 });
             }
 
@@ -447,7 +447,7 @@ public class SupabaseLobbyScreen extends ExampleGScreen {
         // 携带客户端参数跳转到 NetcodeTankOnlineScreen
         NetcodeTankOnlineScreen.preConfigureAsClient(connectIp, room.hostPort);
         NetcodeTankOnlineScreen.preConfigureRoomInfo(room.roomName);
-        getScreenManager().goScreen(NetcodeTankOnlineScreen.class);
+        getScreenManager().replaceScreen(NetcodeTankOnlineScreen.class);
     }
 
     // ==================== 工具方法 ====================
