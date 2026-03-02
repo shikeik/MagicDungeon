@@ -1,10 +1,8 @@
-feat(netcode): 实装 Supabase Realtime Presence 云大厅核心层
+refactor(netcode): 重构 SupabaseLobbyScreen 从轮询驱动到 Presence 事件驱动
 
-- 新增 PhoenixChannel: 封装 WebSocket + Phoenix 协议 (phx_join/heartbeat/presence track/untrack)
-- 新增 PresenceLobbyManager: 替代旧 RoomManager，零数据库 I/O 的实时房间列表同步
-- 新增 PresenceRoomInfo: 纯内存房间元数据模型，替代旧 RoomModel 数据库映射
-- 扩展 SupabaseConfig: 新增 REALTIME_URL 和 LOBBY_CHANNEL 常量
-- 新增 PresenceLobbyManagerTest: 验证 WebSocket 连接/加入频道/发布房间/同步接收
-- 修复 GdxTestRunner: postRunnable 在测试环境中立即执行，解决异步回调不触发问题
-- 引入 Java-WebSocket 1.5.7 依赖
-- 新增策划文档: 8_0_Supabase_Presence云大厅重构策划案
+- SupabaseLobbyScreen: 移除 RoomManager 和 10s 轮询定时器，接入 PresenceLobbyManager
+- SupabaseLobbyScreen: 建房流程打通 (获取IP→publishRoom→跳转游戏)
+- SupabaseLobbyScreen: 加入流程打通 (读取hostIp:port→跳转游戏)
+- SupabaseLobbyScreen: 新增连接状态指示器、房间状态标签、按钮禁用态
+- NetcodeTankOnlineScreen: 新增 preConfigureAsHost/preConfigureAsClient 静态预配置接口
+- NetcodeTankOnlineScreen: create() 中检测预配置，跳过 CONFIG 阶段直接启动网络

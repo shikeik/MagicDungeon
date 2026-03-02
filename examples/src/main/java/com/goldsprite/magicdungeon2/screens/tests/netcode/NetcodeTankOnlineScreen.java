@@ -32,6 +32,39 @@ import com.goldsprite.gdengine.screens.GScreen;
  */
 public class NetcodeTankOnlineScreen extends GScreen {
 
+    // ── 外部预配置 (由大厅屏幕设置，跳过 CONFIG 阶段) ──
+    private static String preConfigIp = null;
+    private static int preConfigPort = -1;
+    private static Boolean preConfigIsServer = null;
+
+    /**
+     * 从大厅屏幕调用：预配置为房主模式，进入后直接启动 Server。
+     * @param port UDP 监听端口
+     */
+    public static void preConfigureAsHost(int port) {
+        preConfigIsServer = true;
+        preConfigPort = port;
+        preConfigIp = null;
+    }
+
+    /**
+     * 从大厅屏幕调用：预配置为客户端模式，进入后直接连接。
+     * @param ip   房主公网 IP
+     * @param port 房主 UDP 端口
+     */
+    public static void preConfigureAsClient(String ip, int port) {
+        preConfigIsServer = false;
+        preConfigIp = ip;
+        preConfigPort = port;
+    }
+
+    /** 清除预配置 */
+    private static void clearPreConfig() {
+        preConfigIp = null;
+        preConfigPort = -1;
+        preConfigIsServer = null;
+    }
+
     // ── 配置面板参数 ─────
     /** 当前选择的角色：true=Server, false=Client */
     private boolean isServerRole = true;
@@ -101,6 +134,19 @@ public class NetcodeTankOnlineScreen extends GScreen {
         neon = new NeonBatch();
         font = FontUtils.generate(14, 2);
         titleFont = FontUtils.generate(18, 2);
+
+        // 检查是否有来自大厅的预配置，如果有则跳过 CONFIG 阶段直接启动网络
+        if (preConfigIsServer != null) {
+            isServerRole = preConfigIsServer;
+            configPort = preConfigPort > 0 ? preConfigPort : 19100;
+            if (preConfigIp != null) {
+                configIp = preConfigIp;
+                ipInput = new StringBuilder(preConfigIp);
+            }
+            portInput = new StringBuilder(String.valueOf(configPort));
+            clearPreConfig();
+            startNetwork();
+        }
     }
 
     @Override
