@@ -15,8 +15,10 @@ import com.goldsprite.gdengine.netcode.ServerRpc;
  * 单进程双屏沙盒和跨进程 UDP 沙盒共用此类，避免重复定义。
  */
 public class TankBehaviour extends NetworkBehaviour {
-    public NetworkVariable<Float> x = new NetworkVariable<>(0f).enableSmooth(10f, 50f, 0.5f);
-    public NetworkVariable<Float> y = new NetworkVariable<>(0f).enableSmooth(10f, 50f, 0.5f);
+//    public NetworkVariable<Float> x = new NetworkVariable<>(0f).enableSmooth(10f, 50f, 0.5f);
+//    public NetworkVariable<Float> y = new NetworkVariable<>(0f).enableSmooth(10f, 50f, 0.5f);
+    public NetworkVariable<Float> x = new NetworkVariable<>(0f).disableSmooth();
+    public NetworkVariable<Float> y = new NetworkVariable<>(0f).disableSmooth();
     public NetworkVariable<Float> rot = new NetworkVariable<>(90f);
     public NetworkVariable<Color> color = new NetworkVariable<>(Color.RED);
     public NetworkVariable<Integer> hp = new NetworkVariable<>(4);
@@ -64,6 +66,23 @@ public class TankBehaviour extends NetworkBehaviour {
 
     /** Server 端标记：此坦克是否有待处理的开火请求 */
     public transient boolean pendingFire = false;
+
+    // ==================== ClientRpc: Server → Client 同步地图种子 ====================
+
+    /** Server 下发的地图种子（IO线程写入，主线程读取） */
+    public transient volatile int receivedMapSeed = 0;
+    /** 是否已收到地图种子（IO线程置true，主线程消费后置false） */
+    public transient volatile boolean mapSeedReceived = false;
+
+    /**
+     * Server → Client: 同步地图随机种子。
+     * 客户端收到后重新生成地图障碍，确保双端墙体布局一致。
+     */
+    @ClientRpc
+    public void rpcSyncMapSeed(int seed) {
+        receivedMapSeed = seed;
+        mapSeedReceived = true;
+    }
 
     /**
      * Server -> Client: 通知客户端生成子弹，客户端独立模拟运动

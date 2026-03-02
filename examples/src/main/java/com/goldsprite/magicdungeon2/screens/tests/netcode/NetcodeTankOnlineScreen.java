@@ -285,8 +285,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
                 });
                 transport.startServer(configPort);
 
-                // 生成地图墙体（使用房间名哈希作为种子，确保双端一致）
-                long mapSeed = roomName != null ? roomName.hashCode() : System.currentTimeMillis();
+                // 生成地图墙体（Server 权威种子，后续通过 rpcSyncMapSeed 下发给客户端）
+                int mapSeed = roomName != null ? roomName.hashCode() : (int) System.currentTimeMillis();
                 gameMap.generateWalls(mapSeed);
 
                 // Server 自身也产一辆坦克（Host 模式: ownerClientId = -1）
@@ -298,9 +298,7 @@ public class NetcodeTankOnlineScreen extends GScreen {
             } else {
                 // Client 模式
                 transport.connect(configIp, configPort);
-                // Client 使用固定种子（后续由 Server 下发，暂用房间名哈希代替）
-                long mapSeed = roomName != null ? roomName.hashCode() : 42;
-                gameMap.generateWalls(mapSeed);
+                // 地图种子由 Server 通过 rpcSyncMapSeed 权威下发，客户端不再自行猜测
                 state = State.WAITING;
                 configError = null;
                 DLog.logT("Netcode", "[Online] Client 连接中: " + configIp + ":" + configPort);
@@ -356,6 +354,8 @@ public class NetcodeTankOnlineScreen extends GScreen {
         if (isServerRole) {
             updateServerLogic(delta);
         } else {
+            // 检查并应用 Server 下发的地图种子
+            checkMapSeedSync();
             updateClientLogic(delta);
         }
 
@@ -446,6 +446,24 @@ public class NetcodeTankOnlineScreen extends GScreen {
         transport.tickReliable();
     }
 
+    /** 客户端: 检查是否收到 Server 的地图种子 RPC，收到则重新生成地图 */
+    private void checkMapSeedSync() {
+        if (manager == null) return;
+        for (NetworkObject obj : manager.getAllNetworkObjects()) {
+            for (com.goldsprite.gdengine.netcode.NetworkBehaviour b : obj.getBehaviours()) {
+                if (b instanceof TankBehaviour) {
+                    TankBehaviour tb = (TankBehaviour) b;
+                    if (tb.mapSeedReceived) {
+                        gameMap.generateWalls(tb.receivedMapSeed);
+                        tb.mapSeedReceived = false;
+                        DLog.logT("Netcode", "[Online] Client 收到地图种子: " + tb.receivedMapSeed + "，已重新生成地图");
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     /** 从 manager 中找到 isLocalPlayer=true 的坦克 */
     private TankBehaviour findLocalPlayerTank() {
         for (NetworkObject obj : manager.getAllNetworkObjects()) {
@@ -468,7 +486,12 @@ public class NetcodeTankOnlineScreen extends GScreen {
         spawnTankForOwner(clientId);
         // 4. 再次发送全量状态（确保新坦克的初始数据也同步给该客户端）
         manager.sendFullStateToClient(clientId);
-        DLog.logT("Netcode", "[Online] Client #" + clientId + " 已连接，Spawn 坦克");
+        // 5. 向所有客户端广播地图种子（确保新客户端获得正确的墙体布局）
+        TankBehaviour hostTank = clientTanks.get(-1);
+        if (hostTank != null) {
+            hostTank.sendClientRpc("rpcSyncMapSeed", (int) gameMap.getMapSeed());
+        }
+        DLog.logT("Netcode", "[Online] Client #" + clientId + " 已连接，Spawn 坦克，已广播地图种子");
     }
 
     /** Server 端: Client 断开时，清理游戏层映射（已在主线程 tick() 中调用） */

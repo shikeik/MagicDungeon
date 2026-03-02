@@ -3,6 +3,17 @@
 本项目的所有显著更改都将记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，并且本项目遵循 [语义化版本控制 (Semantic Versioning)](https://semver.org/lang/zh-CN/)。
 
+## [0.8.1] - 2026-03-03
+
+### 修复 (Fixed)
+
+- **地图障碍渲染不同步**：直连 / 手动输入加入时，客户端墙体布局与服务端不一致
+  - 根因：地图种子由双端各自猜测（直连路径 roomName 不同 → hashCode 不同 → 墙体布局完全不同）
+  - 修复：Server 通过 `rpcSyncMapSeed` ClientRpc 权威下发种子，Client 不再自行生成，等待收到后重建地图
+  - 新增 `TankBehaviour.rpcSyncMapSeed(int)` + `checkMapSeedSync()` 每帧检查
+
+---
+
 ## [0.8.0] - 2026-03-03
 
 ### 重构 (Refactored)
