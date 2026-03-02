@@ -1,13 +1,12 @@
 package com.goldsprite.gdengine.netcode.supabase;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.net.HttpRequestBuilder;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class SupabaseClient {
 
