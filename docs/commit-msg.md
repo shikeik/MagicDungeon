@@ -1,5 +1,6 @@
-fix(input): 修复虚拟攻击按钮无效+触控控件resize变形
+chore(project): 移除SandTank/netcode遗留代码
 
-- InputManager: 引入双缓冲(ready/pending), 解决injectAction同帧被update清空的时序问题
-- simulatedJustPressedActions/Keys 改用 readyJustPressedActions/Keys 读取
-- OnlineScreen: 重写resize()转发给virtualControls, create中初始化viewport尺寸
+- 删除 core/gdengine/netcode/ 引擎目录(21文件): NetworkManager, Transport, NetBuffer等
+- 删除 examples/screens/tests/netcode/ 坦克Screen目录(12文件)
+- 删除 tests/gdengine/netcode/ 测试目录(18文件)
+- 清理 TestSelectionScreen 移除netcode坦克菜单项
