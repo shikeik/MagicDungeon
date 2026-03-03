@@ -15,19 +15,11 @@ java {
 }
 
 dependencies {
-	api "com.badlogicgames.gdx:gdx:$gdxVersion"
-	api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-	api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
-	api "com.kotcrab.vis:vis-ui:$visUIVersion"
-	api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
-//	api "com.github.raeleus:TenPatch:5.2.3"
-	// core/build.gradle
-	api ("com.github.raeleus:TenPatch:5.2.3") {
-		exclude group: 'org.lwjgl' // 排除掉所有 lwjgl 相关的库
-	}
+	// === GDEngine 引擎库 (mavenLocal / JitPack) ===
+	api "com.github.shikeik.GdxCore:core:0.9.0"
+	// MD2 不需要 netcode 模块
 
-	api "com.esotericsoftware.spine:spine-libgdx:$spineVersion"
-//	api 'com.github.GoldSprite:TestNetty:0.8.0'
+	// === 项目自有依赖 ===
 	api ('com.github.GoldSprite:TestNetty:0.8.0.2') {
 		// netty-all 全家桶会传递引入 javax.jms 的两个冲突实现:
 		//   geronimo-jms_1.1_spec-1.0.jar  vs  javax.jms-api-2.0.1.jar
@@ -38,16 +30,6 @@ dependencies {
 		exclude group: "org.apache"
 		exclude group: "log4j"
 	}
-
-	// [Force Refresh] Trigger IDE gradle sync
-	// [Restore] 轻量级 HTTP 服务器 (用于本地文档/资源服务)
-	api 'org.nanohttpd:nanohttpd:2.3.1'
-
-	// WebSocket 客户端 (用于 Supabase Realtime Presence 云大厅)
-	api 'org.java-websocket:Java-WebSocket:1.5.7'
-
-	// SLF4J 空实现 (消除 Java-WebSocket 引入的 SLF4J 无 Provider 警告)
-	api 'org.slf4j:slf4j-nop:2.0.13'
 }
 
 publishing {

@@ -8,12 +8,16 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
+import com.goldsprite.gdengine.GDEngineConfig;
 import com.goldsprite.gdengine.log.DLog;
 import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
+import com.goldsprite.gdengine.screens.basics.SelectionNavigator;
 import com.goldsprite.gdengine.testing.AutoTestManager;
 import com.goldsprite.gdengine.ui.widget.single.ToastUI;
 import com.goldsprite.magicdungeon2.config.LaunchMode;
+import com.goldsprite.magicdungeon2.BuildConfig;
 import com.goldsprite.magicdungeon2.input.InputAction;
 import com.goldsprite.magicdungeon2.input.InputManager;
 import com.goldsprite.magicdungeon2.screens.basics.ExampleSelectScreen;
@@ -41,6 +45,9 @@ public class GdxLauncher extends Game {int k7;
 	public void initGameContent() {
 		if (isInitialized) return;
 
+		// 引擎全局配置初始化
+		GDEngineConfig.init(BuildConfig.PROJECT_NAME, BuildConfig.DEV_VERSION);
+
 		VisUIHelper.loadWithChineseFont();
 		userType = Gdx.app.getType();
 		debug = DLog.getInstance();
@@ -57,6 +64,29 @@ public class GdxLauncher extends Game {int k7;
 		// 解决初次进入演示屏手柄无法操作及鼠标锁定后无法解锁的问题
 		ScreenManager.inputUpdater = () -> InputManager.getInstance().update();
 		ScreenManager.backKeyTrigger = () -> InputManager.getInstance().isJustPressed(InputAction.BACK);
+
+		// 注入选择屏导航输入实现
+		BaseSelectionScreen.setNavigator(new SelectionNavigator() {
+			@Override
+			public boolean isUpJustPressed() {
+				return InputManager.getInstance().isJustPressed(InputAction.UI_UP);
+			}
+
+			@Override
+			public boolean isDownJustPressed() {
+				return InputManager.getInstance().isJustPressed(InputAction.UI_DOWN);
+			}
+
+			@Override
+			public boolean isConfirmJustPressed() {
+				return InputManager.getInstance().isJustPressed(InputAction.UI_CONFIRM);
+			}
+
+			@Override
+			public boolean isKeyboardMode() {
+				return InputManager.getInstance().getInputMode() == InputManager.InputMode.KEYBOARD;
+			}
+		});
 
 		// Catch Android Back Key
 //		Gdx.input.setCatchKey(Input.Keys.BACK, true);
