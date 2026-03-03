@@ -20,6 +20,7 @@ buildscript {
 	}
 	dependencies {
 		classpath 'com.android.tools.build:gradle:8.12.3'
+		classpath 'com.github.shikeik:GdxGradle:0.9.0'
 	}
 }
 
@@ -76,40 +77,12 @@ subprojects {
 eclipse.project.name = 'MagicDungeon2' + '-parent'
 
 // ============================================================
-// 统一构建调度中心 (Build Orchestration)
+// GdxGradle 插件 (统一构建任务)
 // ============================================================
+apply plugin: 'com.goldsprite.gdx-tasks'
 
-// 引入独立的引擎任务管理脚本
-apply from: 'gradle/engine-tasks.gradle'
-//apply from: 'gradle/changelog-generator.gradle'
-
-// [新增] 引入本地文档预览任务
-apply from: 'gradle/docs-preview.gradle'
-
-// [新增] 引入版本管理任务
-apply from: 'gradle/versioning.gradle'
-
-apply from: 'gradle/publish-docs.gradle'
-//apply from: 'gradle/publish-template.gradle'
-//
-// [新增] 引入 jpackage 打包任务 (在 lwjgl3 模块中定义，这里做个别名)
-task oneClickRelease {
-    group = "distribution"
-    description = "一键构建 Jar -> jpackage -> 单文件 Exe (需要配置 Enigma)"
-
-    // 依赖 lwjgl3 模块的打包任务
-    dependsOn ':lwjgl3:packageSingleExe'
-
-    doLast {
-        println "--------------------------------------------------"
-        println "🎉 发布流程结束"
-        println "--------------------------------------------------"
-    }
-}
-
-// 别名任务：允许直接使用 gradlew packageSingleExe
-task packageSingleExe {
-    group = "distribution"
-    description = "Package single exe (Alias for :lwjgl3:packageSingleExe)"
-    dependsOn ':lwjgl3:packageSingleExe'
+gdxTasks {
+    taskGroup = 'magicdungeon2'
+    docsPreviewMainClass = 'com.goldsprite.magicdungeon2.core.web.DocServer'
+    templatesRoot = 'MagicDungeon2/InternalTemplates'
 }
